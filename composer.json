@@ -1,14 +1,9 @@
 {
   "name": "actra/yuf",
-  "description": "Yuf - A smart and lightweight PHP-Framework",
+  "description": "yuf - (pronounced \"[jʌf]\" or \"[jʊf]\") - A smart, fast and lightweight php framework with zero dependencies.",
   "type": "library",
   "license": "MIT",
   "require": {
     "php": ">=8.5"
-  },
-  "autoload": {
-    "files": [
-      "yuf/autoload.php"
-    ]
   }
 }

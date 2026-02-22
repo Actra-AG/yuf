@@ -1,0 +1,235 @@
+<?php
+/**
+ * @copyright Actra AG - https://www.actra.ch
+ * @license   MIT
+ */
+
+declare(strict_types=1);
+
+namespace actra\yuf\core;
+
+use actra\yuf\Core;
+use actra\yuf\exception\NotFoundException;
+use actra\yuf\session\AbstractSessionHandler;
+use LogicException;
+
+class RequestHandler
+{
+    private static ?RequestHandler $instance = null;
+
+    public readonly array $pathParts;
+    public readonly int $countPathParts;
+    public readonly RouteCollection $defaultRoutesByLanguage;
+    public readonly Route $route;
+    public ?Language $language = null;
+    public readonly string $fileTitle;
+    public readonly string $fileExtension;
+    private(set) string $fileName;
+    private(set) ?string $fileGroup = null;
+    private(set) array $routeVariables = [];
+    public readonly array $pathVars;
+
+    private function __construct(RouteCollection $allRoutes)
+    {
+        if (!is_null(value: RequestHandler::$instance)) {
+            throw new LogicException(message: 'RequestHandler is already registered');
+        }
+        RequestHandler::$instance = $this;
+        $core = Core::get();
+        if (!$core->availableLanguages->isEmpty()) {
+            $this->language = $core->availableLanguages->getFirstLanguage();
+        }
+        $this->checkDomain(allowedDomains: $core->allowedDomains);
+        $this->pathParts = explode(separator: '/', string: HttpRequest::getPath());
+        $this->countPathParts = count(value: $this->pathParts);
+        $this->fileName = trim(string: $this->pathParts[$this->countPathParts - 1]);
+        $this->defaultRoutesByLanguage = $this->initDefaultRoutes(
+            allRoutes: $allRoutes
+        );
+        $this->route = $this->initRoute(countPathParts: $this->countPathParts, allRoutes: $allRoutes);
+        $forceFileGroup = $this->route->forceFileGroup;
+        if (!is_null(value: $forceFileGroup) && $forceFileGroup !== '') {
+            $this->fileGroup = $forceFileGroup;
+        }
+        $forceFileName = $this->route->forceFileName;
+        if (!is_null(value: $forceFileName) && $forceFileName !== '') {
+            $this->fileName = $forceFileName;
+        }
+        if (!is_null(value: $this->route->language)) {
+            $this->language = $this->route->language;
+        }
+        if (AbstractSessionHandler::enabled()) {
+            $sessionHandler = AbstractSessionHandler::getSessionHandler();
+            $preferredLanguageCode = $sessionHandler->getPreferredLanguageCode();
+            if (
+                !is_null(value: $this->language)
+                && (
+                    is_null(value: $preferredLanguageCode)
+                    || $preferredLanguageCode !== $this->language->code
+                )
+            ) {
+                $sessionHandler->setPreferredLanguage(language: $this->language);
+            }
+        }
+        $fileName = (trim(string: $this->fileName) === '') ? $this->route->defaultFileName : $this->fileName;
+        $dotPos = strripos(haystack: $fileName, needle: '.');
+        if ($dotPos === false) {
+            $length = strlen(string: $fileName);
+            $fileExtension = '';
+        } else {
+            $length = $dotPos;
+            $fileExtension = substr(string: $fileName, offset: $length + 1);
+        }
+        $fnArr = str_replace(
+            search: '__DASH__',
+            replace: '-',
+            subject: explode(separator: '-', string: substr(string: $fileName, offset: 0, length: $length))
+        );
+        $this->fileName = $fileName;
+        $this->fileTitle = $fnArr[0];
+        $this->pathVars = $fnArr;
+        $this->fileExtension = $fileExtension;
+        if (
+            !is_null(value: $this->route->acceptedExtension)
+            && $this->fileExtension !== $this->route->acceptedExtension
+        ) {
+            throw new NotFoundException();
+        }
+    }
+
+    public static function get(): RequestHandler
+    {
+        return RequestHandler::$instance;
+    }
+
+    private function checkDomain(array $allowedDomains): void
+    {
+        $host = HttpRequest::getHost();
+
+        if (!in_array(
+            needle: $host,
+            haystack: $allowedDomains)
+        ) {
+            throw new NotFoundException(
+                message: $host . ' is not set as allowed domain in your environment settings.'
+            );
+        }
+    }
+
+    private function initDefaultRoutes(
+        RouteCollection $allRoutes
+    ): RouteCollection
+    {
+        $defaultRoutes = new RouteCollection();
+        $usedLanguages = new LanguageCollection();
+        foreach ($allRoutes->routes as $route) {
+            if (
+                !$route->isDefaultForLanguage
+                || is_null(value: $route->language)
+            ) {
+                continue;
+            }
+            if ($usedLanguages->hasLanguage(languageCode: $route->language->code)) {
+                throw new LogicException(
+                    message: 'Default route for language ' . $route->language->code . ' is already set'
+                );
+            }
+            if (Core::get()->availableLanguages->hasLanguage(languageCode: $route->language->code)) {
+                $defaultRoutes->addRoute(route: $route);
+                $usedLanguages->add(language: $route->language);
+            }
+        }
+
+        return $defaultRoutes;
+    }
+
+    private function initRoute(int $countPathParts, RouteCollection $allRoutes): Route
+    {
+        $countDirectories = $countPathParts - 2;
+        $requestedDirectories = '/';
+        for ($x = 1; $x <= $countDirectories; $x++) {
+            $requestedDirectories .= $this->pathParts[$x] . '/';
+        }
+
+        $requestedPath = HttpRequest::getPath();
+        foreach ($allRoutes->routes as $route) {
+            $routePath = $route->path;
+            if ($routePath === $requestedDirectories) {
+                return $route;
+            }
+            if (preg_match_all(
+                    pattern: '#\${(.*?)}#',
+                    subject: $routePath,
+                    matches: $matches1
+                ) === 0) {
+                continue;
+            }
+            $pattern = '#^' . str_replace(search: $matches1[0], replace: '(.*)', subject: $routePath) . '$#';
+            if (preg_match(
+                    pattern: $pattern,
+                    subject: $requestedPath,
+                    matches: $matches2
+                ) === 0) {
+                continue;
+            }
+            foreach ($matches1[1] as $nr => $variableName) {
+                $nr = $nr + 1;
+                $val = array_key_exists(key: $nr, array: $matches2) ? $matches2[$nr] : '';
+                if ($variableName === 'fileName') {
+                    $this->fileName = $val;
+                } elseif ($variableName === 'fileGroup') {
+                    $this->fileGroup = $val;
+                } else {
+                    $this->routeVariables[$variableName] = $val;
+                }
+            }
+
+            return $route;
+        }
+        if (HttpRequest::getURI() === '/') {
+            $defaultRoutesByLanguage = $this->defaultRoutesByLanguage;
+            if (AbstractSessionHandler::enabled()) {
+                $preferredLanguageCode = AbstractSessionHandler::getSessionHandler()->getPreferredLanguageCode();
+                if (!is_null(value: $preferredLanguageCode)) {
+                    foreach ($defaultRoutesByLanguage->routes as $route) {
+                        if ($route->language->code === $preferredLanguageCode) {
+                            HttpResponse::redirectAndExit(relativeOrAbsoluteUri: $route->path);
+                        }
+                    }
+                }
+            }
+            foreach (Httprequest::listBrowserLanguagesByQuality() as $languageCode) {
+                $routeForLanguage = $defaultRoutesByLanguage->getRouteForLanguage(languageCode: $languageCode);
+                if (!is_null(value: $routeForLanguage)) {
+                    HttpResponse::redirectAndExit(relativeOrAbsoluteUri: $routeForLanguage->path);
+                }
+            }
+            // Redirect to the first default route if none is available in accepted languages
+            HttpResponse::redirectAndExit(relativeOrAbsoluteUri: $defaultRoutesByLanguage->getFirstRoute()->path);
+        }
+
+        throw new NotFoundException();
+    }
+
+    public static function register(RouteCollection $routeCollection): void
+    {
+        new RequestHandler(allRoutes: $routeCollection);
+    }
+
+    public function getPathVar(int $nr): ?string
+    {
+        $pathVars = $this->pathVars;
+
+        return array_key_exists(key: $nr, array: $pathVars) ? trim(string: $pathVars[$nr]) : null;
+    }
+
+    public function getLanguageRoot(): string
+    {
+        foreach ($this->defaultRoutesByLanguage->routes as $route) {
+            if ($route->language === $this->language) {
+                return $route->path;
+            }
+        }
+        return '/';
+    }
+}
