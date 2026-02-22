@@ -72,11 +72,18 @@ class ExceptionHandler
 
         if ($throwable instanceof NotFoundException) {
             $httpStatusCode = HttpStatusCode::HTTP_NOT_FOUND;
+            $title = 'Page not found';
         } elseif ($throwable instanceof UnauthorizedException) {
             $httpStatusCode = HttpStatusCode::HTTP_UNAUTHORIZED;
+            $title = 'Unauthorized';
         } else {
             $httpStatusCode = HttpStatusCode::HTTP_INTERNAL_SERVER_ERROR;
+            $title = 'Internal Server Error';
         }
+        $this->htmlReplacementCollection->addEncodedText(
+            identifier: 'title',
+            content: $title
+        );
         $this->htmlReplacementCollection->addEncodedText(
             identifier: 'errorType',
             content: get_class(object: $throwable)
@@ -260,12 +267,6 @@ class ExceptionHandler
 
     protected function sendNotFoundHttpResponseAndExit(Throwable $throwable): void
     {
-        /*
-        $this->htmlReplacementCollection->addEncodedText(
-            identifier: 'title',
-            content: 'Page not found'
-        );
-        */
         $this->sendHttpResponseAndExit(
             httpStatusCode: HttpStatusCode::HTTP_NOT_FOUND,
             errorMessage: $throwable->getMessage(),
@@ -276,12 +277,6 @@ class ExceptionHandler
 
     protected function sendUnauthorizedHttpResponseAndExit(Throwable $throwable): void
     {
-        /*
-        $this->htmlReplacementCollection->addEncodedText(
-            identifier: 'title',
-            content: 'Unauthorized'
-        );
-        */
         $this->sendHttpResponseAndExit(
             httpStatusCode: HttpStatusCode::HTTP_UNAUTHORIZED,
             errorMessage: $throwable->getMessage(),
@@ -292,12 +287,6 @@ class ExceptionHandler
 
     protected function sendDefaultHttpResponseAndExit(Throwable $throwable): void
     {
-        /*
-        $this->htmlReplacementCollection->addEncodedText(
-            identifier: 'title',
-            content: 'Internal Server Error'
-        );
-        */
         $this->sendHttpResponseAndExit(
             httpStatusCode: HttpStatusCode::HTTP_INTERNAL_SERVER_ERROR,
             errorMessage: 'Internal Server Error',
