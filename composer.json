@@ -1,0 +1,14 @@
+{
+  "name": "actra/yuf",
+  "description": "Yuf - A smart and lightweight PHP-Framework",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.5"
+  },
+  "autoload": {
+    "files": [
+      "yuf/autoload.php"
+    ]
+  }
+}
