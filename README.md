@@ -9,34 +9,12 @@ First install it with Composer:
 composer require actra/yuf
 ```
 
-Or you can download the source code and include it manually.
+or you can download the source code from https://github.com/Actra-AG/yuf and use the framework without composer.
 
-Then you would have a basic `index.php` file like this:
+Create a `index.php` file in your document root and start coding.
 
-```php
-<?php
-declare(strict_types=1);
+You do also need to create a file with the environment settings and reference it in the Core constructor with the envFilePath parameter.
 
-use actra\yuf\Core;
-use actra\yuf\core\ContentType;
-use actra\yuf\core\Route;
-use actra\yuf\core\RouteCollection;
-
-require __DIR__ . '/../vendor/actra/yuf/src/Core.php';
-$core = new Core(
-    envFilePath: '.env.php',
-    copyrightYear: 2026
-);
-$core->prepareHttpResponse(
-    routeCollection: new RouteCollection(
-        routes: [
-            new Route(
-                path: '/',
-                viewCallback: fn() => 'Hello World!',
-                defaultContentType: ContentType::createTxt()
-            )
-        ],
-    ),
-    individualSessionHandler: false
-)->sendAndExit();
-```
+Example files:
+- `.env.example.php`: An example environment settings file.
+- `index.example.php`: An example `index.php` file.
