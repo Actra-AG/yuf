@@ -1,9 +1,10 @@
 <?php
 /**
- * @author    Christof Moser <contact@actra.ch>
- * @copyright Actra AG, Embrach, Switzerland, www.actra.ch
+ * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
  */
+
+declare(strict_types=1);
 
 namespace actra\yuf\form\component\collection;
 

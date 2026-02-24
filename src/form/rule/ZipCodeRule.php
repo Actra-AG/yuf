@@ -1,7 +1,11 @@
 <?php
 /**
- * @author    Christof Moser <contact@actra.ch>
- * @copyright Actra AG, Embrach, Switzerland, www.actra.ch
+ * @copyright Actra AG - https://www.actra.ch
+ * @license   MIT
+ */
+
+declare(strict_types=1);
+/**
  * =============================================================
  * this class uses original source (10.2016) from:
  * http://www.pixelenvision.com/1708/zip-postal-code-validation-regex-php-code-for-12-countries/
