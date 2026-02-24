@@ -1,0 +1,127 @@
+<?php
+/**
+ * @author    Christof Moser <contact@actra.ch>
+ * @copyright Actra AG, Embrach, Switzerland, www.actra.ch
+ * @license   MIT
+ */
+
+namespace actra\yuf\form;
+
+use actra\yuf\form\component\FormField;
+use actra\yuf\html\HtmlTag;
+use actra\yuf\html\HtmlTagAttribute;
+use actra\yuf\html\HtmlText;
+use LogicException;
+
+abstract class FormRenderer
+{
+    private ?HtmlTag $htmlTag = null; // The base Tag-Element for this renderer, which may contain child-elements
+
+    public static function addErrorsToParentHtmlTag(
+        FormComponent $formComponentWithErrors,
+        HtmlTag $parentHtmlTag
+    ): void {
+        if (!$formComponentWithErrors->hasErrors(withChildElements: false)) {
+            return;
+        }
+        $divTag = new HtmlTag(
+            name: 'div',
+            selfClosing: false,
+            htmlTagAttributes: [
+                new HtmlTagAttribute(
+                    name: 'class',
+                    value: 'form-input-error',
+                    valueIsEncodedForRendering: true
+                ),
+                new HtmlTagAttribute(
+                    name: 'id',
+                    value: $formComponentWithErrors->name . '-error',
+                    valueIsEncodedForRendering: true
+                ),
+                new HtmlTagAttribute(
+                    name: 'role',
+                    value: 'alert',
+                    valueIsEncodedForRendering: true
+                ),
+                new HtmlTagAttribute(
+                    name: 'aria-live',
+                    value: 'assertive',
+                    valueIsEncodedForRendering: true
+                ),
+            ]
+        );
+        $errorsHTML = [];
+        foreach ($formComponentWithErrors->errorCollection->listErrors() as $htmlText) {
+            $errorsHTML[] = $htmlText->render();
+        }
+        $divTag->addText(htmlText: HtmlText::encoded(textContent: implode(separator: '<br>', array: $errorsHTML)));
+        $parentHtmlTag->addTag(htmlTag: $divTag);
+    }
+
+    public static function addFieldInfoToParentHtmlTag(FormField $formFieldWithFieldInfo, HtmlTag $parentHtmlTag): void
+    {
+        $divTag = new HtmlTag(name: 'div', selfClosing: false, htmlTagAttributes: [
+            new HtmlTagAttribute(name: 'class', value: 'form-input-info', valueIsEncodedForRendering: true),
+            new HtmlTagAttribute(
+                name: 'id',
+                value: $formFieldWithFieldInfo->name . '-info',
+                valueIsEncodedForRendering: true
+            ),
+        ]);
+        $divTag->addText(htmlText: $formFieldWithFieldInfo->fieldInfo);
+        $parentHtmlTag->addTag(htmlTag: $divTag);
+    }
+
+    public static function addAriaAttributesToHtmlTag(FormField $formField, HtmlTag $parentHtmlTag): void
+    {
+        $ariaDescribedBy = [];
+        if ($formField->hasErrors(withChildElements: false)) {
+            $parentHtmlTag->addHtmlTagAttribute(
+                htmlTagAttribute: new HtmlTagAttribute(
+                    name: 'aria-invalid',
+                    value: 'true',
+                    valueIsEncodedForRendering: true
+                )
+            );
+            $ariaDescribedBy[] = $formField->name . '-error';
+        }
+        if (!is_null(value: $formField->fieldInfo)) {
+            $ariaDescribedBy[] = $formField->name . '-info';
+        }
+        if (count(value: $ariaDescribedBy) > 0) {
+            $parentHtmlTag->addHtmlTagAttribute(
+                htmlTagAttribute: new HtmlTagAttribute(
+                    name: 'aria-describedby',
+                    value: implode(separator: ' ', array: $ariaDescribedBy),
+                    valueIsEncodedForRendering: true
+                )
+            );
+        }
+    }
+
+    /** The descending classes must use this method to prepare the base Tag-Element */
+    abstract public function prepare(): void;
+
+    /**
+     * Get the current base Tag-Element for this renderer
+     *
+     * @return HtmlTag|null The current base Tag-Element or null, if not set
+     */
+    public function getHtmlTag(): ?HtmlTag
+    {
+        return $this->htmlTag;
+    }
+
+    /**
+     * Method to set the base Tag-Element. It's not allowed to overwrite it, if already set!
+     *
+     * @param HtmlTag $htmlTag The Tag-Element to be set
+     */
+    protected function setHtmlTag(HtmlTag $htmlTag): void
+    {
+        if (!is_null(value: $this->htmlTag)) {
+            throw new LogicException(message: 'You cannot overwrite an already defined Tag-Element.');
+        }
+        $this->htmlTag = $htmlTag;
+    }
+}

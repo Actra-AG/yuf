@@ -1,0 +1,45 @@
+<?php
+/**
+ * @author    Christof Moser <contact@actra.ch>
+ * @copyright Actra AG, Embrach, Switzerland, www.actra.ch
+ * @license   MIT
+ */
+
+namespace actra\yuf\form\component\field;
+
+use actra\yuf\form\rule\ValidAmountRule;
+use actra\yuf\form\settings\AutoCompleteValue;
+use actra\yuf\html\HtmlText;
+
+class AmountField extends TextField
+{
+    public function __construct(
+        string $name,
+        HtmlText $label,
+        bool $valueIsFloat,
+        null|int|float $initialValue = null,
+        ?HtmlText $individualInvalidError = null,
+        ?HtmlText $requiredError = null,
+        ?string $placeholder = null,
+        ?AutoCompleteValue $autoComplete = null,
+        ?int $maxLength = null
+    ) {
+        parent::__construct(
+            name: $name,
+            label: $label,
+            value: $initialValue,
+            requiredError: $requiredError,
+            placeholder: $placeholder,
+            autoComplete: $autoComplete,
+            maxLength: $maxLength
+        );
+        $this->addRule(
+            formRule: new ValidAmountRule(
+                valueIsFloat: $valueIsFloat,
+                errorMessage: is_null(value: $individualInvalidError) ? HtmlText::encoded(
+                    textContent: 'Der angegebene Wert ist ungültig.'
+                ) : $individualInvalidError
+            )
+        );
+    }
+}

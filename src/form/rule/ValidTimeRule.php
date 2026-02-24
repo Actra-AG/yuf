@@ -1,0 +1,38 @@
+<?php
+/**
+ * @author    Christof Moser <contact@actra.ch>
+ * @copyright Actra AG, Embrach, Switzerland, www.actra.ch
+ * @license   MIT
+ */
+
+namespace actra\yuf\form\rule;
+
+use DateTimeImmutable;
+use actra\yuf\form\component\FormField;
+use actra\yuf\form\FormRule;
+use Throwable;
+
+class ValidTimeRule extends FormRule
+{
+    public function validate(FormField $formField): bool
+    {
+        if ($formField->isValueEmpty()) {
+            return true;
+        }
+        $value = $formField->getRawValue();
+        if (preg_match(pattern: '/^(([0-1]\d)|(2[0-3])):[0-5]\d(:[0-5]\d)?$/', subject: $value) !== 1) {
+            return false;
+        }
+        try {
+            $dateTimeImmutable = new DateTimeImmutable(datetime: $value);
+            if (DateTimeImmutable::getLastErrors() !== false) {
+                return false;
+            }
+            $formField->setValue(value: $dateTimeImmutable->format(format: 'H:i:s'));
+        } catch (Throwable) {
+            return false;
+        }
+
+        return true;
+    }
+}
