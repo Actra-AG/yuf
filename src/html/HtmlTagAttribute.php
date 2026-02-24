@@ -10,10 +10,14 @@ namespace actra\yuf\html;
 
 class HtmlTagAttribute extends HtmlElement
 {
-    public ?string $value;
+    public null|string|int $value;
     private bool $valueIsEncodedForRendering;
 
-    public function __construct(string $name, ?string $value, bool $valueIsEncodedForRendering)
+    public function __construct(
+        string          $name,
+        null|string|int $value,
+        bool            $valueIsEncodedForRendering
+    )
     {
         $this->value = $value;
         $this->valueIsEncodedForRendering = $valueIsEncodedForRendering;
@@ -31,9 +35,8 @@ class HtmlTagAttribute extends HtmlElement
             return $this->name;
         }
 
-        $renderValue = $this->valueIsEncodedForRendering ? $this->value : HtmlEncoder::encode(value: $this->value);
+        $renderValue = $this->valueIsEncodedForRendering ? (string)$this->value : HtmlEncoder::encode(value: $this->value);
 
         return $this->name . '="' . $renderValue . '"';
     }
-
 }

@@ -18,11 +18,14 @@ class ValidateAgainstOptions extends FormRule
 {
     private FormOptions $validFormOptions;
 
-    public function __construct(HtmlText $errorMessage, FormOptions $validFormOptions)
+    public function __construct(
+        HtmlText    $errorMessage,
+        FormOptions $validFormOptions
+    )
     {
         $this->validFormOptions = $validFormOptions;
 
-        parent::__construct($errorMessage);
+        parent::__construct(defaultErrorMessage: $errorMessage);
     }
 
     public function validate(FormField $formField): bool
@@ -30,20 +33,17 @@ class ValidateAgainstOptions extends FormRule
         if ($formField->isValueEmpty()) {
             return true;
         }
-
         $fieldValue = $formField->getRawValue();
-
-        if (is_scalar($fieldValue)) {
-            return $this->validFormOptions->exists($fieldValue);
+        if (is_scalar(value: $fieldValue)) {
+            return $this->validFormOptions->exists(key: $fieldValue);
         }
-
-        if (is_array($fieldValue)) {
+        if (is_array(value: $fieldValue)) {
             foreach ($fieldValue as $elementValue) {
-                if (!is_scalar($elementValue)) {
+                if (!is_scalar(value: $elementValue)) {
                     return false;
                 }
 
-                if (!$this->validFormOptions->exists($elementValue)) {
+                if (!$this->validFormOptions->exists(key: $elementValue)) {
                     return false;
                 }
             }
@@ -51,6 +51,6 @@ class ValidateAgainstOptions extends FormRule
             return true;
         }
 
-        throw new UnexpectedValueException('The field value is neither a scalar data type nor an array');
+        throw new UnexpectedValueException(message: 'The field value is neither a scalar data type nor an array');
     }
 }

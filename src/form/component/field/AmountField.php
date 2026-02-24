@@ -28,7 +28,7 @@ class AmountField extends TextField
         parent::__construct(
             name: $name,
             label: $label,
-            value: $initialValue,
+            value: (string)$initialValue,
             requiredError: $requiredError,
             placeholder: $placeholder,
             autoComplete: $autoComplete,

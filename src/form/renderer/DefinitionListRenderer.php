@@ -28,7 +28,6 @@ class DefinitionListRenderer extends FormRenderer
     public function prepare(): void
     {
         $formField = $this->formField;
-
         $labelAttributes = [new HtmlTagAttribute('for', $formField->name, true)];
         if (!$this->formField->renderLabel) {
             $labelAttributes[] = new HtmlTagAttribute('class', 'visuallyhidden', true);

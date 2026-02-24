@@ -24,17 +24,18 @@ class PhoneNumberField extends InputField
     private(set) string $countryCode;
 
     public function __construct(
-        string $name,
-        HtmlText $label,
-        ?string $value,
-        HtmlText $invalidErrorMessage,
-        ?HtmlText $requiredErrorMessage = null,
-        string $countryCode = 'CH',
+        string                 $name,
+        HtmlText               $label,
+        ?string                $value,
+        HtmlText               $invalidErrorMessage,
+        ?HtmlText              $requiredErrorMessage = null,
+        string                 $countryCode = 'CH',
         public readonly string $countryCodeFieldName = 'countryCode',
-        public readonly bool $renderInternalFormat = false,
-        ?string $placeholder = null,
-        ?AutoCompleteValue $autoComplete = null
-    ) {
+        public readonly bool   $renderInternalFormat = false,
+        ?string                $placeholder = null,
+        ?AutoCompleteValue     $autoComplete = null
+    )
+    {
         parent::__construct(
             inputType: InputTypeValue::TEL,
             name: $name,
@@ -55,6 +56,7 @@ class PhoneNumberField extends InputField
         if (array_key_exists(key: $this->countryCodeFieldName, array: $inputData)) {
             $this->countryCode = $inputData[$this->countryCodeFieldName];
         }
+        $inputData[$this->name] = trim(string: $inputData[$this->name]);
 
         return parent::validate(inputData: $inputData, overwriteValue: $overwriteValue);
     }

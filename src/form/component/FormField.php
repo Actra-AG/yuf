@@ -108,16 +108,16 @@ abstract class FormField extends FormComponent
             return true;
         }
 
-        if (is_scalar($this->value)) {
+        if (is_scalar(value: $this->value)) {
             return (strlen(string: trim(string: $this->value)) <= 0);
-        } elseif (is_array($this->value)) {
-            return (count(array_filter($this->value)) <= 0);
+        } elseif (is_array(value: $this->value)) {
+            return (count(value: array_filter(array: $this->value)) <= 0);
         } elseif ($this->value instanceof ArrayObject) {
-            return (count(array_filter((array)$this->value)) <= 0);
+            return (count(value: array_filter(array: (array)$this->value)) <= 0);
         } elseif ($this->value instanceof DateTime) {
             return false;
         } else {
-            throw new UnexpectedValueException('Could not check value against emptiness');
+            throw new UnexpectedValueException(message: 'Could not check value against emptiness');
         }
     }
 

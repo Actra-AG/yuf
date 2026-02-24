@@ -107,14 +107,15 @@ class CheckboxItemRenderer extends FormRenderer
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'value',
-                value: $optionValue,
+                value: (string)$optionValue,
                 valueIsEncodedForRendering: true
             )
         );
         $checkboxValue = $this->checkboxOptionsField->getRawValue();
         if (
-            is_scalar(value: $checkboxValue)
-            && (string)$checkboxValue == $optionValue
+            !is_null(value: $checkboxValue)
+            && $checkboxValue !== []
+            && (string)$checkboxValue[0] == $optionValue
         ) {
             $inputTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(

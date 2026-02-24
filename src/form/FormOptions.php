@@ -26,6 +26,9 @@ class FormOptions
 
     public function exists(string $key): bool
     {
-        return array_key_exists(key: $key, array: $this->data);
+        return array_key_exists(
+            key: $key,
+            array: $this->data
+        );
     }
 }

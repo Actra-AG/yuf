@@ -18,9 +18,10 @@ abstract class DefaultOptionsRenderer extends FormRenderer
 {
     protected function __construct(
         private readonly OptionsField $optionsField,
-        private readonly string $inputFieldType,
-        private readonly bool $acceptMultipleValues
-    ) {
+        private readonly string       $inputFieldType,
+        private readonly bool         $acceptMultipleValues
+    )
+    {
     }
 
     public function prepare(): void
@@ -72,7 +73,7 @@ abstract class DefaultOptionsRenderer extends FormRenderer
             $inputTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'value',
-                    value: $key,
+                    value: (string)$key,
                     valueIsEncodedForRendering: true
                 )
             );

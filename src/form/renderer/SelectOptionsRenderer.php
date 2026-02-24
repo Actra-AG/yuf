@@ -89,21 +89,31 @@ class SelectOptionsRenderer extends FormRenderer
             $options = ['' => $selectOptionsField->emptyValueLabel] + $options;
         }
         foreach ($options as $key => $htmlText) {
-            $attributes = [new HtmlTagAttribute(name: 'value', value: $key, valueIsEncodedForRendering: true)];
+            $optionTag = new HtmlTag(
+                name: 'option',
+                selfClosing: false
+            );
+            $optionTag->addHtmlTagAttribute(
+                htmlTagAttribute: new HtmlTagAttribute(
+                    name: 'value',
+                    value: (string)$key,
+                    valueIsEncodedForRendering: true
+                )
+            );
             if (
                 ($selectOptionsField->acceptMultipleSelections && in_array(needle: $key, haystack: $selectedValue))
                 || (!$selectOptionsField->acceptMultipleSelections && 'selected_' . $key === 'selected_' . $selectedValue)
             ) {
-                $attributes[] = new HtmlTagAttribute(name: 'selected', value: null, valueIsEncodedForRendering: true);
+                $optionTag->addHtmlTagAttribute(
+                    htmlTagAttribute: new HtmlTagAttribute(
+                        name: 'selected',
+                        value: null,
+                        valueIsEncodedForRendering: true
+                    )
+                );
             }
-            $selectTag->addTag(
-                htmlTag: $optionTag = new HtmlTag(
-                    name: 'option',
-                    selfClosing: false,
-                    htmlTagAttributes: $attributes
-                )
-            );
             $optionTag->addText(htmlText: $htmlText);
+            $selectTag->addTag(htmlTag: $optionTag);
         }
         $this->setHtmlTag(htmlTag: $selectTag);
     }
