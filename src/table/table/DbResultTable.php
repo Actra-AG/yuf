@@ -251,7 +251,7 @@ class DbResultTable extends SmartTable
             dataType: DbResultTable::sessionDataType,
             identifier: $this->identifier,
             index: 'pagination_page',
-            value: $page
+            value: (string)$page
         );
     }
 

@@ -43,7 +43,7 @@ class NumericFieldRenderer extends InputFieldRenderer
         $minLength = $this->numericField->minLength;
         $maxLength = $this->numericField->maxLength;
         if ($minLength === $maxLength) {
-            return $this->numericField->minLength;
+            return (string)$this->numericField->minLength;
         }
         if (is_null(value: $maxLength)) {
             return $minLength . ',';

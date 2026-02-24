@@ -111,10 +111,10 @@ class FrameworkDB extends PDO
     public function prepare(string $query, $options = null): PDOStatement
     {
         if (is_null($options)) {
-            $options = []; // Necessary circumventing of above mentioned library bug
+            $options = []; // Necessary circumventing of the above-mentioned library bug
         }
         try {
-            // This (on error) either throws a PDOException OR returns "false", depending on configuration
+            // This (on error) either throws a PDOException OR returns "false", depending on the configuration
             $stmt = parent::prepare($query, $options);
             if ($stmt === false) {
                 throw new RuntimeException('Could not prepare query.');

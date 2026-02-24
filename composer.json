@@ -4,11 +4,17 @@
   "type": "library",
   "license": "MIT",
   "require": {
-    "php": ">=8.5"
+    "php": ">=8.5",
+    "ext-mbstring": "*",
+    "ext-openssl": "*",
+    "ext-pdo": "*",
+    "ext-intl": "*",
+    "ext-bcmath": "*",
+    "ext-simplexml": "*",
+    "ext-libxml": "*",
+    "ext-dom": "*",
+    "ext-iconv": "*"
   },
   "suggest": {
-    "ext-bcmath": "*",
-    "ext-mbstring": "*",
-    "ext-intl": "*"
   }
 }

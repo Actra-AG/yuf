@@ -45,14 +45,14 @@ class TextAreaRenderer extends FormRenderer
         $textareaTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'rows',
-                value: $textAreaField->rows,
+                value: (string)$textAreaField->rows,
                 valueIsEncodedForRendering: true
             )
         );
         $textareaTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'cols',
-                value: $textAreaField->cols,
+                value: (string)$textAreaField->cols,
                 valueIsEncodedForRendering: true
             )
         );

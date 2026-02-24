@@ -310,14 +310,26 @@ class PhoneParser
         }
 
         // If we find a potential extension, and the number preceding this is a viable number, we assume it is an extension.
-        if (PhoneValidator::isViablePhoneNumber(number: substr(string: $number, offset: 0, length: $matches[0][1]))) {
+        if (
+            PhoneValidator::isViablePhoneNumber(
+                number: substr(
+                    string: $number,
+                    offset: 0,
+                    length: (int)$matches[0][1]
+                )
+            )
+        ) {
             // The numbers are captured into groups in the regular expression.
             for ($i = 1, $length = count(value: $matches); $i <= $length; $i++) {
                 $extension = $matches[$i][0];
                 if ($extension !== '') {
                     // We go through the capturing groups until we find one that captured some digits.
                     // If none did, then we will return the empty string.
-                    $number = substr(string: $number, offset: 0, length: $matches[0][1]);
+                    $number = substr(
+                        string: $number,
+                        offset: 0,
+                        length: (int)$matches[0][1]
+                    );
 
                     return $extension;
                 }
@@ -328,10 +340,11 @@ class PhoneParser
     }
 
     private function maybeExtractCountryCode(
-        string $fullNumber,
+        string         $fullNumber,
         ?PhoneMetaData $defaultRegionMetaData,
-        string &$normalizedNationalNumber
-    ): int {
+        string         &$normalizedNationalNumber
+    ): int
+    {
         if (mb_strlen(string: $fullNumber) === 0) {
             return 0;
         }
@@ -527,10 +540,11 @@ class PhoneParser
     }
 
     private function maybeStripNationalPrefixAndCarrierCode(
-        string &$number,
+        string        &$number,
         PhoneMetaData $phoneMetaData,
-        ?string &$carrierCode
-    ): void {
+        ?string       &$carrierCode
+    ): void
+    {
         $numberLength = mb_strlen(string: $number);
         $possibleNationalPrefix = $phoneMetaData->nationalPrefixForParsing;
         if ($numberLength === 0 || is_null(value: $possibleNationalPrefix) || mb_strlen(

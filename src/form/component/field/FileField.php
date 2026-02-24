@@ -253,7 +253,7 @@ class FileField extends FormField
             $this->addError(
                 errorMessage: str_replace(
                     search: '[max]',
-                    replace: $this->maxFileUploadCount,
+                    replace: (string)$this->maxFileUploadCount,
                     subject: $this->tooManyFilesErrMsg->render()
                 ),
                 isEncodedForRendering: true

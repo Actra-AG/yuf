@@ -46,7 +46,7 @@ class FileFieldRenderer extends FormRenderer
         $divFileUpload->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'data-max-files',
-                value: $stillAllowedToUploadCount,
+                value: (string)$stillAllowedToUploadCount,
                 valueIsEncodedForRendering: true
             )
         );
