@@ -38,7 +38,7 @@ readonly class TableItemModel
                     value: str_replace(
                         search: '<br>',
                         replace: PHP_EOL,
-                        subject: $value
+                        subject: (string)$value
                     )
                 )
             );
