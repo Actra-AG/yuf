@@ -56,11 +56,17 @@ class HtmlEncoder
 
     public static function encodeKeepQuotes(null|string|float|int|bool $value): string
     {
-        return is_null(value: $value) ? '' : htmlspecialchars(string: $value, flags: ENT_NOQUOTES);
+        return is_null(value: $value) ? '' : htmlspecialchars(
+            string: (string)$value,
+            flags: ENT_NOQUOTES
+        );
     }
 
     public static function encode(null|string|float|int|bool $value): string
     {
-        return is_null(value: $value) ? '' : htmlspecialchars(string: $value, flags: ENT_QUOTES);
+        return is_null(value: $value) ? '' : htmlspecialchars(
+            string: (string)$value,
+            flags: ENT_QUOTES
+        );
     }
 }
