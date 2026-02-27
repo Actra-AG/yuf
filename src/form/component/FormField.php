@@ -43,23 +43,27 @@ abstract class FormField extends FormComponent
     /**
      * @param string $name The internal name for this formField which is also used by the renderer (name="")
      * @param HtmlText $label The field label to be used by the renderer
-     * @param mixed $value The original value for this formField. Depending on the specific field it can be a string, float, integer and even an
-     *                                 array. By default it is null.
-     * @param ?HtmlText $labelInfoText Additional text padded to the displayed label-name (see FileField max-Info for example)
+     * @param mixed $value The original value for this formField. Depending on the specific field, it can be a string, float, integer, and even an array. By default, it is null.
+     * @param ?HtmlText $labelInfoText Additional text padded to the displayed label-name (see FileField max-Info, for example)
      */
-    public function __construct(string $name, HtmlText $label, mixed $value = null, ?HtmlText $labelInfoText = null)
+    public function __construct(
+        string    $name,
+        HtmlText  $label,
+        mixed     $value = null,
+        ?HtmlText $labelInfoText = null
+    )
     {
         $this->id = $name;
         $this->label = $label;
-        parent::__construct($name);
+        parent::__construct(name: $name);
 
-        if (is_array($value)) {
-            // If the value to be pre-filled is already an array we can also accept an array as user input
+        if (is_array(value: $value)) {
+            // If the value to be pre-filled is already an array, we can also accept an array as user input
             $this->acceptArrayAsValue();
         }
 
-        $this->setValue($value);
-        $this->setOriginalValue($value);
+        $this->setValue(value: $value);
+        $this->setOriginalValue(value: $value);
         $this->labelInfoText = $labelInfoText;
     }
 
@@ -70,14 +74,23 @@ abstract class FormField extends FormComponent
 
     public function setValue($value): void
     {
-        if (is_array($value) && !$this->isArrayAsValueAllowed()) {
-            $this->addError('Die ungültige Eingabe wurde ignoriert.', true);
+        if (
+            is_array(value: $value)
+            && !$this->isArrayAsValueAllowed()
+        ) {
+            $this->addError(
+                errorMessage: 'Die ungültige Eingabe wurde ignoriert.',
+                isEncodedForRendering: true
+            );
 
             return;
         }
-
-        if (is_string($value)) {
-            $value = str_replace("\xE2\x80\x8B", '', $value);
+        if (is_string(value: $value)) {
+            $value = str_replace(
+                search: "\xE2\x80\x8B",
+                replace: '',
+                subject: $value
+            );
         }
 
         $this->value = $value;
@@ -109,7 +122,7 @@ abstract class FormField extends FormComponent
         }
 
         if (is_scalar(value: $this->value)) {
-            return (strlen(string: trim(string: $this->value)) <= 0);
+            return (strlen(string: trim(string: (string)$this->value)) <= 0);
         } elseif (is_array(value: $this->value)) {
             return (count(value: array_filter(array: $this->value)) <= 0);
         } elseif ($this->value instanceof ArrayObject) {
@@ -133,14 +146,17 @@ abstract class FormField extends FormComponent
 
     public function getAddedValues(): array
     {
-        if (!is_array($this->value) || !is_array($this->originalValue)) {
+        if (!is_array(value: $this->value) || !is_array(value: $this->originalValue)) {
             return [];
         }
 
         $addedValues = [];
 
         foreach ($this->value as $selectedValue) {
-            if (!in_array($selectedValue, $this->originalValue)) {
+            if (!in_array(
+                needle: $selectedValue,
+                haystack: $this->originalValue
+            )) {
                 $addedValues[] = $selectedValue;
             }
         }
@@ -150,14 +166,20 @@ abstract class FormField extends FormComponent
 
     public function getRemovedValues(): array
     {
-        if (!is_array($this->value) || !is_array($this->originalValue)) {
+        if (
+            !is_array(value: $this->value)
+            || !is_array(value: $this->originalValue)
+        ) {
             return [];
         }
 
         $removedValues = [];
 
         foreach ($this->originalValue as $originalValue) {
-            if (!in_array($originalValue, $this->value)) {
+            if (!in_array(
+                needle: $originalValue,
+                haystack: $this->value
+            )) {
                 $removedValues[] = $originalValue;
             }
         }
@@ -203,36 +225,57 @@ abstract class FormField extends FormComponent
         if ($overwriteValue) {
             $defaultValue = $this->isArrayAsValueAllowed() ? [] : null;
             $this->setValue(
-                array_key_exists($this->name, $inputData) ? $inputData[$this->name] : $defaultValue
+                value: array_key_exists(
+                    key: $this->name,
+                    array: $inputData
+                ) ? $inputData[$this->name] : $defaultValue
             );
         }
 
         foreach ($this->listeners as $formFieldListener) {
             if ($this->isValueEmpty()) {
-                $formFieldListener->onEmptyValueBeforeValidation($this->topFormComponent, $this);
+                $formFieldListener->onEmptyValueBeforeValidation(
+                    form: $this->topFormComponent,
+                    formField: $this
+                );
             } else {
-                $formFieldListener->onNotEmptyValueBeforeValidation($this->topFormComponent, $this);
+                $formFieldListener->onNotEmptyValueBeforeValidation(
+                    form: $this->topFormComponent,
+                    formField: $this
+                );
             }
         }
 
         foreach ($this->rules as $formRule) {
-            if (!$formRule->validate($this)) {
-                $this->addErrorAsHtmlTextObject($formRule->getErrorMessage());
+            if (!$formRule->validate(formField: $this)) {
+                $this->addErrorAsHtmlTextObject(errorMessageObject: $formRule->getErrorMessage());
             }
         }
 
         $hasErrors = $this->hasErrors(withChildElements: false);
         foreach ($this->listeners as $formFieldListener) {
             if ($this->isValueEmpty()) {
-                $formFieldListener->onEmptyValueAfterValidation($this->topFormComponent, $this);
+                $formFieldListener->onEmptyValueAfterValidation(
+                    form: $this->topFormComponent,
+                    formField: $this
+                );
             } else {
-                $formFieldListener->onNotEmptyValueAfterValidation($this->topFormComponent, $this);
+                $formFieldListener->onNotEmptyValueAfterValidation(
+                    form: $this->topFormComponent,
+                    formField: $this
+                );
             }
 
             if ($hasErrors) {
-                $formFieldListener->onValidationError($this->topFormComponent, $this);
+                $formFieldListener->onValidationError(
+                    form: $this->topFormComponent,
+                    formField: $this
+                );
             } else {
-                $formFieldListener->onValidationSuccess($this->topFormComponent, $this);
+                $formFieldListener->onValidationSuccess(
+                    form: $this->topFormComponent,
+                    formField: $this
+                );
             }
         }
 
@@ -240,7 +283,7 @@ abstract class FormField extends FormComponent
     }
 
     /**
-     * Suppresses the VISIBLE label rendering of associated input field
+     * Suppresses the VISIBLE label rendering of the associated input field
      * (It will be still readable by screen readers)
      */
     public function setRenderLabelFalse(): void
