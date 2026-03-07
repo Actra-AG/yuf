@@ -6,6 +6,8 @@
 
 declare(strict_types=1);
 
+namespace actra\yuf\common;
+
 use actra\yuf\core\HttpResponse;
 
 class CSVFile
