@@ -58,7 +58,11 @@ class Pagination
                     propertyName: 'isCurrentPage',
                     booleanValue: ($page === $currentPage)
                 );
-                $pageObject->addTextElement(propertyName: 'number', content: $page, isEncodedForRendering: true);
+                $pageObject->addTextElement(
+                    propertyName: 'number',
+                    content: (string)$page,
+                    isEncodedForRendering: true
+                );
                 $pageObject->addTextElement(
                     propertyName: 'href',
                     content: Pagination::getLinkTarget(
