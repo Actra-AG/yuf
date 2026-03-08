@@ -53,12 +53,23 @@ class PhoneNumberField extends InputField
 
     public function validate(array $inputData, bool $overwriteValue = true): bool
     {
-        if (array_key_exists(key: $this->countryCodeFieldName, array: $inputData)) {
+        if (array_key_exists(
+            key: $this->countryCodeFieldName,
+            array: $inputData
+        )) {
             $this->countryCode = $inputData[$this->countryCodeFieldName];
         }
-        $inputData[$this->name] = trim(string: $inputData[$this->name]);
+        if (array_key_exists(
+            key: $this->name,
+            array: $inputData
+        )) {
+            $inputData[$this->name] = trim(string: $inputData[$this->name]);
+        }
 
-        return parent::validate(inputData: $inputData, overwriteValue: $overwriteValue);
+        return parent::validate(
+            inputData: $inputData,
+            overwriteValue: $overwriteValue
+        );
     }
 
     public function renderValue(): string
