@@ -57,6 +57,7 @@ class FrameworkDB extends PDO
         $attributeOptions = [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, // All errors should throw an Exception
             PDO::ATTR_EMULATE_PREPARES => false, // Simulated "prepared statements" are NOT wanted
+            PDO::ATTR_STRINGIFY_FETCHES => false, // Do not convert numeric values to strings
         ];
         if (count($initSetCommands) > 0) {
             $attributeOptions[Mysql::ATTR_INIT_COMMAND] = 'SET ' . implode(
@@ -66,11 +67,11 @@ class FrameworkDB extends PDO
         }
         try {
             parent::__construct($dsn, $dbSettingsModel->userName, $dbSettingsModel->password, $attributeOptions);
-        } catch (Throwable $t) {
-            // We do NOT want to leak the database password in the StackTrace of the caught (PDO)Exception.
+        } catch (Throwable $throwable) {
+            // We do not want to leak the database password in the StackTrace of the caught (PDO)Exception.
             throw new PDOException(
-                $t->getMessage(),
-                $t->getCode()
+                $throwable->getMessage(),
+                (int)$throwable->getCode()
             );
         }
     }
@@ -280,7 +281,8 @@ class FrameworkDB extends PDO
         return DbQueryLogList::getLog();
     }
 
-    #[ReturnTypeWillChange] public function lastInsertId($name = null): int
+    #[ReturnTypeWillChange]
+    public function lastInsertId($name = null): int
     {
         return (int)parent::lastInsertId($name);
     }

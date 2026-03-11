@@ -12,6 +12,7 @@ use actra\yuf\form\rule\ValidDateRule;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\form\settings\InputTypeValue;
 use actra\yuf\html\HtmlText;
+use DateTimeImmutable;
 
 class DateField extends DateTimeFieldCore
 {
@@ -35,5 +36,12 @@ class DateField extends DateTimeFieldCore
             autoComplete: $autoComplete
         );
         $this->addRule(formRule: new ValidDateRule(defaultErrorMessage: $invalidError));
+    }
+
+    public function getValueAsDateTimeImmutable(): ?DateTimeImmutable
+    {
+        $rawValue = $this->getRawValue();
+
+        return $rawValue === '' ? null : new DateTimeImmutable(datetime: $rawValue);
     }
 }

@@ -62,7 +62,7 @@ readonly class HtmlReplacement
         return new HtmlReplacement(content: $collection);
     }
 
-    public function getDataForRenderer(): null|string|bool|stdClass|array
+    public function getDataForRenderer(): null|string|bool|stdClass|array|float
     {
         if ($this->content instanceof HtmlText) {
             return $this->content->render();
