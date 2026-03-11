@@ -13,7 +13,7 @@ use stdClass;
 readonly class HtmlReplacement
 {
     private function __construct(
-        public null|HtmlText|bool|stdClass|HtmlTextCollection|HtmlDataObjectCollection|int $content
+        public null|HtmlText|bool|stdClass|HtmlTextCollection|HtmlDataObjectCollection|int|float $content
     ) {
     }
 
@@ -40,6 +40,11 @@ readonly class HtmlReplacement
     public static function int(?int $int): HtmlReplacement
     {
         return new HtmlReplacement(content: $int);
+    }
+
+    public static function float(?float $float): HtmlReplacement
+    {
+        return new HtmlReplacement(content: $float);
     }
 
     public static function object(?stdClass $object): HtmlReplacement

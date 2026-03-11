@@ -13,7 +13,8 @@
     "ext-simplexml": "*",
     "ext-libxml": "*",
     "ext-dom": "*",
-    "ext-iconv": "*"
+    "ext-iconv": "*",
+    "ext-curl": "*"
   },
   "suggest": {
   }
