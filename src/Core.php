@@ -53,7 +53,7 @@ class Core
     public function __construct(
         string $envFilePath,
         public readonly int $copyrightYear,
-        string $autoloaderPath = __DIR__ . '/../../autoloader/Autoloader.php',
+        string $autoloaderPath = __DIR__ . '/../../autoloader/src/Autoloader.php',
         public readonly string $siteDirectoryName = 'site',
         string $cacheDirectoryName = 'cache',
         string $errorDocsDirectoryName = 'error_docs',
