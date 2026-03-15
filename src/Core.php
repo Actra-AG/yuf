@@ -8,8 +8,8 @@ declare(strict_types=1);
 
 namespace actra\yuf;
 
-use actra\yuf\autoloader\Autoloader;
-use actra\yuf\autoloader\AutoloaderPathModel;
+use actra\autoloader\Autoloader;
+use actra\autoloader\AutoloaderPath;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ErrorHandler;
 use actra\yuf\core\HttpRequest;
@@ -51,18 +51,17 @@ class Core
 
 
     public function __construct(
-        string                 $envFilePath,
-        public readonly int    $copyrightYear,
+        string $envFilePath,
+        public readonly int $copyrightYear,
+        string $autoloaderPath = __DIR__ . '/../../autoloader/Autoloader.php',
         public readonly string $siteDirectoryName = 'site',
-        string                 $cacheDirectoryName = 'cache',
-        string                 $errorDocsDirectoryName = 'error_docs',
-        string                 $logsDirectoryName = 'logs',
-        string                 $settingsDirectoryName = 'settings',
-        string                 $snippetsDirectoryName = 'snippets',
-        public readonly string $viewDirectoryName = 'view',
-        string                 $frameworkFilePathRemove = ''
-    )
-    {
+        string $cacheDirectoryName = 'cache',
+        string $errorDocsDirectoryName = 'error_docs',
+        string $logsDirectoryName = 'logs',
+        string $settingsDirectoryName = 'settings',
+        string $snippetsDirectoryName = 'snippets',
+        public readonly string $viewDirectoryName = 'view'
+    ) {
         if (!is_null(value: Core::$instance)) {
             throw new LogicException(message: 'Core is already initialized');
         }
@@ -75,7 +74,7 @@ class Core
             replace: DIRECTORY_SEPARATOR,
             subject: $_SERVER['DOCUMENT_ROOT'] . DIRECTORY_SEPARATOR
         );
-        $this->frameworkDirectory = $frameworkDirectory = dirname(path: __FILE__) . DIRECTORY_SEPARATOR;
+        $this->frameworkDirectory = dirname(path: __FILE__) . DIRECTORY_SEPARATOR;
         $this->siteDirectory = $this->createIfNotExists(
             path: $this->documentRoot . $siteDirectoryName . DIRECTORY_SEPARATOR
         );
@@ -97,26 +96,18 @@ class Core
         $this->viewDirectory = $this->createIfNotExists(
             path: $this->siteDirectory . $viewDirectoryName . DIRECTORY_SEPARATOR
         );
-
-        require_once $frameworkDirectory . 'autoloader' . DIRECTORY_SEPARATOR . 'Autoloader.php';
-        $autoloader = Autoloader::register(cacheFilePath: $this->cacheDirectory . 'cache.autoload');
-        require_once $frameworkDirectory . 'autoloader' . DIRECTORY_SEPARATOR . 'AutoloaderPathModel.php';
+        require_once $autoloaderPath;
+        $autoloader = Autoloader::register();
         $autoloader->addPath(
-            autoloaderPathModel: new AutoloaderPathModel(
-                name: 'yuf',
+            autoloaderPath: new AutoloaderPath(
                 path: __DIR__ . DIRECTORY_SEPARATOR,
-                mode: AutoloaderPathModel::MODE_NAMESPACE,
-                fileSuffixList: ['.class.php', '.php', '.interface.php'],
-                phpFilePathRemove: 'actra/yuf/'
+                prefix: 'actra\\yuf\\'
             )
         );
         $autoloader->addPath(
-            autoloaderPathModel: new AutoloaderPathModel(
-                name: 'public',
-                path: $this->documentRoot,
-                mode: AutoloaderPathModel::MODE_NAMESPACE,
-                fileSuffixList: ['.class.php', '.php', '.interface.php'],
-                phpFilePathRemove: $frameworkFilePathRemove
+            autoloaderPath: new AutoloaderPath(
+                path: $_SERVER['DOCUMENT_ROOT'] . DIRECTORY_SEPARATOR,
+                prefix: ''
             )
         );
         ErrorHandler::register();
@@ -146,15 +137,14 @@ class Core
     }
 
     public function prepareHttpResponse(
-        ?Logger                      $logger = null,
-        RouteCollection              $routeCollection = new RouteCollection(),
-        ?ExceptionHandler            $individualExceptionHandler = null,
-        CspPolicySettingsModel       $cspPolicySettingsModel = new CspPolicySettingsModel(),
+        ?Logger $logger = null,
+        RouteCollection $routeCollection = new RouteCollection(),
+        ?ExceptionHandler $individualExceptionHandler = null,
+        CspPolicySettingsModel $cspPolicySettingsModel = new CspPolicySettingsModel(),
         false|AbstractSessionHandler $individualSessionHandler = new FileSessionHandler(
             sessionSettingsModel: new SessionSettingsModel()
         )
-    ): HttpResponse
-    {
+    ): HttpResponse {
         if (!is_null(value: Core::$httpResponse)) {
             throw new LogicException(message: 'The HttpResponse is already prepared');
         }

@@ -1,8 +1,17 @@
 {
   "name": "actra/yuf",
-  "description": "yuf - (pronounced \"[jʌf]\" or \"[jʊf]\") - A smart, fast and lightweight php framework with zero dependencies.",
+  "description": "yuf (pronounced \"[jʌf]\" or \"[jʊf]\") - A smart, fast and lightweight php framework with zero dependencies.",
   "type": "library",
+  "keywords": ["php", "framework", "lightweight", "fast", "smart", "actra"],
+  "homepage": "https://github.com/Actra-AG/yuf",
   "license": "MIT",
+  "authors": [
+    {
+      "name": "Actra AG",
+      "email": "info@actra.ch",
+      "homepage": "https://www.actra.ch"
+    }
+  ],
   "require": {
     "php": ">=8.5",
     "ext-mbstring": "*",
@@ -11,11 +20,9 @@
     "ext-intl": "*",
     "ext-bcmath": "*",
     "ext-simplexml": "*",
-    "ext-libxml": "*",
     "ext-dom": "*",
     "ext-iconv": "*",
-    "ext-curl": "*"
-  },
-  "suggest": {
+    "ext-curl": "*",
+    "actra/autoloader": "*"
   }
 }
