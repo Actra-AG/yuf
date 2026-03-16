@@ -15,13 +15,12 @@ use actra\yuf\html\HtmlText;
 class BooleanField extends CheckboxOptionsField
 {
     public function __construct(
-        string                $name,
-        HtmlText              $label,
-        bool                  $isCheckedByDefault,
-        ?HtmlText             $requiredError = null,
+        string $name,
+        HtmlText $label,
+        bool $isCheckedByDefault,
+        ?HtmlText $requiredError = null,
         CheckboxOptionsLayout $layout = CheckboxOptionsLayout::CHECKBOX_ITEM
-    )
-    {
+    ) {
         $formOptions = new FormOptions();
         $formOptions->addItem(
             key: 'checked',
@@ -37,25 +36,8 @@ class BooleanField extends CheckboxOptionsField
         );
     }
 
-    public function validate(array $inputData, bool $overwriteValue = true): bool
-    {
-        if ($overwriteValue) {
-            $this->setValue(
-                value: array_key_exists(
-                    key: $this->name,
-                    array: $inputData
-                ) ? $inputData[$this->name] : null
-            );
-        }
-
-        return parent::validate(
-            inputData: $inputData,
-            overwriteValue: false
-        );
-    }
-
     public function isChecked(): bool
     {
-        return $this->getRawValue() === 'checked';
+        return $this->getRawValue() === ['checked'];
     }
 }

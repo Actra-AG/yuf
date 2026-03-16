@@ -91,7 +91,7 @@ class CheckboxItemRenderer extends FormRenderer
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'name',
-                value: $this->checkboxOptionsField->name,
+                value: $this->checkboxOptionsField->name . '[]',
                 valueIsEncodedForRendering: true
             )
         );
