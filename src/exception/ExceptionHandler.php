@@ -32,8 +32,7 @@ class ExceptionHandler
 
     public function __construct(
         protected readonly HtmlReplacementCollection $htmlReplacementCollection = new HtmlReplacementCollection()
-    )
-    {
+    ) {
     }
 
     public static function register(?ExceptionHandler $individualExceptionHandler): void
@@ -41,7 +40,8 @@ class ExceptionHandler
         if (!is_null(value: ExceptionHandler::$registeredInstance)) {
             throw new LogicException(message: 'ExceptionHandler is already registered.');
         }
-        ExceptionHandler::$registeredInstance = is_null(value: $individualExceptionHandler) ? new ExceptionHandler() : $individualExceptionHandler;
+        ExceptionHandler::$registeredInstance = is_null(value: $individualExceptionHandler) ? new ExceptionHandler(
+        ) : $individualExceptionHandler;
         set_exception_handler(callback: [
             ExceptionHandler::$registeredInstance,
             'handleException',
@@ -50,7 +50,8 @@ class ExceptionHandler
 
     final public function handleException(Throwable $throwable): void
     {
-        $this->contentType = ContentHandler::isRegistered() ? ContentHandler::get()->getContentType() : ContentType::createTxt();
+        $this->contentType = ContentHandler::isRegistered() ? ContentHandler::get()->getContentType(
+        ) : ContentType::createHtml();
         if (Core::get()->debug) {
             $this->sendDebugHttpResponseAndExit(throwable: $throwable);
         }
@@ -143,11 +144,10 @@ class ExceptionHandler
 
     final protected function sendHttpResponseAndExit(
         HttpStatusCode $httpStatusCode,
-        string         $errorMessage,
-        string|int     $errorCode,
-        string         $htmlFileName
-    ): void
-    {
+        string $errorMessage,
+        string|int $errorCode,
+        string $htmlFileName
+    ): void {
         $contentType = $this->contentType;
         if ($contentType->isJson()) {
             $httpResponse = HttpResponse::createResponseFromString(
@@ -222,7 +222,9 @@ class ExceptionHandler
         );
         $htmlReplacementCollection->set(
             identifier: 'pageTitle',
-            htmlReplacement: $htmlReplacementCollection->has(identifier: 'title') ? $htmlReplacementCollection->get(identifier: 'title') : HtmlReplacement::encodedText(content: 'Error')
+            htmlReplacement: $htmlReplacementCollection->has(identifier: 'title') ? $htmlReplacementCollection->get(
+                identifier: 'title'
+            ) : HtmlReplacement::encodedText(content: 'Error')
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'bodyClassName',
@@ -247,8 +249,7 @@ class ExceptionHandler
 
     private function loadLocalizedText(
         RequestHandler $requestHandler
-    ): void
-    {
+    ): void {
         $languageCode = $requestHandler->language->code;
         LocaleHandler::register();
         $defaultRouteForLanguage = $requestHandler->defaultRoutesByLanguage->getRouteForLanguage(
