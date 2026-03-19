@@ -46,7 +46,7 @@ class Core
     public readonly array $allowedDomains;
     public readonly LanguageCollection $availableLanguages;
     public readonly bool $debug;
-    public readonly CspPolicySettingsModel $cspPolicySettingsModel;
+    public readonly ?CspPolicySettingsModel $cspPolicySettingsModel;
     public readonly string $robots;
 
 
@@ -140,7 +140,7 @@ class Core
         ?Logger $logger = null,
         RouteCollection $routeCollection = new RouteCollection(),
         ?ExceptionHandler $individualExceptionHandler = null,
-        CspPolicySettingsModel $cspPolicySettingsModel = new CspPolicySettingsModel(),
+        ?CspPolicySettingsModel $cspPolicySettingsModel = new CspPolicySettingsModel(),
         false|AbstractSessionHandler $individualSessionHandler = new FileSessionHandler(
             sessionSettingsModel: new SessionSettingsModel()
         )
