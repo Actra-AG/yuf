@@ -197,6 +197,10 @@ class ExceptionHandler
         $htmlReplacementCollection = $this->htmlReplacementCollection;
         $requestHandler = RequestHandler::get();
         $htmlReplacementCollection->addEncodedText(
+            identifier: 'copyright',
+            content: $core->renderCopyrightYear()
+        );
+        $htmlReplacementCollection->addEncodedText(
             identifier: 'language',
             content: $requestHandler->language->code
         );
