@@ -46,6 +46,12 @@ class RequestHandler
         $this->defaultRoutesByLanguage = $this->initDefaultRoutes(
             allRoutes: $allRoutes
         );
+        if (str_contains(
+            haystack: HttpRequest::getPath(),
+            needle: '//'
+        )) {
+            throw new NotFoundException();
+        }
         $this->route = $this->initRoute(countPathParts: $this->countPathParts, allRoutes: $allRoutes);
         $forceFileGroup = $this->route->forceFileGroup;
         if (!is_null(value: $forceFileGroup) && $forceFileGroup !== '') {
@@ -80,11 +86,9 @@ class RequestHandler
             $length = $dotPos;
             $fileExtension = substr(string: $fileName, offset: $length + 1);
         }
-        $fnArr = str_replace(
-            search: '__DASH__',
-            replace: '-',
-            subject: explode(separator: '-', string: substr(string: $fileName, offset: 0, length: $length))
-        );
+        $fnArr = substr(string: $fileName, offset: 0, length: $length)
+                |> (fn($x) => explode(separator: '-', string: $x))
+                |> (fn($x) => str_replace(search: '__DASH__', replace: '-', subject: $x));
         $this->fileName = $fileName;
         $this->fileTitle = $fnArr[0];
         $this->pathVars = $fnArr;
@@ -106,9 +110,11 @@ class RequestHandler
     {
         $host = HttpRequest::getHost();
 
-        if (!in_array(
-            needle: $host,
-            haystack: $allowedDomains)
+        if (
+            !in_array(
+                needle: $host,
+                haystack: $allowedDomains
+            )
         ) {
             throw new NotFoundException(
                 message: $host . ' is not set as allowed domain in your environment settings.'
@@ -118,8 +124,7 @@ class RequestHandler
 
     private function initDefaultRoutes(
         RouteCollection $allRoutes
-    ): RouteCollection
-    {
+    ): RouteCollection {
         $defaultRoutes = new RouteCollection();
         $usedLanguages = new LanguageCollection();
         foreach ($allRoutes->routes as $route) {
