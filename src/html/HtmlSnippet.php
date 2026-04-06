@@ -44,7 +44,7 @@ readonly class HtmlSnippet
                 cachePath: $core->cacheDirectory,
                 templateBaseDirectory: str_replace(
                     search: $htmlSnippetFilePath,
-                    replace: $core->documentRoot,
+                    replace: $core->appDirectory,
                     subject: $htmlSnippetFilePath
                 )
             ),
