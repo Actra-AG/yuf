@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
+use actra\yuf\common\StringUtils;
 use actra\yuf\Core;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\html\HtmlDocument;
@@ -94,29 +95,41 @@ class ContentHandler
     {
         $core = Core::get();
         $request = RequestHandler::get();
+        $phpFilePathParts = [
+            $core->viewDirectory,
+            $request->route->viewGroup,
+            DIRECTORY_SEPARATOR . 'php',
+        ];
         $phpClassNameParts = [
-            $core->siteDirectoryName,
-            $core->viewDirectoryName,
+            Core::APP_CLASS_PREFIX,
+            'view',
             $request->route->viewGroup,
             'php',
         ];
         if (!is_null(value: $request->fileGroup)) {
+            $phpFilePathParts[] = DIRECTORY_SEPARATOR . $request->fileGroup;
             $phpClassNameParts[] = $request->fileGroup;
         }
+        $phpFilePathParts[] = DIRECTORY_SEPARATOR . $request->fileTitle . '.php';
         $phpClassNameParts[] = $request->fileTitle;
-        if (!file_exists(
-            filename: $core->documentRoot . implode(
-                separator: DIRECTORY_SEPARATOR,
-                array: $phpClassNameParts
-            ) . '.php'
-        )) {
+        $phpFilePath = implode(
+            separator: StringUtils::IMPLODE_DEFAULT_SEPARATOR,
+            array: $phpFilePathParts
+        );
+        if (!file_exists(filename: $phpFilePath)) {
             return null;
         }
-        $phpClassName = implode(separator: '\\', array: $phpClassNameParts);
+        $phpClassName = implode(
+            separator: '\\',
+            array: $phpClassNameParts
+        );
         if (!class_exists(class: $phpClassName)) {
             return null;
         }
-        if (!is_subclass_of(object_or_class: $phpClassName, class: BaseView::class)) {
+        if (!is_subclass_of(
+            object_or_class: $phpClassName,
+            class: BaseView::class
+        )) {
             throw new Exception(message: 'The class ' . $phpClassName . ' must extend ' . BaseView::class . '.');
         }
 

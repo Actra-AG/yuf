@@ -66,7 +66,7 @@ class SnippetTag extends TemplateTag implements TagNode, TagInline
 
     private function getReplaceValue(string $snippetName): string
     {
-        $snippetPath = Core::get()->siteDirectory . 'snippets' . DIRECTORY_SEPARATOR . $snippetName;
+        $snippetPath = Core::get()->snippetsDirectory . $snippetName;
 
         return '<?php ' . __CLASS__ . '::requireFile(file: \'' . $snippetPath . '\', tplEngine: $this); ?>';
     }

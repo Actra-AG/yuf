@@ -30,13 +30,14 @@ use LogicException;
 
 class Core
 {
+    public const string APP_CLASS_PREFIX = 'app';
     private static ?Core $instance = null;
     private static ?HttpResponse $httpResponse = null;
     private static array $config;
 
     public readonly string $documentRoot;
+    private(set) string $appDirectory = '';
     public readonly string $frameworkDirectory;
-    public readonly string $siteDirectory;
     public readonly string $cacheDirectory;
     public readonly string $errorDocsDirectory;
     public readonly string $logDirectory;
@@ -49,18 +50,17 @@ class Core
     public readonly ?CspPolicySettingsModel $cspPolicySettingsModel;
     public readonly string $robots;
 
-
     public function __construct(
         string $envFilePath,
         public readonly int $copyrightYear,
         string $autoloaderPath = __DIR__ . '/../../autoloader/src/Autoloader.php',
-        public readonly string $siteDirectoryName = 'site',
-        string $cacheDirectoryName = 'cache',
-        string $errorDocsDirectoryName = 'error_docs',
-        string $logsDirectoryName = 'logs',
-        string $settingsDirectoryName = 'settings',
-        string $snippetsDirectoryName = 'snippets',
-        public readonly string $viewDirectoryName = 'view'
+        string $appDirectory = '{DOCUMENT_ROOT}../app/',
+        string $cacheDirectory = '{APP_DIRECTORY}cache/',
+        string $errorDocsDirectory = '{APP_DIRECTORY}error_docs/',
+        string $logsDirectory = '{APP_DIRECTORY}logs/',
+        string $settingsDirectory = '{APP_DIRECTORY}settings/',
+        string $snippetsDirectory = '{APP_DIRECTORY}snippets/',
+        string $viewDirectory = '{APP_DIRECTORY}view/'
     ) {
         if (!is_null(value: Core::$instance)) {
             throw new LogicException(message: 'Core is already initialized');
@@ -74,28 +74,14 @@ class Core
             replace: DIRECTORY_SEPARATOR,
             subject: $_SERVER['DOCUMENT_ROOT'] . DIRECTORY_SEPARATOR
         );
-        $this->frameworkDirectory = dirname(path: __FILE__) . DIRECTORY_SEPARATOR;
-        $this->siteDirectory = $this->createIfNotExists(
-            path: $this->documentRoot . $siteDirectoryName . DIRECTORY_SEPARATOR
-        );
-        $this->cacheDirectory = $this->createIfNotExists(
-            path: $this->siteDirectory . $cacheDirectoryName . DIRECTORY_SEPARATOR
-        );
-        $this->errorDocsDirectory = $this->createIfNotExists(
-            path: $this->siteDirectory . $errorDocsDirectoryName . DIRECTORY_SEPARATOR
-        );
-        $this->logDirectory = $this->createIfNotExists(
-            path: $this->siteDirectory . $logsDirectoryName . DIRECTORY_SEPARATOR
-        );
-        $this->settingsDirectory = $this->createIfNotExists(
-            path: $this->siteDirectory . $settingsDirectoryName . DIRECTORY_SEPARATOR
-        );
-        $this->snippetsDirectory = $this->createIfNotExists(
-            path: $this->siteDirectory . $snippetsDirectoryName . DIRECTORY_SEPARATOR
-        );
-        $this->viewDirectory = $this->createIfNotExists(
-            path: $this->siteDirectory . $viewDirectoryName . DIRECTORY_SEPARATOR
-        );
+        $this->frameworkDirectory = __DIR__ . DIRECTORY_SEPARATOR;
+        $this->appDirectory = $this->createIfNotExists(path: $appDirectory);
+        $this->cacheDirectory = $this->createIfNotExists(path: $cacheDirectory);
+        $this->errorDocsDirectory = $this->createIfNotExists(path: $errorDocsDirectory);
+        $this->logDirectory = $this->createIfNotExists(path: $logsDirectory);
+        $this->settingsDirectory = $this->createIfNotExists(path: $settingsDirectory);
+        $this->snippetsDirectory = $this->createIfNotExists(path: $snippetsDirectory);
+        $this->viewDirectory = $this->createIfNotExists(path: $viewDirectory);
         require_once $autoloaderPath;
         $autoloader = Autoloader::register();
         $autoloader->addPath(
@@ -106,8 +92,8 @@ class Core
         );
         $autoloader->addPath(
             autoloaderPath: new AutoloaderPath(
-                path: $_SERVER['DOCUMENT_ROOT'] . DIRECTORY_SEPARATOR,
-                prefix: ''
+                path: $this->appDirectory,
+                prefix: Core::APP_CLASS_PREFIX . '\\'
             )
         );
         ErrorHandler::register();
@@ -126,6 +112,25 @@ class Core
 
     private function createIfNotExists(string $path): string
     {
+        $path = str_replace(
+            search: [
+                '{DOCUMENT_ROOT}',
+                '{APP_DIRECTORY}',
+                DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR,
+            ],
+            replace: [
+                $this->documentRoot,
+                $this->appDirectory,
+                DIRECTORY_SEPARATOR,
+            ],
+            subject: $path
+        );
+        if (!str_ends_with(
+            haystack: $path,
+            needle: DIRECTORY_SEPARATOR
+        )) {
+            $path .= DIRECTORY_SEPARATOR;
+        }
         if (!file_exists(filename: $path)) {
             mkdir(
                 directory: $path,
