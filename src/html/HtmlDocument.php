@@ -20,15 +20,32 @@ class HtmlDocument
 {
     private static ?HtmlDocument $instance = null;
     public readonly HtmlReplacementCollection $replacements;
+    public string $templateDirectory {
+        set {
+            $this->templateDirectory = $value;
+        }
+    }
+    public string $contentFileDirectory {
+        set {
+            $this->contentFileDirectory = $value;
+        }
+    }
     public string $templateName = 'default';
-    public string $contentFileName;
+    public string $contentFileName {
+        set {
+            $this->contentFileName = $value;
+        }
+    }
     private array $activeHtmlIds = [];
 
     private function __construct()
     {
         $requestHandler = RequestHandler::get();
+        $viewDirectory = $requestHandler->route->viewDirectory;
+        $this->templateDirectory = $viewDirectory . 'templates/';
+        $this->contentFileDirectory = $viewDirectory . 'html/';
         $fileTitle = $requestHandler->fileTitle;
-        $this->contentFileName = $fileTitle;
+        $this->contentFileName = $fileTitle . '.html';
         $this->replacements = new HtmlReplacementCollection();
         $replacements = $this->replacements;
         $core = Core::get();
@@ -72,7 +89,7 @@ class HtmlDocument
 
     public static function get(): HtmlDocument
     {
-        if (is_null(value: HtmlDocument::$instance)) {
+        if (HtmlDocument::$instance === null) {
             HtmlDocument::$instance = new HtmlDocument();
         }
 
@@ -86,44 +103,51 @@ class HtmlDocument
 
     public function isActiveHtmlIdSet(int $key): bool
     {
-        return array_key_exists(key: $key, array: $this->activeHtmlIds);
+        return array_key_exists(
+            key: $key,
+            array: $this->activeHtmlIds
+        );
     }
 
     public function render(): string
     {
-        $request = RequestHandler::get();
-        $viewDirectory = $request->route->viewDirectory;
-        $contentFileDirectory = $viewDirectory . 'html/';
-        $fileGroup = $request->fileGroup;
-        if (!is_null(value: $fileGroup)) {
-            $contentFileDirectory .= $fileGroup . '/';
-        }
         $contentFileName = $this->contentFileName;
         if ($contentFileName === '') {
             throw new NotFoundException();
         }
-        $fullContentFilePath = $contentFileDirectory . $contentFileName . '.html';
+        $contentFileDirectory = $this->contentFileDirectory;
+        $fileGroup = RequestHandler::get()->fileGroup;
+        if ($fileGroup !== null) {
+            $contentFileDirectory .= $fileGroup . '/';
+        }
+        $fullContentFilePath = $contentFileDirectory . $contentFileName;
         if (!is_file(filename: $fullContentFilePath)) {
             throw new NotFoundException();
         }
-        $this->replacements->addEncodedText(identifier: 'this', content: $fullContentFilePath);
+        $this->replacements->addEncodedText(
+            identifier: 'this',
+            content: $fullContentFilePath
+        );
         $templateName = $this->templateName;
-        $templateFilePath = $viewDirectory . 'templates/' . $templateName . '.html';
-        if ($templateName === '' || !is_file(filename: $templateFilePath)) {
+        $templateFilePath = $this->templateDirectory . $templateName . '.html';
+        if (
+            $templateName === ''
+            || !is_file(filename: $templateFilePath)
+        ) {
             $templateFilePath = $fullContentFilePath;
         }
         $core = Core::get();
         $tplEngine = new TemplateEngine(
             templateCacheInterface: new DirectoryTemplateCache(
                 cachePath: $core->cacheDirectory,
-                templateBaseDirectory: $core->appDirectory
+                templateBaseDirectory: $core->baseDirectory
             ),
             tplNsPrefix: 'tst'
         );
         if (count(value: $this->activeHtmlIds) === 0) {
             $this->setActiveHtmlId(
                 key: 1,
-                val: is_null(value: $fileGroup) ? $contentFileName : $fileGroup . '-' . $contentFileName
+                val: $fileGroup === null ? $contentFileName : $fileGroup . '-' . $contentFileName
             );
         }
         $htmlAfterReplacements = $tplEngine->getResultAsHtml(
@@ -133,19 +157,25 @@ class HtmlDocument
 
         return preg_replace_callback(
             pattern: '/(\s+id="nav-(.+?)")(\s+class="(.+?)")?/',
-            callback: [$this, 'setCSSActive'],
+            callback: [
+                $this,
+                'setCSSActive',
+            ],
             subject: $htmlAfterReplacements
         );
     }
 
     private function setCSSActive(array $m): string
     {
-        if (!in_array(needle: $m[2], haystack: $this->activeHtmlIds)) {
+        if (!in_array(
+            needle: $m[2],
+            haystack: $this->activeHtmlIds
+        )) {
             // The id is not within activeHtmlIds, so we just return the whole unmodified string
             return $m[0];
         }
 
         // The id is within activeHtmlIds, so we need to add the "active" class
-        return $m[1] . ' class="' . (isset($m[3]) ? $m[4] . ' ' : '') . 'active"';
+        return $m[1] . ' class="' . (array_key_exists(key: 4, array: $m) ? $m[4] . ' ' : '') . 'active"';
     }
 }

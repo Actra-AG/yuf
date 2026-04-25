@@ -17,7 +17,6 @@ class DirectoryTemplateCache extends TemplateCacheStrategy
     public function __construct(string $cachePath, string $templateBaseDirectory)
     {
         parent::__construct($cachePath);
-
         $this->templateBaseDirectory = $templateBaseDirectory;
         $this->baseDirLength = strlen($templateBaseDirectory);
     }
@@ -26,7 +25,6 @@ class DirectoryTemplateCache extends TemplateCacheStrategy
     {
         $cacheFileName = $this->getCacheFileName($tplFile);
         $cacheFilePath = $this->cachePath . $cacheFileName;
-
         if (file_exists($cacheFilePath) === false) {
             return null;
         }
@@ -52,7 +50,6 @@ class DirectoryTemplateCache extends TemplateCacheStrategy
 
             return new TemplateCacheEntry($cacheFileName, time(), -1);
         }
-
         $fileLocation = pathinfo($cacheFilePath, PATHINFO_DIRNAME);
 
         if (is_dir($fileLocation) === false) {

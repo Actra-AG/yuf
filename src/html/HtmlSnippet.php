@@ -38,15 +38,10 @@ readonly class HtmlSnippet
             $replacements->addEncodedText(identifier: 'cspNonce', content: CspNonce::get());
         }
         $core = Core::get();
-
         return new TemplateEngine(
             templateCacheInterface: new DirectoryTemplateCache(
                 cachePath: $core->cacheDirectory,
-                templateBaseDirectory: str_replace(
-                    search: $htmlSnippetFilePath,
-                    replace: $core->appDirectory,
-                    subject: $htmlSnippetFilePath
-                )
+                templateBaseDirectory: $core->baseDirectory
             ),
             tplNsPrefix: 'tst'
         )->getResultAsHtml(

@@ -36,8 +36,9 @@ class Core
     private static array $config;
 
     public readonly string $documentRoot;
-    private(set) string $appDirectory = '';
     public readonly string $frameworkDirectory;
+    private(set) string $baseDirectory = '';
+    private(set) string $appDirectory = '';
     public readonly string $cacheDirectory;
     public readonly string $errorDocsDirectory;
     public readonly string $logDirectory;
@@ -54,7 +55,8 @@ class Core
         string $envFilePath,
         public readonly int $copyrightYear,
         string $autoloaderPath = __DIR__ . '/../../autoloader/src/Autoloader.php',
-        string $appDirectory = '{DOCUMENT_ROOT}../app/',
+        string $baseDirectory = '{DOCUMENT_ROOT}../',
+        string $appDirectory = '{BASE_DIRECTORY}/app/',
         string $cacheDirectory = '{APP_DIRECTORY}cache/',
         string $errorDocsDirectory = '{APP_DIRECTORY}error_docs/',
         string $logsDirectory = '{APP_DIRECTORY}logs/',
@@ -75,6 +77,7 @@ class Core
             subject: $_SERVER['DOCUMENT_ROOT'] . DIRECTORY_SEPARATOR
         );
         $this->frameworkDirectory = __DIR__ . DIRECTORY_SEPARATOR;
+        $this->baseDirectory = $this->createIfNotExists(path: $baseDirectory);
         $this->appDirectory = $this->createIfNotExists(path: $appDirectory);
         $this->cacheDirectory = $this->createIfNotExists(path: $cacheDirectory);
         $this->errorDocsDirectory = $this->createIfNotExists(path: $errorDocsDirectory);
@@ -115,16 +118,19 @@ class Core
         $path = str_replace(
             search: [
                 '{DOCUMENT_ROOT}',
+                '{BASE_DIRECTORY}',
                 '{APP_DIRECTORY}',
                 DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR,
             ],
             replace: [
                 $this->documentRoot,
+                $this->baseDirectory,
                 $this->appDirectory,
                 DIRECTORY_SEPARATOR,
             ],
             subject: $path
         );
+        $path = $this->getAbsolutePath(path: $path);
         if (!str_ends_with(
             haystack: $path,
             needle: DIRECTORY_SEPARATOR
@@ -139,6 +145,30 @@ class Core
         }
 
         return $path;
+    }
+
+    private function getAbsolutePath(string $path): string
+    {
+        $safe = [];
+        foreach (
+            explode(
+                separator: '/',
+                string: $path
+            ) as $part
+        ) {
+            if ($part === '.' || $part === '') {
+                continue;
+            }
+            if ($part === '..') {
+                array_pop(array: $safe);
+            } else {
+                $safe[] = $part;
+            }
+        }
+        return '/' . implode(
+                separator: '/',
+                array: $safe
+            );
     }
 
     public function prepareHttpResponse(
