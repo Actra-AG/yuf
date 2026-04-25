@@ -254,20 +254,11 @@ class ExceptionHandler
     private function loadLocalizedText(
         RequestHandler $requestHandler
     ): void {
-        $languageCode = $requestHandler->language->code;
         LocaleHandler::register();
         $defaultRouteForLanguage = $requestHandler->defaultRoutesByLanguage->getRouteForLanguage(
-            languageCode: $languageCode
+            languageCode: $requestHandler->language->code
         );
-        $dir = $defaultRouteForLanguage->viewDirectory . 'language' . DIRECTORY_SEPARATOR . $languageCode . DIRECTORY_SEPARATOR;
-        if (!is_dir(filename: $dir)) {
-            return;
-        }
-        $langGlobal = $dir . 'global.lang.php';
-        $locale = LocaleHandler::get();
-        if (file_exists(filename: $langGlobal)) {
-            $locale->loadLanguageFile(filePath: $langGlobal);
-        }
+        $defaultRouteForLanguage->loadLocalizedText(fileTitle: '');
     }
 
     protected function sendNotFoundHttpResponseAndExit(Throwable $throwable): void

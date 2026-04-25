@@ -51,12 +51,15 @@ class LocaleHandler
 
     public static function isRegistered(): bool
     {
-        return !is_null(value: LocaleHandler::$registeredInstance);
+        return LocaleHandler::$registeredInstance !== null;
     }
 
     public function loadLanguageFile(string $filePath): void
     {
-        if (in_array(needle: $filePath, haystack: $this->loadedLangFiles)) {
+        if (in_array(
+            needle: $filePath,
+            haystack: $this->loadedLangFiles
+        )) {
             return;
         }
 

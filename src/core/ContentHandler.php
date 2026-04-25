@@ -8,8 +8,6 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
-use actra\yuf\common\StringUtils;
-use actra\yuf\Core;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\html\HtmlDocument;
 use Exception;
@@ -30,7 +28,8 @@ class ContentHandler
             throw new LogicException(message: 'ContentHandler is already registered.');
         }
         ContentHandler::$registeredInstance = $this;
-        $route = RequestHandler::get()->route;
+        $requestHandler = RequestHandler::get();
+        $route = $requestHandler->route;
         $this->contentType = $route->defaultContentType;
         if (!is_null(value: $route->viewCallback)) {
             $this->setContent(contentString: call_user_func(callback: $route->viewCallback));
@@ -38,14 +37,14 @@ class ContentHandler
         }
         ob_start();
         ob_implicit_flush(enable: false);
-        $this->loadLocalizedText();
+        $route->loadLocalizedText(fileTitle: $requestHandler->fileTitle);
         $viewClass = $this->getViewClass();
-        if (is_null(value: $viewClass)) {
-            if (!is_null(value: RequestHandler::get()->getPathVar(nr: 1))) {
+        if ($viewClass === null) {
+            if ($requestHandler->getPathVar(nr: 1) !== null) {
                 throw new NotFoundException();
             }
         } else {
-            if (!is_null(value: RequestHandler::get()->getPathVar(nr: ($viewClass->maxAllowedPathVars + 1)))) {
+            if ($requestHandler->getPathVar(nr: ($viewClass->maxAllowedPathVars + 1)) !== null) {
                 throw new NotFoundException();
             }
             if (!$this->hasContent()) {
@@ -69,60 +68,9 @@ class ContentHandler
         return ContentHandler::$registeredInstance;
     }
 
-    private function loadLocalizedText(): void
-    {
-        $request = RequestHandler::get();
-        $route = $request->route;
-        if (is_null(value: $route->viewDirectory)) {
-            return;
-        }
-        $dir = $route->viewDirectory . 'language' . DIRECTORY_SEPARATOR . $request->language->code . DIRECTORY_SEPARATOR;
-        if (!is_dir(filename: $dir)) {
-            return;
-        }
-        $langGlobal = $dir . 'global.lang.php';
-        $locale = LocaleHandler::get();
-        if (file_exists(filename: $langGlobal)) {
-            $locale->loadLanguageFile(filePath: $langGlobal);
-        }
-        $langFile = $dir . $request->fileTitle . '.lang.php';
-        if (file_exists(filename: $langFile)) {
-            $locale->loadLanguageFile(filePath: $langFile);
-        }
-    }
-
     private function getViewClass(): ?BaseView
     {
-        $core = Core::get();
-        $request = RequestHandler::get();
-        $phpFilePathParts = [
-            $core->viewDirectory,
-            $request->route->viewGroup,
-            DIRECTORY_SEPARATOR . 'php',
-        ];
-        $phpClassNameParts = [
-            Core::APP_CLASS_PREFIX,
-            'view',
-            $request->route->viewGroup,
-            'php',
-        ];
-        if (!is_null(value: $request->fileGroup)) {
-            $phpFilePathParts[] = DIRECTORY_SEPARATOR . $request->fileGroup;
-            $phpClassNameParts[] = $request->fileGroup;
-        }
-        $phpFilePathParts[] = DIRECTORY_SEPARATOR . $request->fileTitle . '.php';
-        $phpClassNameParts[] = $request->fileTitle;
-        $phpFilePath = implode(
-            separator: StringUtils::IMPLODE_DEFAULT_SEPARATOR,
-            array: $phpFilePathParts
-        );
-        if (!file_exists(filename: $phpFilePath)) {
-            return null;
-        }
-        $phpClassName = implode(
-            separator: '\\',
-            array: $phpClassNameParts
-        );
+        $phpClassName = RequestHandler::get()->route->getPhpClassName();
         if (!class_exists(class: $phpClassName)) {
             return null;
         }
@@ -130,7 +78,9 @@ class ContentHandler
             object_or_class: $phpClassName,
             class: BaseView::class
         )) {
-            throw new Exception(message: 'The class ' . $phpClassName . ' must extend ' . BaseView::class . '.');
+            throw new Exception(
+                message: 'The class ' . $phpClassName . ' must extend ' . BaseView::class . '.'
+            );
         }
 
         return new $phpClassName();
@@ -148,7 +98,7 @@ class ContentHandler
 
     public static function isRegistered(): bool
     {
-        return !is_null(value: ContentHandler::$registeredInstance);
+        return ContentHandler::$registeredInstance !== null;
     }
 
     public function getContentType(): ContentType
@@ -158,7 +108,7 @@ class ContentHandler
 
     public function setContentType(ContentType $contentType): void
     {
-        if (is_null(value: $contentType->charset)) {
+        if ($contentType->charset === null) {
             throw new Exception(message: 'Unknown contentType: ' . $contentType->type);
         }
         $this->contentType = $contentType;
@@ -172,7 +122,7 @@ class ContentHandler
     public function setContent(string $contentString): void
     {
         if ($this->hasContent()) {
-            throw new LogicException('Content is already set. You are not allowed to overwrite it.');
+            throw new LogicException(message: 'Content is already set. You are not allowed to overwrite it.');
         }
         $this->content = $contentString;
     }
