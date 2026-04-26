@@ -19,7 +19,7 @@ class RequestHandler
 
     public readonly array $pathParts;
     public readonly int $countPathParts;
-    public readonly RouteCollection $defaultRoutesByLanguage;
+    private(set) ?RouteCollection $defaultRoutesByLanguage = null;
     public readonly Route $route;
     public ?Language $language = null;
     public readonly string $fileTitle;
@@ -230,6 +230,9 @@ class RequestHandler
 
     public function getLanguageRoot(): string
     {
+        if ($this->defaultRoutesByLanguage === null) {
+            return '/';
+        }
         foreach ($this->defaultRoutesByLanguage->routes as $route) {
             if ($route->language === $this->language) {
                 return $route->path;
