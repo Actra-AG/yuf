@@ -65,7 +65,7 @@ class NavigationItemCollection
     {
         return array_find(
             $this->items,
-            fn($navigationItem) => $navigationItem->hasAccess(authUser: $authUser)
+            fn(NavigationItem $navigationItem) => $navigationItem->hasAccess(authUser: $authUser)
         );
     }
 }

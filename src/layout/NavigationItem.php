@@ -75,9 +75,15 @@ readonly class NavigationItem
 
     public function hasAccess(AuthUser $authUser): bool
     {
+        if ((
+            !$this->requiredAccessRights->isEmpty()
+            && !$authUser->hasOneOfRights(accessRightCollection: $this->requiredAccessRights)
+        )) {
+            return false;
+        }
         return (
-            $this->requiredAccessRights->isEmpty()
-            || $authUser->hasOneOfRights(accessRightCollection: $this->requiredAccessRights)
+            $this->childNavigation === null
+            || !$this->childNavigation->isEmpty(authUser: $authUser)
         );
     }
 }
