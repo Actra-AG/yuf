@@ -116,7 +116,8 @@ class HtmlDocument
             throw new NotFoundException();
         }
         $contentFileDirectory = $this->contentFileDirectory;
-        $fileGroup = RequestHandler::get()->fileGroup;
+        $requestHandler = RequestHandler::get();
+        $fileGroup = $requestHandler->fileGroup;
         if ($fileGroup !== null) {
             $contentFileDirectory .= $fileGroup . '/';
         }
@@ -145,9 +146,10 @@ class HtmlDocument
             tplNsPrefix: 'tst'
         );
         if (count(value: $this->activeHtmlIds) === 0) {
+            $fileTitle = $requestHandler->fileTitle;
             $this->setActiveHtmlId(
                 key: 1,
-                val: $fileGroup === null ? $contentFileName : $fileGroup . '-' . $contentFileName
+                val: $fileGroup === null ? $fileTitle : $fileGroup . '-' . $fileTitle
             );
         }
         $htmlAfterReplacements = $tplEngine->getResultAsHtml(
