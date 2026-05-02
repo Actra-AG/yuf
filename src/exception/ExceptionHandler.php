@@ -202,7 +202,7 @@ class ExceptionHandler
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'language',
-            content: $requestHandler->language->code
+            content: $requestHandler->language === null ? 'en' : $requestHandler->language->code
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'langRoot',
@@ -236,7 +236,7 @@ class ExceptionHandler
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'requestedFileName',
-            content: $requestHandler->fileName
+            content: $requestHandler->fileName === null ? null : $requestHandler->fileName
         );
         if (
             $core->availableLanguages->isMultiLang()

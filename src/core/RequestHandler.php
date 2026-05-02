@@ -24,7 +24,7 @@ class RequestHandler
     public ?Language $language = null;
     public readonly string $fileTitle;
     public readonly string $fileExtension;
-    private(set) string $fileName;
+    private(set) ?string $fileName = null;
     private(set) ?string $fileGroup = null;
     private(set) array $routeVariables = [];
     public readonly array $pathVars;
