@@ -23,6 +23,11 @@ class CurlPatchRequest extends AbstractCurlRequest
         );
     }
 
+    public static function prepareWithoutBody(string $requestTargetUrl): CurlPatchRequest
+    {
+        return new CurlPatchRequest(requestTargetUrl: $requestTargetUrl);
+    }
+
     public static function prepareWithPostBody(string $requestTargetUrl, array $postData): CurlPatchRequest
     {
         $curlPatchRequest = new CurlPatchRequest(requestTargetUrl: $requestTargetUrl);
