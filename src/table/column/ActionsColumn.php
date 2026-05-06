@@ -13,6 +13,9 @@ use actra\yuf\table\TableItemModel;
 
 class ActionsColumn extends AbstractTableColumn
 {
+    public const string EDIT = 'edit';
+    public const string DELETE = 'delete';
+
     private array $actionLinks = [];
     private ?string $hideDeleteLinkField = null;
     private ?string $hideDeleteLinkValue = null;
@@ -22,18 +25,25 @@ class ActionsColumn extends AbstractTableColumn
         string $label = '',
         string $cellCssClass = 'action'
     ) {
-        parent::__construct(identifier: $identifier, label: $label);
+        parent::__construct(
+            identifier: $identifier,
+            label: $label
+        );
         $this->addCellCssClass(className: $cellCssClass);
     }
 
-    public function addIndividualActionLink(string $identifier, string $linkHTML): void
-    {
+    public function addIndividualActionLink(
+        string $identifier,
+        string $linkHTML
+    ): void {
         $this->actionLinks[$identifier] = $linkHTML;
     }
 
-    public function addEditActionLink(string $linkTarget, string $label = 'Bearbeiten'): void
-    {
-        $this->actionLinks['edit'] = '<a href="' . $linkTarget . '" class="edit">' . $label . '</a>';
+    public function addEditActionLink(
+        string $linkTarget,
+        string $label = 'Bearbeiten'
+    ): void {
+        $this->actionLinks[ActionsColumn::EDIT] = '<a href="' . $linkTarget . '" class="edit">' . $label . '</a>';
     }
 
     public function addDeleteLink(
@@ -42,67 +52,46 @@ class ActionsColumn extends AbstractTableColumn
         ?string $hideField = null,
         ?string $hideValue = null
     ): void {
-        $this->actionLinks['delete'] = '<a href="' . $linkTarget . '" class="delete">' . $label . '</a>';
+        $this->actionLinks[ActionsColumn::DELETE] = '<a href="' . $linkTarget . '" class="delete">' . $label . '</a>';
         $this->hideDeleteLinkField = $hideField;
         $this->hideDeleteLinkValue = $hideValue;
     }
 
     protected function renderCellValue(TableItemModel $tableItemModel): string
     {
-        $allActionLinks = $this->actionLinks;
+        $actionLinks = $this->actionLinks;
         if (
-            isset($this->actionLinks['delete'])
-            && !empty($this->hideDeleteLinkField)
+            array_key_exists(key: ActionsColumn::DELETE, array: $this->actionLinks)
+            && $this->hideDeleteLinkField !== null
+            && $this->hideDeleteLinkField !== ''
             && $tableItemModel->getRawValue(name: $this->hideDeleteLinkField) === $this->hideDeleteLinkValue
         ) {
-            unset($allActionLinks['delete']);
+            unset($actionLinks[ActionsColumn::DELETE]);
         }
-
-        if (count($allActionLinks) === 0) {
+        if ($actionLinks === []) {
             return '';
         }
-
         $srcArr = [];
         $rplArr = [];
         foreach ($tableItemModel->data as $key => $val) {
             $srcArr[] = '[' . $key . ']';
             $rplArr[] = HtmlEncoder::encode(value: $val);
         }
-
-        if (count($allActionLinks) === 1) {
-            return implode(
-                separator: PHP_EOL,
-                array: [
-                    implode(
-                        separator: PHP_EOL,
-                        array: str_replace(
-                            search: $srcArr,
-                            replace: $rplArr,
-                            subject: $allActionLinks
-                        )
-                    ),
-                ]
+        foreach ($actionLinks as $key => $val) {
+            $actionLinks[$key] = str_replace(
+                search: $srcArr,
+                replace: $rplArr,
+                subject: $val
             );
         }
+        return $this->renderActionLinks(actionLinks: $actionLinks);
+    }
 
-        foreach ($allActionLinks as $key => $val) {
-            $allActionLinks[$key] = '<li>' . $val . '</li>';
-        }
-
+    protected function renderActionLinks(array $actionLinks): string
+    {
         return implode(
             separator: PHP_EOL,
-            array: [
-                '<ul>',
-                implode(
-                    separator: PHP_EOL,
-                    array: str_replace(
-                        search: $srcArr,
-                        replace: $rplArr,
-                        subject: $allActionLinks
-                    )
-                ),
-                '</ul>',
-            ]
+            array: $actionLinks
         );
     }
 }
