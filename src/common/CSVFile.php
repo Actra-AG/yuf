@@ -53,7 +53,7 @@ class CSVFile
         $this->rows[] = $data;
     }
 
-    public function pushDownloadAndExit(): void
+    public function createTemporaryFile(): string
     {
         $path = sys_get_temp_dir() . DIRECTORY_SEPARATOR . date(format: 'YmdHis') . rand(
                 min: 10000,
@@ -86,9 +86,13 @@ class CSVFile
             );
         }
         fclose(stream: $fileResource);
+        return $path;
+    }
 
+    public function pushDownloadAndExit(): void
+    {
         $httpResponse = HttpResponse::createResponseFromFilePath(
-            absolutePathToFile: $path,
+            absolutePathToFile: $this->createTemporaryFile(),
             forceDownload: true,
             individualFileName: $this->fileName,
             maxAge: 0
