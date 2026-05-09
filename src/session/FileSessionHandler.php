@@ -17,8 +17,15 @@ class FileSessionHandler extends AbstractSessionHandler
 
     protected function executePreStartActions(): void
     {
-        if ($this->sessionSettingsModel->savePath !== '') {
-            session_save_path(path: $this->sessionSettingsModel->savePath);
+        $savePath = $this->sessionSettingsModel->savePath;
+        if ($savePath !== '') {
+            if (!is_dir(filename: $savePath)) {
+                mkdir(
+                    directory: $savePath,
+                    recursive: true
+                );
+            }
+            session_save_path(path: $savePath);
         }
     }
 }
