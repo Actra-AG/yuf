@@ -43,6 +43,7 @@ composer require actra/yuf
 For more detailed examples, please refer to:
 - `.env.example.php`: Configuration examples.
 - `index.example.php`: Full usage example with manual autoloader initialization.
+- [UPGRADE.md](UPGRADE.md): Guide for developers updating to or working with new versions.
 
 ## License
 
