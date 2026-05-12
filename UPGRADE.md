@@ -9,6 +9,9 @@ This document tracks relevant changes for both frontend and backend developers.
 
 ## Backend & API
 
+### May 12, 2026
+* **Navigation & Access Control:** Refactored `NavigationItem` and `NavigationItemCollection`. Methods now accept `AccessRightCollection` instead of `AuthUser` to decouple navigation from the specific user object.
+
 ### May 6, 2026
 * **ActionsColumn Constants:** Added `ActionsColumn::EDIT` and `ActionsColumn::DELETE` constants for action link identifiers to improve type safety and extensibility.
 

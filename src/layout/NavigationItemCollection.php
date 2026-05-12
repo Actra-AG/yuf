@@ -8,7 +8,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\layout;
 
-use actra\yuf\auth\AuthUser;
+use actra\yuf\auth\AccessRightCollection;
 use actra\yuf\html\HtmlDataObjectCollection;
 
 class NavigationItemCollection
@@ -28,17 +28,17 @@ class NavigationItemCollection
 
     public function prepareForRenderer(
         string $activeSubNavigationItem,
-        AuthUser $authUser,
+        AccessRightCollection $accessRightCollection,
     ): HtmlDataObjectCollection {
         $htmlDataObjectCollection = new HtmlDataObjectCollection();
         foreach ($this->items as $navigationItem) {
-            if (!$navigationItem->hasAccess(authUser: $authUser)) {
+            if (!$navigationItem->hasAccess(accessRightCollection: $accessRightCollection)) {
                 continue;
             }
             $htmlDataObjectCollection->add(
                 htmlDataObject: $navigationItem->render(
                     activeMainNavigationItem: $activeSubNavigationItem,
-                    authUser: $authUser
+                    accessRightCollection: $accessRightCollection
                 )
             );
             if ($navigationItem->navKey === $activeSubNavigationItem) {
@@ -49,11 +49,11 @@ class NavigationItemCollection
         return $htmlDataObjectCollection;
     }
 
-    public function isEmpty(AuthUser $authUser): bool
+    public function isEmpty(AccessRightCollection $accessRightCollection): bool
     {
         $count = 0;
         foreach ($this->items as $navigationItem) {
-            if ($navigationItem->hasAccess(authUser: $authUser)) {
+            if ($navigationItem->hasAccess(accessRightCollection: $accessRightCollection)) {
                 $count++;
             }
         }
@@ -61,11 +61,13 @@ class NavigationItemCollection
         return ($count === 0);
     }
 
-    public function getFirst(AuthUser $authUser): ?NavigationItem
+    public function getFirst(AccessRightCollection $accessRightCollection): ?NavigationItem
     {
         return array_find(
             $this->items,
-            fn(NavigationItem $navigationItem) => $navigationItem->hasAccess(authUser: $authUser)
+            fn(NavigationItem $navigationItem) => $navigationItem->hasAccess(
+                accessRightCollection: $accessRightCollection
+            )
         );
     }
 }

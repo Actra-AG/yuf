@@ -9,7 +9,6 @@ declare(strict_types=1);
 namespace actra\yuf\layout;
 
 use actra\yuf\auth\AccessRightCollection;
-use actra\yuf\auth\AuthUser;
 use actra\yuf\html\HtmlDataObject;
 
 readonly class NavigationItem
@@ -26,15 +25,15 @@ readonly class NavigationItem
 
     public function render(
         string $activeMainNavigationItem,
-        AuthUser $authUser
+        AccessRightCollection $accessRightCollection
     ): HtmlDataObject {
         $navigationItemCollection = $this->childNavigation;
         $htmlDataObjectCollection = (
-            is_null(value: $navigationItemCollection)
-            || $navigationItemCollection->isEmpty(authUser: $authUser)
+            $navigationItemCollection === null
+            || $navigationItemCollection->isEmpty(accessRightCollection: $accessRightCollection)
         ) ? null : $navigationItemCollection->prepareForRenderer(
             activeSubNavigationItem: $activeMainNavigationItem,
-            authUser: $authUser
+            accessRightCollection: $accessRightCollection
         );
         $htmlDataObject = new HtmlDataObject();
         $htmlDataObject->addTextElement(
@@ -73,17 +72,17 @@ readonly class NavigationItem
         return $htmlDataObject;
     }
 
-    public function hasAccess(AuthUser $authUser): bool
+    public function hasAccess(AccessRightCollection $accessRightCollection): bool
     {
         if ((
             !$this->requiredAccessRights->isEmpty()
-            && !$authUser->hasOneOfRights(accessRightCollection: $this->requiredAccessRights)
+            && !$accessRightCollection->hasOneOfAccessRights(accessRightCollection: $this->requiredAccessRights)
         )) {
             return false;
         }
         return (
             $this->childNavigation === null
-            || !$this->childNavigation->isEmpty(authUser: $authUser)
+            || !$this->childNavigation->isEmpty(accessRightCollection: $accessRightCollection)
         );
     }
 }
