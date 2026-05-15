@@ -4,6 +4,10 @@ This document tracks relevant changes for both frontend and backend developers.
 
 ## HTML & CSS (Frontend)
 
+### May 15, 2026
+* **Navigation Styling:** `NavigationItem` now supports configurable CSS classes via `activeCssClass` and `inactiveCssClass`.
+* **BREAKING CHANGE:** The `HtmlDataObject` property `buttonClass` has been renamed to `cssClass`. Templates using this property must be updated.
+
 ### May 6, 2026
 * **ActionsColumn Rendering:** The `<ul>` and `<li>` tags were removed. Multiple action links are now simply separated by a newline (`PHP_EOL`).
 

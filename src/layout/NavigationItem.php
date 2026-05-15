@@ -19,7 +19,9 @@ readonly class NavigationItem
         public string $svgPath,
         public string $title,
         public AccessRightCollection $requiredAccessRights,
-        public ?NavigationItemCollection $childNavigation = null
+        public ?NavigationItemCollection $childNavigation = null,
+        public string $activeCssClass = 'nav-main-sub-toggle active',
+        public string $inactiveCssClass = 'nav-main-sub-toggle'
     ) {
     }
 
@@ -27,11 +29,11 @@ readonly class NavigationItem
         string $activeMainNavigationItem,
         AccessRightCollection $accessRightCollection
     ): HtmlDataObject {
-        $navigationItemCollection = $this->childNavigation;
+        $childNavigationItemCollection = $this->childNavigation;
         $htmlDataObjectCollection = (
-            $navigationItemCollection === null
-            || $navigationItemCollection->isEmpty(accessRightCollection: $accessRightCollection)
-        ) ? null : $navigationItemCollection->prepareForRenderer(
+            $childNavigationItemCollection === null
+            || $childNavigationItemCollection->isEmpty(accessRightCollection: $accessRightCollection)
+        ) ? null : $childNavigationItemCollection->prepareForRenderer(
             activeSubNavigationItem: $activeMainNavigationItem,
             accessRightCollection: $accessRightCollection
         );
@@ -61,11 +63,11 @@ readonly class NavigationItem
             htmlDataObjectsArray: is_null(value: $htmlDataObjectCollection) ? null : $htmlDataObjectCollection->items
         );
         $htmlDataObject->addTextElement(
-            propertyName: 'buttonClass',
+            propertyName: 'cssClass',
             content: (
-                !is_null(value: $navigationItemCollection)
-                && $navigationItemCollection->isActive
-            ) ? 'nav-main-sub-toggle active' : 'nav-main-sub-toggle',
+                $childNavigationItemCollection !== null
+                && $childNavigationItemCollection->isActive
+            ) ? $this->activeCssClass : $this->inactiveCssClass,
             isEncodedForRendering: true
         );
 
