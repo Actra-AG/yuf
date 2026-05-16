@@ -13,6 +13,9 @@ This document tracks relevant changes for both frontend and backend developers.
 
 ## Backend & API
 
+### May 16, 2026
+* **HtmlDocument Enhancements:** Added `getActiveHtmlId()` and `listActiveHtmlIds()` to allow retrieval of active HTML identifiers. Refactored internal state checking for better performance.
+
 ### May 12, 2026
 * **Navigation & Access Control:** Refactored `NavigationItem` and `NavigationItemCollection`. Methods now accept `AccessRightCollection` instead of `AuthUser` to decouple navigation from the specific user object.
 

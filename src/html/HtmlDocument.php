@@ -109,6 +109,16 @@ class HtmlDocument
         );
     }
 
+    public function getActiveHtmlId(int $key): string
+    {
+        return $this->activeHtmlIds[$key];
+    }
+
+    public function listActiveHtmlIds(): array
+    {
+        return $this->activeHtmlIds;
+    }
+
     public function render(): string
     {
         $contentFileName = $this->contentFileName;
@@ -145,7 +155,7 @@ class HtmlDocument
             ),
             tplNsPrefix: 'tst'
         );
-        if (count(value: $this->activeHtmlIds) === 0) {
+        if ($this->activeHtmlIds === []) {
             $fileTitle = $requestHandler->fileTitle;
             $this->setActiveHtmlId(
                 key: 1,
