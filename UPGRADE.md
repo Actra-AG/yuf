@@ -4,6 +4,10 @@ This document tracks relevant changes for both frontend and backend developers.
 
 ## HTML & CSS (Frontend)
 
+### May 18, 2026
+* **Navigation Refinement:** `NavigationItem` property `activeCssClass` renamed to `activeSubToggleClass` and `inactiveCssClass` renamed to `inactiveSubToggleClass`.
+* **Logic Change:** The `cssClass` property in `HtmlDataObject` is now only populated if the navigation item has children that the user has access to. Otherwise, it remains empty.
+
 ### May 15, 2026
 * **Navigation Styling:** `NavigationItem` now supports configurable CSS classes via `activeCssClass` and `inactiveCssClass`.
 * **BREAKING CHANGE:** The `HtmlDataObject` property `buttonClass` has been renamed to `cssClass`. Templates using this property must be updated.

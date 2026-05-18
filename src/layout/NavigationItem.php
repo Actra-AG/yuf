@@ -20,8 +20,8 @@ readonly class NavigationItem
         public string $title,
         public AccessRightCollection $requiredAccessRights,
         public ?NavigationItemCollection $childNavigation = null,
-        public string $activeCssClass = 'nav-main-sub-toggle active',
-        public string $inactiveCssClass = 'nav-main-sub-toggle'
+        public string $activeSubToggleClass = 'nav-main-sub-toggle active',
+        public string $inactiveSubToggleClass = 'nav-main-sub-toggle'
     ) {
     }
 
@@ -62,14 +62,22 @@ readonly class NavigationItem
             propertyName: 'subNavigation',
             htmlDataObjectsArray: is_null(value: $htmlDataObjectCollection) ? null : $htmlDataObjectCollection->items
         );
-        $htmlDataObject->addTextElement(
-            propertyName: 'cssClass',
-            content: (
-                $childNavigationItemCollection !== null
-                && $childNavigationItemCollection->isActive
-            ) ? $this->activeCssClass : $this->inactiveCssClass,
-            isEncodedForRendering: true
-        );
+        if (
+            $childNavigationItemCollection === null
+            || $childNavigationItemCollection->isEmpty(accessRightCollection: $accessRightCollection)
+        ) {
+            $htmlDataObject->addTextElement(
+                propertyName: 'cssClass',
+                content: '',
+                isEncodedForRendering: true
+            );
+        } else {
+            $htmlDataObject->addTextElement(
+                propertyName: 'cssClass',
+                content: $childNavigationItemCollection->isActive ? $this->activeSubToggleClass : $this->inactiveSubToggleClass,
+                isEncodedForRendering: true
+            );
+        }
 
         return $htmlDataObject;
     }
