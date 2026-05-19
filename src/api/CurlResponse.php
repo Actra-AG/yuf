@@ -35,7 +35,7 @@ class CurlResponse
         $rawResponseBody = curl_exec(handle: $preparedCurlHandle);
         $curlInfo = curl_getinfo(handle: $preparedCurlHandle);
         $responseHttpCode = HttpStatusCode::tryFrom(value: (int)$curlInfo['http_code']);
-        if (is_null(value: $responseHttpCode)) {
+        if ($responseHttpCode === null) {
             $responseHttpCode = HttpStatusCode::HTTP_UNKNOWN;
         }
         $errorCode = curl_errno(handle: $preparedCurlHandle);
@@ -55,14 +55,17 @@ class CurlResponse
                 default => ''
             };
         } elseif (
-            $responseHttpCode >= HttpStatusCode::HTTP_MULTIPLE_CHOICES
+            $responseHttpCode->value >= 300
             && $responseHttpCode->value < 600
             && (
                 !$acceptRedirectionResponseCode
-                || !in_array(needle: $responseHttpCode, haystack: [
-                    HttpStatusCode::HTTP_MOVED_PERMANENTLY,
-                    HttpStatusCode::HTTP_SEE_OTHER,
-                ])
+                || !in_array(
+                    needle: $responseHttpCode,
+                    haystack: [
+                        HttpStatusCode::HTTP_MOVED_PERMANENTLY,
+                        HttpStatusCode::HTTP_SEE_OTHER,
+                    ]
+                )
             )
         ) {
             $errorCode = CurlResponse::ERROR_BAD_HTTP_RESPONSE_CODE;
