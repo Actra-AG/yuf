@@ -38,6 +38,15 @@ class SelectOptionsRenderer extends FormRenderer
                 valueIsEncodedForRendering: true
             )
         );
+        foreach ($selectOptionsField->getDataAttributes() as $key => $val) {
+            $selectTag->addHtmlTagAttribute(
+                htmlTagAttribute: new HtmlTagAttribute(
+                    name: 'data-' . $key,
+                    value: $val === '' ? null : $val,
+                    valueIsEncodedForRendering: true
+                )
+            );
+        }
         $selectTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'id',

@@ -17,6 +17,9 @@ This document tracks relevant changes for both frontend and backend developers.
 
 ## Backend & API
 
+### May 20, 2026
+* **Form Enhancements:** `SelectOptionsField` now supports custom data attributes via `addDataAttribute()`. These attributes are automatically rendered by `SelectOptionsRenderer`.
+
 ### May 16, 2026
 * **HtmlDocument Enhancements:** Added `getActiveHtmlId()` and `listActiveHtmlIds()` to allow retrieval of active HTML identifiers. Refactored internal state checking for better performance.
 

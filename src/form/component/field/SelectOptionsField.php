@@ -19,6 +19,10 @@ class SelectOptionsField extends OptionsField
 {
     public readonly array $cssClasses;
     public readonly HtmlText $emptyValueLabel;
+    private array $dataAttributesStorage = [];
+    public array $dataAttributes {
+        get => $this->dataAttributesStorage;
+    }
 
     public function __construct(
         string $name,
@@ -54,6 +58,22 @@ class SelectOptionsField extends OptionsField
         if ($this->acceptMultipleSelections) {
             $this->acceptArrayAsValue();
         }
+    }
+
+    public function addDataAttribute(string $name, string $value): void
+    {
+        if (str_starts_with(
+            haystack: $name,
+            needle: 'data-'
+        )) {
+            $name = substr(string: $name, offset: 5);
+        }
+        $this->dataAttributesStorage[$name] = $value;
+    }
+
+    public function getDataAttributes(): array
+    {
+        return $this->dataAttributes;
     }
 
     public function getDefaultRenderer(): FormRenderer
