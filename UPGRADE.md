@@ -4,6 +4,11 @@ This document tracks relevant changes for both frontend and backend developers.
 
 ## HTML & CSS (Frontend)
 
+### May 25, 2026
+* **ActionsColumn Styling:**
+    * The default CSS class for the table cell (`<td>`) has been changed from `action` to `td-action`.
+    * If a cell contains multiple action links, they are now wrapped in a container for better styling control. The default CSS class for this container is `td-action-group`, but it can now be customized via the public property `ActionsColumn::$tdActionGroupClass`.
+
 ### May 18, 2026
 * **Navigation Refinement:** `NavigationItem` property `activeCssClass` renamed to `activeSubToggleClass` and `inactiveCssClass` renamed to `inactiveSubToggleClass`.
 * **Logic Change:** The `cssClass` property in `HtmlDataObject` is now only populated if the navigation item has children that the user has access to. Otherwise, it remains empty.
@@ -16,6 +21,14 @@ This document tracks relevant changes for both frontend and backend developers.
 * **ActionsColumn Rendering:** The `<ul>` and `<li>` tags were removed. Multiple action links are now simply separated by a newline (`PHP_EOL`).
 
 ## Backend & API
+
+### May 25, 2026
+* **Table Column Enhancements & Refactoring:**
+    * In `AbstractTableColumn`, `cellCssClasses` and `columnCssClasses` are now `private(set)`.
+    * `tableIdentifier` in `AbstractTableColumn` is now `public`, and the methods `getTableIdentifier()` and `setTableIdentifier()` have been removed.
+    * `SmartTable::addColumn()` now sets the `tableIdentifier` property directly.
+    * `AbstractTableColumn` constructor now accepts an optional `sortableColumnClass` parameter (defaulting to `sort`) to customize the CSS class applied to sortable columns.
+    * `ActionsColumn` now has a public property `tdActionGroupClass` to customize the wrapper div class for multiple action links.
 
 ### May 20, 2026
 * **Form Enhancements:** `SelectOptionsField` now supports custom data attributes via `addDataAttribute()`. These attributes are automatically rendered by `SelectOptionsRenderer`.

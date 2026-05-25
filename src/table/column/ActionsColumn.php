@@ -19,11 +19,12 @@ class ActionsColumn extends AbstractTableColumn
     private array $actionLinks = [];
     private ?string $hideDeleteLinkField = null;
     private ?string $hideDeleteLinkValue = null;
+    public string $tdActionGroupClass = 'td-action-group';
 
     public function __construct(
         string $identifier = 'actions',
         string $label = '',
-        string $cellCssClass = 'action'
+        string $cellCssClass = 'td-action'
     ) {
         parent::__construct(
             identifier: $identifier,
@@ -61,7 +62,10 @@ class ActionsColumn extends AbstractTableColumn
     {
         $actionLinks = $this->actionLinks;
         if (
-            array_key_exists(key: ActionsColumn::DELETE, array: $this->actionLinks)
+            array_key_exists(
+                key: ActionsColumn::DELETE,
+                array: $this->actionLinks
+            )
             && $this->hideDeleteLinkField !== null
             && $this->hideDeleteLinkField !== ''
             && $tableItemModel->getRawValue(name: $this->hideDeleteLinkField) === $this->hideDeleteLinkValue
@@ -84,7 +88,11 @@ class ActionsColumn extends AbstractTableColumn
                 subject: $val
             );
         }
-        return $this->renderActionLinks(actionLinks: $actionLinks);
+        $value = $this->renderActionLinks(actionLinks: $actionLinks);
+        if (count(value: $actionLinks) === 1) {
+            return $value;
+        }
+        return '<div class="' . $this->tdActionGroupClass . '">' . $value . '</div>';
     }
 
     protected function renderActionLinks(array $actionLinks): string

@@ -58,13 +58,15 @@ class SmartTable
     public function addColumn(AbstractTableColumn $abstractTableColumn): void
     {
         $columnIdentifier = $abstractTableColumn->identifier;
-        if (array_key_exists(key: $columnIdentifier, array: $this->columns)) {
+        if (array_key_exists(
+            key: $columnIdentifier,
+            array: $this->columns
+        )) {
             throw new LogicException(
                 message: 'There is already a column with the same identifier ' . $columnIdentifier
             );
         }
-
-        $abstractTableColumn->setTableIdentifier(tableIdentifier: $this->identifier);
+        $abstractTableColumn->tableIdentifier = $this->identifier;
         $this->columns[$columnIdentifier] = $abstractTableColumn;
     }
 

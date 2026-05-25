@@ -14,41 +14,38 @@ use actra\yuf\table\TableItemModel;
 abstract class AbstractTableColumn
 {
     private(set) array $columnCssClasses = [];
-    private array $cellCssClasses = [];
-    private ?string $tableIdentifier = null;
+    private(set) array $cellCssClasses = [];
+    public ?string $tableIdentifier = null;
 
     public function __construct(
         public readonly string $identifier,
         public readonly string $label,
         public readonly bool $isSortable = false,
-        public readonly bool $sortAscendingByDefault = true
+        public readonly bool $sortAscendingByDefault = true,
+        public readonly string $sortableColumnClass = 'sort'
     ) {
         if ($this->isSortable) {
-            $this->addColumnCssClass(className: 'sort');
+            $this->addColumnCssClass(className: $sortableColumnClass);
         }
     }
 
     public function addColumnCssClass(string $className): void
     {
-        if (in_array(needle: $className, haystack: $this->columnCssClasses)) {
+        if (in_array(
+            needle: $className,
+            haystack: $this->columnCssClasses
+        )) {
             return;
         }
         $this->columnCssClasses[] = $className;
     }
 
-    public function getTableIdentifier(): ?string
-    {
-        return $this->tableIdentifier;
-    }
-
-    public function setTableIdentifier(string $tableIdentifier): void
-    {
-        $this->tableIdentifier = $tableIdentifier;
-    }
-
     public function addCellCssClass(string $className): void
     {
-        if (in_array(needle: $className, haystack: $this->cellCssClasses)) {
+        if (in_array(
+            needle: $className,
+            haystack: $this->cellCssClasses
+        )) {
             return;
         }
         $this->cellCssClasses[] = $className;
@@ -57,15 +54,18 @@ abstract class AbstractTableColumn
     public function renderCell(TableItemModel $tableItemModel): string
     {
         $attributesArr = ['td'];
-        if (count(value: $this->cellCssClasses) > 0) {
+        if ($this->cellCssClasses !== []) {
             $attributesArr[] = 'class="' . implode(separator: ' ', array: $this->cellCssClasses) . '"';
         }
 
-        return implode(separator: StringUtils::IMPLODE_DEFAULT_SEPARATOR, array: [
-            '<' . implode(separator: ' ', array: $attributesArr) . '>',
-            $this->renderCellValue(tableItemModel: $tableItemModel),
-            '</td>',
-        ]);
+        return implode(
+            separator: StringUtils::IMPLODE_DEFAULT_SEPARATOR,
+            array: [
+                '<' . implode(separator: ' ', array: $attributesArr) . '>',
+                $this->renderCellValue(tableItemModel: $tableItemModel),
+                '</td>',
+            ]
+        );
     }
 
     abstract protected function renderCellValue(TableItemModel $tableItemModel): string;
