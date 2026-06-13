@@ -20,18 +20,21 @@ class HttpSuccessResponseContent extends HttpResponseContent
         parent::__construct(content: $content);
     }
 
-    public static function createJsonResponseContent(stdClass $resultDataObject): HttpResponseContent
+    public static function createJsonResponseContent(stdClass $data): HttpResponseContent
     {
         return new HttpSuccessResponseContent(content: JsonUtils::convertToJsonString([
-            'status' => HttpSuccessResponseContent::SUCCESS_STATUS,
-            'result' => $resultDataObject,
+            'success' => true,
+            'data' => $data,
         ]));
     }
 
-    public static function createTextResponseContent(stdClass $resultDataObject): HttpResponseContent
+    public static function createTextResponseContent(stdClass $data): HttpResponseContent
     {
         return new HttpSuccessResponseContent(
-            content: HttpSuccessResponseContent::SUCCESS_STATUS . PHP_EOL . print_r($resultDataObject, true)
+            content: HttpSuccessResponseContent::SUCCESS_STATUS . PHP_EOL . print_r(
+                value: $data,
+                return: true
+            )
         );
     }
 }

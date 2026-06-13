@@ -22,40 +22,37 @@ class HttpErrorResponseContent extends HttpResponseContent
     }
 
     public static function createJsonResponseContent(
-        string                    $errorMessage,
-        null|int|string           $errorCode = null,
-        null|stdClass|ArrayObject $additionalInfo = null
-    ): HttpResponseContent
-    {
-        $content = [
-            'message' => $errorMessage,
-            'code' => $errorCode,
+        string $errorMessage,
+        null|int|string $errorCode = null,
+        null|stdClass|ArrayObject $data = null
+    ): HttpResponseContent {
+        $value = [
+            'success' => false,
+            'error' => [
+                'code' => $errorCode,
+                'message' => $errorMessage,
+            ],
         ];
         if (
-            !is_null(value: $additionalInfo)
-            && $additionalInfo->count() > 0
+            $data instanceof stdClass
+            || ($data instanceof ArrayObject && $data->count() > 0)
         ) {
-            $content['additionalInfo'] = $additionalInfo;
+            $value['data'] = $data;
         }
-
         return new HttpErrorResponseContent(
             content: JsonUtils::convertToJsonString(
-                valueToConvert: [
-                    'status' => HttpErrorResponseContent::ERROR_STATUS,
-                    'error' => $content,
-                ]
+                valueToConvert: $value
             )
         );
     }
 
     public static function createTextResponseContent(
-        string           $errorMessage,
-        null|int|string  $errorCode = null,
+        string $errorMessage,
+        null|int|string $errorCode = null,
         null|ArrayObject $additionalInfo = null
-    ): HttpResponseContent
-    {
+    ): HttpResponseContent {
         $content = [
-            'ERROR: ' . $errorMessage . ' (' . $errorCode . ')'
+            HttpErrorResponseContent::ERROR_STATUS . ': ' . $errorMessage . ' (' . $errorCode . ')'
         ];
         if (
             !is_null(value: $additionalInfo)

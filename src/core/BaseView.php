@@ -17,10 +17,12 @@ use actra\yuf\common\SimpleXMLExtended;
 use actra\yuf\datacheck\Sanitizer;
 use actra\yuf\datacheck\validatorTypes\IpValidator;
 use actra\yuf\exception\NotFoundException;
+use actra\yuf\request\JsonRequestBody;
 use actra\yuf\response\HttpErrorResponseContent;
 use actra\yuf\response\HttpSuccessResponseContent;
 use LogicException;
 use stdClass;
+use Throwable;
 
 abstract class BaseView
 {
@@ -73,30 +75,6 @@ abstract class BaseView
                 return;
             }
         }
-    }
-
-    protected function setErrorResponseContent(
-        string $errorMessage,
-        null|int|string $errorCode = null,
-        ?stdClass $additionalInfo = null
-    ): void {
-        $contentType = ContentHandler::get()->getContentType();
-        if ($contentType->isJson()) {
-            $httpErrorResponseContent = HttpErrorResponseContent::createJsonResponseContent(
-                errorMessage: $errorMessage,
-                errorCode: $errorCode,
-                additionalInfo: $additionalInfo
-            );
-        } elseif ($contentType->isTxt() || $contentType->isCsv()) {
-            $httpErrorResponseContent = HttpErrorResponseContent::createTextResponseContent(
-                errorMessage: $errorMessage,
-                errorCode: $errorCode
-            );
-        } else {
-            throw new LogicException(message: 'Invalid contentType: ' . $contentType->type);
-        }
-
-        $this->setContent(contentString: $httpErrorResponseContent->content);
     }
 
     protected function setContent(string $contentString): void
@@ -172,21 +150,79 @@ abstract class BaseView
         $this->setContent(contentString: JsonUtils::convertToJsonString(valueToConvert: $jsonObject));
     }
 
-    protected function setSuccessResponseContent(stdClass $resultDataObject = new stdClass()): void
-    {
+    protected function setSuccessResponseContent(
+        stdClass $data = new stdClass(),
+        bool $sendAndExit = false
+    ): void {
         $contentType = ContentHandler::get()->getContentType();
         if ($contentType->isJson()) {
             $httpSuccessResponseContent = HttpSuccessResponseContent::createJsonResponseContent(
-                resultDataObject: $resultDataObject
+                data: $data
             );
         } elseif ($contentType->isTxt() || $contentType->isCsv()) {
             $httpSuccessResponseContent = HttpSuccessResponseContent::createTextResponseContent(
-                resultDataObject: $resultDataObject
+                data: $data
             );
         } else {
             throw new LogicException(message: 'Invalid contentType: ' . $contentType->type);
         }
+        if (!$sendAndExit) {
+            $this->setContent(contentString: $httpSuccessResponseContent->content);
+            return;
+        }
+        HttpResponse::createResponseFromString(
+            httpStatusCode: HttpStatusCode::HTTP_OK,
+            contentString: $httpSuccessResponseContent->content,
+            contentType: $contentType
+        )->sendAndExit();
+    }
 
-        $this->setContent(contentString: $httpSuccessResponseContent->content);
+    protected function setErrorResponseContent(
+        string $errorMessage,
+        HttpStatusCode $httpStatusCode = HttpStatusCode::HTTP_BAD_REQUEST,
+        null|int|string $errorCode = null,
+        ?stdClass $data = null,
+        bool $sendAndExit = false
+    ): void {
+        $contentHandler = ContentHandler::get();
+        $contentType = $contentHandler->getContentType();
+        if ($contentType->isJson()) {
+            $httpErrorResponseContent = HttpErrorResponseContent::createJsonResponseContent(
+                errorMessage: $errorMessage,
+                errorCode: $errorCode,
+                data: $data
+            );
+        } elseif ($contentType->isTxt() || $contentType->isCsv()) {
+            $httpErrorResponseContent = HttpErrorResponseContent::createTextResponseContent(
+                errorMessage: $errorMessage,
+                errorCode: $errorCode
+            );
+        } else {
+            throw new LogicException(message: 'Invalid contentType: ' . $contentType->type);
+        }
+        if (!$sendAndExit) {
+            $this->setContent(contentString: $httpErrorResponseContent->content);
+            $contentHandler->httpStatusCode = $httpStatusCode;
+            return;
+        }
+        HttpResponse::createResponseFromString(
+            httpStatusCode: $httpStatusCode,
+            contentString: $httpErrorResponseContent->content,
+            contentType: $contentType
+        )->sendAndExit();
+    }
+
+    protected function getJsonRequestBody(): JsonRequestBody
+    {
+        try {
+            return JsonRequestBody::get();
+        } catch (Throwable $throwable) {
+            $this->setErrorResponseContent(
+                errorMessage: $throwable->getMessage(),
+                errorCode: $throwable->getCode(),
+                sendAndExit: true
+            );
+            exit;
+        }
     }
 }

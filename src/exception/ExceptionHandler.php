@@ -155,7 +155,7 @@ class ExceptionHandler
                 contentString: HttpErrorResponseContent::createJsonResponseContent(
                     errorMessage: $errorMessage,
                     errorCode: $errorCode,
-                    additionalInfo: $this->htmlReplacementCollection->getArrayObject()
+                    data: $this->htmlReplacementCollection->getArrayObject()
                 )->content,
                 contentType: $contentType
             );

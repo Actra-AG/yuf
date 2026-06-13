@@ -1,6 +1,8 @@
 # yuf - A Smart, Fast, and Lightweight PHP Framework
 
-**yuf** (pronounced "[jʌf]" or "[jʊf]") is a smart, fast, and lightweight PHP framework designed with a focus on simplicity and performance. It has zero external dependencies, other than the `actra/autoloader` library which is required for all setups.
+**yuf** (pronounced "[jʌf]" or "[jʊf]") is a smart, fast, and lightweight PHP framework designed with a focus on
+simplicity and performance. It has zero external dependencies, other than the `actra/autoloader` library which is
+required for all setups.
 
 ## Key Features
 
@@ -18,7 +20,8 @@
 
 ### Installation
 
-Install `yuf` and `actra/autoloader` via Composer or download them manually. Note that `yuf` always requires `actra/autoloader` to be manually initialized.
+Install `yuf` and `actra/autoloader` via Composer or download them manually. Note that `yuf` always requires
+`actra/autoloader` to be manually initialized.
 
 ### Via Composer (Recommended)
 
@@ -38,9 +41,44 @@ composer require actra/yuf
 2. Create an `index.php` in your document root based on `index.example.php`.
 3. Initialize the Framework Core and provide the path to `Autoloader.php` if not using the default.
 
+## REST/API Endpoints
+
+`yuf` includes lightweight helpers for building REST-style endpoints without adding external dependencies.
+
+Useful backend/API features include:
+
+- `HttpRequest::getRequestMethod()` returns a typed `RequestMethodEnum`.
+- `BaseView::getJsonRequestBody()` reads and validates JSON request bodies.
+- `BaseView::setSuccessResponseContent()` creates standardized success responses.
+- `BaseView::setErrorResponseContent()` creates standardized error responses and can set the HTTP status code.
+
+JSON success responses use this structure:
+
+```json
+{
+  "success": true,
+  "data": {}
+}
+```
+
+JSON error responses use this structure:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": 0,
+    "message": "Error message"
+  }
+}
+```
+
+Optional additional response data is returned in a top-level `data` property.
+
 ## Documentation
 
 For more detailed examples, please refer to:
+
 - `.env.example.php`: Configuration examples.
 - `index.example.php`: Full usage example with manual autoloader initialization.
 - [UPGRADE.md](UPGRADE.md): Guide for developers updating to or working with new versions.

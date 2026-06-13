@@ -127,9 +127,9 @@ class HttpRequest
         return $_SERVER['QUERY_STRING'];
     }
 
-    public static function getRequestMethod(): string
+    public static function getRequestMethod(): RequestMethodEnum
     {
-        return $_SERVER['REQUEST_METHOD'];
+        return RequestMethodEnum::from(value: $_SERVER['REQUEST_METHOD']);
     }
 
     public static function getUserAgent(): string
