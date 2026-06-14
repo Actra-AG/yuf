@@ -105,6 +105,9 @@ class JsonRequestBody extends RequestBody
         if (is_float(value: $value)) {
             return $value;
         }
+        if (is_int(value: $value)) {
+            return (float)$value;
+        }
         throw new InvalidArgumentException(message: 'Invalid JSON property (float): ' . $keyName);
     }
 

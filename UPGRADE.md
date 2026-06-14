@@ -33,6 +33,12 @@ This document tracks relevant changes for both frontend and backend developers.
 
 ## Backend & API
 
+### v2.1.1 - June 14, 2026
+
+* **JSON Request Body Validation:**
+    * `JsonRequestBody::getOptionalFloat()` and `JsonRequestBody::getRequiredFloat()` now also accept JSON integer
+      values and cast them to floats.
+
 ### v2.1.0 - June 14, 2026
 
 * **JSON Request Body Validation:**
