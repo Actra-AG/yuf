@@ -33,6 +33,14 @@ This document tracks relevant changes for both frontend and backend developers.
 
 ## Backend & API
 
+### v2.1.0 - June 14, 2026
+
+* **JSON Request Body Validation:**
+    * Added `JsonRequestBody::getRequiredFloat()` and `JsonRequestBody::getOptionalFloat()` for validating float values
+      in JSON request bodies.
+    * Improved JSON validation error messages by including the expected value type.
+    * Integer accessors now require actual JSON integer values. Numeric strings are no longer converted automatically.
+
 ### v2.0.0 - June 13, 2026
 
 * **REST/API Endpoint Support:**

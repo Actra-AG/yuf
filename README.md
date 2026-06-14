@@ -16,7 +16,8 @@ required for all setups.
 ## Requirements
 
 - PHP 8.5 or higher
-- Common PHP extensions: `mbstring`, `openssl`, `pdo`, `intl`, `bcmath`, `simplexml`, `dom`, `iconv`, `curl`, `libxml`
+- Common PHP extensions: `mbstring`, `openssl`, `pdo`, `intl`, `bcmath`, `simplexml`, `dom`, `iconv`, `curl`, `libxml`,
+  `ctype`
 
 ### Installation
 
@@ -49,6 +50,7 @@ Useful backend/API features include:
 
 - `HttpRequest::getRequestMethod()` returns a typed `RequestMethodEnum`.
 - `BaseView::getJsonRequestBody()` reads and validates JSON request bodies.
+- `JsonRequestBody` provides typed accessors for required and optional string, integer, float, and array values.
 - `BaseView::setSuccessResponseContent()` creates standardized success responses.
 - `BaseView::setErrorResponseContent()` creates standardized error responses and can set the HTTP status code.
 

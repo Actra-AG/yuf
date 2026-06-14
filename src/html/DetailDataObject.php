@@ -8,8 +8,6 @@ declare(strict_types=1);
 
 namespace actra\yuf\html;
 
-use actra\yuf\html\HtmlDataObject;
-
 class DetailDataObject extends HtmlDataObject
 {
     public function __construct(

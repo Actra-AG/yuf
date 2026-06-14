@@ -65,7 +65,7 @@ abstract class BaseView
             if (
                 is_null(value: $paramValue)
                 || (!is_array(value: $paramValue) && trim(string: $paramValue) === '')
-                || (is_array(value: $paramValue) && count(value: $paramValue) === 0)
+                || $paramValue === []
             ) {
                 if (ContentHandler::get()->getContentType()->isHtml()) {
                     throw new NotFoundException();

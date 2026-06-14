@@ -87,7 +87,8 @@ abstract class AbstractSessionHandler extends SessionHandler
         }
         if (!$this->isSessionCreated()) {
             $this->initDefaultSessionData(destroyCurrentSessionData: false);
-        } elseif ($this->getTrustedRemoteAddress() !== $this->clientRemoteAddress || $this->getTrustedUserAgent() !== $this->clientUserAgent) {
+        } elseif ($this->getTrustedRemoteAddress() !== $this->clientRemoteAddress || $this->getTrustedUserAgent(
+            ) !== $this->clientUserAgent) {
             $this->initDefaultSessionData(destroyCurrentSessionData: true);
         } elseif ($this->isSessionExpired()) {
             // Real session lifetime and regeneration after maxLifeTime
@@ -104,8 +105,7 @@ abstract class AbstractSessionHandler extends SessionHandler
         ?int $gcDivisor,
         ?int $maxLifeTime,
         ?int $gcProbability
-    ): void
-    {
+    ): void {
         if (!is_null(value: $gcDivisor)) {
             ini_set(option: 'session.gc_divisor', value: $gcDivisor);
         }
@@ -179,7 +179,7 @@ abstract class AbstractSessionHandler extends SessionHandler
             return false;
         }
 
-        if ($sidBitsPerChar == 6 && preg_match(pattern: '/^[A-Za-z\d-,]+$/i', subject: $sessionId) === 0) {
+        if ($sidBitsPerChar == 6 && preg_match(pattern: '/^[A-Za-z\d\-,]+$/i', subject: $sessionId) === 0) {
             return false;
         }
 

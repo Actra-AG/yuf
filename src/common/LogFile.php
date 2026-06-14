@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\common;
 
 use actra\yuf\Core;
+use Throwable;
 
 class LogFile
 {
@@ -61,8 +62,7 @@ class LogFile
     public static function info(
         string $logFileName,
         string $message
-    ): void
-    {
+    ): void {
         LogFile::log(
             group: 'info',
             logFileName: $logFileName,
@@ -74,8 +74,7 @@ class LogFile
         string $group,
         string $logFileName,
         string $message
-    ): void
-    {
+    ): void {
         if (array_key_exists(
             key: $group . '-' . $logFileName,
             array: LogFile::$openLogFiles
@@ -115,8 +114,7 @@ class LogFile
     public static function debug(
         string $logFileName,
         string $message
-    ): void
-    {
+    ): void {
         LogFile::log(
             group: 'debug',
             logFileName: $logFileName,
@@ -127,8 +125,7 @@ class LogFile
     public static function error(
         string $logFileName,
         string $message
-    ): void
-    {
+    ): void {
         LogFile::log(
             group: 'error',
             logFileName: $logFileName,
