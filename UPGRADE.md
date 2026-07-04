@@ -4,6 +4,14 @@ This document tracks relevant changes for both frontend and backend developers.
 
 ## HTML & CSS (Frontend)
 
+### v2.2.0 – July 4, 2026
+
+* **Template Tags:**
+    * `tst:if` now supports `compare="hasSnippet"` to check whether a snippet file exists in the configured snippets
+      directory.
+    * This can be used together with `operator="eq"` and `against="snippet-file.html"` to conditionally render content
+      only when a snippet is available.
+
 ### v1.7.0 – May 25, 2026
 
 * **ActionsColumn Styling:**

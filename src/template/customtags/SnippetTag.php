@@ -56,11 +56,11 @@ class SnippetTag extends TemplateTag implements TagNode, TagInline
 
     public function replaceNode(TemplateEngine $tplEngine, ElementNode $elementNode): void
     {
-        $newNode = new TextNode();
-        $newNode->content = $this->getReplaceValue(snippetName: $elementNode->getAttribute(name: 'name')->value);
+        $textNode = new TextNode();
+        $textNode->content = $this->getReplaceValue(snippetName: $elementNode->getAttribute(name: 'name')->value);
         $elementNode->parentNode->replaceNode(
             nodeToReplace: $elementNode,
-            replacementNode: $newNode
+            replacementNode: $textNode
         );
     }
 

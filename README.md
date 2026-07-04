@@ -77,6 +77,24 @@ JSON error responses use this structure:
 
 Optional additional response data is returned in a top-level `data` property.
 
+## Template Tags
+
+`yuf` templates support custom tags for common rendering logic.
+
+### Conditional snippet rendering
+
+The `tst:if` tag can check whether a snippet file exists in the configured snippets directory by using
+`compare="hasSnippet"`.
+
+```html
+
+<tst:if compare="hasSnippet" operator="eq" against="example.html">
+  <tst:snippet name="example.html"/>
+</tst:if>
+```
+
+The value of `against` is resolved relative to `Core::get()->snippetsDirectory`.
+
 ## Documentation
 
 For more detailed examples, please refer to:

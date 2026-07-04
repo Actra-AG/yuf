@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\template\customtags;
 
+use actra\yuf\Core;
 use actra\yuf\template\htmlparser\ElementNode;
 use actra\yuf\template\htmlparser\TextNode;
 use actra\yuf\template\template\TagNode;
@@ -45,13 +46,19 @@ class IfTag extends TemplateTag implements TagNode
         $compareAttr = $elementNode->getAttribute(name: 'compare')->value;
         $operatorAttr = $elementNode->getAttribute(name: 'operator')->value;
         $againstAttr = $elementNode->getAttribute(name: 'against')->value;
-        if (strlen(string: $againstAttr) === 0) {
+        if ($compareAttr === 'hasSnippet') {
+            $againstAttr = 'file_exists(filename: \'' . Core::get()->snippetsDirectory . $againstAttr . '\')';
+        } elseif (strlen(string: $againstAttr) === 0) {
             $againstAttr = "''";
         } elseif (!in_array(needle: strtolower(string: $againstAttr), haystack: ['null', 'true', 'false'])) {
             $againstAttr = "'" . $againstAttr . "'";
         }
         $phpCode = '<?php ';
-        $phpCode .= '$compareValue = $this->getDataFromSelector(\'' . $compareAttr . '\');';
+        if ($compareAttr === 'hasSnippet') {
+            $phpCode .= '$compareValue = true;';
+        } else {
+            $phpCode .= '$compareValue = $this->getDataFromSelector(\'' . $compareAttr . '\');';
+        }
         $phpCode .= 'if(' . match (strtolower(
                 string: $operatorAttr
             )) {
@@ -61,8 +68,8 @@ class IfTag extends TemplateTag implements TagNode
                 'le' => '$compareValue <= ' . $againstAttr,
                 'ne' => '$compareValue != ' . $againstAttr,
                 'eq' => '$compareValue == ' . $againstAttr,
-                'in' => 'in_array($compareValue, explode(\' \', '.$againstAttr.'))',
-                default => throw new LogicException(message: 'Unknown operator "'.$operatorAttr.'"')
+                'in' => 'in_array($compareValue, explode(\' \', ' . $againstAttr . '))',
+                default => throw new LogicException(message: 'Unknown operator "' . $operatorAttr . '"')
             } . ') { ?>';
         $phpCode .= $elementNode->getInnerHtml();
         if (!$tplEngine->isFollowedBy(elementNode: $elementNode, tagNames: ['else', 'elseif'])) {

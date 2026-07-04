@@ -44,6 +44,7 @@ class TemplateEngine
     protected ?HtmlDoc $htmlDoc = null;
     protected ArrayObject $dataPool;
     protected ArrayObject $dataTable;
+    /** @var TagNode[]|TagInline[] */
     protected array $customTags = [];
     protected ?TemplateCacheEntry $cached = null;
     protected string $currentTemplateFile = '';
@@ -56,10 +57,9 @@ class TemplateEngine
      */
     public function __construct(
         protected TemplateCacheStrategy $templateCacheInterface,
-        protected string                $tplNsPrefix,
-        array                           $customTags = []
-    )
-    {
+        protected string $tplNsPrefix,
+        array $customTags = []
+    ) {
         $this->customTags = array_merge(TemplateEngine::getDefaultCustomTags(), $customTags);
         $this->dataPool = new ArrayObject();
         $this->dataTable = new ArrayObject();
@@ -164,12 +164,14 @@ class TemplateEngine
         $this->htmlDoc = new HtmlDoc($content, $this->tplNsPrefix);
         foreach ($this->customTags as $customTag) {
             if (
-                !in_array(needle: TagNode::class, haystack: class_implements(object_or_class: $customTag))
+                !in_array(
+                    needle: TagNode::class,
+                    haystack: class_implements(object_or_class: $customTag)
+                )
                 || !$customTag::isSelfClosing()
             ) {
                 continue;
             }
-
             $this->htmlDoc->addSelfClosingTag(tagName: $this->tplNsPrefix . ':' . $customTag::getName());
         }
 
