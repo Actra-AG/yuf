@@ -19,7 +19,8 @@ abstract class AuthUser
         public readonly bool $isActive,
         private(set) int $wrongPasswordAttempts,
         private readonly AccessRightCollection $accessRightCollection,
-        private(set) Password $password
+        private(set) Password $password,
+        private(set) readonly array $ipWhitelist
     ) {
         if (!is_null(value: AuthUser::$instance)) {
             throw new LogicException(message: 'There can only be one AuthUser instance.');

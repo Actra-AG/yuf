@@ -12,6 +12,7 @@ required for all setups.
 - **Standalone Support**: Works perfectly without Composer.
 - **Forced Autoloading**: Always uses the specialized `actra/autoloader` for maximum performance and control.
 - **Built-in Security**: Includes features like CSP (Content Security Policy) nonce support.
+- **Authentication Helpers**: Supports access rights, password login handling, and optional per-user IP whitelists.
 
 ## Requirements
 

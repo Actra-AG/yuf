@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\auth;
 
 use actra\yuf\core\HttpRequest;
+use actra\yuf\datacheck\validatorTypes\IpValidator;
 use actra\yuf\session\AbstractSessionHandler;
 use LogicException;
 
@@ -19,7 +20,7 @@ abstract class Authenticator
 
     protected function __construct(private readonly int $maxAllowedWrongPasswordAttempts)
     {
-        if (!is_null(value: Authenticator::$instance)) {
+        if (Authenticator::$instance !== null) {
             throw new LogicException(message: 'There can only be one Authenticator instance.');
         }
         Authenticator::$instance = $this;
@@ -48,7 +49,7 @@ abstract class Authenticator
         $sessionID = AbstractSessionHandler::getSessionHandler()->getID();
         $ipAddress = HttpRequest::getRemoteAddress();
         $authUser = $this->createAuthUserByUserName(userName: $userName);
-        if (is_null(value: $authUser)) {
+        if ($authUser === null) {
             $this->authResult = AuthResult::ERROR_UNKNOWN_USER_NAME;
             $this->logAuthResult(
                 userID: null,
@@ -61,6 +62,23 @@ abstract class Authenticator
             return false;
         }
         $userID = $authUser->ID;
+        if ($authUser->ipWhitelist !== []
+            && !IpValidator::isInWhitelist(
+                whiteList: $authUser->ipWhitelist,
+                ipAddressToCheck: $ipAddress
+            )
+        ) {
+            $this->authResult = AuthResult::ERROR_IP_NOT_ALLOWED;
+            $this->logAuthResult(
+                userID: $userID,
+                sessionID: $sessionID,
+                ip: $ipAddress,
+                userName: $userName,
+                authResult: $this->authResult
+            );
+
+            return false;
+        }
         if (!$this->checkLoginCredentials(authUser: $authUser)) {
             if ($this->authResult === AuthResult::UNDEFINED) {
                 throw new LogicException(message: 'Undefined authResult');
@@ -99,7 +117,7 @@ abstract class Authenticator
 
             return false;
         }
-        if (!is_null(value: $passwordToCheck)) {
+        if ($passwordToCheck !== null) {
             if (!$authUser->hasOneOfRights(
                 accessRightCollection: AccessRightCollection::createFromStringArray(
                     input: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN]

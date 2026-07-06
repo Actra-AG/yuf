@@ -41,6 +41,19 @@ This document tracks relevant changes for both frontend and backend developers.
 
 ## Backend & API
 
+### v3.0.0 - July 6, 2026
+
+* **Authentication IP Whitelist:**
+    * `AuthUser` now requires an `ipWhitelist` array constructor argument.
+    * If the whitelist is not empty, login attempts are only accepted when the remote IP address matches the whitelist.
+    * Failed whitelist checks now use `AuthResult::ERROR_IP_NOT_ALLOWED`.
+
+* **BREAKING CHANGE:** Classes extending `AuthUser` or instantiating it must pass the new `ipWhitelist` constructor
+  argument.
+
+* **BREAKING CHANGE:** `AuthResult::renderErrorMessage()` has been removed. Use `AuthResult::render()` or handle
+  user-facing error messages in application code.
+
 ### v2.1.1 - June 14, 2026
 
 * **JSON Request Body Validation:**
