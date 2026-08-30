@@ -41,6 +41,38 @@ This document tracks relevant changes for both frontend and backend developers.
 
 ## Backend & API
 
+### v3.2.0 - August 30, 2026
+
+* **Database Query Helpers:**
+    * `DbQuery::addOrderPart()` got an optional `parameters` argument (before `ascending`): with parameters, the first
+      argument is an SQL expression instead of a column name, e.g. to sort by the relevance of a `MATCH() AGAINST()`
+      fulltext search. Its values are bound between those of the `WHERE` part and the ones of the `LIMIT`.
+
+      ```php
+      $dbQuery->addOrderPart(
+          column: 'MATCH(products.searchContent) AGAINST (? IN BOOLEAN MODE)',
+          parameters: [$searchTerm],
+          ascending: false
+      );
+      ```
+
+      **Attention:** call `addOrderPart()` with named arguments, because `ascending` is no longer the second argument.
+      A call like `addOrderPart($column, false)` now passes `false` to `parameters` and results in a `TypeError`.
+    * `DbQuery::addOrderPart()` accepts several columns separated by a comma and applies the sort direction to each of
+      them (before, only the last column of such a list was sorted descending).
+    * Added `DbQuery::clearOrderParts()` to remove all sorting which has been added so far.
+    * Parts added by `addJoinPart()` / `addWherePart()` are normalized to a single line, so multi-line conditions no
+      longer keep their line breaks and indentation within the generated query.
+    * The generated queries are checked for a matching amount of parameters and `?` placeholders before they are
+      executed, so a mismatch is reported as a `LogicException` instead of a `PDOException`.
+    * **Attention:** an order expression must not end with `ASC` or `DESC`, because the sort direction is added
+      according to the `ascending` argument. Such an expression now throws a `LogicException` instead of producing an
+      invalid `... DESC ASC`.
+* **Tables:**
+    * A sorting which has been chosen by the user now replaces the sorting of the given `DbQuery` instead of being
+      appended to it, so a click on a sortable column header also takes effect if the query is sorted already (e.g. by
+      the relevance of a fulltext search). The default sorting of the table is still appended.
+
 ### v3.1.0 - August 30, 2026
 
 * **Database Query Helpers:**
@@ -53,8 +85,9 @@ This document tracks relevant changes for both frontend and backend developers.
     * **Fixed:** conditions added with `addWherePart()` are wrapped in parentheses, so a condition containing `OR`
       can no longer change the meaning of the other conditions.
     * **Security:** `addOrderPart()` now rejects columns containing anything other than letters, digits, `_`, `.`
-      and backticks. An order column cannot be bound as a `?` placeholder, so a user-controlled value could
-      previously be injected into the query.
+      and backticks. An order column cannot be bound as a `?` placeholder, so a user-controlled value could previously
+      be injected into the query. Every part of a qualified column is wrapped in backticks (e.g. `t.group` becomes
+      `` `t`.`group` ``), because it could be a reserved word.
     * **Attention:** `DbQuery::createFromSqlQuery()` now throws a `LogicException` for queries containing
       `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT` or `UNION` (these silently produced wrong results, especially for
       `getTotalAmount()`), for unbalanced parentheses and for a parameter count which does not match the amount of

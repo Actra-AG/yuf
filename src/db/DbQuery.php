@@ -46,13 +46,14 @@ class DbQuery
     private array $joinParts = [];
     /** @var string[] One complete condition per entry; the conditions are combined with "AND". */
     private array $whereParts = [];
-    /** @var string[] */
+    /** @var string[] One complete "ORDER BY" entry, including its sort direction, per entry. */
     private array $orderParts = [];
     /** Parameters, stored per section, because sections can be extended after the query was created. */
     private array $selectParameters = [];
     private array $fromParameters = [];
     private array $joinParameters = [];
     private array $whereParameters = [];
+    private array $orderParameters = [];
 
     private function __construct()
     {
@@ -280,15 +281,11 @@ class DbQuery
      */
     private static function tokenize(string $query): array
     {
-        $normalizedQuery = trim(
-            string: preg_replace(
-                pattern: '!\s+!',
-                replacement: ' ',
-                subject: str_replace(
-                    search: ['(', ')'],
-                    replace: [' ( ', ' ) '],
-                    subject: $query
-                )
+        $normalizedQuery = DbQuery::normalizeWhitespace(
+            queryPart: str_replace(
+                search: ['(', ')'],
+                replace: [' ( ', ' ) '],
+                subject: $query
             )
         );
         if ($normalizedQuery === '') {
@@ -296,6 +293,21 @@ class DbQuery
         }
 
         return explode(separator: ' ', string: $normalizedQuery);
+    }
+
+    /**
+     * Replaces every sequence of whitespace (including line breaks and indentation of multi-line
+     * query parts) by a single space.
+     */
+    private static function normalizeWhitespace(string $queryPart): string
+    {
+        return trim(
+            string: preg_replace(
+                pattern: '!\s+!',
+                replacement: ' ',
+                subject: $queryPart
+            )
+        );
     }
 
     /**
@@ -348,28 +360,46 @@ class DbQuery
             $queryParts[] = 'ORDER BY ' . implode(separator: ', ', array: $this->orderParts);
         }
         $queryParts[] = 'LIMIT ?, ?';
+        $query = DbQuery::buildQuery(queryParts: $queryParts);
+        $parameters = [
+            ...$this->selectParameters,
+            ...$this->getFromJoinAndWhereParameters(),
+            ...$this->orderParameters,
+            $offset,
+            $rowCount,
+        ];
+        DbQuery::checkParameterCount(queryPart: $query, parameters: $parameters);
 
         return new DbQueryData(
-            query: DbQuery::buildQuery(queryParts: $queryParts),
-            params: [
-                ...$this->selectParameters,
-                ...$this->getFromJoinAndWhereParameters(),
-                $offset,
-                $rowCount,
-            ]
+            query: $query,
+            params: $parameters
         );
     }
 
+    /**
+     * Counts the rows the query would return without its "LIMIT".
+     *
+     * The columns of the "SELECT" are replaced by "COUNT(*)", so the parameters which belong to them
+     * (e.g. those of a sub query within the selected columns) are intentionally not bound: their
+     * placeholders are not part of the generated count query. The same applies to the parameters of a
+     * sorting expression, because a count does not need an "ORDER BY". Parameters within a sub query
+     * of the "FROM" or "JOIN" parts and those of the "WHERE" part are kept, as their placeholders
+     * remain within the query.
+     */
     public function getTotalAmount(FrameworkDB $db): int
     {
+        $query = DbQuery::buildQuery(
+            queryParts: [
+                'SELECT COUNT(*) AS amount',
+                ...$this->getFromJoinAndWhereParts(),
+            ]
+        );
+        $parameters = $this->getFromJoinAndWhereParameters();
+        DbQuery::checkParameterCount(queryPart: $query, parameters: $parameters);
+
         $result = $db->select(
-            sql: DbQuery::buildQuery(
-                queryParts: [
-                    'SELECT COUNT(*) AS amount',
-                    ...$this->getFromJoinAndWhereParts(),
-                ]
-            ),
-            parameters: $this->getFromJoinAndWhereParameters()
+            sql: $query,
+            parameters: $parameters
         );
 
         return (int)$result[0]->amount;
@@ -416,7 +446,7 @@ class DbQuery
 
     public function addJoinPart(string $joinPart, array $parameters): void
     {
-        $joinPart = trim(string: $joinPart);
+        $joinPart = DbQuery::normalizeWhitespace(queryPart: $joinPart);
         if (
             preg_match(
                 pattern: '!(^|\s)(' . implode(separator: '|', array: DbQuery::JOIN_KEYWORDS) . ')\s!i',
@@ -435,7 +465,7 @@ class DbQuery
 
     public function addWherePart(string $wherePart, array $parameters): void
     {
-        $wherePart = trim(string: $wherePart);
+        $wherePart = DbQuery::normalizeWhitespace(queryPart: $wherePart);
         if ($wherePart === '') {
             throw new LogicException(message: 'The where part must not be empty.');
         }
@@ -458,37 +488,82 @@ class DbQuery
     }
 
     /**
-     * The column of an "ORDER BY" cannot be bound as a "?" placeholder, so it is validated against a
-     * whitelist of characters which are valid within an identifier.
+     * Without $parameters, $column is a column name or a list of column names separated by a comma
+     * (e.g. "a.name, b.name"); every one of them is validated, escaped and sorted in the given
+     * direction.
+     *
+     * With $parameters, $column is an SQL expression whose values are bound as "?" placeholders
+     * (e.g. "MATCH(t.searchContent) AGAINST (? IN BOOLEAN MODE)"). Such an expression is taken over
+     * unchanged and must therefore never contain user input.
      */
-    public function addOrderPart(string $column, bool $ascending = true): void
+    public function addOrderPart(string $column, array $parameters = [], bool $ascending = true): void
+    {
+        $sortDirection = $ascending ? DbQuery::SORT_ASC : DbQuery::SORT_DESC;
+        if (count(value: $parameters) === 0) {
+            foreach (explode(separator: ',', string: $column) as $singleColumn) {
+                $this->orderParts[] = DbQuery::escapeColumn(column: $singleColumn) . ' ' . $sortDirection;
+            }
+
+            return;
+        }
+
+        $expression = DbQuery::normalizeWhitespace(queryPart: $column);
+        if ($expression === '') {
+            throw new LogicException(message: 'The order expression must not be empty.');
+        }
+        if (
+            preg_match(
+                pattern: '!\s(' . DbQuery::SORT_ASC . '|' . DbQuery::SORT_DESC . ')$!i',
+                subject: $expression
+            ) === 1
+        ) {
+            throw new LogicException(
+                message: 'The order expression "' . $expression . '" must not contain the sort direction;'
+                . ' it is added according to the "ascending" argument.'
+            );
+        }
+        DbQuery::checkParameterCount(queryPart: $expression, parameters: $parameters);
+
+        $this->orderParts[] = $expression . ' ' . $sortDirection;
+        $this->orderParameters = [...$this->orderParameters, ...array_values(array: $parameters)];
+    }
+
+    /**
+     * Removes all sorting which has been added so far, e.g. to let an explicitly requested sorting
+     * replace a default one instead of being appended to it.
+     */
+    public function clearOrderParts(): void
+    {
+        $this->orderParts = [];
+        $this->orderParameters = [];
+    }
+
+    /**
+     * The column of an "ORDER BY" cannot be bound as a "?" placeholder, so it is validated against a
+     * whitelist of characters which are valid within an identifier. Every part of a qualified column
+     * is wrapped in backticks (e.g. "t.group" => "`t`.`group`"), because it could be a reserved word.
+     */
+    private static function escapeColumn(string $column): string
     {
         $column = trim(string: $column);
-
         if ($column === '') {
             throw new LogicException(message: 'The order column must not be empty.');
         }
-
-        // Validate characters to prevent SQL injection
+        // Prevent SQL injection, because the column cannot be bound as a parameter.
         if (preg_match(pattern: '/[^a-zA-Z0-9_.`]/', subject: $column) === 1) {
             throw new LogicException(message: 'Invalid characters in order column "' . $column . '".');
         }
-
-        // Clean any existing backticks first to prevent double-escaping
-        $cleanColumn = str_replace(search: '`', replace: '', subject: $column);
-
-        if (str_contains(haystack: $cleanColumn, needle: '.')) {
-            // Split by dot (e.g., "t.group" -> ["t", "group"]) and wrap each part in backticks
-            $parts = explode(separator: '.', string: $cleanColumn);
-            $escapedParts = array_map(
-                callback: static fn(string $part): string => '`' . $part . '`',
-                array: $parts
-            );
-            $column = implode(separator: '.', array: $escapedParts);
-        } else {
-            $column = '`' . $cleanColumn . '`';
+        // Existing backticks are removed first to prevent double-escaping.
+        $identifierParts = explode(
+            separator: '.',
+            string: str_replace(search: '`', replace: '', subject: $column)
+        );
+        foreach ($identifierParts as $identifierPart) {
+            if (trim(string: $identifierPart) === '') {
+                throw new LogicException(message: 'Incomplete order column "' . $column . '".');
+            }
         }
 
-        $this->orderParts[] = $column . ' ' . ($ascending ? DbQuery::SORT_ASC : DbQuery::SORT_DESC);
+        return '`' . implode(separator: '`.`', array: $identifierParts) . '`';
     }
 }

@@ -34,6 +34,8 @@ class DbResultTable extends SmartTable
     private ?int $totalAmount = null;
     private bool $filledDataBySelectQuery = false;
     private ?AbstractTableColumn $defaultSortColumn = null;
+    /** Whether the current sorting has been chosen by the user instead of being the default one. */
+    private bool $hasUserDefinedSorting = false;
     private TablePaginationRenderer $tablePaginationRenderer;
     private ?int $filledAmount = null;
 
@@ -106,6 +108,11 @@ class DbResultTable extends SmartTable
         $sortColumn = $this->getCurrentSortColumn();
         $sortDirection = $this->getCurrentSortDirection();
         if ((string)$sortColumn !== '') {
+            if ($this->hasUserDefinedSorting) {
+                // A sorting which has been chosen by the user replaces the one of the given DbQuery
+                // (e.g. a sorting by the relevance of a fulltext search).
+                $this->dbQuery->clearOrderParts();
+            }
             $this->dbQuery->addOrderPart(column: $sortColumn, ascending: ($sortDirection !== TableHelper::SORT_DESC));
         }
         $res = $this->dbQuery->selectFromDb(
@@ -163,6 +170,7 @@ class DbResultTable extends SmartTable
                     keyName: DbResultTable::PARAM_RESET
                 )
             )) {
+            $this->hasUserDefinedSorting = false;
             $defaultSortColumn = $this->defaultSortColumn;
             if (is_null(value: $defaultSortColumn)) {
                 DbResultTable::saveToSession(
@@ -191,7 +199,11 @@ class DbResultTable extends SmartTable
                     value: $defaultSortColumn->sortAscendingByDefault ? TableHelper::SORT_ASC : TableHelper::SORT_DESC
                 );
             }
+
+            return;
         }
+        // The sorting has been chosen by the user, either within this request or a previous one.
+        $this->hasUserDefinedSorting = true;
     }
 
     public static function saveToSession(string $dataType, string $identifier, string $index, string $value): void

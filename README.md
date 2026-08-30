@@ -58,12 +58,32 @@ $query->addOrderPart(column: 'users.name');
 ```
 
 `addJoinPart()` appends joins between the `FROM` and `WHERE` parts and accepts parameters in the same way as
-`addWherePart()`. Every added part must contain exactly one parameter per `?` placeholder, and each condition added
-with `addWherePart()` is wrapped in parentheses before the conditions are combined with `AND`.
+`addWherePart()`. Every added part must contain exactly one parameter per `?` placeholder, and each condition added with
+`addWherePart()` is wrapped in parentheses before the conditions are combined with `AND`.
 
 `addOrderPart()` only accepts columns consisting of letters, digits, `_`, `.` and backticks, because an order column
 cannot be bound as a `?` placeholder. Never pass a user-controlled value which was not checked against your own
 whitelist of sortable columns.
+
+`addOrderPart()` without `parameters` accepts column names only (one or several, separated by a comma), which are
+validated and escaped because they cannot be bound as parameters. As soon as `parameters` are given, the first argument
+is an SQL expression instead, e.g., to sort by the relevance of a fulltext search:
+
+```php
+$query->addWherePart(
+    wherePart: 'MATCH(products.searchContent) AGAINST (? IN BOOLEAN MODE)',
+    parameters: [$searchTerm]
+);
+$query->addOrderPart(
+    column: 'MATCH(products.searchContent) AGAINST (? IN BOOLEAN MODE)',
+    parameters: [$searchTerm],
+    ascending: false
+);
+```
+
+Such an expression is taken over unchanged and must therefore never contain user input; its values belong into
+`parameters`. It must not end with `ASC` or `DESC`, because the sort direction is added according to `ascending`.
+`clearOrderParts()` removes all sorting that has been added so far.
 
 The query passed to `createFromSqlQuery()` must consist of `SELECT`, `FROM`, optional joins and an optional `WHERE`
 only. `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT` and `UNION` are rejected, because sorting and paging are added by
