@@ -41,6 +41,25 @@ This document tracks relevant changes for both frontend and backend developers.
 
 ## Backend & API
 
+### v3.1.0 - August 30, 2026
+
+* **Database Query Helpers:**
+    * Added `DbQuery::addJoinPart()` to append joins between the `FROM` and `WHERE` parts.
+    * `DbQuery` now keeps join parts separately so generated result queries and total-count queries include the same
+      joins. All join types (`LEFT [OUTER] JOIN`, `INNER JOIN`, `CROSS JOIN`, `NATURAL JOIN`, `STRAIGHT_JOIN`, ...)
+      are recognized as one complete join clause each.
+    * **Fixed:** parameters are now stored per query section, so parts added by `addJoinPart()` / `addWherePart()`
+      no longer shift the parameters of the original query out of order.
+    * **Fixed:** conditions added with `addWherePart()` are wrapped in parentheses, so a condition containing `OR`
+      can no longer change the meaning of the other conditions.
+    * **Security:** `addOrderPart()` now rejects columns containing anything other than letters, digits, `_`, `.`
+      and backticks. An order column cannot be bound as a `?` placeholder, so a user-controlled value could
+      previously be injected into the query.
+    * **Attention:** `DbQuery::createFromSqlQuery()` now throws a `LogicException` for queries containing
+      `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT` or `UNION` (these silently produced wrong results, especially for
+      `getTotalAmount()`), for unbalanced parentheses and for a parameter count which does not match the amount of
+      `?` placeholders. The same placeholder check applies to `addJoinPart()` and `addWherePart()`.
+
 ### v3.0.0 - July 6, 2026
 
 * **Authentication IP Whitelist:**

@@ -43,6 +43,32 @@ composer require actra/yuf
 2. Create an `index.php` in your document root based on `index.example.php`.
 3. Initialize the Framework Core and provide the path to `Autoloader.php` if not using the default.
 
+## Database Query Helpers
+
+`DbQuery` can be created from an SQL query and extended dynamically before execution.
+
+```php
+$query = DbQuery::createFromSqlQuery(
+    query: 'SELECT users.* FROM users WHERE users.active = ?',
+    parameters: [1]
+);
+$query->addJoinPart(joinPart: 'LEFT JOIN groups ON groups.id = users.group_id', parameters: []);
+$query->addWherePart(wherePart: 'groups.name = ?', parameters: ['admin']);
+$query->addOrderPart(column: 'users.name');
+```
+
+`addJoinPart()` appends joins between the `FROM` and `WHERE` parts and accepts parameters in the same way as
+`addWherePart()`. Every added part must contain exactly one parameter per `?` placeholder, and each condition added
+with `addWherePart()` is wrapped in parentheses before the conditions are combined with `AND`.
+
+`addOrderPart()` only accepts columns consisting of letters, digits, `_`, `.` and backticks, because an order column
+cannot be bound as a `?` placeholder. Never pass a user-controlled value which was not checked against your own
+whitelist of sortable columns.
+
+The query passed to `createFromSqlQuery()` must consist of `SELECT`, `FROM`, optional joins and an optional `WHERE`
+only. `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT` and `UNION` are rejected, because sorting and paging are added by
+`DbQuery` itself (`addOrderPart()` and the offset/row count of `selectFromDb()`).
+
 ## REST/API Endpoints
 
 `yuf` includes lightweight helpers for building REST-style endpoints without adding external dependencies.
