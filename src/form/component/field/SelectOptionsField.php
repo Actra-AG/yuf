@@ -38,9 +38,9 @@ class SelectOptionsField extends OptionsField
         public readonly ?string $placeholder = null,
         ?AutoCompleteValue $autoComplete = null
     ) {
-        $this->emptyValueLabel = is_null(value: $individualEmptyValueLabel) ? HtmlText::encoded(
-            textContent: '-- Bitte wählen --'
-        ) : $individualEmptyValueLabel;
+        $this->emptyValueLabel = $individualEmptyValueLabel ?? HtmlText::encoded(
+            textContent: $requiredError === null ? '' : '-- Please select --'
+        );
         parent::__construct(
             name: $name,
             label: $label,
@@ -48,7 +48,7 @@ class SelectOptionsField extends OptionsField
             initialValue: $initialValue,
             autoComplete: $autoComplete
         );
-        if (!is_null(value: $requiredError)) {
+        if ($requiredError !== null) {
             $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
         }
         if ($renderAsChosenEnhancedField) {

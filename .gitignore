@@ -1,0 +1,16 @@
+# Ignore everything
+*
+
+# Allow specific core files
+!/.env.example.php
+!/.gitignore
+!/AGENTS.md
+!/composer.json
+!/index.example.php
+!/LICENSE
+!/README.md
+!/UPGRADE.md
+
+# Allow specific ddirectories
+!/src/
+!/src/**

@@ -4,6 +4,18 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v3.2.1] – 2026-09-10
+
+### 🎨 HTML & CSS (Frontend)
+
+* **Form Rendering:**
+    * 🩹 **Fixed:** Optional `SelectOptionsField` instances now render their empty option without a visible label by
+      default.
+    * The default empty option label for required `SelectOptionsField` instances changed from German to English
+      (`-- Please select --`).
+
+---
+
 ## [v3.2.0] – 2026-08-30
 
 ### ⚙️ Backend & API
