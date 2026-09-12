@@ -4,6 +4,17 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v3.2.2] – 2026-09-12
+
+### ⚙️ Backend & API
+
+* **Phone Number Formatting:**
+    * 🩹 **Fixed:** Anchored regex evaluation in `PhoneMatcher` now uses the `A` (`PCRE_ANCHORED`) modifier, ensuring
+      alternation patterns in metadata-leading digits are anchored strictly to the start of the string without false
+      positives.
+
+---
+
 ## [v3.2.1] – 2026-09-10
 
 ### 🎨 HTML & CSS (Frontend)

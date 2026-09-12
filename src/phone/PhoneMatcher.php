@@ -48,7 +48,7 @@ class PhoneMatcher
     public function lookingAt(): bool
     {
         if (preg_match(
-                pattern: '/^' . $this->pattern . '/ui',
+                pattern: '/' . $this->pattern . '/uAi',
                 subject: $this->subject,
                 matches: $groups,
                 flags: PREG_OFFSET_CAPTURE
@@ -69,11 +69,13 @@ class PhoneMatcher
     public function matches(): bool
     {
         if (preg_match(
-                pattern: '/^' . $this->pattern . '$/ui',
+                pattern: '/' . $this->pattern . '/uAi',
                 subject: $this->subject,
                 matches: $groups,
                 flags: PREG_OFFSET_CAPTURE
-            ) !== 1) {
+            ) !== 1
+            || $groups[0][0] !== $this->subject
+        ) {
             return false;
         }
         foreach ($groups as $group) {
