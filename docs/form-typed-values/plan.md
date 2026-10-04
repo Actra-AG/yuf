@@ -1,6 +1,6 @@
 # Plan: Typed form field values (v3.3.0)
 
-Status: planned (2026-10-04). Follow-up for v4: [docs/form-v4/plan.md](../form-v4/plan.md).
+Status: done (2026-10-04). Follow-up for v4: [docs/form-v4/plan.md](../form-v4/plan.md).
 
 ## Goal
 
@@ -149,6 +149,9 @@ Decisions:
 
 - Exponent notation is rejected for both field kinds: users do not type it, it is not a plain amount and `'1e3'` would
   make the integer check ambiguous (it is numerically an integer but not "digits only", as the plan requires).
+- Review change (before release): `AmountField::validate()` now trims posted string input before storing it, so the
+  stored value is clean (`' 12 '` → `'12'`); the getters still trim (values from constructor/`setValue()`). The note
+  below describes the original Task 2 decision.
 - Whitespace is accepted but the stored value is **not trimmed**. Reason: no amount rule changes the value today (only
   email/date/time/phone rules normalize), and trimming would be an additional visible change (`getRawValue()` result,
   re-rendered input). Accepted whitespace is the existing behaviour (`is_numeric()` allows surrounding whitespace), so the
@@ -433,3 +436,19 @@ storage (v4), see Task 3.
 Verify: README and UPGRADE match the implemented API; `ddev composer check` green.
 
 Handover notes:
+
+Done (2026-10-04): documentation only, no change in `src/` or `tests/`.
+
+- `README.md`: new section "Form Field Values" (before "Documentation"): getters per field type, example with named
+  arguments, `HiddenField(..., valueIsInt: true)` recommendation, hint to call after validation
+  (`UnexpectedValueException`).
+- `UPGRADE.md`: new topmost section `[v3.3.0] – unreleased` (the date is set on release): new getters with before/after
+  (also `TextAreaField::getValues()` for subclasses that split lines), `valueIsInt`, `AmountParser`, fixes (⚠️ for the
+  stricter amount rule: integer fields reject decimals/exponent, out-of-range values rejected; phone/zip `TypeError`;
+  `DateField` null-safe), ⚠️ possible method name conflicts, outlook for v4.
+- `docs/form-v4/plan.md`: new section "Input from v3.3.0" (API to keep, remaining baseline entries per file, open
+  oddities).
+- Verified against the code (`git diff v3.2.2..HEAD -- src/`): all method names, signatures and the `HiddenField`
+  parameter match the notes of Tasks 1 to 5. Baseline entry counts per touched file taken from `phpstan-baseline.neon`.
+- Release: next tag `v3.3.0` (new features, no breaking API change; the stricter amount validation is documented as a
+  fix with ⚠️). Set the date in `UPGRADE.md` on release.

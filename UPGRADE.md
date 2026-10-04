@@ -4,6 +4,64 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v3.3.0] – 2026-10-04
+
+### ⚙️ Backend & API
+
+* **Form Field Values:**
+    * Added typed value getters, so no casting of `getRawValue()` is needed anymore. Call them after a successful
+      validation; they throw an `UnexpectedValueException` for values that cannot be converted.
+        * `getValueAsString(): string` on `InputField` (all subclasses), `TextAreaField`, `RadioOptionsField`,
+          `SelectOptionsField` and `ToggleField` (single selection; `null` becomes `''`).
+        * `getValueAsInt(): ?int` and `getValueAsFloat(): ?float` on `AmountField` (so `NumericField`),
+          `getValueAsInt(): ?int` on `HiddenField` (`null` for an empty value).
+        * `getValues(): array` (`list<string>`) on `CheckboxOptionsField` (so `BooleanField`), `SelectOptionsField`,
+          `ToggleField` and `TextAreaField`.
+      ```php
+      // Before
+      $name = ScalarCast::toString($field->getRawValue());
+      $quantity = (int)$quantityField->getRawValue();
+
+      // After
+      $name = $field->getValueAsString();
+      $quantity = $quantityField->getValueAsInt(); // ?int, null if empty
+      ```
+    * `TextAreaField::getValues()` returns one trimmed entry per line (CRLF-safe, without empty lines). A subclass that
+      parsed the lines itself in `validate()` can use it instead:
+      ```php
+      // Before
+      $lines = array_filter(array_map('trim', preg_split('/\R/', ScalarCast::toString($field->getRawValue()))));
+
+      // After
+      $lines = $field->getValues();
+      ```
+    * `HiddenField` got an optional `valueIsInt` argument. Use it for IDs, e.g.
+      `new HiddenField(name: 'id', value: $id, valueIsInt: true)`: manipulated input then becomes a validation error
+      instead of an exception in `getValueAsInt()`.
+    * Added `actra\yuf\form\AmountParser` (accepted number formats, used by the amount rule and the numeric getters).
+    * 🩹 **Fixed:** `DateField::getValueAsDateTimeImmutable()` no longer throws a `TypeError` for an empty field
+      (`null`), it returns `null`.
+    * 🩹 **Fixed:** `PhoneNumberField` and `ZipCodeField` no longer throw a `TypeError` for array input (`name[]=x`).
+      An array phone value is rejected with the normal validation error, an array country code is ignored (the
+      current country code stays).
+    * 🩹 **Fixed:** `ValidAmountRule` (`AmountField`, `NumericField`) accepted decimals in integer fields.
+      ⚠️ **Attention:** input that was accepted before is now a validation error:
+        * Integer fields (`valueIsFloat: false`, `NumericField`) reject `'1.5'`, `'1.0'`, `'1.'`, `'.5'` and `'1e3'`.
+        * Float fields reject exponent notation (`'1e3'`, `'1.5E-3'`).
+        * Values outside the `int` range (integer fields) or too large for a `float` are rejected.
+    * `AmountField` and `NumericField` now store posted input trimmed (`' 12 '` becomes `'12'`, also in
+      `getRawValue()`). Surrounding whitespace is still accepted.
+    * ⚠️ **Possible conflicts:** project subclasses that already declare one of the new methods with another
+      signature cause a fatal error. Rename them or adjust the signature.
+        * Public: `getValueAsString(): string`, `getValueAsInt(): ?int`, `getValueAsFloat(): ?float`,
+          `getValues(): array`.
+        * Protected on `FormField`: `getValueAsStringOrFail()`, `getValueAsIntOrFail()`, `getValueAsFloatOrFail()`,
+          `getValuesAsStringListOrFail()`.
+    * **Outlook:** `getRawValue()` and the `mixed` value storage of `FormField` will be removed in v4. The new getters
+      stay; use them in new code.
+
+---
+
 ## [v3.2.2] – 2026-09-12
 
 ### ⚙️ Backend & API

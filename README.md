@@ -151,6 +151,43 @@ The `tst:if` tag can check whether a snippet file exists in the configured snipp
 
 The value of `against` is resolved relative to `Core::get()->snippetsDirectory`.
 
+## Form Field Values
+
+Form fields return their value with a type, so no casting is needed (PHPStan level 10 friendly):
+
+- **String:** `getValueAsString(): string` on `InputField` (e.g. `TextField`, `HiddenField`), `TextAreaField`,
+  `RadioOptionsField`, `SelectOptionsField` and `ToggleField` (single selection).
+- **Numeric:** `getValueAsInt(): ?int` and `getValueAsFloat(): ?float` on `AmountField`/`NumericField`,
+  `getValueAsInt(): ?int` on `HiddenField` (`null` for an empty value).
+- **List:** `getValues(): array` (`list<string>`) on `CheckboxOptionsField`, `SelectOptionsField`, `ToggleField` and
+  `TextAreaField` (one entry per line, trimmed, without empty lines).
+- **Date:** `DateField::getValueAsDateTimeImmutable(): ?DateTimeImmutable`.
+- **Boolean:** `BooleanField::isChecked(): bool`.
+
+```php
+$quantityField = new AmountField(
+    name: 'quantity',
+    label: HtmlText::encoded(textContent: 'Quantity'),
+    valueIsFloat: false
+);
+$idField = new HiddenField(name: 'id', value: $id, valueIsInt: true);
+$form = new Form(name: 'order');
+$form->addField(formField: $quantityField);
+$form->addField(formField: $idField);
+
+if ($form->validate()) {
+    $quantity = $quantityField->getValueAsInt(); // ?int, null if empty
+    $id = $idField->getValueAsInt();
+}
+```
+
+Hidden IDs should be declared with `HiddenField(..., valueIsInt: true)`: manipulated input then becomes a validation
+error instead of an exception.
+
+Call the getters after a successful validation. A value that cannot be converted (e.g. text in a numeric field,
+a number outside the `int` range, a manipulated array) throws an `UnexpectedValueException`. List getters do not
+check the values against the options and drop empty (`''`/`null`) entries.
+
 ## Documentation
 
 For more detailed examples, please refer to:

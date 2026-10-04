@@ -20,6 +20,49 @@ are allowed and documented in `UPGRADE.md` with before/after examples.
   rendered HTML. Do not commit.
 - Append handover notes to the task below.
 
+## Input from v3.3.0
+
+Findings of [docs/form-typed-values/plan.md](../form-typed-values/plan.md) that the tasks below must take into account.
+
+**The getter semantics of v3.3.0 are the API to keep** (`getValueAsString()`, `getValueAsInt()`, `getValueAsFloat()`,
+`getValues()`, `getValueAsDateTimeImmutable()`, `isChecked()`, `HiddenField` `valueIsInt`, `AmountParser`): `null` and
+missing keys give `''`/`null`/`[]`, numbers are parsed like `ValidAmountRule` accepts them (whitespace trimmed, no
+exponent, no overflow), `getValues()` drops `''`/`null` entries and converts `int` entries, and invalid values throw an
+`UnexpectedValueException` naming the field. Their tests are the regression base.
+
+**Remaining PHPStan baseline entries in `src/form/`** (140 in total, all need a signature change or the `mixed` value
+storage; count of entries per touched file, verified in `phpstan-baseline.neon`):
+
+| File | Entries | Cause |
+|:--|:--|:--|
+| `FormField` | 8 | untyped `getRawValue()`, `getOriginalValue()`, `setValue()`, `setOriginalValue()`; array types; `mixed` in `encode()` |
+| `TextAreaField` | 4 | array types of the constructor and `cssClassesForRenderer`, `renderValue()` with `mixed` |
+| `SelectOptionsField` | 6 | array types (constructor, `cssClasses`, data attributes) |
+| `ToggleField` | 20 | untyped `$initialValue`/`setValue()`, `mixed` in `changeValueToArray()` and rendering |
+| `PhoneNumberField` | 6 | `validate()` `$inputData`, `mixed` from `getRawValue()` into `Sanitizer`, `PhoneNumber`, `HtmlEncoder` |
+| `ZipCodeField` | 1 | `validate()` `$inputData` array type |
+| `CheckboxOptionsField` | 1 | array type of `$initialValues` |
+
+`InputField`, `RadioOptionsField`, `DateField`, `AmountField`, `HiddenField` and `ValidAmountRule` have none left.
+Untouched files with entries (renderers, rules, `FileField`, collections) belong to tasks 5 to 7.
+
+**Open oddities pinned by the characterization tests** (decide in the design, tests change on purpose):
+
+- A rejected array input keeps the previous value instead of resetting to `null`; the rules still run on it.
+- `isValueEmpty()` uses `array_filter()`: `'0'` entries and `false` count as empty. `getValues()` keeps `'0'`, but
+  `ValidateAgainstOptions` treats `['0']`, `[false]` and `[[]]` as empty and therefore valid.
+- `setOriginalValue()` does not remove zero-width spaces while `setValue()` does, so `valueHasChanged()` is `true`
+  right after construction with such a string.
+- `ValidateAgainstOptions` raises a `TypeError` for `int` entries (`FormOptions::exists(string)` under `strict_types`),
+  reachable only via project code. `getValues()` converts them to strings.
+- "Multiple" fields can hold a single string (`SelectOptionsField`, `CheckboxOptionsField`); only `ToggleField` wraps.
+  `SelectOptionsField::getValueAsString()` throws for multiple selection by configuration, not by value.
+- `ToggleField` (multiple) starts with `[null]` and holds `['']` for posted `''`; `getValues()` maps both to `[]`.
+- Single `SelectOptionsField`/`ToggleField` constructed with an array accept arrays.
+- The unchanged v3.3.0 field-level decisions: the amount value is stored untrimmed, `HiddenField`/`InputField` keep
+  `int|float|bool` constructor values until the first posted string, `PhoneNumberField`/`ZipCodeField` ignore a
+  non-string country code.
+
 ## Tasks
 
 ### Task 1: Design decision
@@ -40,6 +83,14 @@ Write `docs/form-v4/design.md` and get it approved by the user before task 2 sta
   (e.g. a nameserver field). Decide between a string-only `TextAreaField` with `getValues()` (from v3.3.0) for the
   lines, or a separate field class with a `list<string>` value. The feature must remain; `UPGRADE.md` shows the
   migration of such a subclass.
+- **Input normalization:** which fields trim (or otherwise normalize) posted input before storing it. v3.3.0 trims
+  amount fields (like email and phone fields already normalize); decide for text fields in general, with explicit
+  exceptions (never trim passwords; text areas may need leading whitespace).
+- **Numeric field classes:** replace `AmountField(valueIsFloat: ...)` (a boolean flag argument) with separate classes,
+  e.g. `IntegerField` (`?int`), `FloatField` (`?float`) and possibly a `DecimalField` for money (string-based decimal
+  with bcmath, no float rounding errors). Each class has only the getter that fits its type, so a wrong getter is a
+  PHPStan error instead of a runtime exception. `NumericField` (an integer field with its own renderer) is part of
+  this decision.
 - **Rules:** how `FormRule` implementations get typed values (e.g. rule per value type) instead of `getRawValue()`.
 - **Error messages:** the hard-coded German messages (e.g. "Die ungültige Eingabe wurde ignoriert.") — keep, make
   configurable, or translate (may become a separate plan).
