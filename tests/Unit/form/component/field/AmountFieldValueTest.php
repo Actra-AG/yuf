@@ -64,7 +64,7 @@ final class AmountFieldValueTest extends TestCase
         yield 'leading zeros' => ['007.50', true];
         yield 'trailing dot' => ['1.', true];
         yield 'leading dot' => ['.5', true];
-        yield 'surrounding whitespace is accepted and kept' => [' 1.5 ', true];
+        yield 'surrounding whitespace is accepted and trimmed' => [' 1.5 ', true];
         yield 'exponent notation is rejected' => ['1e3', false];
         yield 'decimal exponent notation is rejected' => ['1.5E-3', false];
         yield 'sign only' => ['-', false];
@@ -74,19 +74,19 @@ final class AmountFieldValueTest extends TestCase
     }
 
     #[DataProvider('floatInputProvider')]
-    public function testFloatFieldStoresInputAsString(string $input, bool $expectedValid): void
+    public function testFloatFieldStoresTrimmedInputAsString(string $input, bool $expectedValid): void
     {
         $field = $this->createField(valueIsFloat: true);
 
         $isValid = $field->validate(inputData: ['amount' => $input]);
 
         $this->assertSame($expectedValid, $isValid);
-        $this->assertSame($input, $field->getRawValue());
+        $this->assertSame(trim(string: $input), $field->getRawValue());
     }
 
     /**
      * Integer fields only accept an optional sign and digits. Surrounding whitespace is accepted (the stored value is
-     * not trimmed), exponent notation and decimals are rejected.
+     * trimmed), exponent notation and decimals are rejected.
      *
      * @return iterable<string, array{string, bool}>
      */
@@ -114,14 +114,14 @@ final class AmountFieldValueTest extends TestCase
     }
 
     #[DataProvider('integerInputProvider')]
-    public function testIntegerFieldValidatesInputAndStoresItAsPosted(string $input, bool $expectedValid): void
+    public function testIntegerFieldValidatesInputAndStoresItTrimmed(string $input, bool $expectedValid): void
     {
         $field = $this->createField(valueIsFloat: false);
 
         $isValid = $field->validate(inputData: ['amount' => $input]);
 
         $this->assertSame($expectedValid, $isValid);
-        $this->assertSame($input, $field->getRawValue());
+        $this->assertSame(trim(string: $input), $field->getRawValue());
     }
 
     public function testIntegerFieldAcceptsIntegerConstructorValue(): void

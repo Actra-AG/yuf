@@ -46,6 +46,24 @@ class AmountField extends TextField
     }
 
     /**
+     * Trims posted string input before it is stored and validated, so the stored value is a clean number (`' 12 '`
+     * becomes `'12'`). Arrays are left to the normal rejection in setValue().
+     *
+     * @param array<string, mixed> $inputData
+     */
+    public function validate(array $inputData, bool $overwriteValue = true): bool
+    {
+        if (
+            array_key_exists(key: $this->name, array: $inputData)
+            && is_string(value: $inputData[$this->name])
+        ) {
+            $inputData[$this->name] = trim(string: $inputData[$this->name]);
+        }
+
+        return parent::validate(inputData: $inputData, overwriteValue: $overwriteValue);
+    }
+
+    /**
      * Returns the value as `int`, or `null` if the field is empty (`null`, `''`, whitespace only).
      *
      * Accepts exactly what ValidAmountRule accepts for integers: optional sign and digits, surrounding whitespace

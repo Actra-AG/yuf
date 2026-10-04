@@ -41,8 +41,9 @@ class ValidAmountRule extends FormRule
             return false;
         }
 
-        // The stored value is not trimmed, so surrounding whitespace is accepted like is_numeric() does. Values out
-        // of the int/float range are invalid, so the numeric getters never fail after a successful validation.
+        // Surrounding whitespace is accepted like is_numeric() does: AmountField trims its input, other fields using
+        // this rule (HiddenField) may not. Values out of the int/float range are invalid, so the numeric getters
+        // never fail after a successful validation.
         return $this->valueIsFloat
             ? AmountParser::toFloat(value: $value) !== null
             : AmountParser::toInt(value: $value) !== null;

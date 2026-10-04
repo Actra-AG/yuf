@@ -134,7 +134,7 @@ final class InputFieldGetValueAsStringTest extends TestCase
         $this->assertSame($expected, $field->getValueAsString());
     }
 
-    public function testAmountFieldReturnsPostedStringUntrimmed(): void
+    public function testAmountFieldReturnsPostedStringTrimmed(): void
     {
         $field = new AmountField(
             name: 'amount',
@@ -144,6 +144,6 @@ final class InputFieldGetValueAsStringTest extends TestCase
 
         $field->validate(inputData: ['amount' => ' 1.5 ']);
 
-        $this->assertSame(' 1.5 ', $field->getValueAsString());
+        $this->assertSame('1.5', $field->getValueAsString());
     }
 }
