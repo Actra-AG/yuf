@@ -16,20 +16,21 @@ use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\html\HtmlText;
 
 /**
- * A select with one selected option. See `MultiSelectOptionsField` for a multiple selection.
+ * A select with multiple selected options (`name[]`). Replaces `SelectOptionsField(acceptMultipleSelections: true)`.
  */
-class SelectOptionsField extends SingleOptionsField
+class MultiSelectOptionsField extends MultiOptionsField
 {
     use SelectOptionsSettings;
 
     /**
+     * @param list<string> $initialValues
      * @param list<string> $cssClasses
      */
     public function __construct(
         string $name,
         HtmlText $label,
         FormOptions $formOptions,
-        ?string $initialValue,
+        array $initialValues,
         ?HtmlText $requiredError = null,
         ?HtmlText $individualEmptyValueLabel = null,
         array $cssClasses = [],
@@ -42,7 +43,7 @@ class SelectOptionsField extends SingleOptionsField
             name: $name,
             label: $label,
             formOptions: $formOptions,
-            initialValue: $initialValue,
+            initialValues: $initialValues,
             autoComplete: $autoComplete
         );
         if ($requiredError !== null) {

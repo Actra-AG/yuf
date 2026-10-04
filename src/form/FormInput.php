@@ -10,19 +10,20 @@ namespace actra\yuf\form;
 
 /**
  * Request data narrowed to the shapes a form field can read. `fromArray()` is the only place that sees `mixed`.
+ * An array of strings is kept with its keys (`getMap()`); `getList()` gives its values without the keys.
  */
 final readonly class FormInput
 {
     /**
      * @param array<string, string> $texts
-     * @param array<string, list<string>> $lists
+     * @param array<string, array<int|string, string>> $maps arrays of strings, with the keys of the request
      * @param array<string, true> $invalid
      * @param array<string, string> $queryTexts
      * @param array<string, true> $queryKeys
      */
     private function __construct(
         private array $texts,
-        private array $lists,
+        private array $maps,
         private array $invalid,
         private array $queryTexts,
         private array $queryKeys
@@ -37,7 +38,7 @@ final readonly class FormInput
     public static function fromArray(array $data, array $files = [], array $query = []): FormInput
     {
         $texts = [];
-        $lists = [];
+        $maps = [];
         $invalid = [];
         foreach ($data + $files as $key => $value) {
             $name = (string)$key;
@@ -45,12 +46,12 @@ final readonly class FormInput
                 $texts[$name] = $value;
                 continue;
             }
-            $list = FormInput::toStringList(value: $value);
-            if ($list === null) {
+            $map = FormInput::toStringMap(value: $value);
+            if ($map === null) {
                 $invalid[$name] = true;
                 continue;
             }
-            $lists[$name] = $list;
+            $maps[$name] = $map;
         }
         $queryTexts = [];
         $queryKeys = [];
@@ -63,7 +64,7 @@ final readonly class FormInput
 
         return new FormInput(
             texts: $texts,
-            lists: $lists,
+            maps: $maps,
             invalid: $invalid,
             queryTexts: $queryTexts,
             queryKeys: $queryKeys
@@ -71,29 +72,29 @@ final readonly class FormInput
     }
 
     /**
-     * @return ?list<string> `null` if the value is not an array that consists only of strings
+     * @return ?array<int|string, string> `null` if the value is not an array that consists only of strings
      */
-    private static function toStringList(mixed $value): ?array
+    private static function toStringMap(mixed $value): ?array
     {
         if (!is_array(value: $value)) {
             return null;
         }
-        $list = [];
-        foreach ($value as $entry) {
+        $map = [];
+        foreach ($value as $key => $entry) {
             if (!is_string(value: $entry)) {
                 return null;
             }
-            $list[] = $entry;
+            $map[$key] = $entry;
         }
 
-        return $list;
+        return $map;
     }
 
     public function getShape(string $name): InputShapeEnum
     {
         return match (true) {
             array_key_exists(key: $name, array: $this->texts) => InputShapeEnum::TEXT,
-            array_key_exists(key: $name, array: $this->lists) => InputShapeEnum::LIST,
+            array_key_exists(key: $name, array: $this->maps) => InputShapeEnum::LIST,
             array_key_exists(key: $name, array: $this->invalid) => InputShapeEnum::INVALID,
             default => InputShapeEnum::MISSING,
         };
@@ -108,11 +109,25 @@ final readonly class FormInput
     }
 
     /**
+     * The values of an array in their order, without the keys (`qty[a]=1&qty[b]=2` gives `['1', '2']`).
+     *
      * @return ?list<string> `null` unless the shape is LIST
      */
     public function getList(string $name): ?array
     {
-        return $this->lists[$name] ?? null;
+        $map = $this->maps[$name] ?? null;
+
+        return $map === null ? null : array_values(array: $map);
+    }
+
+    /**
+     * An array with its keys and order (`qty[123]=2` gives `[123 => '2']`). The shape is LIST, like for `getList()`.
+     *
+     * @return ?array<int|string, string> `null` unless the shape is LIST
+     */
+    public function getMap(string $name): ?array
+    {
+        return $this->maps[$name] ?? null;
     }
 
     public function hasQueryKey(string $key): bool

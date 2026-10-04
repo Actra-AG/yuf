@@ -191,6 +191,11 @@ final readonly class FormInput
 - `string` is `TEXT`; an array whose values are all strings is `LIST` (keys dropped); anything else (nested arrays,
   ints) is `INVALID`. `$_POST`-over-`$_FILES` precedence of `Form::validate()` is kept. The query part is always `$_GET`
   (the form action carries the sent indicator, also for POST forms).
+- **Keys of posted arrays are kept (added in review).** A posted array (`qty[123]=2`) keeps its int or string keys and
+  its order: `FormInput` stores an array whose entries are all strings as it is. `getList(name): ?list<string>` returns
+  the values in order without the keys (option fields use it), the new `getMap(name): ?array<int|string, string>`
+  returns the array with its keys, for project fields that use them. Both belong to the shape `LIST` (no new shape: the
+  shape only says "an array of strings"). Nested arrays and non-string entries stay `INVALID`.
 - `FormInput::fromGlobals()` is the only code in `src/form/` that reads `$_POST/$_GET/$_FILES`. `Form::validate()` and
   `Form::isSent()` take `?FormInput $input = null` (default: from globals), so forms are testable without superglobals
   (3.11).
@@ -479,12 +484,12 @@ Projects extend library classes, so `final` is the exception, not the default.
   `ZipCodeField` and
   `IbanNumberField`), `TextAreaField`, `IntegerField` (parent of `NumericField`), all option fields
   (`RadioOptionsField`, `SelectOptionsField`, `CheckboxOptionsField`, `ToggleField`, `MultiSelectOptionsField`,
-  `MultiToggleField`), `FormRenderer` and all renderers (projects extend them and set them with
-  `setRenderer()`/`getDefaultRenderer()`), `FormFieldListener`, `Form`, `FormCollection`, `FormComponent` and the other
+  `MultiToggleField`), `BooleanField` (refined in review), `FormRenderer` and all renderers (projects extend them and
+  set them with `setRenderer()`/`getDefaultRenderer()`), `FormFieldListener`, `Form`, `FormCollection`, `FormComponent` and the other
   `Form*` collections, and the rules: `FormRule`, the typed rule bases and all concrete rules (3.8).
 - **Final:** all other classes: `EmailField`, `PasswordField`, `PhoneNumberField`, `TimeField`, `DateField`,
   `FloatField`, `DecimalField`, `HiddenField`, `HiddenIntegerField`, `CsrfTokenField`, `NumericField`, `ZipCodeField`,
-  `IbanNumberField`, `BooleanField`, `FileField`, `FormOptions`, `FormInput`, `FormMessages`, `UploadedFile`,
+  `IbanNumberField`, `FileField`, `FormOptions`, `FormInput`, `FormMessages`, `UploadedFile`,
   `UploadInput`, `TimeOfDay`, `ErrorCollection`, the storage/source implementations and the validators. Customization
   of a final field goes through its constructor, setters, rules, listeners and renderer.
 - **Enums:** `InputTypeValue` becomes `InputTypeEnum`, `AutoCompleteValue` `AutoCompleteEnum`, `RadioOptionsLayout`
@@ -812,7 +817,8 @@ family; `TimeOfDay` gets its own unit test in task 4a.
 7. **`PasswordField`:** no normalization at all, never rendered back.
 8. **`FormMessages`** with English defaults, configured per `Form`, no `LocaleHandler`; `FormMessages::german()`
    reproduces the v3 texts (3.9).
-9. **Extension points are non-final:** `TextField`, `TextAreaField`, all option fields, `IntegerField`, the abstract
+9. **Extension points are non-final:** `TextField`, `TextAreaField`, all option fields, `BooleanField` (refined in
+   review, it has a protected `setInitiallyChecked()`), `IntegerField`, the abstract
    bases, renderers, `Form*` collections and all rules (`FormRule`, typed bases, concrete rules); everything else final
    (3.12).
 10. **Split into `Multi*` classes;** `BooleanField` is no longer a `CheckboxOptionsField`.
@@ -837,5 +843,7 @@ family; `TimeOfDay` gets its own unit test in task 4a.
 18. **`PasswordField` purpose (added in review):** required `PasswordPurposeEnum $purpose` (`CURRENT` → autocomplete
     `current-password`, `NEW` → `new-password`) replaces the free `autoComplete` argument; no generic/random field
     names to block autofill (3.6).
+19. **Keys of posted arrays (added in review):** `FormInput` keeps the keys of a posted array of strings
+    (`getMap()`), `getList()` returns the values without keys; one shape `LIST` for both (3.3).
 
 New open questions: none.

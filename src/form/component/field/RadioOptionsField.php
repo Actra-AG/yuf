@@ -16,10 +16,11 @@ use actra\yuf\form\renderer\LegendAndListRenderer;
 use actra\yuf\form\renderer\RadioOptionsRenderer;
 use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\html\HtmlText;
-use UnexpectedValueException;
 
-class RadioOptionsField extends OptionsField
+class RadioOptionsField extends SingleOptionsField
 {
+    private ?RequiredRule $defaultRequiredRule = null;
+
     public function __construct(
         string $name,
         HtmlText $label,
@@ -35,11 +36,15 @@ class RadioOptionsField extends OptionsField
             initialValue: $initialValue,
             autoComplete: null
         );
-        if (is_null(value: $requiredError)) {
-            // Mandatory rule: In a field with radio options it is always required to choose one of those options
-            $requiredError = HtmlText::encoded(textContent: 'Bitte wählen Sie eine der Optionen aus.');
+        // Mandatory rule: In a field with radio options it is always required to choose one of those options
+        if ($requiredError === null) {
+            $this->defaultRequiredRule = new RequiredRule(
+                defaultErrorMessage: HtmlText::unencoded(textContent: $this->messages->selectOneOption)
+            );
+            $this->addRule(formRule: $this->defaultRequiredRule);
+        } else {
+            $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
         }
-        $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
         switch ($layout) {
             case RadioOptionsLayout::DEFINITION_LIST:
                 $this->setRenderer(renderer: new DefinitionListRenderer(formField: $this));
@@ -54,14 +59,16 @@ class RadioOptionsField extends OptionsField
     }
 
     /**
-     * Returns the stored value as string, without trimming or HTML encoding: `null` is `''`, a string is returned
-     * as is. See FormField::getValueAsStringOrFail() for other types.
-     *
-     * @throws UnexpectedValueException If the stored value is an array or of any other unsupported type.
+     * The default text of the required rule comes from the messages of the form, which the field only gets after
+     * its construction.
      */
-    public function getValueAsString(): string
+    public function validateCurrentValue(): bool
     {
-        return $this->getValueAsStringOrFail();
+        $this->defaultRequiredRule?->setErrorMessage(
+            errorMessage: HtmlText::unencoded(textContent: $this->messages->selectOneOption)
+        );
+
+        return parent::validateCurrentValue();
     }
 
     public function getDefaultRenderer(): FormRenderer

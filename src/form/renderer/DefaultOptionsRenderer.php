@@ -77,21 +77,7 @@ abstract class DefaultOptionsRenderer extends FormRenderer
                     valueIsEncodedForRendering: true
                 )
             );
-            $rawValue = $optionsField->getRawValue();
-            if ($this->acceptMultipleValues) {
-                if (
-                    is_array(value: $rawValue)
-                    && in_array(needle: $key, haystack: $rawValue)
-                ) {
-                    $inputTag->addHtmlTagAttribute(
-                        htmlTagAttribute: new HtmlTagAttribute(
-                            name: 'checked',
-                            value: null,
-                            valueIsEncodedForRendering: true
-                        )
-                    );
-                }
-            } elseif ($rawValue == $key) {
+            if ($optionsField->isSelected(optionKey: (string)$key)) {
                 $inputTag->addHtmlTagAttribute(
                     htmlTagAttribute: new HtmlTagAttribute(
                         name: 'checked',

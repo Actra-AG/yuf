@@ -146,35 +146,6 @@ abstract class FormField extends FormComponent
     }
 
     /**
-     * Shared implementation of the `getValueAsString()` getters of single-value fields.
-     *
-     * - `null` becomes `''`, a string is returned unchanged (no trimming, no encoding).
-     * - `int`, `float` and `bool` are converted like `renderValue()` does before HTML encoding (`true` is `'1'`,
-     *   `false` is `''`, `1.0` is `'1'`).
-     *
-     * @throws UnexpectedValueException If the value is an array or any other type, which is a programming error
-     *         (e.g. a multiple field or a field constructed with an array used as single-value field).
-     */
-    protected function getValueAsStringOrFail(): string
-    {
-        $value = $this->getRawValue();
-        if ($value === null) {
-            return '';
-        }
-        if (is_string(value: $value)) {
-            return $value;
-        }
-        if (is_scalar(value: $value)) {
-            return (string)$value;
-        }
-
-        throw new UnexpectedValueException(
-            message: 'The value of field ' . $this->name . ' cannot be read as string, it is of type '
-            . get_debug_type(value: $value) . '.'
-        );
-    }
-
-    /**
      * Shared implementation of the `getValueAsInt()` getters of single-value fields.
      *
      * - `null`, an empty string and a whitespace-only string give `null`.
@@ -245,64 +216,6 @@ abstract class FormField extends FormComponent
             message: 'The value of field ' . $this->name . ' cannot be read as float, it is not a decimal number: '
             . $this->describeValueForException(value: $value)
         );
-    }
-
-    /**
-     * Shared implementation of the `getValues()` getters of option fields (checkbox, select, toggle).
-     *
-     * Reports what is stored, it does not check against the options (validation does that).
-     *
-     * - `null` and `''` give `[]` ("nothing selected", like the empty option in a select). Any other string gives a
-     *   list with this string, also for multiple fields that hold a single string.
-     * - An array gives its entries in the stored order, re-indexed. Entries `''`, `null`, `false`, `0.0` and `[]` are
-     *   dropped (nothing selected), an `int` is converted to string (renderers compare option keys loosely, so `1`
-     *   and `'1'` are the same selection). `'0'` is kept: it is a valid option key.
-     *
-     * @return list<string>
-     * @throws UnexpectedValueException If the value or one of its entries is of another type (e.g. a nested array
-     *         from manipulated input). This never happens after a successful validation: ValidateAgainstOptions
-     *         accepts only scalar entries, or an array that consists only of the dropped entries.
-     */
-    protected function getValuesAsStringListOrFail(): array
-    {
-        $value = $this->getRawValue();
-        if ($value === null) {
-            return [];
-        }
-        if (is_string(value: $value)) {
-            return $value === '' ? [] : [$value];
-        }
-        if (!is_array(value: $value)) {
-            throw new UnexpectedValueException(
-                message: 'The value of field ' . $this->name . ' cannot be read as list of strings, it is of type '
-                . get_debug_type(value: $value) . '.'
-            );
-        }
-
-        $values = [];
-        foreach ($value as $entry) {
-            if (is_int(value: $entry)) {
-                $values[] = (string)$entry;
-                continue;
-            }
-            if (is_string(value: $entry)) {
-                if ($entry !== '') {
-                    $values[] = $entry;
-                }
-                continue;
-            }
-            if ($entry === null || $entry === false || $entry === 0.0 || $entry === []) {
-                continue;
-            }
-
-            throw new UnexpectedValueException(
-                message: 'The value of field ' . $this->name
-                . ' cannot be read as list of strings, it contains an entry of type ' . get_debug_type(value: $entry)
-                . '.'
-            );
-        }
-
-        return $values;
     }
 
     private function createNumericTypeException(string $target, mixed $value): UnexpectedValueException

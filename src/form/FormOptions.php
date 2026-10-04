@@ -10,9 +10,9 @@ namespace actra\yuf\form;
 
 use actra\yuf\html\HtmlText;
 
-class FormOptions
+final class FormOptions
 {
-    /** @var HtmlText[] */
+    /** @var array<int|string, HtmlText> The keys of numeric strings become integers in a PHP array. */
     private(set) array $data = [];
 
     public function __construct()

@@ -8,33 +8,28 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\renderer;
 
+use actra\yuf\form\component\field\MultiSelectOptionsField;
 use actra\yuf\form\component\field\SelectOptionsField;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
-use LogicException;
 
 class SelectOptionsRenderer extends FormRenderer
 {
-    public function __construct(private readonly SelectOptionsField $selectOptionsField)
+    public function __construct(private readonly SelectOptionsField|MultiSelectOptionsField $selectOptionsField)
     {
     }
 
     public function prepare(): void
     {
         $selectOptionsField = $this->selectOptionsField;
-        $selectedValue = $selectOptionsField->getRawValue();
-        if ($selectOptionsField->acceptMultipleSelections && !is_array(value: $selectedValue)) {
-            throw new LogicException(
-                message: 'The selected value must be an array if selection of multiple elements is allowed'
-            );
-        }
+        $isMultiple = $selectOptionsField->isMultiple();
         $fieldName = $selectOptionsField->name;
         $selectTag = new HtmlTag(name: 'select', selfClosing: false);
         $selectTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'name',
-                value: $selectOptionsField->acceptMultipleSelections ? $fieldName . '[]' : $fieldName,
+                value: $isMultiple ? $fieldName . '[]' : $fieldName,
                 valueIsEncodedForRendering: true
             )
         );
@@ -63,7 +58,7 @@ class SelectOptionsRenderer extends FormRenderer
                 )
             );
         }
-        if ($selectOptionsField->acceptMultipleSelections) {
+        if ($isMultiple) {
             $selectTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'multiple',
@@ -109,10 +104,7 @@ class SelectOptionsRenderer extends FormRenderer
                     valueIsEncodedForRendering: true
                 )
             );
-            if (
-                ($selectOptionsField->acceptMultipleSelections && in_array(needle: $key, haystack: $selectedValue))
-                || (!$selectOptionsField->acceptMultipleSelections && 'selected_' . $key === 'selected_' . $selectedValue)
-            ) {
+            if ($selectOptionsField->isSelected(optionKey: (string)$key)) {
                 $optionTag->addHtmlTagAttribute(
                     htmlTagAttribute: new HtmlTagAttribute(
                         name: 'selected',

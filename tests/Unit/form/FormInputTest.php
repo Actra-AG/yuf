@@ -61,6 +61,62 @@ final class FormInputTest extends TestCase
         $this->assertNull($input->getText(name: 'field'));
     }
 
+    public function testMapKeepsIntKeysAndOrder(): void
+    {
+        $input = FormInput::fromArray(data: ['qty' => [123 => '2', 7 => '5', 40 => '1']]);
+
+        $this->assertSame([123 => '2', 7 => '5', 40 => '1'], $input->getMap(name: 'qty'));
+        $this->assertSame(['2', '5', '1'], $input->getList(name: 'qty'));
+    }
+
+    public function testMapKeepsStringKeysAndOrder(): void
+    {
+        $input = FormInput::fromArray(data: ['qty' => ['b' => 'x', 'a' => 'y']]);
+
+        $this->assertSame(['b' => 'x', 'a' => 'y'], $input->getMap(name: 'qty'));
+        $this->assertSame(['x', 'y'], $input->getList(name: 'qty'));
+    }
+
+    public function testMapKeepsMixedKeys(): void
+    {
+        $input = FormInput::fromArray(data: ['qty' => [5 => 'a', 'k' => 'b', 6 => 'c']]);
+
+        $this->assertSame([5 => 'a', 'k' => 'b', 6 => 'c'], $input->getMap(name: 'qty'));
+    }
+
+    public function testMapOfAPlainListHasTheListKeys(): void
+    {
+        $input = FormInput::fromArray(data: ['field' => ['a', 'b']]);
+
+        $this->assertSame([0 => 'a', 1 => 'b'], $input->getMap(name: 'field'));
+    }
+
+    public function testMapOfAnEmptyArrayIsEmpty(): void
+    {
+        $input = FormInput::fromArray(data: ['field' => []]);
+
+        $this->assertSame([], $input->getMap(name: 'field'));
+        $this->assertSame([], $input->getList(name: 'field'));
+    }
+
+    public function testNestedArrayWithKeysIsInvalidAndHasNoMap(): void
+    {
+        $input = FormInput::fromArray(data: ['qty' => [123 => ['2']], 'mixed' => [1 => 'a', 2 => 3]]);
+
+        $this->assertSame(InputShapeEnum::INVALID, $input->getShape(name: 'qty'));
+        $this->assertNull($input->getMap(name: 'qty'));
+        $this->assertSame(InputShapeEnum::INVALID, $input->getShape(name: 'mixed'));
+        $this->assertNull($input->getMap(name: 'mixed'));
+    }
+
+    public function testNoMapForTextAndMissingShape(): void
+    {
+        $input = FormInput::fromArray(data: ['field' => 'a']);
+
+        $this->assertNull($input->getMap(name: 'field'));
+        $this->assertNull($input->getMap(name: 'missing'));
+    }
+
     public function testNothingIsReturnedForMissingAndInvalidShape(): void
     {
         $input = FormInput::fromArray(data: ['invalid' => [['x']]]);
@@ -69,6 +125,7 @@ final class FormInputTest extends TestCase
         $this->assertNull($input->getList(name: 'missing'));
         $this->assertNull($input->getText(name: 'invalid'));
         $this->assertNull($input->getList(name: 'invalid'));
+        $this->assertNull($input->getMap(name: 'invalid'));
     }
 
     public function testDataWinsOverFilesWithTheSameName(): void

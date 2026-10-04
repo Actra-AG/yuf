@@ -8,14 +8,17 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\form\component\field;
 
+use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\RadioOptionsField;
+use actra\yuf\form\FormMessages;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\TestCase;
+use TypeError;
 
 final class RadioOptionsFieldValueTest extends TestCase
 {
-    private function createField(?string $initialValue = null): RadioOptionsField
+    private function createField(?string $initialValue = null, ?HtmlText $requiredError = null): RadioOptionsField
     {
         $formOptions = new FormOptions();
         $formOptions->addItem(key: 'a', htmlText: HtmlText::encoded(textContent: 'A'));
@@ -25,103 +28,210 @@ final class RadioOptionsFieldValueTest extends TestCase
             name: 'radio',
             label: HtmlText::encoded(textContent: 'Radio'),
             formOptions: $formOptions,
-            initialValue: $initialValue
+            initialValue: $initialValue,
+            requiredError: $requiredError
         );
     }
 
-    public function testValueIsNullAfterConstructionWithoutValue(): void
+    public function testValueIsEmptyAfterConstructionWithoutValue(): void
     {
-        $this->assertNull($this->createField()->getRawValue());
+        $field = $this->createField();
+
+        $this->assertSame('', $field->getValueAsString());
+        $this->assertTrue($field->isValueEmpty());
     }
 
     public function testValueIsStringAfterConstructionWithString(): void
     {
-        $this->assertSame('b', $this->createField(initialValue: 'b')->getRawValue());
+        $field = $this->createField(initialValue: 'b');
+
+        $this->assertSame('b', $field->getValueAsString());
+        $this->assertFalse($field->isValueEmpty());
     }
 
-    public function testValidOptionIsStoredAsString(): void
+    public function testValidOptionIsStored(): void
     {
         $field = $this->createField();
 
         $isValid = $field->validate(inputData: ['radio' => 'a']);
 
         $this->assertTrue($isValid);
-        $this->assertSame('a', $field->getRawValue());
+        $this->assertSame('a', $field->getValueAsString());
     }
 
-    public function testUnknownOptionIsStoredButInvalid(): void
+    public function testUnknownOptionIsInvalidAndResetsTheValue(): void
     {
-        $field = $this->createField();
+        $field = $this->createField(initialValue: 'a');
 
         $isValid = $field->validate(inputData: ['radio' => 'x']);
 
         $this->assertFalse($isValid);
-        $this->assertSame('x', $field->getRawValue());
+        $this->assertSame('', $field->getValueAsString());
     }
 
-    public function testValueIsNullAfterValidationWithMissingKeyAndFieldIsInvalid(): void
+    public function testUnknownOptionAddsExactlyOneErrorWithTheFieldName(): void
+    {
+        $field = $this->createField();
+
+        $field->validate(inputData: ['radio' => 'x']);
+
+        $this->assertSame(1, $field->errorCollection->count());
+        $this->assertSame('Selected invalid value in field radio', $field->errorCollection->getFirstError()->render());
+    }
+
+    public function testMissingKeyIsInvalidBecauseARadioFieldIsAlwaysRequired(): void
     {
         $field = $this->createField(initialValue: 'b');
 
         $isValid = $field->validate(inputData: []);
 
         $this->assertFalse($isValid);
-        $this->assertNull($field->getRawValue());
+        $this->assertSame('', $field->getValueAsString());
+        $this->assertSame('Please select one of the options.', $field->errorCollection->getFirstError()->render());
     }
 
-    public function testArrayInputIsRejectedAndKeepsPreviousValue(): void
+    public function testPostedEmptyStringIsEmptyAndInvalidBecauseOfTheRequiredRule(): void
+    {
+        $field = $this->createField(initialValue: 'b');
+
+        $this->assertFalse($field->validate(inputData: ['radio' => '']));
+        $this->assertSame('', $field->getValueAsString());
+        $this->assertSame(1, $field->errorCollection->count());
+    }
+
+    public function testArrayInputResetsTheValueWithOneErrorAndNoRequiredError(): void
     {
         $field = $this->createField(initialValue: 'b');
 
         $isValid = $field->validate(inputData: ['radio' => ['a']]);
 
         $this->assertFalse($isValid);
-        $this->assertSame('b', $field->getRawValue());
+        $this->assertSame('', $field->getValueAsString());
+        $this->assertSame(1, $field->errorCollection->count());
+        $this->assertSame('The invalid input was ignored.', $field->errorCollection->getFirstError()->render());
     }
 
-    public function testGetValueAsStringIsEmptyForNull(): void
-    {
-        $this->assertSame('', $this->createField()->getValueAsString());
-    }
-
-    public function testGetValueAsStringReturnsConstructorString(): void
-    {
-        $this->assertSame('b', $this->createField(initialValue: 'b')->getValueAsString());
-    }
-
-    public function testGetValueAsStringReturnsPostedString(): void
+    public function testNestedArrayInputIsInvalidInput(): void
     {
         $field = $this->createField();
 
-        $field->validate(inputData: ['radio' => 'a']);
-
-        $this->assertSame('a', $field->getValueAsString());
-    }
-
-    public function testGetValueAsStringReturnsUnknownOptionString(): void
-    {
-        $field = $this->createField();
-
-        $field->validate(inputData: ['radio' => 'x']);
-
-        $this->assertSame('x', $field->getValueAsString());
-    }
-
-    public function testGetValueAsStringIsEmptyAfterValidationWithMissingKey(): void
-    {
-        $field = $this->createField(initialValue: 'a');
-
-        $field->validate(inputData: []);
-
+        $this->assertFalse($field->validate(inputData: ['radio' => [['a']]]));
+        $this->assertSame(1, $field->errorCollection->count());
         $this->assertSame('', $field->getValueAsString());
     }
 
-    public function testGetValueAsStringReturnsPreviousValueAfterRejectedArrayInput(): void
+    public function testDefaultRequiredTextIsTakenFromTheMessagesOfTheForm(): void
+    {
+        $form = new Form(name: 'radioGermanForm', messages: FormMessages::german());
+        $field = $this->createField();
+        $form->addField(formField: $field);
+
+        $field->validate(inputData: []);
+
+        $this->assertSame(
+            'Bitte wählen Sie eine der Optionen aus.',
+            $field->errorCollection->getFirstError()->render()
+        );
+    }
+
+    public function testIndividualRequiredErrorWins(): void
+    {
+        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Choose!'));
+
+        $field->validate(inputData: []);
+
+        $this->assertSame('Choose!', $field->errorCollection->getFirstError()->render());
+    }
+
+    public function testFieldIsRequired(): void
+    {
+        $this->assertTrue($this->createField()->isRequired());
+    }
+
+    public function testUnknownOptionMessageUsesTheMessagesOfTheForm(): void
+    {
+        $form = new Form(
+            name: 'radioCustomForm',
+            messages: new FormMessages(invalidOption: 'Bad option in [field]!')
+        );
+        $field = $this->createField();
+        $form->addField(formField: $field);
+
+        $field->validate(inputData: ['radio' => 'x']);
+
+        $this->assertSame('Bad option in radio!', $field->errorCollection->getFirstError()->render());
+    }
+
+    public function testIsSelectedComparesTheExactKey(): void
     {
         $field = $this->createField(initialValue: 'a');
 
-        $field->validate(inputData: ['radio' => ['x']]);
+        $this->assertTrue($field->isSelected(optionKey: 'a'));
+        $this->assertFalse($field->isSelected(optionKey: 'b'));
+        $this->assertFalse($field->isSelected(optionKey: 'A'));
+        $this->assertFalse($field->isSelected(optionKey: ''));
+    }
 
-        $this->assertSame('a', $field->getValueAsString());
+    public function testSetValueChangesOnlyTheCurrentValue(): void
+    {
+        $field = $this->createField(initialValue: 'a');
+
+        $field->setValue(value: 'b');
+
+        $this->assertSame('b', $field->getValueAsString());
+        $this->assertTrue($field->valueHasChanged());
+        $field->setValue(value: 'a');
+        $this->assertFalse($field->valueHasChanged());
+    }
+
+    public function testSetValueNullSelectsNothing(): void
+    {
+        $field = $this->createField(initialValue: 'a');
+
+        $field->setValue(value: null);
+
+        $this->assertSame('', $field->getValueAsString());
+        $this->assertTrue($field->isValueEmpty());
+    }
+
+    public function testSetValueWithWrongTypeThrowsTypeError(): void
+    {
+        $field = $this->createField();
+
+        $this->expectException(TypeError::class);
+
+        $field->setValue(value: ['a']);
+    }
+
+    public function testSetValueDoesNotCheckAgainstTheOptions(): void
+    {
+        $field = $this->createField();
+
+        $field->setValue(value: 'from database');
+
+        $this->assertSame('from database', $field->getValueAsString());
+    }
+
+    public function testValueHasChangedAfterPostingAnotherOption(): void
+    {
+        $field = $this->createField(initialValue: 'a');
+
+        $field->validate(inputData: ['radio' => 'b']);
+
+        $this->assertTrue($field->valueHasChanged());
+    }
+
+    public function testValueHasNotChangedAfterPostingTheInitialOption(): void
+    {
+        $field = $this->createField(initialValue: 'a');
+
+        $field->validate(inputData: ['radio' => 'a']);
+
+        $this->assertFalse($field->valueHasChanged());
+    }
+
+    public function testRenderValueIsTheEncodedKey(): void
+    {
+        $this->assertSame('a', $this->createField(initialValue: 'a')->renderValue());
     }
 }

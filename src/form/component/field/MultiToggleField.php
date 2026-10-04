@@ -19,9 +19,9 @@ use actra\yuf\html\HtmlText;
 use Closure;
 
 /**
- * Radio options that show child components under the selected option. See `MultiToggleField` for checkboxes.
+ * Checkboxes that show child components under the selected options. Replaces `ToggleField(multiple: true)`.
  */
-class ToggleField extends SingleOptionsField
+class MultiToggleField extends MultiOptionsField
 {
     private readonly ToggleChildren $toggleChildren;
     /** @var array<int|string, array<int|string, FormComponent>> */
@@ -29,11 +29,14 @@ class ToggleField extends SingleOptionsField
         get => $this->toggleChildren->getAll();
     }
 
+    /**
+     * @param list<string> $initialValues
+     */
     public function __construct(
         string $name,
         HtmlText $label,
         FormOptions $formOptions,
-        ?string $initialValue,
+        array $initialValues,
         ?HtmlText $requiredError = null,
         private readonly bool $displayLegend = true,
         ?AutoCompleteValue $autoComplete = null
@@ -42,7 +45,7 @@ class ToggleField extends SingleOptionsField
             name: $name,
             label: $label,
             formOptions: $formOptions,
-            initialValue: $initialValue,
+            initialValues: $initialValues,
             autoComplete: $autoComplete
         );
         $this->toggleChildren = new ToggleChildren(toggleField: $this);

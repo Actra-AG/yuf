@@ -1759,12 +1759,6 @@ parameters:
 			path: src/form/component/collection/ErrorCollection.php
 
 		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\CheckboxOptionsField\:\:__construct\(\) has parameter \$initialValues with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/CheckboxOptionsField.php
-
-		-
 			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
 			identifier: foreach.nonIterable
 			count: 1
@@ -1861,168 +1855,6 @@ parameters:
 			path: src/form/component/field/FileField.php
 
 		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\OptionsField\:\:getListTagClasses\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/OptionsField.php
-
-		-
-			message: '#^Parameter \$array of function array_unique expects an array of values castable to string, array given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/component/field/OptionsField.php
-
-		-
-			message: '#^Property actra\\yuf\\form\\component\\field\\OptionsField\:\:\$listTagClasses type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/OptionsField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\SelectOptionsField\:\:__construct\(\) has parameter \$cssClasses with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/SelectOptionsField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\SelectOptionsField\:\:__construct\(\) has parameter \$initialValue with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/SelectOptionsField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\SelectOptionsField\:\:getDataAttributes\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/SelectOptionsField.php
-
-		-
-			message: '#^Property actra\\yuf\\form\\component\\field\\SelectOptionsField\:\:\$cssClasses type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/SelectOptionsField.php
-
-		-
-			message: '#^Property actra\\yuf\\form\\component\\field\\SelectOptionsField\:\:\$dataAttributes type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/SelectOptionsField.php
-
-		-
-			message: '#^Property actra\\yuf\\form\\component\\field\\SelectOptionsField\:\:\$dataAttributesStorage type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/SelectOptionsField.php
-
-		-
-			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
-			identifier: foreach.nonIterable
-			count: 2
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Cannot access offset string on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Instanceof between actra\\yuf\\form\\component\\FormField and actra\\yuf\\form\\component\\FormField will always evaluate to true\.$#'
-			identifier: instanceof.alwaysTrue
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\ToggleField\:\:__construct\(\) has parameter \$initialValue with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\ToggleField\:\:changeValueToArray\(\) has parameter \$value with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\ToggleField\:\:changeValueToArray\(\) never returns null so it can be removed from the return type\.$#'
-			identifier: return.unusedType
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\ToggleField\:\:changeValueToArray\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\ToggleField\:\:setValue\(\) has parameter \$value with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Negated boolean expression is always true\.$#'
-			identifier: booleanNot.alwaysTrue
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Parameter \#1 \$htmlTag of method actra\\yuf\\html\\HtmlTag\:\:addTag\(\) expects actra\\yuf\\html\\HtmlTag, actra\\yuf\\html\\HtmlTag\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Parameter \#1 \$renderer of method actra\\yuf\\form\\FormComponent\:\:setRenderer\(\) expects actra\\yuf\\form\\FormRenderer, object given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Parameter \#1 \$value of method actra\\yuf\\form\\component\\field\\ToggleField\:\:changeValueToArray\(\) expects array\|string\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Parameter \#2 \$haystack of function in_array expects array, mixed given\.$#'
-			identifier: argument.type
-			count: 2
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Parameter \$value of method actra\\yuf\\form\\component\\field\\ToggleField\:\:changeValueToArray\(\) expects array\|string\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Property actra\\yuf\\form\\component\\field\\ToggleField\:\:\$childrenByMainOption type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			message: '#^Cannot access offset 0 on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 1
-			path: src/form/renderer/CheckboxItemRenderer.php
-
-		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 1
-			path: src/form/renderer/CheckboxItemRenderer.php
-
-		-
 			message: '#^Parameter \#1 \$htmlTag of method actra\\yuf\\html\\HtmlTag\:\:addTag\(\) expects actra\\yuf\\html\\HtmlTag, actra\\yuf\\html\\HtmlTag\|null given\.$#'
 			identifier: argument.type
 			count: 1
@@ -2033,12 +1865,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/form/renderer/DefaultFormRenderer.php
-
-		-
-			message: '#^Parameter \$array of function implode expects array\<string\>, array given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/renderer/DefaultOptionsRenderer.php
 
 		-
 			message: '#^Parameter \#1 \$htmlTag of method actra\\yuf\\html\\HtmlTag\:\:addTag\(\) expects actra\\yuf\\html\\HtmlTag, actra\\yuf\\html\\HtmlTag\|null given\.$#'
@@ -2069,24 +1895,6 @@ parameters:
 			identifier: method.nonObject
 			count: 2
 			path: src/form/renderer/NumericFieldRenderer.php
-
-		-
-			message: '#^Binary operation "\." between ''selected_'' and mixed results in an error\.$#'
-			identifier: binaryOp.invalid
-			count: 1
-			path: src/form/renderer/SelectOptionsRenderer.php
-
-		-
-			message: '#^Parameter \$array of function implode expects array\<string\>, array given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/renderer/SelectOptionsRenderer.php
-
-		-
-			message: '#^Parameter \$value of class actra\\yuf\\html\\HtmlTagAttribute constructor expects int\|string\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/renderer/SelectOptionsRenderer.php
 
 		-
 			message: '#^Method actra\\yuf\\form\\rule\\MaxLengthRule\:\:checkValueLengthAgainst\(\) has parameter \$valueLength with no type specified\.$#'

@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\renderer;
 
+use actra\yuf\form\component\field\BooleanField;
 use actra\yuf\form\component\field\CheckboxOptionsField;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
@@ -15,7 +16,7 @@ use actra\yuf\html\HtmlTagAttribute;
 
 class CheckboxItemRenderer extends FormRenderer
 {
-    public function __construct(private readonly CheckboxOptionsField $checkboxOptionsField)
+    public function __construct(private readonly CheckboxOptionsField|BooleanField $checkboxOptionsField)
     {
     }
 
@@ -102,21 +103,15 @@ class CheckboxItemRenderer extends FormRenderer
                 valueIsEncodedForRendering: true
             )
         );
-        $options = $this->checkboxOptionsField->formOptions->data;
-        $optionValue = key(array: $options);
+        $optionValue = $this->getOptionKey();
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'value',
-                value: (string)$optionValue,
+                value: $optionValue,
                 valueIsEncodedForRendering: true
             )
         );
-        $checkboxValue = $this->checkboxOptionsField->getRawValue();
-        if (
-            !is_null(value: $checkboxValue)
-            && $checkboxValue !== []
-            && (string)$checkboxValue[0] == $optionValue
-        ) {
+        if ($this->isChecked(optionKey: $optionValue)) {
             $inputTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'checked',
@@ -153,5 +148,26 @@ class CheckboxItemRenderer extends FormRenderer
         }
 
         return $inputTag;
+    }
+
+    /**
+     * The value of the checkbox: the key of a boolean field, else the first option.
+     */
+    private function getOptionKey(): string
+    {
+        if ($this->checkboxOptionsField instanceof BooleanField) {
+            return BooleanField::CHECKED_KEY;
+        }
+
+        return (string)key(array: $this->checkboxOptionsField->formOptions->data);
+    }
+
+    private function isChecked(string $optionKey): bool
+    {
+        if ($this->checkboxOptionsField instanceof BooleanField) {
+            return $this->checkboxOptionsField->isChecked();
+        }
+
+        return $this->checkboxOptionsField->isSelected(optionKey: $optionKey);
     }
 }

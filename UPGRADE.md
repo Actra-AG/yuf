@@ -76,6 +76,102 @@ This document tracks relevant changes and upgrade instructions for developers.
       `OptionsField` does not have).
     * The v3.3.0 getters stay: `getValueAsString()` (now on `StringInputField` and `TextAreaField`), `getValues()` of
       `TextAreaField`, `getValueAsInt()` of `HiddenField`.
+* **Form Fields (typed values, part 2: option fields):** `OptionsField` is split by value type. `SingleOptionsField`
+  (value `string`, the option key, `''` = nothing selected) is the base of `RadioOptionsField`, `SelectOptionsField` and
+  `ToggleField`; `MultiOptionsField` (value `list<string>`, empty is `[]`) is the base of `CheckboxOptionsField` and the
+  new `MultiSelectOptionsField` and `MultiToggleField`. `BooleanField` has a `bool` value. The option fields stay
+  non-final, `FormOptions` is `final`. New on every option field: `isSelected(string $optionKey): bool` and
+  `isMultiple(): bool`.
+    * ⚠️ **`Multi*` classes replace the flags:** `SelectOptionsField(acceptMultipleSelections: true)` and
+      `ToggleField(multiple: true)` are removed. The constructor argument of the multi classes is `initialValues`
+      (`list<string>`).
+      ```php
+      // Before
+      $tags = new SelectOptionsField(name: 'tags', label: $label, formOptions: $options, initialValue: ['a', 'b'],
+          acceptMultipleSelections: true);
+      $areas = new ToggleField(name: 'areas', label: $label, formOptions: $options, initialValue: ['a'],
+          multiple: true);
+
+      // After
+      $tags = new MultiSelectOptionsField(name: 'tags', label: $label, formOptions: $options,
+          initialValues: ['a', 'b']);
+      $areas = new MultiToggleField(name: 'areas', label: $label, formOptions: $options, initialValues: ['a']);
+      ```
+    * ⚠️ **Getters per class:** `getValueAsString(): string` on `RadioOptionsField`, `SelectOptionsField` and
+      `ToggleField`; `getValues(): list<string>` on `CheckboxOptionsField`, `MultiSelectOptionsField` and
+      `MultiToggleField`. Neither throws any more (invalid input resets the value). `getValues()` of a single
+      `SelectOptionsField`/`ToggleField` is removed (use `getValueAsString()`, `''` means nothing selected, no list
+      with one entry), `getValueAsString()` of a multiple select (it always threw) does not exist. A single field
+      constructed with an array (`new SelectOptionsField(..., initialValue: ['a'])`) is a `TypeError`: use the multi
+      class.
+    * ⚠️ **A scalar posted to a multi field is invalid input:** `tags=a` instead of `tags[]=a` (also an empty
+      `tags=`) was wrapped into a list in v3, now the value is reset to `[]`, one error "invalid input" is added and
+      the rules do not run. A browser sends `tags[]`, so only manipulated requests change.
+    * ⚠️ **Invalid options reset the value:** a posted key that is not one of the options (and a nested or non-string
+      entry) no longer stays in the field. The value is reset to `''` or `[]`, exactly one error
+      (`FormMessages::invalidOption`, `[field]` is the field name) is added and the other rules do not run (no second
+      "required" error). An array posted to a single field is invalid input (v3 kept the previous value). Empty keys
+      in a multi list (`['', 'a']`) are dropped, so `['0']` is a normal selection. `ValidateAgainstOptions` is not
+      added to the fields any more (the check is part of reading the input; the class itself is removed in a later
+      step of v4).
+    * ⚠️ **Typed setters and initial value:** constructor values and setters have the type of the value
+      (`?string`, `list<string>`, a wrong type is a `TypeError`; keys are not checked against the options). The public
+      setters change only the current value, the initial value stays, `valueHasChanged()` compares with it. A subclass
+      fills the field after `parent::__construct()` with the protected `setInitialValue(?string)` (single),
+      `setInitialValues(list<string>)` (multi) or `setInitiallyChecked(bool)` (`BooleanField`): current and initial
+      value, a `LogicException` once the field was validated. `setOriginalValue()` throws a `LogicException`,
+      `getOriginalValue()` is removed in a later step.
+      ```php
+      // Before
+      $field->setValue($row->status);               // single
+      $field->setValue($row->tags);                 // checkbox / multiple select: array
+      $field->setOriginalValue($row->tags);
+
+      // After
+      $field->setValue($row->status);               // ?string, null = nothing selected
+      $field->setValues($row->tags);                // list<string> (setValue(array) throws a LogicException)
+      // pre-fill in a subclass: $this->setInitialValues($row->tags);  // or the constructor argument initialValues
+      ```
+    * ⚠️ **`getAddedValues()`/`getRemovedValues()`** exist only on `MultiOptionsField` (`list<string>`, compared
+      with the initial values). `valueHasChanged()` of a multi field compares the selection, the order of the keys
+      does not matter (v3 compared the arrays strictly).
+    * ⚠️ **`BooleanField` is no longer a `CheckboxOptionsField`:** it extends `FormField` and has a `bool` value.
+      `instanceof CheckboxOptionsField` is `false`, `getValues()` and the `formOptions` property are removed. Use
+      `isChecked()`, `setChecked(bool)` and the protected `setInitiallyChecked(bool)`. Input: `name[]=checked` (as
+      rendered) and `name=checked` are checked, a missing value is not checked, any other value is invalid input (one
+      error, not checked). The layouts and their HTML are unchanged.
+      ```php
+      // Before
+      $agree = new BooleanField(name: 'agree', label: $label, isCheckedByDefault: false, requiredError: $required);
+      if (in_array('checked', $agree->getValues(), true)) { ... }
+
+      // After: unchanged constructor
+      if ($agree->isChecked()) { ... }
+      ```
+    * ⚠️ **Default texts come from `FormMessages`:** the required text of a `RadioOptionsField` without
+      `requiredError` (`selectOneOption`), the empty option of a required `SelectOptionsField` or
+      `MultiSelectOptionsField` (`selectEmptyOption`) and the invalid option text (`invalidOption`). With
+      `FormMessages::german()` they are the v3 texts, without it English. The empty option label is read when it is
+      rendered (`emptyValueLabel` is a computed property), so the messages of the form are used.
+    * ⚠️ **`ToggleField` and `MultiToggleField`:** the child handling moved into `ToggleChildren` (composition), the
+      markup into `ToggleFieldRenderer` (the field sets it as its renderer in the constructor, override
+      `getDefaultRenderer()` in a subclass to change it). `addChildField()`, `addChildComponent()`, `getChildField()`,
+      `getChildComponent()` and `childrenByMainOption` stay. The public string property `defaultChildFieldRenderer`
+      is replaced by a method with a closure. Child fields now get the form (`topFormComponent`) and its messages,
+      so listeners on them work. Like every field, a toggle field can be rendered only once.
+      ```php
+      // Before
+      $toggle->defaultChildFieldRenderer = MyChildRenderer::class;
+
+      // After
+      $toggle->setDefaultChildFieldRenderer(rendererFactory: fn(FormField $child) => new MyChildRenderer($child));
+      ```
+    * ⚠️ **Renderers:** `DefaultOptionsRenderer`, `CheckboxItemRenderer` (now `CheckboxOptionsField|BooleanField`) and
+      `SelectOptionsRenderer` (now `SelectOptionsField|MultiSelectOptionsField`) mark the selected options with
+      `isSelected()` (an exact comparison of the keys as strings; v3 compared loosely, e.g. `'1.0'` with `'1'`). A
+      custom renderer reads `isSelected($optionKey)` instead of `getRawValue()`. `SelectOptionsField::$cssClasses`,
+      `$renderEmptyValueOption` and `$placeholder` are still readable but no longer `readonly` (`private(set)`);
+      `SelectOptionsField::getDataAttributes()` has the type `array<string, string>`.
 * **Form messages:** the German texts of the form code ("Die ungültige Eingabe wurde ignoriert.", "Der angegebene Wert
   ist ungültig.", ...) are no longer hard-coded. New `FormMessages` with English defaults and `FormMessages::german()`
   with the v3 texts; the form hands them to its fields.
@@ -89,8 +185,9 @@ This document tracks relevant changes and upgrade instructions for developers.
   // own texts (named arguments, the rest stays English): new FormMessages(invalidInput: 'Ungültige Eingabe.')
   ```
 * **Added:** `FormInput` (request data narrowed to text, list, missing or invalid, `FormInput::fromArray()`) and
-  `InputShapeEnum`; fields read their request value from it. `FormField::validateCurrentValue()` runs the listeners and
-  rules without reading input.
+  `InputShapeEnum`; fields read their request value from it. A posted array of strings keeps its keys: `getMap(name)`
+  returns `qty[123]=2` as `[123 => '2']`, `getList(name)` the values without the keys.
+  `FormField::validateCurrentValue()` runs the listeners and rules without reading input.
 * **Temporary (bridge):** until all fields have typed values, `getRawValue()`, `setValue(mixed)` and the array-based
   `validate(array, bool)` still exist and are marked `@internal`. They are removed in a later step of v4.
 

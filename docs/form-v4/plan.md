@@ -273,6 +273,118 @@ Verify: as task 2.
 
 Handover notes:
 
+Done (2026-10-04), `ddev composer check` green (604 tests), 32 baseline entries removed, none added.
+
+**What was built**
+
+- New: `SingleOptionsField` (`string`, `''` = none; `getValueAsString()`, `setValue(?string)`, protected
+  `setInitialValue(?string)`), `MultiOptionsField` (`list<string>`; `getValues()`, `setValues(list<string>)`, protected
+  `setInitialValues(list<string>)`, `getAddedValues()`, `getRemovedValues()`), `MultiSelectOptionsField`,
+  `MultiToggleField`, `ToggleChildren` (final, child registry + validation of the children of the selected options +
+  form handover), `ToggleFieldRenderer`, the trait `SelectOptionsSettings` (cssClasses, placeholder, empty option,
+  data attributes shared by the two select classes). `OptionsField` (abstract) now has no value: `isSelected()`,
+  `isMultiple()`, `readInput()` (abstract), `rejectInvalidOption()`.
+- Changed: `RadioOptionsField`, `SelectOptionsField`, `ToggleField` extend `SingleOptionsField`;
+  `CheckboxOptionsField` extends `MultiOptionsField`; `BooleanField` extends `FormField` (`bool`, `isChecked()`,
+  `setChecked()`, protected `setInitiallyChecked()`, public const `CHECKED_KEY`); `FormOptions` final;
+  `DefaultOptionsRenderer`, `SelectOptionsRenderer` (`SelectOptionsField|MultiSelectOptionsField`),
+  `CheckboxItemRenderer` (`CheckboxOptionsField|BooleanField`) use `isSelected()`; new `BooleanFieldListRenderer`
+  (v3 list markup of `BooleanField`).
+- Removed: the flags `acceptMultipleSelections`/`multiple`, `ToggleField::$defaultChildFieldRenderer` (class string,
+  now `setDefaultChildFieldRenderer(Closure)`), `ToggleField::getHtmlTag()`/`changeValueToArray()`,
+  `getValues()` of single fields and of `BooleanField`, `ValidateAgainstOptions` is no longer added (class kept, see
+  below), `FormField::getValueAsStringOrFail()`/`getValuesAsStringListOrFail()` (unused now).
+- `readInput()` per family as in design 3.3: single: TEXT must be a key (or `''`), MISSING gives `''`, list/invalid is
+  invalid input; multi: LIST keys must exist (`''` entries dropped), MISSING gives `[]`, TEXT and INVALID are invalid
+  input (scalar to a multi field); boolean: text or one-entry list `checked`, MISSING unchecked, else invalid input.
+  Rejected input resets the value, adds one error (`rejectInput()`) and skips the rules.
+
+**`FormInput` key addition (approved in review)**
+
+`FormInput` stores an array of strings with its keys (`array<string, array<int|string, string>>`, int and string keys,
+order kept). `getList(name): ?list<string>` is unchanged for callers (values, keys dropped); new
+`getMap(name): ?array<int|string, string>` returns the keys too. Same shape `LIST` for both (no new shape: nothing
+needs a distinction). Nested arrays and non-string entries stay `INVALID`. Tests in `FormInputTest`; design 3.3 has a
+paragraph marked "(added in review)" and decision 19.
+
+**Deviations from the design (and why)**
+
+1. **Typed setter on single fields is `setValue(mixed)`** with a `TypeError` for anything but `?string` (same bridge
+   pattern as task 2: PHP forbids narrowing `FormField::setValue(mixed)`); becomes `setValue(?string)` in task 6.
+   `MultiOptionsField::setValue()` (legacy) throws a `LogicException` pointing to `setValues()`; `setValues()` is a
+   typed new method (no clash). `BooleanField::setValue()`/`setOriginalValue()` and `OptionsField::setOriginalValue()`
+   throw a `LogicException` (like `TextualField`).
+2. **`BooleanField` is not final** (design 3.12 listed it as final, but 3.1/5 give it a protected
+   `setInitiallyChecked()` for subclasses, and v3 was open). Confirmed in review; design 3.12 and decision 9 updated.
+3. **`BooleanField` keeps the v3 markup for all layouts** (review): `NONE`, `DEFINITION_LIST` and `LEGEND_AND_LIST` render
+   the v3 list with one checkbox (`id="name_checked"`), because `BooleanFieldListRenderer` builds a short-lived
+   `CheckboxOptionsField` copy of the field (name, label, id, info, required, errors, checked state) and lets the
+   options renderers render it. `CHECKBOX_ITEM` (default) uses `CheckboxItemRenderer`. No HTML change and no layout
+   exception; `BooleanFieldV3MarkupTest` pins the full form HTML of v3.3.1 (all layouts, checked/unchecked with error).
+4. **`valueHasChanged()` of multi fields compares the selection as a set** (via `getAddedValues()`/
+   `getRemovedValues()`), not the arrays strictly: posted order follows the options, a loaded order may differ.
+5. **Empty keys are dropped in constructor and setters of multi fields too** (not only at input), so `getValues()`
+   keeps the v3.3.0 meaning ("no `''` entries") without a filter; non-string entries are a `TypeError`.
+6. **`MultiOptionsField::renderValue()` returns `''`** (a list has no text; v3 threw for arrays).
+7. **Messages are resolved lazily:** `RadioOptionsField` keeps its default `RequiredRule` and sets its message from
+   `messages->selectOneOption` in `validateCurrentValue()` (the field gets its messages only in `Form::addField()`);
+   `emptyValueLabel` of the select classes is a computed property (individual label, else `selectEmptyOption` if
+   required, else `''`). The invalid option text uses `[field]` (`str_replace`).
+8. **Select presentation settings** are shared by a trait (`SelectOptionsSettings`), because `SelectOptionsField` and
+   `MultiSelectOptionsField` cannot share a base class (different value types) and duplicating ~60 lines was worse.
+   The three `readonly` properties became `private(set)` (PHPStan rejects assigning `readonly` from a trait method).
+9. **`ToggleField`/`MultiToggleField` set `ToggleFieldRenderer` as their renderer in the constructor** (via
+    `getDefaultRenderer()`, so a subclass can override it). Reason: `Form`'s renderer would otherwise wrap the toggle
+    in a `<dl>` (v3 ignored the renderer through a `getHtmlTag()` override). Side effect: like every field, a toggle
+    can be rendered only once (the `FormRenderer::setHtmlTag()` guard); v3 toggles could be rendered repeatedly.
+    `ToggleChildren` hands `topFormComponent` and `messages` to the children when the toggle is already in a form
+    and again before the children are validated (the toggle is usually added to the form after its children).
+10. `FormOptions::$data` is documented `array<int|string, HtmlText>` (design: `array<string, HtmlText>`): numeric
+    string keys become `int` keys in PHP, so `string` would be wrong; renderers cast with `(string)$key`.
+11. `ValidateAgainstOptions` (and its baseline entry) stays: its removal is listed in task 6; it is no longer used by
+    any field.
+12. `README.md` was not touched (task 7).
+
+**The bridge (added or changed in this task, remove in task 6)**
+
+`OptionsField`: `readInputData(array)` (builds a `FormInput`), `initializeLegacyValue()` (no-op),
+`setOriginalValue()` (throws). `SingleOptionsField`/`MultiOptionsField`/`BooleanField`: `getRawValue()` (`string`,
+`list<string>`, `bool`; legacy rules like `MinLengthRule` still read it), `getOriginalValue()`, `setValue(mixed)`.
+`ToggleField`/`MultiToggleField` and `ToggleChildren::validateSelected()` keep the `validate(array, bool)` signature,
+move to the `validate(FormInput)` template hook in task 6 (the children must be validated after the field itself, with
+the same `FormInput`). `FormField::getAddedValues()`/`getRemovedValues()`/`isValueEmpty()`/`valueHasChanged()` still
+read the unset legacy `$value` (`Error` on uninitialized property) for fields that do not override them: textual
+fields and single/boolean fields do not override `getAddedValues()`/`getRemovedValues()`, so calling them there throws
+(they existed on every field in v3 and returned `[]`); they go away with the bridge.
+
+**Tests changed on purpose**
+
+Rewritten: `RadioOptionsFieldValueTest`, `SelectOptionsFieldValueTest`, `ToggleFieldValueTest`,
+`CheckboxOptionsFieldValueTest` (typed getters instead of `getRawValue()`; reset to empty instead of storing unknown
+options and arrays; one error and no second "required" error; scalar to a multi field is invalid input, also in the
+v3.3.0 `getValues()` wrap tests; no `[null]` start of a multi toggle; no array value for a single select; no
+`getValues()` on single fields; the `getValues()` "never throws after validation" provider kept for checkbox). The
+`BooleanField` tests moved to `BooleanFieldValueTest` (`getValues()` removed, text and list `checked`). `FormInputTest`
+extended (keys). New: `MultiSelectOptionsFieldValueTest`, `MultiToggleFieldValueTest`, `BooleanFieldValueTest`,
+`OptionsInitialValueTest` (+ `tests/Double/form/InitialValue{Radio,Checkbox}OptionsField`, `InitialValueBooleanField`),
+`ToggleChildrenTest`, `FormOptionsTest`, `renderer/OptionsFieldRenderersTest`.
+
+**Baseline:** 32 entries removed (`OptionsField` 3, `SelectOptionsField` 6, `ToggleField` 16, `CheckboxOptionsField` 1,
+`CheckboxItemRenderer` 2, `DefaultOptionsRenderer` 1, `SelectOptionsRenderer` 3), none added; no entry left in touched
+files. Not touched, still with entries: `LegendAndListRenderer` (1), `ValidateAgainstOptions` (1; task 6),
+`FormField` had none.
+
+**For tasks 4a to 7**
+
+- Task 6: the bridge `setValue(mixed)` of the single fields becomes `setValue(?string)`; delete
+  `ValidateAgainstOptions`; `ToggleField`/`MultiToggleField::validate()` and `ToggleChildren::validateSelected()` need
+  the `FormInput` version; the typed `addRule(StringListRule)`/`addEachRule()` belong on `MultiOptionsField`;
+  `RequiredRule` stays what `addRequiredRule()` adds (`isRequired()` of the radio field relies on it).
+- Task 7: `README.md` "Form Field Values" (`getValues()` on `SelectOptionsField`/`ToggleField`, `BooleanField`
+  `getValues()`, `AmountField`); `CheckboxOptionsLayout`/`RadioOptionsLayout` -> `*Enum` (the `BooleanField` layout
+  argument uses `CheckboxOptionsLayout`); `LegendAndListRenderer` entry; 
+- 4a/4b: `FormInput::getMap()` is available for project fields; fields that need list input use `getList()`.
+
 ### Task 4a: Numbers and date/time
 
 Implement design sections 3.7 and 3.13: `IntegerField`, `NumericField` (final subclass), `HiddenIntegerField`,

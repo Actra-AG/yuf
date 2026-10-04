@@ -8,20 +8,18 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\form\component\field;
 
-use actra\yuf\form\component\field\BooleanField;
 use actra\yuf\form\component\field\CheckboxOptionsField;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use UnexpectedValueException;
 
 final class CheckboxOptionsFieldValueTest extends TestCase
 {
     /**
      * @param list<string> $initialValues
      */
-    private function createField(array $initialValues = []): CheckboxOptionsField
+    private function createField(array $initialValues = [], ?HtmlText $requiredError = null): CheckboxOptionsField
     {
         $formOptions = new FormOptions();
         $formOptions->addItem(key: 'a', htmlText: HtmlText::encoded(textContent: 'A'));
@@ -31,115 +29,9 @@ final class CheckboxOptionsFieldValueTest extends TestCase
             name: 'checkbox',
             label: HtmlText::encoded(textContent: 'Checkbox'),
             formOptions: $formOptions,
-            initialValues: $initialValues
+            initialValues: $initialValues,
+            requiredError: $requiredError
         );
-    }
-
-    public function testValueIsArrayAfterConstruction(): void
-    {
-        $this->assertSame(['a'], $this->createField(initialValues: ['a'])->getRawValue());
-    }
-
-    public function testValueIsEmptyArrayAfterConstructionWithEmptyArray(): void
-    {
-        $this->assertSame([], $this->createField()->getRawValue());
-    }
-
-    public function testArrayInputIsStored(): void
-    {
-        $field = $this->createField();
-
-        $isValid = $field->validate(inputData: ['checkbox' => ['a', 'b']]);
-
-        $this->assertTrue($isValid);
-        $this->assertSame(['a', 'b'], $field->getRawValue());
-    }
-
-    /**
-     * ODDITY: a posted string is accepted and stored as string (not wrapped into an array).
-     */
-    public function testStringInputIsStoredAsString(): void
-    {
-        $field = $this->createField();
-
-        $isValid = $field->validate(inputData: ['checkbox' => 'a']);
-
-        $this->assertTrue($isValid);
-        $this->assertSame('a', $field->getRawValue());
-    }
-
-    public function testValueIsEmptyArrayAfterValidationWithMissingKey(): void
-    {
-        $field = $this->createField(initialValues: ['a']);
-
-        $this->assertTrue($field->validate(inputData: []));
-        $this->assertSame([], $field->getRawValue());
-    }
-
-    public function testUnknownOptionIsStoredButInvalid(): void
-    {
-        $field = $this->createField();
-
-        $isValid = $field->validate(inputData: ['checkbox' => ['x']]);
-
-        $this->assertFalse($isValid);
-        $this->assertSame(['x'], $field->getRawValue());
-    }
-
-    public function testNestedArrayIsStoredButInvalid(): void
-    {
-        $field = $this->createField();
-
-        $isValid = $field->validate(inputData: ['checkbox' => [['a']]]);
-
-        $this->assertFalse($isValid);
-        $this->assertSame([['a']], $field->getRawValue());
-    }
-
-    public function testBooleanFieldIsCheckedWithExactlyTheCheckedValue(): void
-    {
-        $field = new BooleanField(
-            name: 'boolean',
-            label: HtmlText::encoded(textContent: 'Boolean'),
-            isCheckedByDefault: false
-        );
-
-        $this->assertSame([], $field->getRawValue());
-        $this->assertFalse($field->isChecked());
-
-        $field->validate(inputData: ['boolean' => ['checked']]);
-
-        $this->assertSame(['checked'], $field->getRawValue());
-        $this->assertTrue($field->isChecked());
-    }
-
-    public function testBooleanFieldIsNotCheckedWhenStringIsPosted(): void
-    {
-        $field = new BooleanField(
-            name: 'boolean',
-            label: HtmlText::encoded(textContent: 'Boolean'),
-            isCheckedByDefault: true
-        );
-
-        $this->assertSame(['checked'], $field->getRawValue());
-
-        $field->validate(inputData: ['boolean' => 'checked']);
-
-        $this->assertSame('checked', $field->getRawValue());
-        $this->assertFalse($field->isChecked());
-    }
-
-    public function testBooleanFieldValueIsEmptyArrayAfterValidationWithMissingKey(): void
-    {
-        $field = new BooleanField(
-            name: 'boolean',
-            label: HtmlText::encoded(textContent: 'Boolean'),
-            isCheckedByDefault: true
-        );
-
-        $field->validate(inputData: []);
-
-        $this->assertSame([], $field->getRawValue());
     }
 
     public function testGetValuesReturnsConstructorValues(): void
@@ -149,128 +41,138 @@ final class CheckboxOptionsFieldValueTest extends TestCase
 
     public function testGetValuesIsEmptyForEmptyConstructorArray(): void
     {
-        $this->assertSame([], $this->createField()->getValues());
+        $field = $this->createField();
+
+        $this->assertSame([], $field->getValues());
+        $this->assertTrue($field->isValueEmpty());
     }
 
-    public function testGetValuesConvertsIntEntriesToString(): void
+    public function testArrayInputIsStored(): void
     {
         $field = $this->createField();
-        $field->setValue(value: [1, 'a']);
 
-        $this->assertSame(['1', 'a'], $field->getValues());
+        $isValid = $field->validate(inputData: ['checkbox' => ['a', 'b']]);
+
+        $this->assertTrue($isValid);
+        $this->assertSame(['a', 'b'], $field->getValues());
     }
 
     public function testGetValuesReindexesArrayAndKeepsOrder(): void
     {
         $field = $this->createField();
+
         $field->validate(inputData: ['checkbox' => [4 => 'b', 1 => 'a']]);
 
         $this->assertSame(['b', 'a'], $field->getValues());
     }
 
-    public function testGetValuesWrapsPostedString(): void
-    {
-        $field = $this->createField();
-        $field->validate(inputData: ['checkbox' => 'a']);
-
-        $this->assertSame(['a'], $field->getValues());
-    }
-
-    public function testGetValuesIsEmptyForPostedEmptyString(): void
-    {
-        $field = $this->createField(initialValues: ['a']);
-
-        $this->assertTrue($field->validate(inputData: ['checkbox' => '']));
-        $this->assertSame([], $field->getValues());
-    }
-
     public function testGetValuesIsEmptyAfterValidationWithMissingKey(): void
     {
         $field = $this->createField(initialValues: ['a']);
-        $field->validate(inputData: []);
 
+        $this->assertTrue($field->validate(inputData: []));
         $this->assertSame([], $field->getValues());
     }
 
-    public function testGetValuesReturnsUnknownOptionsBecauseValidationIsResponsible(): void
+    /**
+     * Changed on purpose (v4): a scalar posted to a multi field is invalid input, it is not wrapped.
+     */
+    public function testStringInputIsInvalidInput(): void
+    {
+        $field = $this->createField(initialValues: ['a']);
+
+        $isValid = $field->validate(inputData: ['checkbox' => 'a']);
+
+        $this->assertFalse($isValid);
+        $this->assertSame([], $field->getValues());
+        $this->assertSame('The invalid input was ignored.', $field->errorCollection->getFirstError()->render());
+    }
+
+    public function testUnknownOptionIsInvalidAndResetsTheValues(): void
     {
         $field = $this->createField();
 
-        $this->assertFalse($field->validate(inputData: ['checkbox' => ['a', 'x']]));
-        $this->assertSame(['a', 'x'], $field->getValues());
+        $isValid = $field->validate(inputData: ['checkbox' => ['a', 'x']]);
+
+        $this->assertFalse($isValid);
+        $this->assertSame([], $field->getValues());
+        $this->assertSame(1, $field->errorCollection->count());
     }
 
-    public function testGetValuesThrowsForNestedArrayAfterFailedValidation(): void
+    public function testNestedArrayIsInvalidInputAndGetValuesDoesNotThrow(): void
     {
         $field = $this->createField();
 
         $this->assertFalse($field->validate(inputData: ['checkbox' => ['a', ['b']]]));
-
-        $this->expectException(UnexpectedValueException::class);
-        $this->expectExceptionMessage('field checkbox');
-        $this->expectExceptionMessage('array');
-
-        $field->getValues();
-    }
-
-    public function testBooleanFieldGetValues(): void
-    {
-        $field = new BooleanField(
-            name: 'boolean',
-            label: HtmlText::encoded(textContent: 'Boolean'),
-            isCheckedByDefault: true
-        );
-
-        $this->assertSame(['checked'], $field->getValues());
-
-        $field->validate(inputData: []);
-
         $this->assertSame([], $field->getValues());
-        $this->assertFalse($field->isChecked());
     }
 
-    public function testBooleanFieldGetValuesWithPostedString(): void
+    public function testRequiredRuleFailsForEmptyValues(): void
     {
-        $field = new BooleanField(
-            name: 'boolean',
-            label: HtmlText::encoded(textContent: 'Boolean'),
-            isCheckedByDefault: false
-        );
-        $field->validate(inputData: ['boolean' => 'checked']);
+        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
 
-        // isChecked() stays false for a posted string (unchanged), the list is the more tolerant view
-        $this->assertSame(['checked'], $field->getValues());
-        $this->assertFalse($field->isChecked());
+        $this->assertFalse($field->validate(inputData: []));
+        $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
+        $this->assertTrue($field->isRequired());
+    }
+
+    public function testSetValuesChangesOnlyTheCurrentValues(): void
+    {
+        $field = $this->createField(initialValues: ['a']);
+
+        $field->setValues(values: ['a', 'b']);
+
+        $this->assertSame(['a', 'b'], $field->getValues());
+        $this->assertTrue($field->valueHasChanged());
+        $this->assertSame(['b'], $field->getAddedValues());
+        $this->assertSame([], $field->getRemovedValues());
+    }
+
+    public function testValueHasChangedIsFalseWithoutChange(): void
+    {
+        $field = $this->createField(initialValues: ['a']);
+
+        $this->assertFalse($field->valueHasChanged());
+        $field->validate(inputData: ['checkbox' => ['a']]);
+        $this->assertFalse($field->valueHasChanged());
     }
 
     /**
-     * @return array<string, array{null|string|array<mixed>}>
+     * @return array<string, array{null|string|array<mixed>, bool}>
      */
-    public static function validInputProvider(): array
+    public static function inputProvider(): array
     {
         return [
-            'string' => ['a'],
-            'empty string' => [''],
-            'array' => [['a', 'b']],
-            'array with empty string' => [['']],
-            'empty array' => [[]],
-            'zero string is empty for validation' => [['0']],
-            'empty nested array is empty for validation' => [[[]]],
-            'missing key' => [null],
+            'array' => [['a', 'b'], true],
+            'array with empty string' => [[''], true],
+            'empty array' => [[], true],
+            'zero string is an unknown option' => [['0'], false],
+            'string' => ['a', false],
+            'empty string' => ['', false],
+            'empty nested array' => [[[]], false],
+            'missing key' => [null, true],
         ];
     }
 
     /**
      * @param null|string|array<mixed> $input
      */
-    #[DataProvider('validInputProvider')]
-    public function testGetValuesNeverThrowsAfterSuccessfulValidation(null|string|array $input): void
+    #[DataProvider('inputProvider')]
+    public function testValidationResultAndGetValuesNeverThrows(null|string|array $input, bool $expectedValid): void
     {
         $field = $this->createField();
         $inputData = $input === null ? [] : ['checkbox' => $input];
 
-        $this->assertTrue($field->validate(inputData: $inputData));
-        // Must not throw: a validated field is always readable
+        $this->assertSame($expectedValid, $field->validate(inputData: $inputData));
+        // Must not throw: a field is always readable
         $field->getValues();
+    }
+
+    public function testIsSelected(): void
+    {
+        $field = $this->createField(initialValues: ['b']);
+
+        $this->assertTrue($field->isSelected(optionKey: 'b'));
+        $this->assertFalse($field->isSelected(optionKey: 'a'));
     }
 }
