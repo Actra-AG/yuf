@@ -4,6 +4,34 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.5.0] – 2026-10-04
+
+### ⚙️ Backend & API
+
+* **Typed path variables.** `BaseView` got `getPathVarAsInt(int $nr): ?int`, `getRequiredPathVarAsInt(int $nr): int`
+  and `getRequiredPathVarAsString(int $nr): string`. The required getters throw a `NotFoundException` (404) if the
+  path variable is missing, not an integer or empty. Integers are strictly formatted as in `DbRow::getInt()` (optional
+  minus and digits, no `+`, no spaces, overflow counts as not an integer). The logic lives in the new
+  `actra\yuf\core\PathVars`. See the README section "Path variables".
+* `getPathVar()` is unchanged. No breaking changes.
+* **Migration hint:** replace `(int)$this->getPathVar(nr: 1)` and own null/empty checks that throw a
+  `NotFoundException` with the new getters:
+  ```php
+  // Before
+  $id = (int)$this->getPathVar(nr: 1);
+  $slug = $this->getPathVar(nr: 2);
+  if ($slug === null || $slug === '') {
+      throw new NotFoundException();
+  }
+
+  // After
+  $id = $this->getRequiredPathVarAsInt(nr: 1);
+  $slug = $this->getRequiredPathVarAsString(nr: 2);
+  ```
+  Note: `(int)` turned `"abc"` or a missing value into `0`; the new getter answers with a 404 instead.
+
+---
+
 ## [v4.4.0] – 2026-10-04
 
 ### 🧩 Forms

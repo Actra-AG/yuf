@@ -140,6 +140,35 @@ abstract class BaseView
         return RequestHandler::get()->getPathVar(nr: $nr);
     }
 
+    /**
+     * `null` if the path variable is missing or not strictly an integer (e.g. `"12abc"`, `"+12"`, `" 12"`, overflow).
+     */
+    protected function getPathVarAsInt(int $nr): ?int
+    {
+        return $this->pathVars()->getAsInt(nr: $nr);
+    }
+
+    /**
+     * For an ID in the URL (`subscription-42.html`): a missing or non-integer value throws a `NotFoundException`.
+     */
+    protected function getRequiredPathVarAsInt(int $nr): int
+    {
+        return $this->pathVars()->getRequiredAsInt(nr: $nr);
+    }
+
+    /**
+     * The trimmed value; a missing or empty value throws a `NotFoundException`.
+     */
+    protected function getRequiredPathVarAsString(int $nr): string
+    {
+        return $this->pathVars()->getRequiredAsString(nr: $nr);
+    }
+
+    private function pathVars(): PathVars
+    {
+        return new PathVars(values: RequestHandler::get()->pathVars);
+    }
+
     protected function setContentByXmlObject(SimpleXMLExtended $xmlObject): void
     {
         $this->setContent(contentString: $xmlObject->asXML());

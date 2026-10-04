@@ -98,6 +98,21 @@ The query passed to `createFromSqlQuery()` must consist of `SELECT`, `FROM`, opt
 only. `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT` and `UNION` are rejected, because sorting and paging are added by
 `DbQuery` itself (`addOrderPart()` and the offset/row count of `selectFromDb()`).
 
+## Path variables
+
+A file name like `subscription-42.html` is split at `-` into path variables (`0` → `subscription`, `1` → `42`); the
+view allows them with `maxAllowedPathVars`. `getPathVar()` returns the untyped `?string`. The typed getters of
+`BaseView` throw a `NotFoundException` (404) for a wrong URL instead of turning it into ID `0`:
+
+```php
+$id = $this->getRequiredPathVarAsInt(nr: 1);     // int, 404 if missing or not an integer
+$slug = $this->getRequiredPathVarAsString(nr: 2); // trimmed string, 404 if missing or empty
+$page = $this->getPathVarAsInt(nr: 3) ?? 1;       // ?int, null if missing or not an integer
+```
+
+Integers must be strictly formatted: optional minus and digits only (no `+`, no spaces, no decimals); values outside
+the integer range count as not an integer.
+
 ## REST/API Endpoints
 
 `yuf` includes lightweight helpers for building REST-style endpoints without adding external dependencies.

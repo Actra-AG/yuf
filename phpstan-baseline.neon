@@ -1279,12 +1279,6 @@ parameters:
 			path: src/core/RequestHandler.php
 
 		-
-			message: '#^Property actra\\yuf\\core\\RequestHandler\:\:\$pathVars type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/core/RequestHandler.php
-
-		-
 			message: '#^Property actra\\yuf\\core\\RequestHandler\:\:\$routeVariables type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
