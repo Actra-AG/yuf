@@ -78,12 +78,21 @@ abstract class TextualField extends FormField
      */
     final protected function readInput(FormInput $input): void
     {
+        $this->readAdditionalInput(input: $input);
         $text = $input->getText(name: $this->name);
         match ($input->getShape(name: $this->name)) {
             InputShapeEnum::TEXT => $this->accept(text: $this->normalize(input: $text ?? '')),
             InputShapeEnum::MISSING => $this->accept(text: ''),
             InputShapeEnum::LIST, InputShapeEnum::INVALID => $this->rejectTextInput(),
         };
+    }
+
+    /**
+     * Hook for request input besides the field's own value (e.g. the country code of a phone number or a fallback
+     * token from the query string). It runs before the value is read, so the value can depend on it.
+     */
+    protected function readAdditionalInput(FormInput $input): void
+    {
     }
 
     private function rejectTextInput(): void
@@ -105,6 +114,19 @@ abstract class TextualField extends FormField
     public function renderValue(): string
     {
         return HtmlEncoder::encode(value: $this->text);
+    }
+
+    /**
+     * Validates the field with request data that carries the query part (the array based `validate()` has none).
+     *
+     * @internal Bridge until `validate(FormInput)` replaces `validate(array, bool)`.
+     */
+    final public function validateInput(FormInput $input): bool
+    {
+        $this->startReadingInput();
+        $this->readInput(input: $input);
+
+        return $this->validateCurrentValue();
     }
 
     /**

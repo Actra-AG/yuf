@@ -9,29 +9,48 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\PhoneNumberField;
+use actra\yuf\form\FormInput;
 use actra\yuf\html\HtmlText;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class PhoneNumberFieldValueTest extends TestCase
 {
-    private function createField(?string $value = null): PhoneNumberField
-    {
+    private function createField(
+        ?string $value = null,
+        string $countryCode = 'CH',
+        ?HtmlText $requiredErrorMessage = null
+    ): PhoneNumberField {
         return new PhoneNumberField(
             name: 'phone',
             label: HtmlText::encoded(textContent: 'Phone'),
             value: $value,
-            invalidErrorMessage: HtmlText::encoded(textContent: 'Invalid')
+            invalidErrorMessage: HtmlText::encoded(textContent: 'Invalid'),
+            requiredErrorMessage: $requiredErrorMessage,
+            countryCode: $countryCode
         );
     }
 
     public function testValueIsEmptyStringAfterConstructionWithoutValue(): void
     {
-        $this->assertSame('', $this->createField()->getRawValue());
+        $this->assertSame('', $this->createField()->getValueAsString());
     }
 
-    public function testValueIsStringAfterConstructionWithStringAndIsNotFormatted(): void
+    public function testValidConstructorValueIsStoredInInternalFormat(): void
     {
-        $this->assertSame('044 668 18 00', $this->createField(value: '044 668 18 00')->getRawValue());
+        $this->assertSame('+41.446681800', $this->createField(value: '044 668 18 00')->getValueAsString());
+    }
+
+    public function testConstructorValueIsReadWithTheCountryCodeOfTheField(): void
+    {
+        $field = $this->createField(value: '030 123456', countryCode: 'DE');
+
+        $this->assertSame('+49.30123456', $field->getValueAsString());
+    }
+
+    public function testInvalidConstructorValueStaysAsGivenTrimmed(): void
+    {
+        $this->assertSame('abc', $this->createField(value: ' abc ')->getValueAsString());
     }
 
     public function testValidPhoneNumberIsTrimmedAndStoredInInternalFormat(): void
@@ -41,17 +60,72 @@ final class PhoneNumberFieldValueTest extends TestCase
         $isValid = $field->validate(inputData: ['phone' => ' 044 668 18 00 ']);
 
         $this->assertTrue($isValid);
-        $this->assertSame('+41.446681800', $field->getRawValue());
+        $this->assertSame('+41.446681800', $field->getValueAsString());
     }
 
-    public function testInvalidPhoneNumberKeepsInputAsString(): void
+    /**
+     * @return iterable<string, array{string, string, string}>
+     */
+    public static function equivalentNumberProvider(): iterable
+    {
+        yield 'national' => ['044 668 18 00', 'CH', '+41.446681800'];
+        yield 'international with plus' => ['+41 44 668 18 00', 'CH', '+41.446681800'];
+        yield 'international with 00' => ['0041446681800', 'CH', '+41.446681800'];
+        yield 'internal format' => ['+41.446681800', 'CH', '+41.446681800'];
+        yield 'mobile' => ['079 123 45 67', 'CH', '+41.791234567'];
+        yield 'foreign number with other default country' => ['+41 44 668 18 00', 'DE', '+41.446681800'];
+        yield 'German number' => ['030 123456', 'DE', '+49.30123456'];
+    }
+
+    #[DataProvider('equivalentNumberProvider')]
+    public function testNumbersAreStoredInInternalFormat(string $input, string $countryCode, string $expected): void
+    {
+        $field = $this->createField(countryCode: $countryCode);
+
+        $isValid = $field->validate(inputData: ['phone' => $input]);
+
+        $this->assertTrue($isValid);
+        $this->assertSame($expected, $field->getValueAsString());
+    }
+
+    public function testInvalidPhoneNumberKeepsInputAndAddsTheError(): void
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['phone' => 'abc']);
+        $isValid = $field->validate(inputData: ['phone' => ' abc ']);
 
         $this->assertFalse($isValid);
-        $this->assertSame('abc', $field->getRawValue());
+        $this->assertSame('abc', $field->getValueAsString());
+        $this->assertSame(['Invalid'], array_map(
+            callback: fn(HtmlText $error): string => $error->render(),
+            array: $field->errorCollection->listErrors()
+        ));
+    }
+
+    public function testNumberWithTooFewDigitsIsInvalid(): void
+    {
+        $field = $this->createField();
+
+        $this->assertFalse($field->validate(inputData: ['phone' => '12']));
+    }
+
+    public function testEmptyInputIsValidWithoutRequiredError(): void
+    {
+        $field = $this->createField();
+
+        $this->assertTrue($field->validate(inputData: ['phone' => '  ']));
+    }
+
+    public function testEmptyInputGivesOnlyTheRequiredError(): void
+    {
+        $field = $this->createField(requiredErrorMessage: HtmlText::encoded(textContent: 'Required'));
+
+        $isValid = $field->validate(inputData: ['phone' => '']);
+
+        $this->assertFalse($isValid);
+        $this->assertSame(1, $field->errorCollection->count());
+        $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
+        $this->assertTrue($field->isRequired());
     }
 
     public function testValueIsEmptyStringAfterValidationWithMissingKey(): void
@@ -59,7 +133,7 @@ final class PhoneNumberFieldValueTest extends TestCase
         $field = $this->createField(value: '044 668 18 00');
 
         $this->assertTrue($field->validate(inputData: []));
-        $this->assertSame('', $field->getRawValue());
+        $this->assertSame('', $field->getValueAsString());
     }
 
     public function testArrayInputIsRejectedAndResetsValue(): void
@@ -69,8 +143,8 @@ final class PhoneNumberFieldValueTest extends TestCase
         $isValid = $field->validate(inputData: ['phone' => ['x']]);
 
         $this->assertFalse($isValid);
-        $this->assertTrue($field->hasErrors(withChildElements: true));
-        $this->assertSame('', $field->getRawValue());
+        $this->assertSame(1, $field->errorCollection->count());
+        $this->assertSame('', $field->getValueAsString());
     }
 
     public function testArrayAsCountryCodeInputIsIgnoredAndKeepsCountryCode(): void
@@ -81,15 +155,104 @@ final class PhoneNumberFieldValueTest extends TestCase
 
         $this->assertTrue($isValid);
         $this->assertSame('CH', $field->countryCode);
-        $this->assertSame('+41.446681800', $field->getRawValue());
+        $this->assertSame('+41.446681800', $field->getValueAsString());
     }
 
-    public function testStringCountryCodeInputIsUsed(): void
+    public function testStringCountryCodeInputIsUsedForTheNumberOfTheSameRequest(): void
     {
         $field = $this->createField();
 
         $field->validate(inputData: ['phone' => '030 123456', 'countryCode' => 'DE']);
 
         $this->assertSame('DE', $field->countryCode);
+        $this->assertSame('+49.30123456', $field->getValueAsString());
+    }
+
+    public function testCountryCodeFieldNameIsConfigurable(): void
+    {
+        $field = new PhoneNumberField(
+            name: 'phone',
+            label: HtmlText::encoded(textContent: 'Phone'),
+            value: null,
+            invalidErrorMessage: HtmlText::encoded(textContent: 'Invalid'),
+            countryCodeFieldName: 'country'
+        );
+
+        $field->validate(inputData: ['phone' => '030 123456', 'country' => 'DE', 'countryCode' => 'FR']);
+
+        $this->assertSame('DE', $field->countryCode);
+    }
+
+    public function testValidateInputReadsTheCountryCodeFromTheFormInput(): void
+    {
+        $field = $this->createField();
+
+        $isValid = $field->validateInput(
+            input: FormInput::fromArray(data: ['phone' => '030 123456', 'countryCode' => 'DE'])
+        );
+
+        $this->assertTrue($isValid);
+        $this->assertSame('+49.30123456', $field->getValueAsString());
+    }
+
+    public function testSetValueNormalizesAndChangesTheCurrentValueOnly(): void
+    {
+        $field = $this->createField(value: '044 668 18 00');
+
+        $field->setValue(value: '079 123 45 67');
+
+        $this->assertSame('+41.791234567', $field->getValueAsString());
+        $this->assertTrue($field->valueHasChanged());
+    }
+
+    public function testValueHasChangedIsFalseForTheSameNumberInAnotherFormat(): void
+    {
+        $field = $this->createField(value: '044 668 18 00');
+
+        $field->validate(inputData: ['phone' => '+41 44 668 18 00']);
+
+        $this->assertFalse($field->valueHasChanged());
+    }
+
+    public function testValueHasChangedIsTrueForAnotherNumber(): void
+    {
+        $field = $this->createField(value: '044 668 18 00');
+
+        $field->validate(inputData: ['phone' => '079 123 45 67']);
+
+        $this->assertTrue($field->valueHasChanged());
+    }
+
+    public function testRenderValueIsInternationalFormatByDefault(): void
+    {
+        $this->assertSame('+41 44 668 18 00', $this->createField(value: '044 668 18 00')->renderValue());
+    }
+
+    public function testRenderValueIsInternalFormatIfConfigured(): void
+    {
+        $field = new PhoneNumberField(
+            name: 'phone',
+            label: HtmlText::encoded(textContent: 'Phone'),
+            value: '044 668 18 00',
+            invalidErrorMessage: HtmlText::encoded(textContent: 'Invalid'),
+            renderInternalFormat: true
+        );
+
+        $this->assertSame('+41.446681800', $field->renderValue());
+    }
+
+    public function testRenderValueOfInvalidNumberIsEncodedWithAndWithoutError(): void
+    {
+        $withoutError = $this->createField(value: 'a"<b');
+        $withError = $this->createField();
+        $withError->validate(inputData: ['phone' => 'a"<b']);
+
+        $this->assertSame('a&quot;&lt;b', $withoutError->renderValue());
+        $this->assertSame('a&quot;&lt;b', $withError->renderValue());
+    }
+
+    public function testRenderValueOfEmptyFieldIsEmpty(): void
+    {
+        $this->assertSame('', $this->createField()->renderValue());
     }
 }

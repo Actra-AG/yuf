@@ -12,7 +12,7 @@ use actra\yuf\form\renderer\HiddenFieldRenderer;
 use actra\yuf\form\settings\InputTypeValue;
 use actra\yuf\html\HtmlText;
 
-class HiddenField extends SettableStringInputField
+final class HiddenField extends SettableStringInputField
 {
     public function __construct(string $name, ?string $value = null)
     {

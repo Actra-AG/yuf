@@ -12,14 +12,16 @@ use Exception;
 use actra\yuf\form\component\field\CsrfTokenField;
 use actra\yuf\form\component\FormField;
 use actra\yuf\form\FormCollection;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\form\FormComponent;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\DefaultFormRenderer;
 use actra\yuf\form\renderer\DefinitionListRenderer;
-use actra\yuf\form\rule\ValidCsrfTokenValue;
 use actra\yuf\html\HtmlText;
 use actra\yuf\security\CsrfToken;
+use actra\yuf\security\CsrfTokenSource;
+use actra\yuf\security\SessionCsrfTokenSource;
 use LogicException;
 
 class Form extends FormCollection
@@ -38,7 +40,8 @@ class Form extends FormCollection
         public readonly bool $methodPost = true,
         ?string $individualSentIndicator = null,
         public readonly bool $disableClientValidation = false,
-        public readonly FormMessages $messages = new FormMessages()
+        public readonly FormMessages $messages = new FormMessages(),
+        ?CsrfTokenSource $csrfTokenSource = null
     ) {
         if (in_array(
             needle: $name,
@@ -50,7 +53,9 @@ class Form extends FormCollection
         $this->sentIndicator = is_null(value: $individualSentIndicator) ? $name : $individualSentIndicator;
         parent::__construct(name: $name);
 
-        $this->addField(formField: new CsrfTokenField());
+        $this->addField(
+            formField: new CsrfTokenField(tokenSource: $csrfTokenSource ?? new SessionCsrfTokenSource())
+        );
     }
 
     public function addField(FormField $formField): void
@@ -113,7 +118,8 @@ class Form extends FormCollection
         $inputData = ($this->methodPost ? $_POST : $_GET) + $_FILES;
 
         foreach ($this->childComponents as $formComponent) {
-            if (!$formComponent instanceof FormField) {
+            // The CSRF token is only checked if the other fields are valid (validateCsrf())
+            if (!$formComponent instanceof FormField || $formComponent instanceof CsrfTokenField) {
                 continue;
             }
 
@@ -152,12 +158,14 @@ class Form extends FormCollection
             // The Csrf protection has been disabled
             return;
         }
-        /** @var CsrfTokenField $csrfTokenField */
         $csrfTokenField = $this->getField(name: CsrfToken::getFieldName());
-        $validCsrfTokenValue = new ValidCsrfTokenValue();
-        $csrfTokenField->addRule(formRule: $validCsrfTokenValue);
-        if (!$csrfTokenField->validate(inputData: $inputData)) {
-            $this->addErrorAsHtmlTextObject(errorMessageObject: $validCsrfTokenValue->getErrorMessage());
+        if (!$csrfTokenField instanceof CsrfTokenField) {
+            return;
+        }
+        // The token falls back to the query string, so the query part (`$_GET`) is passed as well
+        $input = FormInput::fromArray(data: $inputData, query: $_GET);
+        if (!$csrfTokenField->validateInput(input: $input)) {
+            $this->addError(errorMessage: $this->messages->invalidCsrfToken, isEncodedForRendering: false);
         }
     }
 

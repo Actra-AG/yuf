@@ -266,10 +266,11 @@ abstract class FormField extends FormComponent
      */
     public function validate(array $inputData, bool $overwriteValue = true): bool
     {
-        $this->inputReceived = true;
         if ($overwriteValue) {
-            $this->inputRejected = false;
+            $this->startReadingInput();
             $this->readInputData(inputData: $inputData);
+        } else {
+            $this->inputReceived = true;
         }
 
         return $this->validateCurrentValue();
@@ -348,6 +349,15 @@ abstract class FormField extends FormComponent
         }
 
         return !$this->hasErrors(withChildElements: true);
+    }
+
+    /**
+     * Marks the field as having received input and forgets that the previous input was rejected.
+     */
+    final protected function startReadingInput(): void
+    {
+        $this->inputReceived = true;
+        $this->inputRejected = false;
     }
 
     /**

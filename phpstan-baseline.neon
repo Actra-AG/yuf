@@ -1933,12 +1933,6 @@ parameters:
 			path: src/form/rule/RegexRule.php
 
 		-
-			message: '#^Parameter \$token of static method actra\\yuf\\security\\CsrfToken\:\:validateToken\(\) expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/rule/ValidCsrfTokenValue.php
-
-		-
 			message: '#^Cannot cast mixed to string\.$#'
 			identifier: cast.string
 			count: 1

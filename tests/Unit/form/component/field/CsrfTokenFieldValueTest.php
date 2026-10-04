@@ -9,34 +9,257 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\CsrfTokenField;
+use actra\yuf\form\FormInput;
+use actra\yuf\form\FormMessages;
+use actra\yuf\security\CsrfTokenSource;
+use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
+use LogicException;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
 /**
- * Not covered: getHtmlTag() sets the value from the session token ($_SESSION, random token).
- * Before rendering, the field behaves like a HiddenField.
+ * The field checks the posted token against the `CsrfTokenSource` (here an in-memory one, token `expected-token`).
  */
 final class CsrfTokenFieldValueTest extends TestCase
 {
-    public function testValueIsEmptyStringAfterConstruction(): void
+    private function createField(string $token = 'expected-token'): CsrfTokenField
     {
-        $this->assertSame('', new CsrfTokenField()->getRawValue());
+        return new CsrfTokenField(tokenSource: new InMemoryCsrfTokenSource(token: $token));
     }
 
-    public function testStringInputIsStored(): void
+    /**
+     * @param array<string, string|list<string>> $query
+     * @param array<string, string|list<string>> $data
+     */
+    private function validate(CsrfTokenField $field, array $data, array $query = []): bool
     {
-        $field = new CsrfTokenField();
-
-        $field->validate(inputData: ['csrftoken' => 'abc']);
-
-        $this->assertSame('abc', $field->getRawValue());
+        return $field->validateInput(input: FormInput::fromArray(data: $data, query: $query));
     }
 
-    public function testValueIsEmptyStringAfterValidationWithMissingKey(): void
+    public function testNameIsTheCsrfFieldName(): void
     {
-        $field = new CsrfTokenField();
+        $this->assertSame('csrftoken', $this->createField()->name);
+    }
 
-        $field->validate(inputData: []);
+    public function testFieldHasNoGetter(): void
+    {
+        $reflection = new ReflectionClass(objectOrClass: CsrfTokenField::class);
 
-        $this->assertSame('', $field->getRawValue());
+        $this->assertFalse($reflection->hasMethod(name: 'getValueAsString'));
+    }
+
+    public function testFieldHasNoInitialValue(): void
+    {
+        $reflection = new ReflectionClass(objectOrClass: CsrfTokenField::class);
+
+        $this->assertFalse($reflection->hasMethod(name: 'setInitialValue'));
+    }
+
+    public function testBridgeSetterThrows(): void
+    {
+        $this->expectException(LogicException::class);
+
+        $this->createField()->setValue(value: 'abc');
+    }
+
+    public function testValidTokenIsAccepted(): void
+    {
+        $field = $this->createField();
+
+        $this->assertTrue($this->validate(field: $field, data: ['csrftoken' => 'expected-token']));
+        $this->assertFalse($field->hasErrors(withChildElements: true));
+    }
+
+    public function testWrongTokenAddsOneErrorWithTheMessageOfTheField(): void
+    {
+        $field = $this->createField();
+
+        $isValid = $this->validate(field: $field, data: ['csrftoken' => 'abc']);
+
+        $this->assertFalse($isValid);
+        $this->assertSame(1, $field->errorCollection->count());
+        $this->assertSame(
+            'The form could not be submitted because of a technical problem (invalid CSRF token). Please try again.',
+            $field->errorCollection->getFirstError()->render()
+        );
+    }
+
+    public function testErrorUsesTheGermanMessageIfTheFieldHasThem(): void
+    {
+        $field = $this->createField();
+        $field->messages = FormMessages::german();
+
+        $this->validate(field: $field, data: ['csrftoken' => 'abc']);
+
+        $this->assertStringStartsWith(
+            'Das Formular konnte wegen eines technischen Problems',
+            $field->errorCollection->getFirstError()->render()
+        );
+    }
+
+    public function testMissingTokenIsInvalid(): void
+    {
+        $field = $this->createField();
+
+        $this->assertFalse($this->validate(field: $field, data: []));
+        $this->assertSame(1, $field->errorCollection->count());
+    }
+
+    public function testEmptyTokenIsInvalid(): void
+    {
+        $this->assertFalse($this->validate(field: $this->createField(), data: ['csrftoken' => '']));
+    }
+
+    public function testTokenIsNotTrimmed(): void
+    {
+        $this->assertFalse($this->validate(field: $this->createField(), data: ['csrftoken' => ' expected-token ']));
+    }
+
+    public function testZeroWidthSpacesAreRemovedFromThePostedToken(): void
+    {
+        $isValid = $this->validate(field: $this->createField(), data: ['csrftoken' => "expected\u{200B}-token"]);
+
+        $this->assertTrue($isValid);
+    }
+
+    public function testMissingPostedTokenFallsBackToTheQueryString(): void
+    {
+        $field = $this->createField();
+
+        $isValid = $this->validate(field: $field, data: [], query: ['csrftoken' => 'expected-token']);
+
+        $this->assertTrue($isValid);
+    }
+
+    public function testWrongTokenInTheQueryStringIsInvalid(): void
+    {
+        $isValid = $this->validate(field: $this->createField(), data: [], query: ['csrftoken' => 'abc']);
+
+        $this->assertFalse($isValid);
+    }
+
+    public function testPostedTokenWinsOverTheQueryString(): void
+    {
+        $field = $this->createField();
+
+        $isValid = $this->validate(
+            field: $field,
+            data: ['csrftoken' => 'abc'],
+            query: ['csrftoken' => 'expected-token']
+        );
+
+        $this->assertFalse($isValid);
+    }
+
+    public function testEmptyPostedTokenDoesNotFallBackToTheQueryString(): void
+    {
+        $isValid = $this->validate(
+            field: $this->createField(),
+            data: ['csrftoken' => ''],
+            query: ['csrftoken' => 'expected-token']
+        );
+
+        $this->assertFalse($isValid);
+    }
+
+    public function testQueryStringTokenOfAnArrayIsIgnored(): void
+    {
+        $isValid = $this->validate(field: $this->createField(), data: [], query: ['csrftoken' => ['expected-token']]);
+
+        $this->assertFalse($isValid);
+    }
+
+    public function testArrayInputIsRejectedWithOneError(): void
+    {
+        $field = $this->createField();
+
+        $isValid = $this->validate(field: $field, data: ['csrftoken' => ['expected-token']]);
+
+        $this->assertFalse($isValid);
+        $this->assertSame(1, $field->errorCollection->count());
+        $this->assertSame('The invalid input was ignored.', $field->errorCollection->getFirstError()->render());
+    }
+
+    public function testArrayInputIsNotReplacedByTheQueryString(): void
+    {
+        $isValid = $this->validate(
+            field: $this->createField(),
+            data: ['csrftoken' => ['x']],
+            query: ['csrftoken' => 'expected-token']
+        );
+
+        $this->assertFalse($isValid);
+    }
+
+    public function testArrayBasedValidateHasNoQueryString(): void
+    {
+        $field = $this->createField();
+
+        $this->assertTrue($field->validate(inputData: ['csrftoken' => 'expected-token']));
+        $this->assertFalse($this->createField()->validate(inputData: []));
+    }
+
+    public function testEachValidationChecksTheNewInput(): void
+    {
+        $field = $this->createField();
+        $this->validate(field: $field, data: ['csrftoken' => 'abc']);
+
+        $this->validate(field: $field, data: ['csrftoken' => 'expected-token']);
+
+        $this->assertSame(1, $field->errorCollection->count());
+    }
+
+    public function testRenderingShowsTheTokenOfTheSource(): void
+    {
+        $this->assertSame(
+            '<input type="hidden" name="csrftoken" value="expected-token">',
+            $this->createField()->render()
+        );
+    }
+
+    public function testRenderingEncodesTheToken(): void
+    {
+        $this->assertSame(
+            '<input type="hidden" name="csrftoken" value="a&quot;&lt;b+/=">',
+            $this->createField(token: 'a"<b+/=')->render()
+        );
+    }
+
+    public function testRenderingNeverShowsThePostedToken(): void
+    {
+        $field = $this->createField();
+        $this->validate(field: $field, data: ['csrftoken' => 'posted-token']);
+
+        $html = $field->render();
+
+        $this->assertStringNotContainsString('posted-token', $html);
+        $this->assertStringContainsString('value="expected-token"', $html);
+    }
+
+    public function testTokenIsOnlyReadFromTheSourceWhenNeeded(): void
+    {
+        $source = new class implements CsrfTokenSource {
+            public int $calls = 0;
+
+            public function getToken(): string
+            {
+                $this->calls++;
+
+                return 'token';
+            }
+
+            public function isValid(string $token): bool
+            {
+                $this->calls++;
+
+                return false;
+            }
+        };
+
+        $field = new CsrfTokenField(tokenSource: $source);
+        $this->assertSame(0, $source->calls);
+
+        $field->render();
+        $this->assertSame(1, $source->calls);
     }
 }

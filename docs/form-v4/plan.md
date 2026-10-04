@@ -504,6 +504,91 @@ Verify: as task 2.
 
 Handover notes:
 
+Done (2026-10-04), `ddev composer check` green (994 tests), 1 baseline block (6 lines) removed, none added; no entry
+left in the touched files (the only entry of a touched file was `ValidCsrfTokenValue`, deleted with it).
+
+**What was built**
+
+- New: `ZipCodeValidator::validate(zipCode, countryCode)` and `IbanValidator::validate(input)` (`final`, pure static
+  functions in `actra\yuf\datacheck\validatorTypes`, next to the existing `IpValidator`/`DomainValidator`, same style);
+  `CsrfTokenSource` (interface: `getToken()`, `isValid(string)`) and `SessionCsrfTokenSource` (`final readonly`, wraps
+  `CsrfToken`) in `actra\yuf\security`; test double `tests/Double/security/InMemoryCsrfTokenSource`.
+- Changed: `PhoneNumberField` (`normalize()` canonicalizes to the internal format, `readAdditionalInput()` reads the
+  country code, `validateCurrentValue()` adds `invalidErrorMessage`, own `valueHasChanged()` removed, the `validate()`
+  override and `PhoneNumberRule` gone), `ZipCodeField` (final, `ZipCodeValidator`, error from `individualInvalidError`
+  or `FormMessages::invalidZipCode`), `IbanNumberField` (final, `IbanValidator`, error only if the other rules passed,
+  as in v3), `HiddenField` (final), `CsrfTokenField` (extends `InputField`, optional `CsrfTokenSource` argument,
+  `accept()` checks the token, `renderValue()` is the token of the source), `Form` (new last constructor argument
+  `?CsrfTokenSource $csrfTokenSource`, CSRF check, see bridge), `PasswordField` (checked: final, `StringInputField`,
+  no normalization, `renderValue()` is `''`; no change needed).
+- Removed: `ZipCodeRule`, `PhoneNumberRule`, `ValidCsrfTokenValue` (design 3.8, nothing else used them).
+  `RequiredRule` stays (task 6).
+
+**Deviations from the design (and why)**
+
+1. **Validators are static classes in `datacheck\validatorTypes`** (the design only names them): the existing
+   validators there are `final`-less static classes with `validate()`; pure static functions have no state. Instances
+   would only add boilerplate.
+2. **`IbanValidator` is stricter on nonsense input:** only `[a-z0-9]` after removing spaces is accepted (v3 ignored
+   unknown characters and raised an "undefined array key" warning) and more than 34 characters are rejected (a post of
+   megabytes made `bcmod()` run on a huge number). A 300000-case differential test against the v3.3.1 code (random
+   strings of known and unknown countries) gave no difference for input with letters and digits. The per-country
+   length table of v3 was never used for validation (only `isset()`), so it became a list of country codes; length is
+   still not checked (the table has a wrong value for CR, 21 instead of 22, so a check would reject valid IBANs).
+3. **CSRF is checked in the field, in a second pass of `Form`:** the design says "compares in `accept()`". The field
+   calls `CsrfTokenSource::isValid()` in `accept()` (stores the result) and adds the `invalidCsrfToken` error in
+   `validateCurrentValue()` (unless the input was rejected and has its error). The GET fallback needs the query part,
+   which the array based `validate()` does not carry, so `CsrfTokenField::readAdditionalInput()` reads it from the
+   `FormInput`. `Form::validate()` skips the field in the first pass and validates it afterwards (only if all other
+   fields are valid, as in v3), with `FormInput::fromArray(data: $inputData, query: $_GET)` and the new bridge method
+   `validateInput()`; it then adds `messages->invalidCsrfToken` to the form (v3: the rule message). Observable behaviour
+   is the v3 behaviour (pinned by `SpecialFieldRenderersTest` with the HTML of v3.3.1, `FormCsrfTest`). Fixed on the
+   way: since task 2 the fallback to `$_GET` was dead (the empty value was `''`, v3 checked `null`).
+4. **Phone constructor values are canonicalized** (design 3.6: constructor, setters and `normalize()` share one path),
+   so `new PhoneNumberField(value: '044 668 18 00')` holds `+41.446681800`; the country code is assigned before
+   `parent::__construct()` for that reason. Rendering is unchanged (v3.3.1 rendered the same international format).
+5. **Security fix, HTML change:** `PhoneNumberField::renderValue()` returned the unencoded text if the field had an
+   error (v3.3.1: `"><b>x` broke out of the `value` attribute). It is encoded now (listed in `UPGRADE.md`). All other
+   HTML equals v3.3.1, except the already documented trimming of posted zip codes and IBANs (task 2, normalization).
+6. **Phone error timing:** the invalid-number error is added before the listeners run (like the typed fields of 4a),
+   v3 added it with the rules after the "before validation" listeners. Zip code: same. IBAN: after the rules, as in v3.
+7. **`readAdditionalInput(FormInput)` sits on `TextualField`** (design: on `FormField`, task 6). Called by the final
+   `readInput()` before the value is read.
+
+**The bridge (changed in this task, remove in task 6)**
+
+New, `@internal`: `TextualField::validateInput(FormInput): bool` (needed for the query part, and handy in tests) and
+`FormField::startReadingInput()` (protected, shared with `validate(array)`). Task 6: `validate(FormInput)` replaces
+`validateInput()`, and `Form::validate(?FormInput)` passes its `FormInput` (with the query from `fromGlobals()`) to
+`CsrfTokenField` instead of building one from `$_GET`; the second CSRF pass and the `instanceof CsrfTokenField` skip in
+`Form::validate()` / `validateCsrf()` stay as they are (or move into a `Form` method). `readAdditionalInput()` can move
+to the `FormField` template. `TextualField::setValue()` (throws) still gives `CsrfTokenField` and `PasswordField` a
+public `setValue()` until the bridge is removed.
+
+**Tests changed on purpose**
+
+`PhoneNumberFieldValueTest`: the constructor value is canonical (was "not formatted"), `getValueAsString()` instead of
+`getRawValue()`. `ZipCodeFieldValueTest`, `IbanNumberFieldValueTest`: `getValueAsString()`, array input resets the value
+(was "keeps previous value" in the name only). `CsrfTokenFieldValueTest` rewritten (the field has no getter, tests use
+the in-memory source). New: `ZipCodeValidatorTest`, `IbanValidatorTest`, `FormCsrfTest`, `SessionCsrfTokenSourceTest`,
+`renderer/SpecialFieldRenderersTest` (HTML of v3.3.1 for phone, zip code, IBAN, hidden, password, CSRF and three forms,
+one test per case; the XSS case and trimmed posted zip code/IBAN differ on purpose, see deviation 5).
+
+**Baseline:** removed the block of `ValidCsrfTokenValue`; none added. `CsrfToken::getToken()` (1 entry, `mixed` from
+`$_SESSION`) was not touched (not a form class).
+
+**For tasks 5 to 7**
+
+- Task 5: `FileField` still extends the legacy `validate(array, bool)` path; it can use the same pattern for the
+  session class (`SessionFileUploadStorage` like `SessionCsrfTokenSource`, `?FileUploadStorage` argument on the field,
+  in-memory double in `tests/Double/`). `Form` has the optional `csrfTokenSource` argument now; a `fileUploadStorage`
+  argument is not needed (the field gets it directly).
+- Task 6: see "The bridge" above. `Form` tests that call `validate()` need to save/restore `$_GET/$_POST/$_FILES`
+  (`FormCsrfTest`, `SpecialFieldRenderersTest`) until `Form::validate(?FormInput)` exists; then they can pass a
+  `FormInput`. `RequiredRule` is still used by the three fields (`addRule(RequiredRule)`).
+- Task 7: `README.md` does not mention the new classes; check the sections on CSRF (`ValidCsrfTokenValue`) and zip code
+  / phone validation if they exist.
+
 ### Task 5: `FileField`
 
 Design section 3.11: `UploadedFile` (replaces `FileDataModel`), `UploadInput`, `FormInput::getUploads()` (narrowing of

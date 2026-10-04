@@ -8,8 +8,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
-use actra\yuf\datacheck\Sanitizer;
-use actra\yuf\form\rule\PhoneNumberRule;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\form\settings\InputTypeValue;
@@ -19,23 +18,31 @@ use actra\yuf\phone\PhoneNumber;
 use actra\yuf\phone\PhoneParseException;
 use actra\yuf\phone\PhoneRenderer;
 
+/**
+ * A text field for a phone number. A valid number is stored in the internal format (`+41.446681800`), also when it is
+ * set by the constructor or `setValue()`; it is rendered in the international format (`+41 44 668 18 00`) or, with
+ * `renderInternalFormat`, in the internal format. A number without country code is read with the country code of the
+ * field, which can be posted with the field (named `countryCodeFieldName`; manipulated input is ignored). An invalid
+ * number stays as typed (trimmed) and adds `invalidErrorMessage` when the field is validated.
+ */
 final class PhoneNumberField extends SettableStringInputField
 {
     private(set) string $countryCode;
 
     public function __construct(
-        string                 $name,
-        HtmlText               $label,
-        ?string                $value,
-        HtmlText               $invalidErrorMessage,
-        ?HtmlText              $requiredErrorMessage = null,
-        string                 $countryCode = 'CH',
+        string $name,
+        HtmlText $label,
+        ?string $value,
+        private readonly HtmlText $invalidErrorMessage,
+        ?HtmlText $requiredErrorMessage = null,
+        string $countryCode = 'CH',
         public readonly string $countryCodeFieldName = 'countryCode',
-        public readonly bool   $renderInternalFormat = false,
-        ?string                $placeholder = null,
-        ?AutoCompleteValue     $autoComplete = null
-    )
-    {
+        public readonly bool $renderInternalFormat = false,
+        ?string $placeholder = null,
+        ?AutoCompleteValue $autoComplete = null
+    ) {
+        // The value is normalized in the parent constructor, which needs the country code.
+        $this->countryCode = $countryCode;
         parent::__construct(
             inputType: InputTypeValue::TEL,
             name: $name,
@@ -44,37 +51,39 @@ final class PhoneNumberField extends SettableStringInputField
             placeholder: $placeholder,
             autoComplete: $autoComplete
         );
-        $this->countryCode = $countryCode;
-        if (!is_null(value: $requiredErrorMessage)) {
+        if ($requiredErrorMessage !== null) {
             $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredErrorMessage));
         }
-        $this->addRule(formRule: new PhoneNumberRule(defaultErrorMessage: $invalidErrorMessage));
     }
 
     /**
-     * @param array<array-key, mixed> $inputData
+     * A valid number is stored in the internal format, an invalid one stays as typed (trimmed), so the user can
+     * correct it.
      */
-    public function validate(array $inputData, bool $overwriteValue = true): bool
+    protected function normalize(string $input): string
     {
-        // Manipulated (non-string) country code input is ignored, the current country code stays.
-        if (
-            array_key_exists(key: $this->countryCodeFieldName, array: $inputData)
-            && is_string(value: $inputData[$this->countryCodeFieldName])
-        ) {
-            $this->countryCode = $inputData[$this->countryCodeFieldName];
+        $text = parent::normalize(input: $input);
+        $phoneNumber = $this->parsePhoneNumber(text: $text);
+
+        return $phoneNumber === null ? $text : PhoneRenderer::renderInternalFormat(phoneNumber: $phoneNumber);
+    }
+
+    protected function readAdditionalInput(FormInput $input): void
+    {
+        // Only text is accepted: manipulated (array) input is ignored, the current country code stays.
+        $countryCode = $input->getText(name: $this->countryCodeFieldName);
+        if ($countryCode !== null) {
+            $this->countryCode = $countryCode;
         }
-        // Only strings are trimmed, arrays are rejected by FormField::setValue().
-        if (
-            array_key_exists(key: $this->name, array: $inputData)
-            && is_string(value: $inputData[$this->name])
-        ) {
-            $inputData[$this->name] = trim(string: $inputData[$this->name]);
+    }
+
+    public function validateCurrentValue(): bool
+    {
+        if (!$this->isValueEmpty() && $this->parsePhoneNumber(text: $this->getValueAsString()) === null) {
+            $this->addErrorAsHtmlTextObject(errorMessageObject: $this->invalidErrorMessage);
         }
 
-        return parent::validate(
-            inputData: $inputData,
-            overwriteValue: $overwriteValue
-        );
+        return parent::validateCurrentValue();
     }
 
     public function renderValue(): string
@@ -82,17 +91,10 @@ final class PhoneNumberField extends SettableStringInputField
         if ($this->isValueEmpty()) {
             return '';
         }
-        $currentValue = $this->getRawValue();
-        if ($this->hasErrors(withChildElements: true)) {
-            return $currentValue;
-        }
-        try {
-            $phoneNumber = PhoneNumber::createFromString(
-                input: $currentValue,
-                defaultCountryCode: $this->countryCode
-            );
-        } catch (PhoneParseException) {
-            return HtmlEncoder::encode(value: $currentValue);
+        $text = $this->getValueAsString();
+        $phoneNumber = $this->parsePhoneNumber(text: $text);
+        if ($this->hasErrors(withChildElements: true) || $phoneNumber === null) {
+            return HtmlEncoder::encode(value: $text);
         }
         if ($this->renderInternalFormat) {
             return PhoneRenderer::renderInternalFormat(phoneNumber: $phoneNumber);
@@ -101,22 +103,15 @@ final class PhoneNumberField extends SettableStringInputField
         return PhoneRenderer::renderInternationalFormat(phoneNumber: $phoneNumber);
     }
 
-    public function valueHasChanged(): bool
+    private function parsePhoneNumber(string $text): ?PhoneNumber
     {
-        $originalValue = Sanitizer::trimmedString(input: $this->getOriginalValue());
-        if ($originalValue !== '') {
-            try {
-                $originalValue = PhoneRenderer::renderInternalFormat(
-                    phoneNumber: PhoneNumber::createFromString(
-                        input: $this->getOriginalValue(),
-                        defaultCountryCode: $this->countryCode
-                    )
-                );
-            } catch (PhoneParseException) {
-                $originalValue = '';
-            }
+        if ($text === '') {
+            return null;
         }
-
-        return ($this->getRawValue() !== $originalValue);
+        try {
+            return PhoneNumber::createFromString(input: $text, defaultCountryCode: $this->countryCode);
+        } catch (PhoneParseException) {
+            return null;
+        }
     }
 }

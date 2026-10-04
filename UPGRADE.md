@@ -70,8 +70,8 @@ This document tracks relevant changes and upgrade instructions for developers.
       new PasswordField(name: 'pw', label: $label, requiredError: $required, purpose: PasswordPurposeEnum::CURRENT);
       ```
     * ⚠️ **`final` classes:** `EmailField`, `PasswordField` and `PhoneNumberField` are `final`. Customize them with the
-      constructor, setters, rules, listeners and the renderer. `TextField`, `TextAreaField` and `HiddenField` stay
-      open.
+      constructor, setters, rules, listeners and the renderer. `TextField` and `TextAreaField` stay open
+      (`HiddenField`, `ZipCodeField`, `IbanNumberField` and `CsrfTokenField` are `final` since part 4).
     * ⚠️ `InputFieldRenderer` takes an `InputField` only (it already read the `inputType` of the field, which an
       `OptionsField` does not have).
     * The v3.3.0 getters stay: `getValueAsString()` (now on `StringInputField` and `TextAreaField`), `getValues()` of
@@ -276,6 +276,62 @@ This document tracks relevant changes and upgrade instructions for developers.
       `FloatMaxRule` and `DecimalMinRule`/`DecimalMaxRule` that replace them (`addValueRule()`) come with the rules in a
       later step of v4; the migration example is added there.
     * ⚠️ `HiddenFieldRenderer` takes an `InputField` (was `HiddenField`) so that it renders `HiddenIntegerField` too.
+* **Form Fields (typed values, part 4: phone number, zip code, IBAN, CSRF token):** the checks that belong to one
+  field moved from rules into the fields and into two pure validators. New `ZipCodeValidator::validate(zipCode,
+  countryCode)` and `IbanValidator::validate(input)` (`actra\yuf\datacheck\validatorTypes`, no global state, usable
+  without a form). `ZipCodeField`, `IbanNumberField` and `HiddenField` are now `final`.
+    * ⚠️ **Removed rules:** `ZipCodeRule`, `PhoneNumberRule` and `ValidCsrfTokenValue`. The fields run the checks
+      themselves when they are validated (zip code: `ZipCodeValidator` with the country code of the field, phone
+      number: the parser with the country code of the field, CSRF: the token source); the error texts are those of the
+      constructor arguments (`individualInvalidError`, `invalidErrorMessage`), the zip code and CSRF defaults come from
+      `FormMessages` (`invalidZipCode`, `invalidCsrfToken`, German with `FormMessages::german()`). A project that added
+      one of these rules to a field removes the line:
+      ```php
+      // Before
+      $zip->addRule(new ZipCodeRule(defaultErrorMessage: $invalid));   // already part of ZipCodeField
+      $form->getField('csrftoken')->addRule(new ValidCsrfTokenValue());
+
+      // After: nothing to add, the field checks itself. Own checks of a zip code or IBAN without a field:
+      $isValid = ZipCodeValidator::validate(zipCode: $input, countryCode: 'CH');
+      $isValid = IbanValidator::validate(input: $input);
+      ```
+    * ⚠️ **`PhoneNumberField` stores the internal format from the start:** a valid number is stored as `+41.446681800`
+      not only after `validate()` but also for the constructor value and `setValue()` (with the country code of the
+      field); `getValueAsString()` returns it. An invalid number stays as typed (trimmed). `valueHasChanged()` is the
+      plain comparison of the stored values (the number `044 668 18 00` and `+41 44 668 18 00` are the same value).
+      The country code (`countryCode`, posted with the field as `countryCodeFieldName`) is applied before the number
+      is read; non-text country code input is still ignored.
+      ```php
+      // Before
+      $field = new PhoneNumberField(name: 'phone', label: $label, value: '044 668 18 00', invalidErrorMessage: $invalid);
+      $field->getRawValue();        // '044 668 18 00' until validate(), then '+41.446681800'
+
+      // After
+      $field->getValueAsString();   // '+41.446681800' at once
+      ```
+    * ⚠️ **`IbanValidator` is strict about characters:** a character other than a letter or digit (after removing
+      spaces) makes the IBAN invalid (v3 ignored unknown characters and raised a PHP warning), and so does an IBAN
+      longer than 34 characters. Valid IBANs are unchanged (known country, mod-97 checksum, no length check per
+      country, spaces and case are ignored).
+    * ⚠️ **`CsrfTokenField` extends `InputField`, not `HiddenField`:** `instanceof HiddenField` is `false` for it, it has
+      neither a getter nor a setter and renders the token of its source, never the posted one. New interface
+      `actra\yuf\security\CsrfTokenSource` (`getToken()`, `isValid()`) and its default `SessionCsrfTokenSource` (wraps
+      `CsrfToken`). The field takes the source as an optional constructor argument, `Form` as the new last argument
+      `csrfTokenSource` (default: the session), so forms can be tested without a session. The token is read lazily
+      (no session access before it is rendered or checked).
+      ```php
+      $form = new Form(name: 'contact', csrfTokenSource: new MyCsrfTokenSource());
+      ```
+      `Form::validate()` still checks the token after all other fields were valid, with the posted token and the
+      fallback to the query string (`?csrftoken=...`), and still adds the message to the form. The text now comes from
+      `FormMessages::invalidCsrfToken` (English by default, the v3 text with `FormMessages::german()`).
+    * ⚠️ **HTML:** the value of an invalid phone number is HTML-encoded (v3.3.1 wrote it unencoded into the `value`
+      attribute when the field had an error, so `"><script>` in the input broke out of the attribute: a cross-site
+      scripting vulnerability, fixed). Everything else is unchanged (checked against the HTML of v3.3.1); posted zip
+      codes and IBANs are rendered trimmed (see the normalization note above).
+    * **Added (bridge, `@internal`):** `TextualField::validateInput(FormInput)` validates a text field with request
+      data that carries the query part, and the hook `readAdditionalInput(FormInput)` reads input besides the field's
+      own value (country code, fallback token). They are replaced by `validate(FormInput)` in a later step of v4.
 * **Form messages:** the German texts of the form code ("Die ungültige Eingabe wurde ignoriert.", "Der angegebene Wert
   ist ungültig.", ...) are no longer hard-coded. New `FormMessages` with English defaults and `FormMessages::german()`
   with the v3 texts; the form hands them to its fields.

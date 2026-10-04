@@ -8,18 +8,23 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
-use actra\yuf\form\rule\ZipCodeRule;
+use actra\yuf\datacheck\validatorTypes\ZipCodeValidator;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\html\HtmlText;
 
-class ZipCodeField extends TextField
+/**
+ * A text field for a zip code, checked against the format of its country (`ZipCodeValidator`). The country code can
+ * be posted with the field (a country select named `countryCodeFieldName`); manipulated input is ignored.
+ */
+final class ZipCodeField extends TextField
 {
     public function __construct(
         string $name,
         HtmlText $label,
         ?string $value = null,
         ?HtmlText $requiredError = null,
-        ?HtmlText $individualInvalidError = null,
+        private readonly ?HtmlText $individualInvalidError = null,
         private(set) string $countryCode = 'CH',
         private readonly string $countryCodeFieldName = 'countryCode',
         ?string $placeholder = null,
@@ -35,25 +40,36 @@ class ZipCodeField extends TextField
             autoComplete: $autoComplete,
             maxLength: $maxLength
         );
-        $invalidError = is_null(value: $individualInvalidError) ? HtmlText::encoded(
-            textContent: 'Die eingegebene PLZ ist ungültig.'
-        ) : $individualInvalidError;
-        $this->addRule(formRule: new ZipCodeRule(defaultErrorMessage: $invalidError));
     }
 
-    public function validate(array $inputData, bool $overwriteValue = true): bool
+    protected function readAdditionalInput(FormInput $input): void
     {
-        // Manipulated (non-string) country code input is ignored, the current country code stays.
-        if (
-            array_key_exists(key: $this->countryCodeFieldName, array: $inputData)
-            && is_string(value: $inputData[$this->countryCodeFieldName])
-        ) {
-            $this->countryCode = $inputData[$this->countryCodeFieldName];
+        // Only text is accepted: manipulated (array) input is ignored, the current country code stays.
+        $countryCode = $input->getText(name: $this->countryCodeFieldName);
+        if ($countryCode !== null) {
+            $this->countryCode = $countryCode;
         }
-        if (!parent::validate(inputData: $inputData, overwriteValue: $overwriteValue)) {
-            return false;
+    }
+
+    public function validateCurrentValue(): bool
+    {
+        if (
+            !$this->isValueEmpty()
+            && !ZipCodeValidator::validate(zipCode: $this->getValueAsString(), countryCode: $this->countryCode)
+        ) {
+            $this->addInvalidZipCodeError();
         }
 
-        return true;
+        return parent::validateCurrentValue();
+    }
+
+    private function addInvalidZipCodeError(): void
+    {
+        if ($this->individualInvalidError === null) {
+            $this->addError(errorMessage: $this->messages->invalidZipCode, isEncodedForRendering: false);
+
+            return;
+        }
+        $this->addErrorAsHtmlTextObject(errorMessageObject: $this->individualInvalidError);
     }
 }
