@@ -13,8 +13,11 @@ use actra\yuf\table\table\DbResultTable;
 
 readonly class TablePaginationRenderer
 {
-    public function __construct(public ?string $individualHtmlSnippetPath = null)
-    {
+    public function __construct(
+        public ?string $individualHtmlSnippetPath = null,
+        public string $previousTitle = 'Previous',
+        public string $nextTitle = 'Next'
+    ) {
     }
 
     public function render(
@@ -31,6 +34,8 @@ readonly class TablePaginationRenderer
             beforeAfter: $beforeAfter,
             startEnd: $startEnd,
             additionalLinkParameters: $dbResultTable->additionalLinkParameters,
+            previousTitle: $this->previousTitle,
+            nextTitle: $this->nextTitle,
             individualHtmlSnippetPath: $this->individualHtmlSnippetPath
         );
     }

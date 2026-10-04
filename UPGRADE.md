@@ -4,6 +4,34 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.1.0] – 2026-10-04
+
+### 🎨 Frontend & UI
+
+* ⚠️ **Table pagination: English titles by default, configurable.** The titles of the previous/next icons are now
+  `'Previous'` / `'Next'` instead of `'Zurück'` / `'Vor'`. `TablePaginationRenderer` has the new optional arguments
+  `previousTitle` and `nextTitle`; the defaults of `Pagination::render()` changed the same way. To keep the German
+  texts, pass them:
+
+  ```php
+  // Before: always "Zurück" / "Vor"
+  new DbResultTable(identifier: 'users', db: $db, dbQuery: $query);
+
+  // After
+  new DbResultTable(
+      identifier: 'users',
+      db: $db,
+      dbQuery: $query,
+      tablePaginationRenderer: new TablePaginationRenderer(previousTitle: 'Zurück', nextTitle: 'Vor')
+  );
+  ```
+  Direct callers of `Pagination::render()` pass `previousTitle: 'Zurück', nextTitle: 'Vor'`. The template has no other
+  hard-coded texts.
+* ⚠️ `Pagination::render()` now HTML-encodes `previousTitle` and `nextTitle`: pass plain text, not already encoded HTML
+  (e.g. `'Back & forth'`, not `'Back &amp; forth'`).
+
+---
+
 ## [v4.0.0] – 2026-10-04
 
 ### ⚙️ Backend & API

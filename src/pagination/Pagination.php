@@ -28,8 +28,8 @@ class Pagination
         int $beforeAfter = 2,
         int $startEnd = 1,
         array $additionalLinkParameters = [],
-        string $previousTitle = 'Zurück',
-        string $nextTitle = 'Vor',
+        string $previousTitle = 'Previous',
+        string $nextTitle = 'Next',
         ?string $individualHtmlSnippetPath = null
     ): string {
         if ($totalAmount <= $entriesPerPage) {
@@ -80,7 +80,7 @@ class Pagination
             }
         }
         $replacements = new HtmlReplacementCollection();
-        $replacements->addEncodedText(identifier: 'previousTitle', content: $previousTitle);
+        $replacements->addUnencodedText(identifier: 'previousTitle', content: $previousTitle);
         $replacements->addEncodedText(
             identifier: 'previousPageHref',
             content: ($currentPage === $firstPage) ? '' : Pagination::getLinkTarget(
@@ -90,7 +90,7 @@ class Pagination
             )
         );
         $replacements->addHtmlDataObjectCollection(identifier: 'pages', htmlDataObjectCollection: $pages);
-        $replacements->addEncodedText(identifier: 'nextTitle', content: $nextTitle);
+        $replacements->addUnencodedText(identifier: 'nextTitle', content: $nextTitle);
         $replacements->addEncodedText(
             identifier: 'nextPageHref',
             content: ($currentPage === $maxPage) ? '' : Pagination::getLinkTarget(
