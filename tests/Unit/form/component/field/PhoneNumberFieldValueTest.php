@@ -255,4 +255,15 @@ final class PhoneNumberFieldValueTest extends TestCase
     {
         $this->assertSame('', $this->createField()->renderValue());
     }
+
+    public function testInvalidInputIsEncodedWhenRenderedBack(): void
+    {
+        $field = $this->createField();
+
+        $field->validate(inputData: ['phone' => '"><b>x']);
+
+        $this->assertTrue($field->hasErrors(withChildElements: true));
+        $this->assertSame('&quot;&gt;&lt;b&gt;x', $field->renderValue());
+        $this->assertStringNotContainsString('"><b>', (string)$field->getHtmlTag()?->render());
+    }
 }

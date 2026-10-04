@@ -353,6 +353,17 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v3.3.2] – 2026-10-04
+
+### 🎨 HTML & CSS (Frontend)
+
+* **Form Rendering:**
+    * 🩹 **Fixed (security):** `PhoneNumberField` rendered an invalid posted phone number back into the `value`
+      attribute without HTML encoding when the field had an error, which allowed HTML injection (e.g. `"><b>x`).
+      The value is now encoded like in every other field.
+
+---
+
 ## [v3.3.1] – 2026-10-04
 
 ### 🎨 HTML & CSS (Frontend)
