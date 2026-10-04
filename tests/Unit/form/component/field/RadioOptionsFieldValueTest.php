@@ -10,11 +10,12 @@ namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\RadioOptionsField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
+use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\TestCase;
-use TypeError;
 
 final class RadioOptionsFieldValueTest extends TestCase
 {
@@ -31,6 +32,11 @@ final class RadioOptionsFieldValueTest extends TestCase
             initialValue: $initialValue,
             requiredError: $requiredError
         );
+    }
+
+    protected function setUp(): void
+    {
+        FormNameRegistry::reset();
     }
 
     public function testValueIsEmptyAfterConstructionWithoutValue(): void
@@ -53,7 +59,7 @@ final class RadioOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['radio' => 'a']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['radio' => 'a']));
 
         $this->assertTrue($isValid);
         $this->assertSame('a', $field->getValueAsString());
@@ -63,7 +69,7 @@ final class RadioOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 'a');
 
-        $isValid = $field->validate(inputData: ['radio' => 'x']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['radio' => 'x']));
 
         $this->assertFalse($isValid);
         $this->assertSame('', $field->getValueAsString());
@@ -73,7 +79,7 @@ final class RadioOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(inputData: ['radio' => 'x']);
+        $field->validate(input: FormInput::fromArray(data: ['radio' => 'x']));
 
         $this->assertSame(1, $field->errorCollection->count());
         $this->assertSame('Selected invalid value in field radio', $field->errorCollection->getFirstError()->render());
@@ -83,7 +89,7 @@ final class RadioOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 'b');
 
-        $isValid = $field->validate(inputData: []);
+        $isValid = $field->validate(input: FormInput::fromArray(data: []));
 
         $this->assertFalse($isValid);
         $this->assertSame('', $field->getValueAsString());
@@ -94,7 +100,7 @@ final class RadioOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 'b');
 
-        $this->assertFalse($field->validate(inputData: ['radio' => '']));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['radio' => ''])));
         $this->assertSame('', $field->getValueAsString());
         $this->assertSame(1, $field->errorCollection->count());
     }
@@ -103,7 +109,7 @@ final class RadioOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 'b');
 
-        $isValid = $field->validate(inputData: ['radio' => ['a']]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['radio' => ['a']]));
 
         $this->assertFalse($isValid);
         $this->assertSame('', $field->getValueAsString());
@@ -115,7 +121,7 @@ final class RadioOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertFalse($field->validate(inputData: ['radio' => [['a']]]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['radio' => [['a']]])));
         $this->assertSame(1, $field->errorCollection->count());
         $this->assertSame('', $field->getValueAsString());
     }
@@ -126,7 +132,7 @@ final class RadioOptionsFieldValueTest extends TestCase
         $field = $this->createField();
         $form->addField(formField: $field);
 
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $this->assertSame(
             'Bitte wählen Sie eine der Optionen aus.',
@@ -138,7 +144,7 @@ final class RadioOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Choose!'));
 
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $this->assertSame('Choose!', $field->errorCollection->getFirstError()->render());
     }
@@ -157,7 +163,7 @@ final class RadioOptionsFieldValueTest extends TestCase
         $field = $this->createField();
         $form->addField(formField: $field);
 
-        $field->validate(inputData: ['radio' => 'x']);
+        $field->validate(input: FormInput::fromArray(data: ['radio' => 'x']));
 
         $this->assertSame('Bad option in radio!', $field->errorCollection->getFirstError()->render());
     }
@@ -194,15 +200,6 @@ final class RadioOptionsFieldValueTest extends TestCase
         $this->assertTrue($field->isValueEmpty());
     }
 
-    public function testSetValueWithWrongTypeThrowsTypeError(): void
-    {
-        $field = $this->createField();
-
-        $this->expectException(TypeError::class);
-
-        $field->setValue(value: ['a']);
-    }
-
     public function testSetValueDoesNotCheckAgainstTheOptions(): void
     {
         $field = $this->createField();
@@ -216,7 +213,7 @@ final class RadioOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 'a');
 
-        $field->validate(inputData: ['radio' => 'b']);
+        $field->validate(input: FormInput::fromArray(data: ['radio' => 'b']));
 
         $this->assertTrue($field->valueHasChanged());
     }
@@ -225,7 +222,7 @@ final class RadioOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 'a');
 
-        $field->validate(inputData: ['radio' => 'a']);
+        $field->validate(input: FormInput::fromArray(data: ['radio' => 'a']));
 
         $this->assertFalse($field->valueHasChanged());
     }

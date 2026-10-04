@@ -12,7 +12,6 @@ use actra\yuf\common\TimeOfDay;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\form\settings\InputTypeValue;
 use actra\yuf\html\HtmlText;
-use TypeError;
 use UnexpectedValueException;
 
 /**
@@ -79,16 +78,9 @@ final class TimeField extends ParsedInputField
     /**
      * Changes the current value only, the initial value stays (so `valueHasChanged()` compares with it).
      *
-     * The parameter is declared `mixed` only while the legacy `FormField::setValue(mixed)` bridge exists; it becomes
-     * `?TimeOfDay` with the removal of the bridge.
-     *
-     * @throws TypeError If the value is not a `TimeOfDay` or `null`.
      */
-    public function setValue(mixed $value): void
+    public function setValue(?TimeOfDay $value): void
     {
-        if ($value !== null && !$value instanceof TimeOfDay) {
-            throw $this->createValueTypeError(expectedType: 'a TimeOfDay or null', value: $value);
-        }
         $this->changeText(text: $value?->toString() ?? '');
     }
 }

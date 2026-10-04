@@ -15,6 +15,7 @@ use actra\yuf\form\component\field\PhoneNumberField;
 use actra\yuf\form\component\field\StringInputField;
 use actra\yuf\form\component\field\TextField;
 use actra\yuf\form\component\field\ZipCodeField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -59,7 +60,7 @@ final class InputFieldGetValueAsStringTest extends TestCase
     #[DataProvider('fieldProvider')]
     public function testValueIsEmptyStringAfterValidationWithMissingKey(StringInputField $field, string $name): void
     {
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $this->assertSame('', $field->getValueAsString());
     }
@@ -68,7 +69,7 @@ final class InputFieldGetValueAsStringTest extends TestCase
     {
         $field = new TextField(name: 'field', label: HtmlText::encoded(textContent: 'Label'));
 
-        $field->validate(inputData: ['field' => ' <a> ']);
+        $field->validate(input: FormInput::fromArray(data: ['field' => ' <a> ']));
 
         $this->assertSame('<a>', $field->getValueAsString());
     }
@@ -84,7 +85,7 @@ final class InputFieldGetValueAsStringTest extends TestCase
     {
         $field = new TextField(name: 'field', label: HtmlText::encoded(textContent: 'Label'), value: 'x');
 
-        $field->validate(inputData: ['field' => ['y']]);
+        $field->validate(input: FormInput::fromArray(data: ['field' => ['y']]));
 
         $this->assertSame('', $field->getValueAsString());
     }
@@ -110,7 +111,7 @@ final class InputFieldGetValueAsStringTest extends TestCase
             invalidErrorMessage: HtmlText::encoded(textContent: 'Invalid')
         );
 
-        $field->validate(inputData: ['phone' => ' 044 668 18 00 ']);
+        $field->validate(input: FormInput::fromArray(data: ['phone' => ' 044 668 18 00 ']));
 
         $this->assertSame('+41.446681800', $field->getValueAsString());
     }

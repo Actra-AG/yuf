@@ -11,6 +11,8 @@ namespace actra\yuf\tests\Unit\form\renderer;
 use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\BooleanField;
 use actra\yuf\form\component\layout\CheckboxOptionsLayout;
+use actra\yuf\form\FormInput;
+use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -22,6 +24,11 @@ use PHPUnit\Framework\TestCase;
 final class BooleanFieldV3MarkupTest extends TestCase
 {
     private static int $formCounter = 0;
+
+    protected function setUp(): void
+    {
+        FormNameRegistry::reset();
+    }
 
     /**
      * @return iterable<string, array{CheckboxOptionsLayout, bool, string}>
@@ -85,7 +92,7 @@ final class BooleanFieldV3MarkupTest extends TestCase
         $field->fieldInfo = HtmlText::encoded(textContent: 'Info');
         $form->addField(formField: $field);
         if (!$checked) {
-            $field->validate(inputData: []);
+            $field->validate(input: FormInput::fromArray(data: []));
         }
 
         $html = preg_replace(

@@ -12,7 +12,6 @@ use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\form\settings\InputTypeValue;
 use actra\yuf\html\HtmlText;
 use DateTimeImmutable;
-use TypeError;
 use UnexpectedValueException;
 
 /**
@@ -92,16 +91,9 @@ final class DateField extends ParsedInputField
     /**
      * Changes the current value only, the initial value stays (so `valueHasChanged()` compares with it).
      *
-     * The parameter is declared `mixed` only while the legacy `FormField::setValue(mixed)` bridge exists; it becomes
-     * `?DateTimeImmutable` with the removal of the bridge.
-     *
-     * @throws TypeError If the value is not a `DateTimeImmutable` or `null`.
      */
-    public function setValue(mixed $value): void
+    public function setValue(?DateTimeImmutable $value): void
     {
-        if ($value !== null && !$value instanceof DateTimeImmutable) {
-            throw $this->createValueTypeError(expectedType: 'a DateTimeImmutable or null', value: $value);
-        }
         $this->changeText(text: $value?->format(format: DateField::FORMAT) ?? '');
     }
 }

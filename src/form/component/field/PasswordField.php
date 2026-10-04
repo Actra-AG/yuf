@@ -8,7 +8,6 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
-use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\form\settings\InputTypeValue;
 use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
@@ -36,7 +35,7 @@ final class PasswordField extends StringInputField
             autoComplete: $purpose->autoComplete(),
             maxLength: $maxLength
         );
-        $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
+        $this->addRequiredRule(errorMessage: $requiredError);
     }
 
     protected function normalize(string $input): string

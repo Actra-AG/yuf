@@ -9,12 +9,12 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\DecimalField;
+use actra\yuf\form\FormInput;
 use actra\yuf\html\HtmlText;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
-use TypeError;
 use UnexpectedValueException;
 
 /**
@@ -90,7 +90,7 @@ final class DecimalFieldValueTest extends TestCase
     {
         $field = $this->createField(scale: $scale);
 
-        $this->assertTrue($field->validate(inputData: ['price' => $input]));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['price' => $input])));
         $this->assertSame($expected, $field->getValueAsDecimal());
     }
 
@@ -117,7 +117,7 @@ final class DecimalFieldValueTest extends TestCase
     {
         $field = $this->createField(scale: $scale);
 
-        $this->assertFalse($field->validate(inputData: ['price' => $input]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['price' => $input])));
         $this->assertSame('The given value is invalid.', $field->errorCollection->getFirstError()->render());
         $this->assertStringContainsString(
             'value="' . htmlspecialchars(string: $input, flags: ENT_QUOTES) . '"',
@@ -129,7 +129,7 @@ final class DecimalFieldValueTest extends TestCase
     public function testGetterThrowsForInvalidInput(int $scale, string $input): void
     {
         $field = $this->createField(scale: $scale);
-        $field->validate(inputData: ['price' => $input]);
+        $field->validate(input: FormInput::fromArray(data: ['price' => $input]));
 
         $this->expectException(UnexpectedValueException::class);
         $this->expectExceptionMessage('field price');
@@ -141,7 +141,7 @@ final class DecimalFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: '1.00');
 
-        $field->validate(inputData: ['price' => '1.999']);
+        $field->validate(input: FormInput::fromArray(data: ['price' => '1.999']));
 
         $this->assertTrue($field->hasErrors(withChildElements: false));
         $this->assertStringContainsString('value="1.999"', $field->render());
@@ -156,7 +156,7 @@ final class DecimalFieldValueTest extends TestCase
             individualInvalidError: HtmlText::encoded(textContent: 'At most 2 decimals')
         );
 
-        $field->validate(inputData: ['price' => '1.234']);
+        $field->validate(input: FormInput::fromArray(data: ['price' => '1.234']));
 
         $this->assertSame('At most 2 decimals', $field->errorCollection->getFirstError()->render());
     }
@@ -165,7 +165,7 @@ final class DecimalFieldValueTest extends TestCase
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
 
-        $this->assertFalse($field->validate(inputData: ['price' => ' ']));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['price' => ' '])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
     }
 
@@ -173,7 +173,7 @@ final class DecimalFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: '5');
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertNull($field->getValueAsDecimal());
     }
 
@@ -181,7 +181,7 @@ final class DecimalFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: '5');
 
-        $this->assertFalse($field->validate(inputData: ['price' => ['1']]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['price' => ['1']])));
         $this->assertNull($field->getValueAsDecimal());
         $this->assertSame('The invalid input was ignored.', $field->errorCollection->getFirstError()->render());
     }
@@ -190,10 +190,10 @@ final class DecimalFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: '12.50');
 
-        $field->validate(inputData: ['price' => '12.5']);
+        $field->validate(input: FormInput::fromArray(data: ['price' => '12.5']));
         $this->assertFalse($field->valueHasChanged());
 
-        $field->validate(inputData: ['price' => '12.51']);
+        $field->validate(input: FormInput::fromArray(data: ['price' => '12.51']));
         $this->assertTrue($field->valueHasChanged());
     }
 
@@ -219,7 +219,7 @@ final class DecimalFieldValueTest extends TestCase
     public function testSetValueClearsKeptInvalidInput(): void
     {
         $field = $this->createField();
-        $field->validate(inputData: ['price' => 'abc']);
+        $field->validate(input: FormInput::fromArray(data: ['price' => 'abc']));
 
         $field->setValue(value: '3');
 
@@ -252,13 +252,6 @@ final class DecimalFieldValueTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $this->createField(initialValue: $value);
-    }
-
-    public function testSetValueRejectsAFloat(): void
-    {
-        $this->expectException(TypeError::class);
-
-        $this->createField()->setValue(value: 1.5);
     }
 
     public function testNegativeScaleIsRejected(): void

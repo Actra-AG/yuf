@@ -16,6 +16,7 @@ use actra\yuf\form\component\field\RadioOptionsField;
 use actra\yuf\form\component\field\SelectOptionsField;
 use actra\yuf\form\component\field\ToggleField;
 use actra\yuf\form\component\layout\CheckboxOptionsLayout;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\TestCase;
@@ -88,7 +89,7 @@ final class OptionsFieldRenderersTest extends TestCase
             formOptions: $this->createOptions(),
             initialValue: 'b'
         );
-        $field->validate(inputData: ['r' => 'a']);
+        $field->validate(input: FormInput::fromArray(data: ['r' => 'a']));
 
         $html = $field->render();
 
@@ -169,7 +170,7 @@ final class OptionsFieldRenderersTest extends TestCase
     public function testBooleanFieldRendersTheCurrentValueAfterInput(): void
     {
         $field = new BooleanField(name: 'bo', label: $this->label(), isCheckedByDefault: true);
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $this->assertStringNotContainsString('checked>', $field->render());
     }
@@ -182,7 +183,7 @@ final class OptionsFieldRenderersTest extends TestCase
             isCheckedByDefault: false,
             requiredError: HtmlText::encoded(textContent: 'Accept')
         );
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $html = $field->render();
 
@@ -267,7 +268,7 @@ final class OptionsFieldRenderersTest extends TestCase
             formOptions: $this->createOptions(),
             initialValues: ['a']
         );
-        $field->validate(inputData: ['m' => ['b']]);
+        $field->validate(input: FormInput::fromArray(data: ['m' => ['b']]));
 
         $html = $field->render();
 
@@ -363,7 +364,7 @@ final class OptionsFieldRenderersTest extends TestCase
             requiredError: HtmlText::encoded(textContent: 'Required'),
             displayLegend: false
         );
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $html = $field->render();
 

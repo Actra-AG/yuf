@@ -714,7 +714,7 @@ class NameserverField extends TextAreaField   // TextAreaField stays open, the s
     public function __construct(string $name, HtmlText $label, array $nameservers, HtmlText $invalid)
     {
         parent::__construct(name: $name, label: $label, value: implode(PHP_EOL, $nameservers));
-        $this->addEachRule(rule: new RegexRule(pattern: '/^[a-z0-9.-]+$/i', errorMessage: $invalid));
+        $this->addEachRule(formRule: new RegexRule(pattern: '/^[a-z0-9.-]+$/i', errorMessage: $invalid));
     }
 }
 $nameservers = $field->getValues();   // list<string>: trimmed, no empty lines, CRLF-safe

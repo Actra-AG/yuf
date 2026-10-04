@@ -16,7 +16,6 @@ use actra\yuf\form\InputShapeEnum;
 use actra\yuf\form\renderer\BooleanFieldListRenderer;
 use actra\yuf\form\renderer\CheckboxItemRenderer;
 use actra\yuf\form\renderer\DefinitionListRenderer;
-use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\html\HtmlText;
 use LogicException;
 
@@ -45,7 +44,7 @@ class BooleanField extends FormField
         );
         $this->setInitiallyChecked(checked: $isCheckedByDefault);
         if ($requiredError !== null) {
-            $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
+            $this->addRequiredRule(errorMessage: $requiredError);
         }
         match ($layout) {
             CheckboxOptionsLayout::DEFINITION_LIST => $this->setRenderer(
@@ -114,7 +113,7 @@ class BooleanField extends FormField
      * Reads the value from the request: `checked` (as text or as the only entry of a list) is checked, a missing
      * value is not checked, anything else is rejected (not checked, one error, no rules).
      */
-    private function readInput(FormInput $input): void
+    final protected function readInput(FormInput $input): void
     {
         $isChecked = match ($input->getShape(name: $this->name)) {
             InputShapeEnum::MISSING => false,
@@ -126,59 +125,5 @@ class BooleanField extends FormField
         if ($isChecked === null) {
             $this->rejectInput(errorMessage: $this->messages->invalidInput);
         }
-    }
-
-    /**
-     * @param array<array-key, mixed> $inputData
-     * @internal Bridge until `validate(FormInput)` replaces `validate(array)`.
-     */
-    protected function readInputData(array $inputData): void
-    {
-        $this->readInput(input: FormInput::fromArray(data: $inputData));
-    }
-
-    /**
-     * @internal Bridge until all fields have typed values.
-     */
-    protected function initializeLegacyValue(mixed $value): void
-    {
-    }
-
-    /**
-     * @internal Bridge until all fields have typed values: use `isChecked()`.
-     */
-    public function getRawValue(bool $returnNullIfEmpty = false): ?bool
-    {
-        return $returnNullIfEmpty && !$this->checked ? null : $this->checked;
-    }
-
-    /**
-     * @internal Bridge until all fields have typed values: the original value is the initial value.
-     */
-    public function getOriginalValue(): bool
-    {
-        return $this->initiallyChecked;
-    }
-
-    /**
-     * @internal Bridge until all fields have typed values.
-     * @throws LogicException Always: use `setChecked()`.
-     */
-    public function setValue(mixed $value): void
-    {
-        throw new LogicException(
-            message: 'The field ' . $this->name . ' has a boolean value, use setChecked() instead of setValue().'
-        );
-    }
-
-    /**
-     * @internal Bridge until all fields have typed values.
-     * @throws LogicException Always: removed, use the constructor or `setInitiallyChecked()`.
-     */
-    public function setOriginalValue(mixed $value): void
-    {
-        throw new LogicException(
-            message: 'setOriginalValue() was removed. Pass the value to the constructor of field ' . $this->name . '.'
-        );
     }
 }

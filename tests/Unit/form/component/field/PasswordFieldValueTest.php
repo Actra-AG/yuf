@@ -9,12 +9,13 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\PasswordField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
-use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
 final class PasswordFieldValueTest extends TestCase
 {
@@ -37,7 +38,7 @@ final class PasswordFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['password' => " se\u{200B}cret "]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['password' => " se\u{200B}cret "]));
 
         $this->assertTrue($isValid);
         $this->assertSame(" se\u{200B}cret ", $field->getValueAsString());
@@ -47,7 +48,7 @@ final class PasswordFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: []);
+        $isValid = $field->validate(input: FormInput::fromArray(data: []));
 
         $this->assertFalse($isValid);
         $this->assertSame('', $field->getValueAsString());
@@ -57,7 +58,7 @@ final class PasswordFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['password' => ['x']]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['password' => ['x']]));
 
         $this->assertFalse($isValid);
         $this->assertSame('', $field->getValueAsString());
@@ -68,7 +69,7 @@ final class PasswordFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(inputData: ['password' => 'secret']);
+        $field->validate(input: FormInput::fromArray(data: ['password' => 'secret']));
 
         $this->assertSame('', $field->renderValue());
         $this->assertSame('secret', $field->getValueAsString());
@@ -78,16 +79,14 @@ final class PasswordFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(inputData: ['password' => 'secret']);
+        $field->validate(input: FormInput::fromArray(data: ['password' => 'secret']));
 
         $this->assertStringNotContainsString('secret', (string)$field->getHtmlTag()?->render());
     }
 
-    public function testBridgeSetterThrows(): void
+    public function testFieldHasNoSetter(): void
     {
-        $this->expectException(LogicException::class);
-
-        $this->createField()->setValue(value: 'x');
+        $this->assertFalse(new ReflectionClass(objectOrClass: PasswordField::class)->hasMethod(name: 'setValue'));
     }
 
     /**

@@ -10,6 +10,7 @@ namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\IntegerField;
 use actra\yuf\form\component\field\NumericField;
+use actra\yuf\form\FormInput;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -45,7 +46,7 @@ final class NumericFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $this->assertNull($field->getValueAsInt());
     }
@@ -54,7 +55,7 @@ final class NumericFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertTrue($field->validate(inputData: ['number' => ' -42 ']));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['number' => ' -42 '])));
         $this->assertSame(-42, $field->getValueAsInt());
     }
 
@@ -62,7 +63,7 @@ final class NumericFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertTrue($field->validate(inputData: ['number' => '007']));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['number' => '007'])));
         $this->assertSame(7, $field->getValueAsInt());
         $this->assertStringContainsString('value="7"', $field->render());
     }
@@ -71,7 +72,7 @@ final class NumericFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 7);
 
-        $this->assertFalse($field->validate(inputData: ['number' => '1.5']));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['number' => '1.5'])));
         $this->assertStringContainsString('value="1.5"', $field->render());
     }
 

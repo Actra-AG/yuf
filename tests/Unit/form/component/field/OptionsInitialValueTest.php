@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\form\component\field;
 
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\InitialValueBooleanField;
@@ -95,7 +96,7 @@ final class OptionsInitialValueTest extends TestCase
     public function testSingleSetInitialValueAfterValidateThrows(): void
     {
         $field = $this->createRadio();
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('field radio');
@@ -117,7 +118,7 @@ final class OptionsInitialValueTest extends TestCase
     {
         $field = $this->createRadio();
         $field->fill(value: 'a');
-        $field->validate(inputData: ['radio' => 'b']);
+        $field->validate(input: FormInput::fromArray(data: ['radio' => 'b']));
 
         $field->setValue(value: 'a');
 
@@ -139,7 +140,7 @@ final class OptionsInitialValueTest extends TestCase
     public function testMultiSetInitialValuesAfterValidateThrows(): void
     {
         $field = $this->createCheckbox();
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $this->expectException(LogicException::class);
 
@@ -150,7 +151,7 @@ final class OptionsInitialValueTest extends TestCase
     {
         $field = $this->createCheckbox();
         $field->fill(values: ['a']);
-        $field->validate(inputData: ['checkbox' => ['a']]);
+        $field->validate(input: FormInput::fromArray(data: ['checkbox' => ['a']]));
 
         $field->setValues(values: ['b']);
 
@@ -182,7 +183,7 @@ final class OptionsInitialValueTest extends TestCase
     public function testBooleanSetInitiallyCheckedAfterValidateThrows(): void
     {
         $field = $this->createBoolean();
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $this->expectException(LogicException::class);
 
@@ -193,7 +194,7 @@ final class OptionsInitialValueTest extends TestCase
     {
         $field = $this->createBoolean();
         $field->fill(checked: true);
-        $field->validate(inputData: ['boolean' => ['checked']]);
+        $field->validate(input: FormInput::fromArray(data: ['boolean' => ['checked']]));
 
         $field->setChecked(checked: false);
 

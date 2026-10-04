@@ -94,6 +94,16 @@ final readonly class FormInput
     }
 
     /**
+     * The request of the current PHP process, the only place in `src/form/` that reads `$_POST`, `$_GET` and `$_FILES`.
+     *
+     * @param bool $methodPost Whether the form is sent with POST (the values are in `$_POST`) or GET (in `$_GET`)
+     */
+    public static function fromGlobals(bool $methodPost): FormInput
+    {
+        return FormInput::fromArray(data: $methodPost ? $_POST : $_GET, files: $_FILES, query: $_GET);
+    }
+
+    /**
      * An entry of `$_FILES` always has the five keys. One that has at least one of them was meant as an upload, so
      * a broken one is reported (`hasMalformedUpload()`); any other value is not an upload at all and is ignored.
      */

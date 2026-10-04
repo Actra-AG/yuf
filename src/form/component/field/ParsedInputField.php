@@ -8,11 +8,9 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
-use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\form\settings\InputTypeValue;
 use actra\yuf\html\HtmlText;
-use TypeError;
 use UnexpectedValueException;
 
 /**
@@ -41,7 +39,7 @@ abstract class ParsedInputField extends InputField
             maxLength: $maxLength
         );
         if ($requiredError !== null) {
-            $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
+            $this->addRequiredRule(errorMessage: $requiredError);
         }
     }
 
@@ -71,18 +69,6 @@ abstract class ParsedInputField extends InputField
         throw new UnexpectedValueException(
             message: 'The value of field ' . $this->name . ' cannot be read as ' . $type . ', it is not valid: "'
             . (strlen(string: $text) > 40 ? substr(string: $text, offset: 0, length: 40) . '...' : $text) . '"'
-        );
-    }
-
-    /**
-     * @internal Bridge until the legacy `FormField::setValue(mixed)` is removed: the typed setters are declared with
-     *           `mixed` and throw this for a value of the wrong type.
-     */
-    final protected function createValueTypeError(string $expectedType, mixed $value): TypeError
-    {
-        return new TypeError(
-            message: 'The value of field ' . $this->name . ' must be ' . $expectedType . ', '
-            . get_debug_type(value: $value) . ' given.'
         );
     }
 

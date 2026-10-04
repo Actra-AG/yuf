@@ -9,11 +9,9 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\component\FormField;
-use actra\yuf\form\FormInput;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\html\HtmlText;
-use LogicException;
 
 /**
  * A field whose value is one or several keys of its `FormOptions`: `SingleOptionsField` (one key) or
@@ -48,8 +46,6 @@ abstract class OptionsField extends FormField
      */
     abstract public function isMultiple(): bool;
 
-    abstract protected function readInput(FormInput $input): void;
-
     public function addListTagClass(string $className): void
     {
         $this->listTagClasses[] = $className;
@@ -71,34 +67,6 @@ abstract class OptionsField extends FormField
     {
         $this->rejectInput(
             errorMessage: str_replace(search: '[field]', replace: $this->name, subject: $this->messages->invalidOption)
-        );
-    }
-
-    /**
-     * @param array<array-key, mixed> $inputData
-     * @internal Bridge until `validate(FormInput)` replaces `validate(array)`.
-     */
-    protected function readInputData(array $inputData): void
-    {
-        $this->readInput(input: FormInput::fromArray(data: $inputData));
-    }
-
-    /**
-     * @internal Bridge until all fields have typed values.
-     */
-    protected function initializeLegacyValue(mixed $value): void
-    {
-    }
-
-    /**
-     * @internal Bridge until all fields have typed values.
-     * @throws LogicException Always: removed, pass the value to the constructor or use `setInitialValue()`.
-     */
-    public function setOriginalValue(mixed $value): void
-    {
-        throw new LogicException(
-            message: 'setOriginalValue() was removed. Pass the value to the constructor of field ' . $this->name
-            . ' or call setInitialValue() or setInitialValues() in a subclass.'
         );
     }
 }

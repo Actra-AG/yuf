@@ -14,7 +14,9 @@ use actra\yuf\form\component\field\IbanNumberField;
 use actra\yuf\form\component\field\PasswordField;
 use actra\yuf\form\component\field\PhoneNumberField;
 use actra\yuf\form\component\field\ZipCodeField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
+use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
@@ -25,32 +27,15 @@ use PHPUnit\Framework\TestCase;
  * The HTML of the phone number, zip code, IBAN, hidden, password and CSRF fields. The expected strings were rendered
  * by yuf v3.3.1 for the equivalent state, except for the documented changes (UPGRADE.md): posted zip codes and IBANs
  * are trimmed, and the invalid phone number is HTML-encoded (v3.3.1 rendered it unencoded into the attribute).
- * `validate()` still reads the superglobals, so they are restored after each test.
+ * The request is passed to `Form::validate()` as `FormInput`.
  */
 final class SpecialFieldRenderersTest extends TestCase
 {
     private static int $formCounter = 0;
 
-    /** @var array<array-key, mixed> */
-    private array $savedGet;
-    /** @var array<array-key, mixed> */
-    private array $savedPost;
-    /** @var array<array-key, mixed> */
-    private array $savedFiles;
-
     protected function setUp(): void
     {
-        $this->savedGet = $_GET;
-        $this->savedPost = $_POST;
-        $this->savedFiles = $_FILES;
-        $_FILES = [];
-    }
-
-    protected function tearDown(): void
-    {
-        $_GET = $this->savedGet;
-        $_POST = $this->savedPost;
-        $_FILES = $this->savedFiles;
+        FormNameRegistry::reset();
     }
 
     private function text(string $text): HtmlText
@@ -133,7 +118,7 @@ final class SpecialFieldRenderersTest extends TestCase
     public function testPostedPhoneNumberIsRenderedInInternationalFormat(): void
     {
         $field = $this->phone();
-        $field->validate(inputData: ['phone' => ' 044 668 18 00 ']);
+        $field->validate(input: FormInput::fromArray(data: ['phone' => ' 044 668 18 00 ']));
 
         $this->assertSame(
             '<input type="tel" name="phone" id="phone" value="+41 44 668 18 00">',
@@ -144,7 +129,7 @@ final class SpecialFieldRenderersTest extends TestCase
     public function testPostedPhoneNumberIsRenderedInInternalFormat(): void
     {
         $field = $this->phone(internalFormat: true);
-        $field->validate(inputData: ['phone' => '044 668 18 00']);
+        $field->validate(input: FormInput::fromArray(data: ['phone' => '044 668 18 00']));
 
         $this->assertSame('<input type="tel" name="phone" id="phone" value="+41.446681800">', $field->render());
     }
@@ -152,7 +137,7 @@ final class SpecialFieldRenderersTest extends TestCase
     public function testPostedPhoneNumberWithPostedCountryCode(): void
     {
         $field = $this->phone();
-        $field->validate(inputData: ['phone' => '030 123456', 'countryCode' => 'DE']);
+        $field->validate(input: FormInput::fromArray(data: ['phone' => '030 123456', 'countryCode' => 'DE']));
 
         $this->assertSame('<input type="tel" name="phone" id="phone" value="+49 30 123456">', $field->render());
     }
@@ -160,7 +145,7 @@ final class SpecialFieldRenderersTest extends TestCase
     public function testInvalidPostedPhoneNumberIsRenderedAsPosted(): void
     {
         $field = $this->phone();
-        $field->validate(inputData: ['phone' => 'abc']);
+        $field->validate(input: FormInput::fromArray(data: ['phone' => 'abc']));
 
         $this->assertSame(
             '<input type="tel" name="phone" id="phone" value="abc" aria-invalid="true" aria-describedby="phone-error">',
@@ -171,7 +156,7 @@ final class SpecialFieldRenderersTest extends TestCase
     public function testInvalidPostedPhoneNumberCannotBreakOutOfTheAttribute(): void
     {
         $field = $this->phone();
-        $field->validate(inputData: ['phone' => '"><b>x']);
+        $field->validate(input: FormInput::fromArray(data: ['phone' => '"><b>x']));
 
         $this->assertSame(
             '<input type="tel" name="phone" id="phone" value="&quot;&gt;&lt;b&gt;x" aria-invalid="true"'
@@ -183,7 +168,7 @@ final class SpecialFieldRenderersTest extends TestCase
     public function testRequiredPhoneNumberFieldWithoutValue(): void
     {
         $field = $this->phone();
-        $field->validate(inputData: ['phone' => '']);
+        $field->validate(input: FormInput::fromArray(data: ['phone' => '']));
 
         $this->assertSame(
             '<input type="tel" name="phone" id="phone" value="" aria-invalid="true" aria-describedby="phone-error">',
@@ -227,7 +212,7 @@ final class SpecialFieldRenderersTest extends TestCase
     public function testPostedZipCodeIsRenderedTrimmed(): void
     {
         $field = $this->zip();
-        $field->validate(inputData: ['zip' => ' 8000 ']);
+        $field->validate(input: FormInput::fromArray(data: ['zip' => ' 8000 ']));
 
         $this->assertSame('<input type="text" name="zip" id="zip" value="8000" maxlength="10">', $field->render());
     }
@@ -235,7 +220,7 @@ final class SpecialFieldRenderersTest extends TestCase
     public function testInvalidZipCodeIsRenderedEncodedWithErrorAttributes(): void
     {
         $field = $this->zip();
-        $field->validate(inputData: ['zip' => 'x"y']);
+        $field->validate(input: FormInput::fromArray(data: ['zip' => 'x"y']));
 
         $this->assertSame(
             '<input type="text" name="zip" id="zip" value="x&quot;y" maxlength="10" aria-invalid="true"'
@@ -247,7 +232,7 @@ final class SpecialFieldRenderersTest extends TestCase
     public function testRequiredZipCodeFieldWithoutValue(): void
     {
         $field = $this->zip();
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $this->assertSame(
             '<input type="text" name="zip" id="zip" value="" maxlength="10" aria-invalid="true"'
@@ -272,7 +257,7 @@ final class SpecialFieldRenderersTest extends TestCase
     public function testPostedIbanIsRenderedTrimmedWithItsCase(): void
     {
         $field = $this->iban();
-        $field->validate(inputData: ['iban' => ' ch9300762011623852957 ']);
+        $field->validate(input: FormInput::fromArray(data: ['iban' => ' ch9300762011623852957 ']));
 
         $this->assertSame(
             '<input type="text" name="iban" id="iban" value="ch9300762011623852957">',
@@ -283,7 +268,7 @@ final class SpecialFieldRenderersTest extends TestCase
     public function testInvalidIbanIsRenderedEncodedWithErrorAttributes(): void
     {
         $field = $this->iban();
-        $field->validate(inputData: ['iban' => 'xx<']);
+        $field->validate(input: FormInput::fromArray(data: ['iban' => 'xx<']));
 
         $this->assertSame(
             '<input type="text" name="iban" id="iban" value="xx&lt;" aria-invalid="true"'
@@ -308,7 +293,7 @@ final class SpecialFieldRenderersTest extends TestCase
             requiredError: $this->text('Req'),
             purpose: PasswordPurposeEnum::CURRENT
         );
-        $field->validate(inputData: ['pw' => 'secret"x']);
+        $field->validate(input: FormInput::fromArray(data: ['pw' => 'secret"x']));
 
         $this->assertSame(
             '<input type="password" name="pw" id="pw" value="" autocomplete="current-password">',
@@ -361,10 +346,13 @@ final class SpecialFieldRenderersTest extends TestCase
         $form->addField(formField: $this->phone());
         $form->addField(formField: $this->zip());
         $form->addField(formField: $this->iban());
-        $_GET = [$formName => ''];
-        $_POST = ['phone' => 'abc', 'zip' => 'x', 'iban' => 'x', 'csrftoken' => 'tok+en/1='];
 
-        $isValid = $form->validate();
+        $isValid = $form->validate(
+            input: FormInput::fromArray(
+                data: ['phone' => 'abc', 'zip' => 'x', 'iban' => 'x', 'csrftoken' => 'tok+en/1='],
+                query: [$formName => '']
+            )
+        );
 
         $this->assertFalse($isValid);
         $this->assertSame(
@@ -390,10 +378,13 @@ final class SpecialFieldRenderersTest extends TestCase
         $form = $this->createForm(messages: FormMessages::german());
         $formName = $form->name;
         $form->addField(formField: $this->phone());
-        $_GET = [$formName => ''];
-        $_POST = ['phone' => '044 668 18 00', 'csrftoken' => 'wrong'];
 
-        $isValid = $form->validate();
+        $isValid = $form->validate(
+            input: FormInput::fromArray(
+                data: ['phone' => '044 668 18 00', 'csrftoken' => 'wrong'],
+                query: [$formName => '']
+            )
+        );
 
         $this->assertFalse($isValid);
         $this->assertSame(
@@ -412,10 +403,13 @@ final class SpecialFieldRenderersTest extends TestCase
         $form = $this->createForm();
         $formName = $form->name;
         $form->addField(formField: $this->phone());
-        $_GET = [$formName => '', 'csrftoken' => 'tok+en/1='];
-        $_POST = ['phone' => '044 668 18 00'];
 
-        $isValid = $form->validate();
+        $isValid = $form->validate(
+            input: FormInput::fromArray(
+                data: ['phone' => '044 668 18 00'],
+                query: [$formName => '', 'csrftoken' => 'tok+en/1=']
+            )
+        );
 
         $this->assertTrue($isValid);
         $this->assertSame(

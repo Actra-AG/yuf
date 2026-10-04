@@ -9,10 +9,10 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\TextAreaField;
+use actra\yuf\form\FormInput;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use TypeError;
 
 /**
  * The string value of TextAreaField and `getValues()` (one entry per line).
@@ -42,7 +42,7 @@ final class TextAreaFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(inputData: ['text' => " a\u{200B}\nb "]);
+        $field->validate(input: FormInput::fromArray(data: ['text' => " a\u{200B}\nb "]));
 
         $this->assertSame(" a\nb ", $field->getValueAsString());
     }
@@ -56,7 +56,7 @@ final class TextAreaFieldValueTest extends TestCase
     {
         $field = $this->createField(value: 'initial');
 
-        $isValid = $field->validate(inputData: ['text' => ['x', 'y']]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['text' => ['x', 'y']]));
 
         $this->assertFalse($isValid);
         $this->assertSame('', $field->getValueAsString());
@@ -67,7 +67,7 @@ final class TextAreaFieldValueTest extends TestCase
     {
         $field = $this->createField(value: 'initial');
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
 
         $this->assertSame('', $field->getValueAsString());
     }
@@ -79,15 +79,7 @@ final class TextAreaFieldValueTest extends TestCase
         $field->setValue(value: "new\nvalue");
 
         $this->assertSame("new\nvalue", $field->getValueAsString());
-        $this->assertSame('initial', $field->getOriginalValue());
         $this->assertTrue($field->valueHasChanged());
-    }
-
-    public function testSetValueRejectsArray(): void
-    {
-        $this->expectException(TypeError::class);
-
-        $this->createField()->setValue(value: ['a', 'b']);
     }
 
     public function testRenderValueEncodesTheText(): void
@@ -147,7 +139,7 @@ final class TextAreaFieldValueTest extends TestCase
     public function testGetValuesSplitsPostedStringIntoLines(string $text, array $expected): void
     {
         $field = $this->createField();
-        $field->validate(inputData: ['text' => $text]);
+        $field->validate(input: FormInput::fromArray(data: ['text' => $text]));
 
         $this->assertSame($expected, $field->getValues());
     }
@@ -155,7 +147,7 @@ final class TextAreaFieldValueTest extends TestCase
     public function testGetValuesIsEmptyAfterValidationWithMissingKey(): void
     {
         $field = $this->createField(value: "a\nb");
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $this->assertSame([], $field->getValues());
     }
@@ -164,7 +156,7 @@ final class TextAreaFieldValueTest extends TestCase
     {
         $field = $this->createField(value: "a\nb");
 
-        $this->assertFalse($field->validate(inputData: ['text' => ['c']]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['text' => ['c']])));
         $this->assertSame([], $field->getValues());
     }
 }

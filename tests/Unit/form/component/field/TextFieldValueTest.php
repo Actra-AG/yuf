@@ -9,12 +9,10 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\TextField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\html\HtmlText;
-use LogicException;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use TypeError;
 
 /**
  * The typed string value of TextField (and of its base classes TextualField, InputField, StringInputField and
@@ -45,7 +43,7 @@ final class TextFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(inputData: ['field' => '  text  ']);
+        $field->validate(input: FormInput::fromArray(data: ['field' => '  text  ']));
 
         $this->assertSame('text', $field->getValueAsString());
     }
@@ -54,7 +52,7 @@ final class TextFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(inputData: ['field' => "a\u{200B}b\u{200B}"]);
+        $field->validate(input: FormInput::fromArray(data: ['field' => "a\u{200B}b\u{200B}"]));
 
         $this->assertSame('ab', $field->getValueAsString());
     }
@@ -75,7 +73,7 @@ final class TextFieldValueTest extends TestCase
     {
         $field = $this->createField(value: 'initial');
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
 
         $this->assertSame('', $field->getValueAsString());
     }
@@ -84,7 +82,7 @@ final class TextFieldValueTest extends TestCase
     {
         $field = $this->createField(value: 'initial');
 
-        $isValid = $field->validate(inputData: ['field' => ['x']]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['field' => ['x']]));
 
         $this->assertFalse($isValid);
         $this->assertSame('', $field->getValueAsString());
@@ -96,7 +94,7 @@ final class TextFieldValueTest extends TestCase
     {
         $field = $this->createField(value: 'initial');
 
-        $this->assertFalse($field->validate(inputData: ['field' => [['x']]]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['field' => [['x']]])));
         $this->assertSame('', $field->getValueAsString());
     }
 
@@ -108,7 +106,7 @@ final class TextFieldValueTest extends TestCase
             requiredError: HtmlText::encoded(textContent: 'Required')
         );
 
-        $field->validate(inputData: ['field' => ['x']]);
+        $field->validate(input: FormInput::fromArray(data: ['field' => ['x']]));
 
         $this->assertSame(1, $field->errorCollection->count());
     }
@@ -121,7 +119,7 @@ final class TextFieldValueTest extends TestCase
             requiredError: HtmlText::encoded(textContent: 'Required')
         );
 
-        $this->assertFalse($field->validate(inputData: ['field' => '  ']));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['field' => '  '])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
     }
 
@@ -132,9 +130,9 @@ final class TextFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'Label'),
             requiredError: HtmlText::encoded(textContent: 'Required')
         );
-        $field->validate(inputData: ['field' => ['x']]);
+        $field->validate(input: FormInput::fromArray(data: ['field' => ['x']]));
 
-        $field->validate(inputData: ['field' => '']);
+        $field->validate(input: FormInput::fromArray(data: ['field' => '']));
 
         $this->assertSame(2, $field->errorCollection->count());
     }
@@ -144,7 +142,7 @@ final class TextFieldValueTest extends TestCase
         $field = $this->createField();
         $field->messages = FormMessages::german();
 
-        $field->validate(inputData: ['field' => ['x']]);
+        $field->validate(input: FormInput::fromArray(data: ['field' => ['x']]));
 
         $this->assertSame(
             'Die ungültige Eingabe wurde ignoriert.',
@@ -156,29 +154,9 @@ final class TextFieldValueTest extends TestCase
     {
         $field = $this->createField(value: 'initial');
 
-        $field->validate(inputData: ['field' => 'other'], overwriteValue: false);
+        $field->validateCurrentValue();
 
         $this->assertSame('initial', $field->getValueAsString());
-    }
-
-    /**
-     * @return iterable<string, array{?string, bool, ?string}>
-     */
-    public static function returnNullIfEmptyProvider(): iterable
-    {
-        yield 'no value' => [null, true, null];
-        yield 'whitespace only returns null' => ['  ', true, null];
-        yield 'filled string is returned' => ['x', true, 'x'];
-        yield 'empty string without flag is returned' => ['', false, ''];
-        yield 'no value without flag is the empty string' => [null, false, ''];
-    }
-
-    #[DataProvider('returnNullIfEmptyProvider')]
-    public function testGetRawValueReturnNullIfEmpty(?string $value, bool $returnNullIfEmpty, ?string $expected): void
-    {
-        $field = $this->createField(value: $value);
-
-        $this->assertSame($expected, $field->getRawValue(returnNullIfEmpty: $returnNullIfEmpty));
     }
 
     public function testZeroIsNotEmpty(): void
@@ -200,7 +178,6 @@ final class TextFieldValueTest extends TestCase
         $field->setValue(value: 'other');
 
         $this->assertSame('other', $field->getValueAsString());
-        $this->assertSame('initial', $field->getOriginalValue());
         $this->assertTrue($field->valueHasChanged());
         $this->assertFalse($field->hasErrors(withChildElements: false));
     }
@@ -227,7 +204,7 @@ final class TextFieldValueTest extends TestCase
     public function testSetValueWorksAfterValidationAndKeepsInitialValue(): void
     {
         $field = $this->createField(value: 'initial');
-        $field->validate(inputData: ['field' => 'posted']);
+        $field->validate(input: FormInput::fromArray(data: ['field' => 'posted']));
 
         $field->setValue(value: 'set');
 
@@ -235,18 +212,11 @@ final class TextFieldValueTest extends TestCase
         $this->assertTrue($field->valueHasChanged());
     }
 
-    public function testSetValueRejectsNonString(): void
-    {
-        $this->expectException(TypeError::class);
-
-        $this->createField()->setValue(value: 5);
-    }
-
     public function testValueHasChangedAfterPostedDifferentValue(): void
     {
         $field = $this->createField(value: 'initial');
 
-        $field->validate(inputData: ['field' => 'other']);
+        $field->validate(input: FormInput::fromArray(data: ['field' => 'other']));
 
         $this->assertTrue($field->valueHasChanged());
     }
@@ -255,16 +225,9 @@ final class TextFieldValueTest extends TestCase
     {
         $field = $this->createField(value: 'initial');
 
-        $field->validate(inputData: ['field' => ' initial ']);
+        $field->validate(input: FormInput::fromArray(data: ['field' => ' initial ']));
 
         $this->assertFalse($field->valueHasChanged());
-    }
-
-    public function testSetOriginalValueWasRemoved(): void
-    {
-        $this->expectException(LogicException::class);
-
-        $this->createField()->setOriginalValue(value: 'x');
     }
 
     public function testRenderValueEncodesValue(): void

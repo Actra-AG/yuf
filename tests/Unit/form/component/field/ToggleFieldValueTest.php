@@ -9,10 +9,10 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\ToggleField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\TestCase;
-use TypeError;
 
 final class ToggleFieldValueTest extends TestCase
 {
@@ -48,7 +48,7 @@ final class ToggleFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['toggle' => 'a']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['toggle' => 'a']));
 
         $this->assertTrue($isValid);
         $this->assertSame('a', $field->getValueAsString());
@@ -58,7 +58,7 @@ final class ToggleFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 'a');
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertSame('', $field->getValueAsString());
     }
 
@@ -66,7 +66,7 @@ final class ToggleFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 'a');
 
-        $this->assertTrue($field->validate(inputData: ['toggle' => '']));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['toggle' => ''])));
         $this->assertSame('', $field->getValueAsString());
     }
 
@@ -74,7 +74,7 @@ final class ToggleFieldValueTest extends TestCase
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
 
-        $this->assertFalse($field->validate(inputData: []));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
     }
 
@@ -82,7 +82,7 @@ final class ToggleFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 'b');
 
-        $isValid = $field->validate(inputData: ['toggle' => ['a']]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['toggle' => ['a']]));
 
         $this->assertFalse($isValid);
         $this->assertSame('', $field->getValueAsString());
@@ -94,7 +94,7 @@ final class ToggleFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 'a');
 
-        $isValid = $field->validate(inputData: ['toggle' => 'x']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['toggle' => 'x']));
 
         $this->assertFalse($isValid);
         $this->assertSame('', $field->getValueAsString());
@@ -118,13 +118,6 @@ final class ToggleFieldValueTest extends TestCase
 
         $this->assertSame('b', $field->getValueAsString());
         $this->assertTrue($field->valueHasChanged());
-    }
-
-    public function testSetValueWithWrongTypeThrowsTypeError(): void
-    {
-        $this->expectException(TypeError::class);
-
-        $this->createField()->setValue(value: ['a']);
     }
 
     public function testRequiredFieldIsRequired(): void

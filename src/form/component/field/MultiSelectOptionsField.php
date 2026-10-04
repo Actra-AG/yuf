@@ -11,7 +11,6 @@ namespace actra\yuf\form\component\field;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\SelectOptionsRenderer;
-use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\html\HtmlText;
 
@@ -47,7 +46,7 @@ class MultiSelectOptionsField extends MultiOptionsField
             autoComplete: $autoComplete
         );
         if ($requiredError !== null) {
-            $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
+            $this->addRequiredRule(errorMessage: $requiredError);
         }
         $this->initializeSelectOptionsSettings(
             isRequired: $requiredError !== null,

@@ -9,11 +9,11 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\AmountParser;
+use actra\yuf\form\rule\IntegerRule;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\form\settings\InputTypeValue;
 use actra\yuf\html\HtmlText;
 use LogicException;
-use TypeError;
 use UnexpectedValueException;
 
 /**
@@ -28,6 +28,8 @@ use UnexpectedValueException;
 class IntegerField extends ParsedInputField
 {
     private ?int $value = null;
+    /** @var list<IntegerRule> */
+    private array $valueRules = [];
 
     public function __construct(
         string $name,
@@ -66,6 +68,27 @@ class IntegerField extends ParsedInputField
     }
 
     /**
+     * Adds a rule for the value (e.g. `IntegerMinRule`). Value rules run for a parsed, non-empty value only.
+     */
+    public function addValueRule(IntegerRule $formRule): void
+    {
+        $this->valueRules[] = $formRule;
+    }
+
+    protected function checkRules(): void
+    {
+        parent::checkRules();
+        if ($this->value === null) {
+            return;
+        }
+        foreach ($this->valueRules as $rule) {
+            if (!$rule->validate(value: $this->value)) {
+                $this->addErrorAsHtmlTextObject(errorMessageObject: $rule->getErrorMessage());
+            }
+        }
+    }
+
+    /**
      * Returns the value, or `null` if the field is empty.
      *
      * @throws UnexpectedValueException If the field holds input that is not an integer (before validation or after a
@@ -81,16 +104,9 @@ class IntegerField extends ParsedInputField
     /**
      * Changes the current value only, the initial value stays (so `valueHasChanged()` compares with it).
      *
-     * The parameter is declared `mixed` only while the legacy `FormField::setValue(mixed)` bridge exists (PHP does
-     * not allow narrowing it); it becomes `?int` with the removal of the bridge.
-     *
-     * @throws TypeError If the value is not an `int` or `null`.
      */
-    public function setValue(mixed $value): void
+    public function setValue(?int $value): void
     {
-        if ($value !== null && !is_int(value: $value)) {
-            throw $this->createValueTypeError(expectedType: 'an int or null', value: $value);
-        }
         $this->changeText(text: $value === null ? '' : (string)$value);
     }
 

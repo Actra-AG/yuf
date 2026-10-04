@@ -8,7 +8,6 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
-use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\form\settings\InputTypeValue;
 use actra\yuf\html\HtmlText;
@@ -34,7 +33,7 @@ class TextField extends SettableStringInputField
             maxLength: $maxLength
         );
         if (!is_null(value: $requiredError)) {
-            $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
+            $this->addRequiredRule(errorMessage: $requiredError);
         }
     }
 }

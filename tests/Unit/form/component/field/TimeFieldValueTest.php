@@ -10,11 +10,11 @@ namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\common\TimeOfDay;
 use actra\yuf\form\component\field\TimeField;
+use actra\yuf\form\FormInput;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
-use TypeError;
 use UnexpectedValueException;
 
 /**
@@ -69,7 +69,7 @@ final class TimeFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertTrue($field->validate(inputData: ['time' => $input]));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['time' => $input])));
         $this->assertSame($expected, $field->getValueAsTimeOfDay()?->toString());
         $shortText = substr(string: $expected, offset: 0, length: 5);
 
@@ -97,7 +97,7 @@ final class TimeFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertFalse($field->validate(inputData: ['time' => $input]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['time' => $input])));
         $this->assertSame('Invalid', $field->errorCollection->getFirstError()->render());
         $this->assertSame(1, $field->errorCollection->count());
         $this->assertStringContainsString('value="' . $input . '"', $field->render());
@@ -107,7 +107,7 @@ final class TimeFieldValueTest extends TestCase
     public function testGetterThrowsForInvalidTime(string $input): void
     {
         $field = $this->createField();
-        $field->validate(inputData: ['time' => $input]);
+        $field->validate(input: FormInput::fromArray(data: ['time' => $input]));
 
         $this->expectException(UnexpectedValueException::class);
         $this->expectExceptionMessage('field time');
@@ -119,7 +119,7 @@ final class TimeFieldValueTest extends TestCase
     {
         $field = $this->createField(value: new TimeOfDay(hour: 8, minute: 0));
 
-        $this->assertTrue($field->validate(inputData: ['time' => '']));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['time' => ''])));
         $this->assertNull($field->getValueAsTimeOfDay());
     }
 
@@ -127,7 +127,7 @@ final class TimeFieldValueTest extends TestCase
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
 
-        $this->assertFalse($field->validate(inputData: ['time' => '  ']));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['time' => '  '])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
     }
 
@@ -135,7 +135,7 @@ final class TimeFieldValueTest extends TestCase
     {
         $field = $this->createField(value: new TimeOfDay(hour: 8, minute: 0));
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertNull($field->getValueAsTimeOfDay());
     }
 
@@ -143,7 +143,7 @@ final class TimeFieldValueTest extends TestCase
     {
         $field = $this->createField(value: new TimeOfDay(hour: 8, minute: 0));
 
-        $this->assertFalse($field->validate(inputData: ['time' => ['x']]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['time' => ['x']])));
         $this->assertNull($field->getValueAsTimeOfDay());
         $this->assertSame('The invalid input was ignored.', $field->errorCollection->getFirstError()->render());
     }
@@ -152,10 +152,10 @@ final class TimeFieldValueTest extends TestCase
     {
         $field = $this->createField(value: new TimeOfDay(hour: 8, minute: 30));
 
-        $field->validate(inputData: ['time' => '08:30:00']);
+        $field->validate(input: FormInput::fromArray(data: ['time' => '08:30:00']));
         $this->assertFalse($field->valueHasChanged());
 
-        $field->validate(inputData: ['time' => '08:30:01']);
+        $field->validate(input: FormInput::fromArray(data: ['time' => '08:30:01']));
         $this->assertTrue($field->valueHasChanged());
     }
 
@@ -181,18 +181,11 @@ final class TimeFieldValueTest extends TestCase
     public function testSetValueClearsKeptInvalidInput(): void
     {
         $field = $this->createField();
-        $field->validate(inputData: ['time' => '25:00']);
+        $field->validate(input: FormInput::fromArray(data: ['time' => '25:00']));
 
         $field->setValue(value: new TimeOfDay(hour: 1, minute: 2));
 
         $this->assertSame('01:02:00', $field->getValueAsTimeOfDay()?->toString());
-    }
-
-    public function testSetValueRejectsAString(): void
-    {
-        $this->expectException(TypeError::class);
-
-        $this->createField()->setValue(value: '08:30');
     }
 
     public function testFieldHasNoGetValueAsString(): void

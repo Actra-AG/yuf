@@ -54,8 +54,8 @@ This document tracks relevant changes and upgrade instructions for developers.
       $nameservers = $field->getValues();                      // list<string>
       $field->setValue(implode(PHP_EOL, $nameserversFromDatabase));
       ```
-      A subclass that overrode `validate()` to parse the lines must move its checks into rules (the per-line rule
-      `addEachRule()` follows in v4).
+      A subclass that overrode `validate()` to parse the lines must move its checks into rules: the per-line rule
+      `addEachRule()` (part 6).
     * ⚠️ **`PasswordField`:** the free `autoComplete` argument is replaced by the required argument
       `PasswordPurposeEnum $purpose` (`CURRENT`: login or confirming the password, `NEW`: registration, password
       change, reset). The field always renders the matching `autocomplete` attribute. A password field without
@@ -112,15 +112,14 @@ This document tracks relevant changes and upgrade instructions for developers.
       (`FormMessages::invalidOption`, `[field]` is the field name) is added and the other rules do not run (no second
       "required" error). An array posted to a single field is invalid input (v3 kept the previous value). Empty keys
       in a multi list (`['', 'a']`) are dropped, so `['0']` is a normal selection. `ValidateAgainstOptions` is not
-      added to the fields any more (the check is part of reading the input; the class itself is removed in a later
-      step of v4).
+      added to the fields any more (the check is part of reading the input; the class is removed, part 6).
     * ⚠️ **Typed setters and initial value:** constructor values and setters have the type of the value
       (`?string`, `list<string>`, a wrong type is a `TypeError`; keys are not checked against the options). The public
       setters change only the current value, the initial value stays, `valueHasChanged()` compares with it. A subclass
       fills the field after `parent::__construct()` with the protected `setInitialValue(?string)` (single),
       `setInitialValues(list<string>)` (multi) or `setInitiallyChecked(bool)` (`BooleanField`): current and initial
-      value, a `LogicException` once the field was validated. `setOriginalValue()` throws a `LogicException`,
-      `getOriginalValue()` is removed in a later step.
+      value, a `LogicException` once the field was validated. `setOriginalValue()` and `getOriginalValue()` are
+      removed (part 6).
       ```php
       // Before
       $field->setValue($row->status);               // single
@@ -268,13 +267,9 @@ This document tracks relevant changes and upgrade instructions for developers.
       its scale (`12.5` renders `12.50`). Invalid input is rendered as posted (trimmed). The HTML structure and
       attributes of all fields are unchanged.
     * ⚠️ **Removed rules:** `ValidAmountRule`, `ValidDateRule`, `ValidTimeRule` (the field checks its input; a rule
-      that read them is not needed). `FloatValueRule` and `NumericValueRule` stay until the rules are retyped in a later
-      step of v4. A custom rule that used `ValidAmountRule` on a text field validates the text itself with
+      that read them is not needed). `FloatValueRule` and `NumericValueRule` are removed in part 6. A custom rule that used `ValidAmountRule` on a text field validates the text itself with
       `AmountParser::isInteger()`, `isDecimal()`, `toInt()`, `toFloat()` or the new `toDecimal(value, scale)`.
-    * ⚠️ **`MinValueRule`/`MaxValueRule`/`ValueBetweenRule`:** they threw for every posted (string) value, so they
-      cannot have worked on a form field in v3.x. The typed `IntegerMinRule`/`IntegerMaxRule`, `FloatMinRule`/
-      `FloatMaxRule` and `DecimalMinRule`/`DecimalMaxRule` that replace them (`addValueRule()`) come with the rules in a
-      later step of v4; the migration example is added there.
+    * ⚠️ **`MinValueRule`/`MaxValueRule`/`ValueBetweenRule`:** replaced by the typed numeric rules, see part 6.
     * ⚠️ `HiddenFieldRenderer` takes an `InputField` (was `HiddenField`) so that it renders `HiddenIntegerField` too.
 * **Form Fields (typed values, part 4: phone number, zip code, IBAN, CSRF token):** the checks that belong to one
   field moved from rules into the fields and into two pure validators. New `ZipCodeValidator::validate(zipCode,
@@ -329,9 +324,8 @@ This document tracks relevant changes and upgrade instructions for developers.
       attribute when the field had an error, so `"><script>` in the input broke out of the attribute: a cross-site
       scripting vulnerability, fixed). Everything else is unchanged (checked against the HTML of v3.3.1); posted zip
       codes and IBANs are rendered trimmed (see the normalization note above).
-    * **Added (bridge, `@internal`):** `TextualField::validateInput(FormInput)` validates a text field with request
-      data that carries the query part, and the hook `readAdditionalInput(FormInput)` reads input besides the field's
-      own value (country code, fallback token). They are replaced by `validate(FormInput)` in a later step of v4.
+    * The hook `readAdditionalInput(FormInput)` reads input besides the field's own value (country code, fallback
+      token), see part 6.
 * **Form Fields (typed values, part 5: file field):** `FileField` no longer touches `$_SESSION`, `$_SERVER`, `$_FILES`
   or the file system itself. It reads the uploads from `FormInput::getUploads()` and keeps the files between the
   requests in a `FileUploadStorage`. The default `SessionFileUploadStorage` does what v3 did (session list of the files,
@@ -374,9 +368,9 @@ This document tracks relevant changes and upgrade instructions for developers.
       `alreadyExistsErrorMessage` win as before) and the "löschen" button of the file list (`removeFile`) are the v3
       texts with `FormMessages::german()` and English otherwise (see "Form messages" below). With `german()` the HTML is
       unchanged.
-    * ⚠️ **Removed:** `FileField::setValue()` (it throws a `LogicException`; the files come in with the request, a
-      project cannot add files to a field), the protected `convertMultiFileArray()` (use `FormInput::getUploads()`),
-      the public `getRawValue()` is a bridge for `getFiles()`. `removeOldFiles()`, `clearData()`, `getFiles()`,
+    * ⚠️ **Removed:** `FileField::setValue()` (the files come in with the request, a project cannot add files to a
+      field), the protected `convertMultiFileArray()` (use `FormInput::getUploads()`), `getRawValue()` (use
+      `getFiles()`). `removeOldFiles()`, `clearData()`, `getFiles()`,
       `getRemovedValues()`, `getAddedValues()` (the files, as in v3), `uniqueSessFileStorePointer` and
       `maxFileUploadCount` stay.
     * **Optional storage argument:** `new FileField(..., storage: $storage)`, any `FileUploadStorage` (`load()`,
@@ -412,8 +406,131 @@ This document tracks relevant changes and upgrade instructions for developers.
   uploads of an input of `$_FILES` as `list<UploadInput>` (single and `name[]` structure) and `hasMalformedUpload(name)`
   tells that the structure was manipulated.
   `FormField::validateCurrentValue()` runs the listeners and rules without reading input.
-* **Temporary (bridge):** until all fields have typed values, `getRawValue()`, `setValue(mixed)` and the array-based
-  `validate(array, bool)` still exist and are marked `@internal`. They are removed in a later step of v4.
+* **Form Fields (typed values, part 6: rules, validation and global state):** the last part of the typed values. The
+  temporary bridge of the earlier parts (`getRawValue()`, `setValue(mixed)`, `getOriginalValue()`,
+  `setOriginalValue()`, `validate(array, bool)`, `TextualField::validateInput()`) is gone, every setter has its real
+  type, and rules get typed values.
+    * ⚠️ **Typed rules:** `FormRule` no longer has `validate(FormField)` (it only stores the error message). A rule
+      extends the base that fits the value, and is a pure predicate that is called for a non-empty value only (no empty
+      check, no `setValue()`):
+
+      | Base | `validate()` | Added with |
+      |:--|:--|:--|
+      | `StringRule` | `validate(string $value)` | `addRule()` of all text fields (also number and date fields: the text), `SingleOptionsField` (the selected key) |
+      | `StringListRule` | `validate(array $values)` (`list<string>`) | `addRule()` of `MultiOptionsField` |
+      | `IntegerRule` | `validate(int $value)` | `addValueRule()` of `IntegerField` (and `NumericField`) |
+      | `FloatRule` | `validate(float $value)` | `addValueRule()` of `FloatField` |
+      | `DecimalRule` | `validate(string $value)` (canonical decimal) | `addValueRule()` of `DecimalField` |
+
+      `addEachRule(StringRule)` applies a text rule to every line of a `TextAreaField` (`getValues()`) or to every
+      selected key of a `MultiOptionsField`; a failing rule adds its message once. A rule that extends `FormRule`
+      directly can no longer be added (`TypeError`, a PHPStan error). All rules stay non-final. The argument keeps
+      its name `formRule` (also for `addEachRule()` and `addValueRule()`), so calls with named arguments stay valid.
+      ```php
+      // Before: reads the value of the field and checks its type itself
+      class NoSpacesRule extends FormRule
+      {
+          public function validate(FormField $formField): bool
+          {
+              $value = $formField->getRawValue();
+              return !is_string($value) || !str_contains($value, ' ');
+          }
+      }
+      $field->addRule(formRule: new NoSpacesRule(defaultErrorMessage: $message));
+
+      // After: typed base, native parameter, called for non-empty text only
+      class NoSpacesRule extends StringRule
+      {
+          public function validate(string $value): bool
+          {
+              return !str_contains($value, ' ');
+          }
+      }
+      $field->addRule(formRule: new NoSpacesRule(defaultErrorMessage: $message));
+      // an int value: extends IntegerRule + addValueRule(); a list of keys: extends StringListRule on a multi field
+      ```
+    * ⚠️ **Retyped rules:** `MinLengthRule`, `MaxLengthRule`, `RegexRule`, `ValidValueRule` and
+      `ValidEmailAddressRule` extend `StringRule` (constructor arguments unchanged). `ValidValueRule` takes
+      `list<string>` and compares exactly (v3 compared loosely, so `1` matched `'1'`). `ValidEmailAddressRule` checks
+      syntax and DNS only: the canonical form (lower case) is set by `EmailField`, not by the rule, so a project that
+      added the rule to a `TextField` must call `strtolower()` itself.
+    * ⚠️ **`MinLengthRule`/`MaxLengthRule` on lists:** on a `MultiOptionsField` they counted the entries. Use the new
+      `MinCountRule(minCount:, errorMessage:)` and `MaxCountRule(maxCount:, errorMessage:)` (`StringListRule`).
+    * ⚠️ **`RequiredRule` is removed:** use `addRequiredRule(HtmlText)` (or the `requiredError` constructor argument),
+      `isRequired()` stays. A second `addRequiredRule()` replaces the message of the first one.
+      ```php
+      // Before
+      $field->addRule(new RequiredRule($message));
+      // After
+      $field->addRequiredRule(errorMessage: $message);
+      ```
+    * ⚠️ **`MinValueRule`, `MaxValueRule`, `ValueBetweenRule` are replaced** by `IntegerMinRule`/`IntegerMaxRule`,
+      `FloatMinRule`/`FloatMaxRule` and `DecimalMinRule`/`DecimalMaxRule` (`addValueRule()`). They threw for every
+      posted (string) value in v3.x, so they only worked with values a project set as `int`/`float`. "Between" is a
+      min and a max rule. Decimal limits are decimal strings and are compared without float rounding (`bcmath`).
+      ```php
+      // Before
+      $field->addRule(new MinValueRule(minValue: 1, errorMessage: $tooSmall));
+      $field->addRule(new MaxValueRule(maxValue: 100, errorMessage: $tooBig));
+      $field->addRule(new ValueBetweenRule(minValue: 1, maxValue: 100, errorMessage: $outOfRange));
+
+      // After: IntegerField (FloatField, DecimalField)
+      $field->addValueRule(formRule: new IntegerMinRule(min: 1, errorMessage: $tooSmall));
+      $field->addValueRule(formRule: new IntegerMaxRule(max: 100, errorMessage: $tooBig));
+      // ValueBetweenRule: a min and a max rule with the same message
+      $field->addValueRule(formRule: new IntegerMinRule(min: 1, errorMessage: $outOfRange));
+      $field->addValueRule(formRule: new IntegerMaxRule(max: 100, errorMessage: $outOfRange));
+      // money: new DecimalMinRule(min: '0.05', errorMessage: $tooSmall)
+      ```
+    * ⚠️ **Removed rules:** `RequiredRule`, `FloatValueRule`, `NumericValueRule` (the number fields parse their
+      input), `NoArrayRule` (array input is rejected when the input is read), `ValidateAgainstOptions` (the option
+      check is part of reading the input of an options field), `ValueBetweenRule`, `MinValueRule`, `MaxValueRule`.
+    * ⚠️ **`validate(array)` becomes `validate(FormInput)`:** `FormField::validate(FormInput $input): bool` is a
+      `final` template (read the additional input, read the value, run listeners, check the required rule and the
+      rules, validate the children of a toggle field if the field is valid). A subclass can no longer override it;
+      customize through the constructor, `normalize()`, rules and listeners. The flag `overwriteValue: false` is now
+      the method `validateCurrentValue()`. The listeners (`FormFieldListener`) are unchanged.
+      ```php
+      // Before
+      $field->validate(['name' => 'Ann']);
+      $field->validate([], overwriteValue: false);
+
+      // After
+      $field->validate(input: FormInput::fromArray(data: ['name' => 'Ann']));
+      $field->validateCurrentValue();
+      ```
+    * ⚠️ **`Form::validate()` and `Form::isSent()` take an optional `FormInput`:** without argument they read the
+      current request (`FormInput::fromGlobals(methodPost:)`: `$_POST` or `$_GET` for the values, `$_FILES`, `$_GET`
+      for the sent indicator and the CSRF fallback), so a project that calls `$form->validate()` changes nothing. A
+      project (or a test) can pass its own request:
+      ```php
+      $form->validate(input: FormInput::fromArray(data: $post, files: $files, query: ['contact' => '']));
+      $form->isSent(input: $input);
+      ```
+      `FormInput::fromGlobals()` is the only place in `src/form/` that reads `$_POST`, `$_GET` and `$_FILES`. The
+      form name check ("A Form with the name ... has already been defined.") is unchanged (its list moved into the
+      `@internal` class `FormNameRegistry`; tests that build the same form name twice call
+      `FormNameRegistry::reset()`).
+    * ⚠️ **Removed from `FormField`:** `getRawValue()` (use the typed getter: `getValueAsString()`, `getValueAsInt()`,
+      `getValueAsFloat()`, `getValueAsDecimal()`, `getValueAsDateTimeImmutable()`, `getValueAsTimeOfDay()`,
+      `getValues()`, `isChecked()`, `getFiles()`; `getRawValue(true)` is the getter plus `isValueEmpty()`),
+      `getOriginalValue()`, `setOriginalValue()` (the initial value is the constructor value or the protected
+      `setInitialValue()`; `valueHasChanged()`, `getAddedValues()` and `getRemovedValues()` compare with it), the
+      constructor argument `value` of `FormField` (`mixed`), and `getAddedValues()`/`getRemovedValues()` on fields
+      other than `MultiOptionsField` and `FileField` (they returned `[]` before). `renderValue()`, `isValueEmpty()` and
+      `valueHasChanged()` are abstract: a project field that extends `FormField` directly implements them and
+      `readInput(FormInput)`.
+    * ⚠️ **Typed setters:** `setValue(string)` (`TextField`, `EmailField`, `PhoneNumberField`, `HiddenField`,
+      `TextAreaField`), `setValue(?string)` (single option fields, `DecimalField`), `setValue(?int)`
+      (`IntegerField`, `HiddenIntegerField`), `setValue(?float)`, `setValue(?DateTimeImmutable)`,
+      `setValue(?TimeOfDay)`, `setValues(list<string>)`, `setChecked(bool)`. A value of the wrong type is a PHPStan
+      error (and a `TypeError` at runtime), no longer a `TypeError` from a `mixed` parameter. `PasswordField`,
+      `CsrfTokenField` and `FileField` have no `setValue()` at all (it threw a `LogicException`), `BooleanField` and
+      `MultiOptionsField` neither (use `setChecked()` / `setValues()`).
+    * ⚠️ **Behaviour:** the text rules of `EmailField` run for a non-empty text after the required check, as before;
+      an unparsable number or date still gets its error before the other rules, and the rules for the typed value
+      (`addValueRule()`) do not run for it. A text rule runs for the text of a number or date field too (the canonical
+      text when the value is valid).
 
 ---
 

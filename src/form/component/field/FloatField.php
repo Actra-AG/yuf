@@ -9,11 +9,11 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\AmountParser;
+use actra\yuf\form\rule\FloatRule;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\form\settings\InputTypeValue;
 use actra\yuf\html\HtmlText;
 use InvalidArgumentException;
-use TypeError;
 use UnexpectedValueException;
 
 /**
@@ -25,6 +25,8 @@ use UnexpectedValueException;
 final class FloatField extends ParsedInputField
 {
     private ?float $value = null;
+    /** @var list<FloatRule> */
+    private array $valueRules = [];
 
     /**
      * @throws InvalidArgumentException If the initial value is `INF` or `NAN`.
@@ -66,6 +68,27 @@ final class FloatField extends ParsedInputField
     }
 
     /**
+     * Adds a rule for the value (e.g. `FloatMinRule`). Value rules run for a parsed, non-empty value only.
+     */
+    public function addValueRule(FloatRule $formRule): void
+    {
+        $this->valueRules[] = $formRule;
+    }
+
+    protected function checkRules(): void
+    {
+        parent::checkRules();
+        if ($this->value === null) {
+            return;
+        }
+        foreach ($this->valueRules as $rule) {
+            if (!$rule->validate(value: $this->value)) {
+                $this->addErrorAsHtmlTextObject(errorMessageObject: $rule->getErrorMessage());
+            }
+        }
+    }
+
+    /**
      * Returns the value, or `null` if the field is empty.
      *
      * @throws UnexpectedValueException If the field holds input that is not a decimal number (before validation or
@@ -81,27 +104,11 @@ final class FloatField extends ParsedInputField
     /**
      * Changes the current value only, the initial value stays (so `valueHasChanged()` compares with it).
      *
-     * The parameter is declared `mixed` only while the legacy `FormField::setValue(mixed)` bridge exists; it becomes
-     * `?float` with the removal of the bridge (an `int` is accepted, like for a `float` parameter).
-     *
-     * @throws TypeError If the value is not a `float`, an `int` or `null`.
      * @throws InvalidArgumentException If the value is `INF` or `NAN`.
      */
-    public function setValue(mixed $value): void
+    public function setValue(?float $value): void
     {
-        $this->changeText(text: $this->toNullableText(value: $value));
-    }
-
-    private function toNullableText(mixed $value): string
-    {
-        if ($value === null) {
-            return '';
-        }
-        if (!is_float(value: $value) && !is_int(value: $value)) {
-            throw $this->createValueTypeError(expectedType: 'a float or null', value: $value);
-        }
-
-        return $this->toText(value: (float)$value);
+        $this->changeText(text: $value === null ? '' : $this->toText(value: $value));
     }
 
     /**

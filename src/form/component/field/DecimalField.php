@@ -9,11 +9,11 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\AmountParser;
+use actra\yuf\form\rule\DecimalRule;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\form\settings\InputTypeValue;
 use actra\yuf\html\HtmlText;
 use InvalidArgumentException;
-use TypeError;
 use UnexpectedValueException;
 
 /**
@@ -29,6 +29,8 @@ use UnexpectedValueException;
 final class DecimalField extends ParsedInputField
 {
     private ?string $value = null;
+    /** @var list<DecimalRule> */
+    private array $valueRules = [];
 
     /**
      * @param int $scale The number of decimals, 0 or more (`2` for CHF).
@@ -78,6 +80,27 @@ final class DecimalField extends ParsedInputField
     }
 
     /**
+     * Adds a rule for the value (e.g. `DecimalMinRule`). Value rules run for a parsed, non-empty value only.
+     */
+    public function addValueRule(DecimalRule $formRule): void
+    {
+        $this->valueRules[] = $formRule;
+    }
+
+    protected function checkRules(): void
+    {
+        parent::checkRules();
+        if ($this->value === null) {
+            return;
+        }
+        foreach ($this->valueRules as $rule) {
+            if (!$rule->validate(value: $this->value)) {
+                $this->addErrorAsHtmlTextObject(errorMessageObject: $rule->getErrorMessage());
+            }
+        }
+    }
+
+    /**
      * Returns the canonical decimal string (e.g. `'12.50'`), or `null` if the field is empty.
      *
      * @throws UnexpectedValueException If the field holds input that is not a valid decimal (before validation or
@@ -93,17 +116,10 @@ final class DecimalField extends ParsedInputField
     /**
      * Changes the current value only, the initial value stays (so `valueHasChanged()` compares with it).
      *
-     * The parameter is declared `mixed` only while the legacy `FormField::setValue(mixed)` bridge exists; it becomes
-     * `?string` with the removal of the bridge.
-     *
-     * @throws TypeError If the value is not a string or `null`.
      * @throws InvalidArgumentException If the string is not a decimal or has more decimals than the scale.
      */
-    public function setValue(mixed $value): void
+    public function setValue(?string $value): void
     {
-        if ($value !== null && !is_string(value: $value)) {
-            throw $this->createValueTypeError(expectedType: 'a decimal string or null', value: $value);
-        }
         $this->changeText(text: $value === null ? '' : $this->validDecimal(value: $value));
     }
 

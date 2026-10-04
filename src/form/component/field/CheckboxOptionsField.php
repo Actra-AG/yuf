@@ -15,7 +15,6 @@ use actra\yuf\form\renderer\CheckboxItemRenderer;
 use actra\yuf\form\renderer\CheckboxOptionsRenderer;
 use actra\yuf\form\renderer\DefinitionListRenderer;
 use actra\yuf\form\renderer\LegendAndListRenderer;
-use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\html\HtmlText;
 
 class CheckboxOptionsField extends MultiOptionsField
@@ -39,7 +38,7 @@ class CheckboxOptionsField extends MultiOptionsField
             autoComplete: null
         );
         if (!is_null(value: $requiredError)) {
-            $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
+            $this->addRequiredRule(errorMessage: $requiredError);
         }
         switch ($layout) {
             case CheckboxOptionsLayout::DEFINITION_LIST:

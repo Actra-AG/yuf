@@ -9,10 +9,10 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\HiddenIntegerField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use TypeError;
 use UnexpectedValueException;
 
 /**
@@ -59,7 +59,7 @@ final class HiddenIntegerFieldValueTest extends TestCase
     {
         $field = new HiddenIntegerField(name: 'id');
 
-        $this->assertTrue($field->validate(inputData: ['id' => $input]));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['id' => $input])));
         $this->assertSame($expected, $field->getValueAsInt());
     }
 
@@ -81,7 +81,7 @@ final class HiddenIntegerFieldValueTest extends TestCase
     {
         $field = new HiddenIntegerField(name: 'id');
 
-        $this->assertFalse($field->validate(inputData: ['id' => $input]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['id' => $input])));
         $this->assertSame('The given value is invalid.', $field->errorCollection->getFirstError()->render());
         $this->assertSame(1, $field->errorCollection->count());
     }
@@ -90,7 +90,7 @@ final class HiddenIntegerFieldValueTest extends TestCase
     public function testGetterThrowsForManipulatedInput(string $input): void
     {
         $field = new HiddenIntegerField(name: 'id');
-        $field->validate(inputData: ['id' => $input]);
+        $field->validate(input: FormInput::fromArray(data: ['id' => $input]));
 
         $this->expectException(UnexpectedValueException::class);
         $this->expectExceptionMessage('field id');
@@ -103,7 +103,7 @@ final class HiddenIntegerFieldValueTest extends TestCase
         $field = new HiddenIntegerField(name: 'id');
         $field->messages = FormMessages::german();
 
-        $field->validate(inputData: ['id' => 'abc']);
+        $field->validate(input: FormInput::fromArray(data: ['id' => 'abc']));
 
         $this->assertSame('Der angegebene Wert ist ungültig.', $field->errorCollection->getFirstError()->render());
     }
@@ -112,7 +112,7 @@ final class HiddenIntegerFieldValueTest extends TestCase
     {
         $field = new HiddenIntegerField(name: 'id', value: 5);
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertNull($field->getValueAsInt());
     }
 
@@ -120,7 +120,7 @@ final class HiddenIntegerFieldValueTest extends TestCase
     {
         $field = new HiddenIntegerField(name: 'id', value: 5);
 
-        $this->assertFalse($field->validate(inputData: ['id' => ['5']]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['id' => ['5']])));
         $this->assertNull($field->getValueAsInt());
         $this->assertSame('The invalid input was ignored.', $field->errorCollection->getFirstError()->render());
     }
@@ -128,7 +128,7 @@ final class HiddenIntegerFieldValueTest extends TestCase
     public function testManipulatedInputIsRenderedBackAsPosted(): void
     {
         $field = new HiddenIntegerField(name: 'id');
-        $field->validate(inputData: ['id' => '1"2']);
+        $field->validate(input: FormInput::fromArray(data: ['id' => '1"2']));
 
         $this->assertStringContainsString('value="1&quot;2"', $field->render());
     }
@@ -141,12 +141,5 @@ final class HiddenIntegerFieldValueTest extends TestCase
 
         $this->assertSame(6, $field->getValueAsInt());
         $this->assertTrue($field->valueHasChanged());
-    }
-
-    public function testSetValueRejectsAString(): void
-    {
-        $this->expectException(TypeError::class);
-
-        new HiddenIntegerField(name: 'id')->setValue(value: '5');
     }
 }

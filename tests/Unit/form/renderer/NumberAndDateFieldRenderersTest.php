@@ -16,6 +16,7 @@ use actra\yuf\form\component\field\HiddenIntegerField;
 use actra\yuf\form\component\field\IntegerField;
 use actra\yuf\form\component\field\NumericField;
 use actra\yuf\form\component\field\TimeField;
+use actra\yuf\form\FormInput;
 use actra\yuf\html\HtmlText;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
@@ -53,7 +54,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
     public function testIntegerFieldWithPostedValue(): void
     {
         $field = new IntegerField(name: 'a', label: $this->label());
-        $field->validate(inputData: ['a' => ' 12 ']);
+        $field->validate(input: FormInput::fromArray(data: ['a' => ' 12 ']));
 
         $this->assertSame('<input type="text" name="a" id="a" value="12">', $field->render());
     }
@@ -61,7 +62,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
     public function testIntegerFieldWithInvalidInput(): void
     {
         $field = new IntegerField(name: 'a', label: $this->label());
-        $field->validate(inputData: ['a' => 'abc']);
+        $field->validate(input: FormInput::fromArray(data: ['a' => 'abc']));
 
         $this->assertSame(
             '<input type="text" name="a" id="a" value="abc" aria-invalid="true" aria-describedby="a-error">',
@@ -158,7 +159,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
     public function testDateFieldWithSwissPostedDate(): void
     {
         $field = new DateField(name: 'd', label: $this->label(), value: null, invalidError: $this->error());
-        $field->validate(inputData: ['d' => '3.2.2020']);
+        $field->validate(input: FormInput::fromArray(data: ['d' => '3.2.2020']));
 
         $this->assertSame('<input type="date" name="d" id="d" value="2020-02-03">', $field->render());
     }
@@ -166,7 +167,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
     public function testDateFieldWithInvalidInput(): void
     {
         $field = new DateField(name: 'd', label: $this->label(), value: null, invalidError: $this->error());
-        $field->validate(inputData: ['d' => '2020-02-30']);
+        $field->validate(input: FormInput::fromArray(data: ['d' => '2020-02-30']));
 
         $this->assertSame(
             '<input type="date" name="d" id="d" value="2020-02-30" aria-invalid="true" aria-describedby="d-error">',
@@ -202,7 +203,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
     public function testTimeFieldWithInvalidInput(): void
     {
         $field = new TimeField(name: 't', label: $this->label(), value: null, invalidError: $this->error());
-        $field->validate(inputData: ['t' => '25:00']);
+        $field->validate(input: FormInput::fromArray(data: ['t' => '25:00']));
 
         $this->assertSame(
             '<input type="time" name="t" id="t" value="25:00" aria-invalid="true" aria-describedby="t-error">',
@@ -219,7 +220,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
             invalidError: $this->error(),
             requiredError: HtmlText::encoded(textContent: 'Req')
         );
-        $field->validate(inputData: ['t' => '']);
+        $field->validate(input: FormInput::fromArray(data: ['t' => '']));
 
         $this->assertSame(
             '<input type="time" name="t" id="t" value="" aria-invalid="true" aria-describedby="t-error">',

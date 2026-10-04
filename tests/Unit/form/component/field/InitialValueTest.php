@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\form\component\field;
 
+use actra\yuf\form\FormInput;
 use actra\yuf\tests\Double\form\InitialValueTextAreaField;
 use actra\yuf\tests\Double\form\InitialValueTextField;
 use actra\yuf\html\HtmlText;
@@ -37,7 +38,6 @@ final class InitialValueTest extends TestCase
         $field->fill(value: 'from database');
 
         $this->assertSame('from database', $field->getValueAsString());
-        $this->assertSame('from database', $field->getOriginalValue());
         $this->assertFalse($field->valueHasChanged());
     }
 
@@ -55,7 +55,7 @@ final class InitialValueTest extends TestCase
     public function testSetInitialValueAfterValidateThrows(): void
     {
         $field = $this->createTextField();
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $this->expectException(LogicException::class);
         $this->expectExceptionMessage('field');
@@ -76,7 +76,7 @@ final class InitialValueTest extends TestCase
     public function testSetInitialValueAfterValidateWithoutOverwriteThrows(): void
     {
         $field = $this->createTextField();
-        $field->validate(inputData: [], overwriteValue: false);
+        $field->validateCurrentValue();
 
         $this->expectException(LogicException::class);
 
@@ -87,7 +87,7 @@ final class InitialValueTest extends TestCase
     {
         $field = $this->createTextAreaField();
         $field->fill(value: 'ok');
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $this->expectException(LogicException::class);
 
@@ -98,11 +98,11 @@ final class InitialValueTest extends TestCase
     {
         $field = $this->createTextField();
         $field->fill(value: 'initial');
-        $field->validate(inputData: ['field' => 'posted']);
+        $field->validate(input: FormInput::fromArray(data: ['field' => 'posted']));
 
         $field->setValue(value: 'later');
 
         $this->assertSame('later', $field->getValueAsString());
-        $this->assertSame('initial', $field->getOriginalValue());
+        $this->assertTrue($field->valueHasChanged());
     }
 }

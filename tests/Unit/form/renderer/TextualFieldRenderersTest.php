@@ -11,6 +11,7 @@ namespace actra\yuf\tests\Unit\form\renderer;
 use actra\yuf\form\component\field\HiddenField;
 use actra\yuf\form\component\field\TextAreaField;
 use actra\yuf\form\component\field\TextField;
+use actra\yuf\form\FormInput;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\TestCase;
 
@@ -29,7 +30,7 @@ final class TextualFieldRenderersTest extends TestCase
     public function testInputFieldRendersPostedValueTrimmed(): void
     {
         $field = new TextField(name: 'field', label: HtmlText::encoded(textContent: 'Label'));
-        $field->validate(inputData: ['field' => ' posted ']);
+        $field->validate(input: FormInput::fromArray(data: ['field' => ' posted ']));
 
         $this->assertStringContainsString('value="posted"', $field->render());
     }
@@ -54,7 +55,7 @@ final class TextualFieldRenderersTest extends TestCase
     public function testTextAreaRendersPostedText(): void
     {
         $field = new TextAreaField(name: 'text', label: HtmlText::encoded(textContent: 'Label'));
-        $field->validate(inputData: ['text' => "x\ny"]);
+        $field->validate(input: FormInput::fromArray(data: ['text' => "x\ny"]));
 
         $this->assertStringContainsString(">x\ny</textarea>", $field->render());
     }

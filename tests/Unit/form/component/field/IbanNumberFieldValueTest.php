@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\IbanNumberField;
+use actra\yuf\form\FormInput;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -53,7 +54,7 @@ final class IbanNumberFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['iban' => $input]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['iban' => $input]));
 
         $this->assertTrue($isValid);
         $this->assertSame($expected, $field->getValueAsString());
@@ -63,7 +64,7 @@ final class IbanNumberFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['iban' => 'xx']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['iban' => 'xx']));
 
         $this->assertFalse($isValid);
         $this->assertSame('xx', $field->getValueAsString());
@@ -75,19 +76,19 @@ final class IbanNumberFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertFalse($field->validate(inputData: ['iban' => 'CH93 0076 2011 6238 5295 8']));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['iban' => 'CH93 0076 2011 6238 5295 8'])));
     }
 
     public function testEmptyIbanIsValidWithoutRequiredError(): void
     {
-        $this->assertTrue($this->createField()->validate(inputData: ['iban' => '']));
+        $this->assertTrue($this->createField()->validate(input: FormInput::fromArray(data: ['iban' => ''])));
     }
 
     public function testEmptyIbanGivesOnlyTheRequiredError(): void
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
 
-        $isValid = $field->validate(inputData: ['iban' => '']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['iban' => '']));
 
         $this->assertFalse($isValid);
         $this->assertSame(1, $field->errorCollection->count());
@@ -98,7 +99,7 @@ final class IbanNumberFieldValueTest extends TestCase
     {
         $field = $this->createField(value: 'CH9300762011623852957');
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertSame('', $field->getValueAsString());
     }
 
@@ -106,7 +107,7 @@ final class IbanNumberFieldValueTest extends TestCase
     {
         $field = $this->createField(value: 'CH9300762011623852957');
 
-        $isValid = $field->validate(inputData: ['iban' => ['x']]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['iban' => ['x']]));
 
         $this->assertFalse($isValid);
         $this->assertSame(1, $field->errorCollection->count());

@@ -12,7 +12,6 @@ use actra\yuf\form\AmountParser;
 use actra\yuf\form\renderer\HiddenFieldRenderer;
 use actra\yuf\form\settings\InputTypeValue;
 use actra\yuf\html\HtmlText;
-use TypeError;
 use UnexpectedValueException;
 
 /**
@@ -75,16 +74,9 @@ final class HiddenIntegerField extends ParsedInputField
     /**
      * Changes the current value only, the initial value stays.
      *
-     * The parameter is declared `mixed` only while the legacy `FormField::setValue(mixed)` bridge exists; it becomes
-     * `?int` with the removal of the bridge.
-     *
-     * @throws TypeError If the value is not an `int` or `null`.
      */
-    public function setValue(mixed $value): void
+    public function setValue(?int $value): void
     {
-        if ($value !== null && !is_int(value: $value)) {
-            throw $this->createValueTypeError(expectedType: 'an int or null', value: $value);
-        }
         $this->changeText(text: $value === null ? '' : (string)$value);
     }
 }

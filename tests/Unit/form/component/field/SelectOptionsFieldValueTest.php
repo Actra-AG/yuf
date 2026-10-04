@@ -10,11 +10,12 @@ namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\SelectOptionsField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
+use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\TestCase;
-use TypeError;
 
 final class SelectOptionsFieldValueTest extends TestCase
 {
@@ -31,6 +32,11 @@ final class SelectOptionsFieldValueTest extends TestCase
             initialValue: $initialValue,
             requiredError: $requiredError
         );
+    }
+
+    protected function setUp(): void
+    {
+        FormNameRegistry::reset();
     }
 
     public function testValueIsEmptyAfterConstructionWithoutValue(): void
@@ -50,7 +56,7 @@ final class SelectOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['select' => 'a']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['select' => 'a']));
 
         $this->assertTrue($isValid);
         $this->assertSame('a', $field->getValueAsString());
@@ -60,7 +66,7 @@ final class SelectOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 'a');
 
-        $isValid = $field->validate(inputData: ['select' => '']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['select' => '']));
 
         $this->assertTrue($isValid);
         $this->assertSame('', $field->getValueAsString());
@@ -70,7 +76,7 @@ final class SelectOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
 
-        $this->assertFalse($field->validate(inputData: ['select' => '']));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['select' => ''])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
     }
 
@@ -78,7 +84,7 @@ final class SelectOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 'a');
 
-        $isValid = $field->validate(inputData: ['select' => 'x']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['select' => 'x']));
 
         $this->assertFalse($isValid);
         $this->assertSame('', $field->getValueAsString());
@@ -90,7 +96,7 @@ final class SelectOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
 
-        $field->validate(inputData: ['select' => 'x']);
+        $field->validate(input: FormInput::fromArray(data: ['select' => 'x']));
 
         $this->assertSame(1, $field->errorCollection->count());
     }
@@ -99,7 +105,7 @@ final class SelectOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 'a');
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertSame('', $field->getValueAsString());
     }
 
@@ -107,7 +113,7 @@ final class SelectOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 'a');
 
-        $isValid = $field->validate(inputData: ['select' => ['b']]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['select' => ['b']]));
 
         $this->assertFalse($isValid);
         $this->assertSame('', $field->getValueAsString());
@@ -119,7 +125,7 @@ final class SelectOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 'a');
 
-        $this->assertFalse($field->validate(inputData: ['select' => ['a', 'b']]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['select' => ['a', 'b']])));
     }
 
     public function testIsSelected(): void
@@ -145,13 +151,6 @@ final class SelectOptionsFieldValueTest extends TestCase
 
         $this->assertSame('b', $field->getValueAsString());
         $this->assertTrue($field->valueHasChanged());
-    }
-
-    public function testSetValueWithWrongTypeThrowsTypeError(): void
-    {
-        $this->expectException(TypeError::class);
-
-        $this->createField()->setValue(value: 5);
     }
 
     public function testEmptyValueLabelIsEmptyWithoutRequiredRule(): void

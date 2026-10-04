@@ -14,12 +14,10 @@ use actra\yuf\form\FormRenderer;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\form\model\UploadInput;
 use actra\yuf\form\renderer\FileFieldRenderer;
-use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\form\upload\FileUploadStorage;
 use actra\yuf\form\upload\SessionFileUploadStorage;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
-use LogicException;
 
 /**
  * Uploads one or several files. The value is the list of the files uploaded so far (`getFiles()`, key = hash of the
@@ -74,7 +72,7 @@ final class FileField extends FormField
             )
         );
         if ($requiredError !== null) {
-            $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
+            $this->addRequiredRule(errorMessage: $requiredError);
         }
     }
 
@@ -105,11 +103,9 @@ final class FileField extends FormField
      * user asked to remove and adds the new uploads. Manipulated upload data adds one error and the rules do not run;
      * the files uploaded before stay. Texts, lists and invalid values posted under the name of the field are ignored.
      */
-    private function readInput(FormInput $input): void
+    final protected function readInput(FormInput $input): void
     {
         $this->storage->removeExpired();
-        $this->readPointer(input: $input);
-        $this->readRemoveRequest(input: $input);
         $files = $this->removeRequestedFile(
             files: $this->storage->load(pointer: $this->uniqueSessFileStorePointer)
         );
@@ -120,6 +116,15 @@ final class FileField extends FormField
         }
         $this->files = $files;
         $this->storage->save(pointer: $this->uniqueSessFileStorePointer, files: $files);
+    }
+
+    /**
+     * The pointer of the files and the removal request come with the form, not with the files themselves.
+     */
+    protected function readAdditionalInput(FormInput $input): void
+    {
+        $this->readPointer(input: $input);
+        $this->readRemoveRequest(input: $input);
     }
 
     /**
@@ -322,62 +327,5 @@ final class FileField extends FormField
     public function renderValue(): string
     {
         return '';
-    }
-
-    /**
-     * @param array<array-key, mixed> $inputData
-     * @internal Bridge until `validate(FormInput)` replaces `validate(array)`. The array is `$_POST + $_FILES`, so it
-     *           is the source of the uploads.
-     */
-    protected function readInputData(array $inputData): void
-    {
-        $this->readInput(input: FormInput::fromArray(data: [], files: $inputData));
-    }
-
-    /**
-     * @internal Bridge until all fields have typed values.
-     */
-    protected function initializeLegacyValue(mixed $value): void
-    {
-    }
-
-    /**
-     * @return array<string, UploadedFile>
-     * @internal Bridge until all fields have typed values: use `getFiles()`.
-     */
-    public function getRawValue(bool $returnNullIfEmpty = false): array
-    {
-        return $this->files;
-    }
-
-    /**
-     * @return array<string, UploadedFile>
-     * @internal Bridge until all fields have typed values: the files do not have an initial value.
-     */
-    public function getOriginalValue(): array
-    {
-        return [];
-    }
-
-    /**
-     * @internal Bridge until all fields have typed values.
-     * @throws LogicException Always: the files come in with the request.
-     */
-    public function setValue(mixed $value): void
-    {
-        throw new LogicException(
-            message: 'The field ' . $this->name . ' has no setter, its files come in with the request.'
-        );
-    }
-
-    /**
-     * @internal Bridge until all fields have typed values.
-     * @throws LogicException Always: removed.
-     */
-    public function setOriginalValue(mixed $value): void
-    {
-        throw new LogicException(
-            message: 'setOriginalValue() was removed. The field ' . $this->name . ' has no initial value.'
-        );
     }
 }

@@ -10,6 +10,7 @@ namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\component\FormField;
 use actra\yuf\form\FormComponent;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\DefinitionListRenderer;
 use Closure;
@@ -110,12 +111,30 @@ final class ToggleChildren
 
     /**
      * Validates the child fields of the selected main options with the same input.
-     *
-     * @param array<array-key, mixed> $inputData
-     * @internal The signature is a bridge until `validate(FormInput)` replaces `validate(array)`.
      */
-    public function validateSelected(array $inputData, bool $overwriteValue): void
+    public function validateSelected(FormInput $input): void
     {
+        foreach ($this->listSelectedChildFields() as $childField) {
+            $childField->validate(input: $input);
+        }
+    }
+
+    /**
+     * Validates the child fields of the selected main options with their current values (without input).
+     */
+    public function validateSelectedCurrentValues(): void
+    {
+        foreach ($this->listSelectedChildFields() as $childField) {
+            $childField->validateCurrentValue();
+        }
+    }
+
+    /**
+     * @return list<FormField>
+     */
+    private function listSelectedChildFields(): array
+    {
+        $childFields = [];
         foreach ($this->childrenByMainOption as $mainOption => $children) {
             if (!$this->toggleField->isSelected(optionKey: (string)$mainOption)) {
                 continue;
@@ -125,9 +144,11 @@ final class ToggleChildren
                     continue;
                 }
                 $this->adoptForm(childComponent: $childComponent);
-                $childComponent->validate(inputData: $inputData, overwriteValue: $overwriteValue);
+                $childFields[] = $childComponent;
             }
         }
+
+        return $childFields;
     }
 
     /**

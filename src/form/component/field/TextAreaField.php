@@ -10,10 +10,9 @@ namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\TextAreaRenderer;
-use actra\yuf\form\rule\RequiredRule;
+use actra\yuf\form\rule\StringRule;
 use actra\yuf\html\HtmlText;
 use LogicException;
-use TypeError;
 use UnexpectedValueException;
 
 class TextAreaField extends TextualField
@@ -23,6 +22,8 @@ class TextAreaField extends TextualField
     /** @var list<string> */
     private(set) array $cssClassesForRenderer = [];
     private ?string $placeholder = null;
+    /** @var list<StringRule> */
+    private array $lineRules = [];
 
     public function __construct(
         string $name,
@@ -41,7 +42,7 @@ class TextAreaField extends TextualField
         }
 
         if (!is_null($requiredError)) {
-            $this->addRule(new RequiredRule($requiredError));
+            $this->addRequiredRule(errorMessage: $requiredError);
         }
     }
 
@@ -83,20 +84,9 @@ class TextAreaField extends TextualField
 
     /**
      * Changes the current value only, the initial value stays.
-     *
-     * The parameter is declared `mixed` only while the legacy `FormField::setValue(mixed)` bridge exists (PHP does
-     * not allow narrowing it); it becomes `string` with the removal of the bridge.
-     *
-     * @throws TypeError If the value is not a string.
      */
-    public function setValue(mixed $value): void
+    public function setValue(string $value): void
     {
-        if (!is_string(value: $value)) {
-            throw new TypeError(
-                message: 'The value of field ' . $this->name . ' must be a string, ' . get_debug_type(value: $value)
-                . ' given.'
-            );
-        }
         $this->changeText(text: $value);
     }
 
@@ -108,6 +98,29 @@ class TextAreaField extends TextualField
     protected function setInitialValue(string $value): void
     {
         $this->changeInitialText(text: $value);
+    }
+
+    /**
+     * Adds a rule that is applied to every line of `getValues()` (trimmed, no empty lines); a rule that fails for
+     * one or more lines adds its error message once.
+     */
+    public function addEachRule(StringRule $formRule): void
+    {
+        $this->lineRules[] = $formRule;
+    }
+
+    protected function checkRules(): void
+    {
+        parent::checkRules();
+        if ($this->lineRules === []) {
+            return;
+        }
+        $lines = $this->getValues();
+        foreach ($this->lineRules as $rule) {
+            if (!array_all(array: $lines, callback: static fn(string $line): bool => $rule->validate(value: $line))) {
+                $this->addErrorAsHtmlTextObject(errorMessageObject: $rule->getErrorMessage());
+            }
+        }
     }
 
     /**

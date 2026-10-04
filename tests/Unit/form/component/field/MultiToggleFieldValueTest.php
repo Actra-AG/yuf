@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\MultiToggleField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\TestCase;
@@ -53,7 +54,7 @@ final class MultiToggleFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['toggle' => ['b', 'a']]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['toggle' => ['b', 'a']]));
 
         $this->assertTrue($isValid);
         $this->assertSame(['b', 'a'], $field->getValues());
@@ -63,7 +64,7 @@ final class MultiToggleFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValues: ['a']);
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertSame([], $field->getValues());
     }
 
@@ -74,7 +75,7 @@ final class MultiToggleFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertFalse($field->validate(inputData: ['toggle' => 'a']));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['toggle' => 'a'])));
         $this->assertSame([], $field->getValues());
         $this->assertSame('The invalid input was ignored.', $field->errorCollection->getFirstError()->render());
     }
@@ -83,7 +84,7 @@ final class MultiToggleFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertFalse($field->validate(inputData: ['toggle' => '']));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['toggle' => ''])));
         $this->assertSame([], $field->getValues());
     }
 
@@ -91,7 +92,7 @@ final class MultiToggleFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertFalse($field->validate(inputData: ['toggle' => ['a', 'x']]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['toggle' => ['a', 'x']])));
         $this->assertSame([], $field->getValues());
         $this->assertSame(1, $field->errorCollection->count());
     }
@@ -100,7 +101,7 @@ final class MultiToggleFieldValueTest extends TestCase
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
 
-        $this->assertFalse($field->validate(inputData: []));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
     }
 
@@ -117,7 +118,7 @@ final class MultiToggleFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValues: ['a']);
 
-        $field->validate(inputData: ['toggle' => ['b']]);
+        $field->validate(input: FormInput::fromArray(data: ['toggle' => ['b']]));
 
         $this->assertTrue($field->valueHasChanged());
         $this->assertSame(['b'], $field->getAddedValues());

@@ -737,6 +737,76 @@ Verify: `grep -rn getRawValue src/` is empty; as task 2.
 
 Handover notes:
 
+
+Done (2026-10-04), `ddev composer check` green (1253 tests), 19 baseline entries removed (all rules), none added; 17
+entries (13 blocks) remain in `src/form/`. `example/` returns 200 with "Hello World!".
+
+**What was built**
+
+- New rules (`actra\yuf\form\rule`, all non-final): bases `StringRule`, `StringListRule`, `IntegerRule`, `FloatRule`,
+  `DecimalRule` (with `compare()`/`toLimit()` helpers, bcmath); `MinCountRule`/`MaxCountRule`, `IntegerMinRule`/
+  `IntegerMaxRule`, `FloatMinRule`/`FloatMaxRule`, `DecimalMinRule`/`DecimalMaxRule` (arguments `min`/`max`/
+  `minCount`/`maxCount`, `errorMessage`). Retyped: `MinLengthRule`, `MaxLengthRule`, `RegexRule`, `ValidValueRule`
+  (`list<string>`, strict), `ValidEmailAddressRule` (no `setValue()`). `FormRule` only stores the message.
+- Removed rules: `RequiredRule`, `FloatValueRule`, `NumericValueRule`, `NoArrayRule`, `ValueBetweenRule`,
+  `MinValueRule`, `MaxValueRule`, `ValidateAgainstOptions`.
+- `FormField`: no value, abstract `renderValue()`/`isValueEmpty()`/`valueHasChanged()`/`readInput(FormInput)`, hooks
+  `readAdditionalInput()`, `checkRules()`, `validateChildFields()`; `final validate(FormInput)`; `validateCurrentValue()`;
+  required check via `addRequiredRule()` (stores one message; a second call replaces it) and `isRequired()`.
+  Typed `addRule()` on `TextualField` (`StringRule`), `SingleOptionsField` (`StringRule`), `MultiOptionsField`
+  (`StringListRule`, `addEachRule(StringRule)`); `addEachRule()` on `TextAreaField`; `addValueRule()` on `IntegerField`,
+  `FloatField`, `DecimalField`. Value rules run only for a parsed, non-empty value.
+- `Form::validate(?FormInput)`/`isSent(?FormInput)`, `FormInput::fromGlobals(methodPost)` (the only `$_POST/$_GET/$_FILES`
+  access), CSRF field validated with the same `FormInput` (second pass kept), `FormNameRegistry` (`@internal`).
+- Real typed setters everywhere; `PasswordField`, `CsrfTokenField`, `FileField`, `BooleanField`, `MultiOptionsField` have
+  no `setValue()`; `getAddedValues()`/`getRemovedValues()` only on `MultiOptionsField` and `FileField`.
+- Toggle children: `ToggleChildren::validateSelected(FormInput)` called from the `validateChildFields()` hook.
+  `FileField` reads pointer and removal request in `readAdditionalInput()`.
+
+**Deviations (and why)**
+
+1. `SingleOptionsField::addRule(StringRule)` was added (design lists typed `addRule()` only for text and multi fields);
+   without it a rule on a select/radio field (v3 allowed any rule) would be lost.
+2. `ValidValueRule` takes `list<string>` and compares strictly (v3 loose); `ValidateAgainstOptions` is deleted.
+3. `FormNameRegistry` compares strictly (v3 `in_array` loose: `'1'` and `'01'` collided).
+4. `validateCurrentValue()` of a toggle validates only its own value (children need the `FormInput`); v3
+   `validate(..., overwriteValue: false)` also validated the children.
+5. The invalid-value error of `ParsedInputField` stays in its `validateCurrentValue()` override (not moved to the read
+   step); behaviour identical. `IbanNumberField`, `ZipCodeField`, `PhoneNumberField`, `CsrfTokenField` keep their
+   `validateCurrentValue()` overrides.
+6. `MultiOptionsField::toKeyList()` keeps a phpdoc `array<array-key, mixed>` (runtime `TypeError` guard for non-strings).
+7. `grep getRawValue src/` still matches `src/table/` (`TableItemModel::getRawValue()`, unrelated).
+
+**Bridge removed (checklist)**: `getRawValue`, `getOriginalValue`, `setOriginalValue`, `initializeLegacyValue`,
+`readInputData`, `validate(array, bool)`, `validateInput`, `TextualField::setValue` (throwing), bridge `setValue(mixed)` and
+`createValueTypeError`, legacy `FormField::$value`/`acceptArrayAsValue`, `FormField` `value` constructor argument,
+`MultiOptionsField::setValue`, `BooleanField::setValue`, `FileField::setValue`. Only `FormNameRegistry` has `@internal`.
+HTML output: unchanged (all markup tests pass).
+
+**Tests changed on purpose**: all `validate(inputData:)` calls now `validate(input: FormInput::fromArray(...))`,
+`overwriteValue: false` is `validateCurrentValue()`; removed tests for `getRawValue(true)`, `setOriginalValue()`,
+`getOriginalValue()`, wrong-type `TypeError` setters (PHPStan checks now), legacy throwing setters (now "has no
+`setValue()`" via reflection), `validateInput()` duplicates; `FileFieldValueTest`/`FileFieldMarkupTest` use a `request()`
+helper; `FormCsrfTest`/`SpecialFieldRenderersTest` pass a `FormInput` instead of superglobals; seven form-building tests
+call `FormNameRegistry::reset()` in `setUp()`. New: `FormNameRegistryTest`, `FormValidateTest`, `FormFieldListenerTest`,
+`FieldRulesTest`, `rule/StringRulesTest`, `rule/NumericRulesTest`, `rule/StringListRulesTest`, `FormInputTest` (globals),
+doubles `NoSpacesRule`, `RecordingFieldListener`.
+
+**Remaining baseline in `src/form/`** (17 entries): `FormComponent` 2, `FormRenderer` 1, `FormInfo` 3, `ErrorCollection` 1,
+`DefaultCollectionRenderer` 1, `DefaultFormRenderer` 1, `DefinitionListRenderer` 3, `FormControlRenderer` 1,
+`FormInfoRenderer` 3, `LegendAndListRenderer` 1.
+
+**For task 7**: fix those entries and rename the enums; `README.md` still mentions `AmountField`, `valueIsInt`,
+`getRawValue()`, `addRule(new RequiredRule())`; `UPGRADE.md` part 6 is written.
+
+Review changes (user decisions):
+- `validateCurrentValue()` of `ToggleField`/`MultiToggleField` validates the children of the selected options with
+  their current values again (as in v3): new hook `FormField::validateChildFieldsWithCurrentValues()` and
+  `ToggleChildren::validateSelectedCurrentValues()`; inside `validate()` the children are still validated once, with
+  the input (`ToggleChildrenTest`).
+- The argument of `addRule()`, `addEachRule()` and `addValueRule()` keeps the v3 name `formRule`, so existing calls
+  with named arguments stay valid (UPGRADE.md updated).
+
 ### Task 7: Finish `src/form/`
 
 - Remaining baseline entries in `src/form/` (renderers, collections, `FormComponent`, `FormInfo`) fixed, enums renamed

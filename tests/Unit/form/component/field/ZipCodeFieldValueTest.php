@@ -10,14 +10,20 @@ namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\ZipCodeField;
-use actra\yuf\form\FormMessages;
 use actra\yuf\form\FormInput;
+use actra\yuf\form\FormMessages;
+use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\TestCase;
 
 final class ZipCodeFieldValueTest extends TestCase
 {
     private static int $formCounter = 0;
+
+    protected function setUp(): void
+    {
+        FormNameRegistry::reset();
+    }
 
     private function createField(?string $value = null, ?HtmlText $individualInvalidError = null): ZipCodeField
     {
@@ -43,7 +49,7 @@ final class ZipCodeFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['zip' => '8000']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['zip' => '8000']));
 
         $this->assertTrue($isValid);
         $this->assertSame('8000', $field->getValueAsString());
@@ -53,7 +59,7 @@ final class ZipCodeFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['zip' => ' 8000 ']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['zip' => ' 8000 ']));
 
         $this->assertTrue($isValid);
         $this->assertSame('8000', $field->getValueAsString());
@@ -63,7 +69,7 @@ final class ZipCodeFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['zip' => 'x']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['zip' => 'x']));
 
         $this->assertFalse($isValid);
         $this->assertSame('x', $field->getValueAsString());
@@ -79,7 +85,7 @@ final class ZipCodeFieldValueTest extends TestCase
         $field = $this->createField();
         $form->addField(formField: $field);
 
-        $field->validate(inputData: ['zip' => 'x']);
+        $field->validate(input: FormInput::fromArray(data: ['zip' => 'x']));
 
         $this->assertSame('Die eingegebene PLZ ist ungültig.', $field->errorCollection->getFirstError()->render());
     }
@@ -88,7 +94,7 @@ final class ZipCodeFieldValueTest extends TestCase
     {
         $field = $this->createField(individualInvalidError: HtmlText::encoded(textContent: 'Own text'));
 
-        $field->validate(inputData: ['zip' => 'x']);
+        $field->validate(input: FormInput::fromArray(data: ['zip' => 'x']));
 
         $this->assertSame(1, $field->errorCollection->count());
         $this->assertSame('Own text', $field->errorCollection->getFirstError()->render());
@@ -102,7 +108,7 @@ final class ZipCodeFieldValueTest extends TestCase
             requiredError: HtmlText::encoded(textContent: 'Required')
         );
 
-        $isValid = $field->validate(inputData: ['zip' => ' ']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['zip' => ' ']));
 
         $this->assertFalse($isValid);
         $this->assertSame(1, $field->errorCollection->count());
@@ -111,14 +117,14 @@ final class ZipCodeFieldValueTest extends TestCase
 
     public function testEmptyZipCodeIsValidWithoutRequiredError(): void
     {
-        $this->assertTrue($this->createField()->validate(inputData: ['zip' => '']));
+        $this->assertTrue($this->createField()->validate(input: FormInput::fromArray(data: ['zip' => ''])));
     }
 
     public function testCountryCodeFromInputDataIsUsedForValidation(): void
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['zip' => '12345', 'countryCode' => 'DE']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['zip' => '12345', 'countryCode' => 'DE']));
 
         $this->assertTrue($isValid);
         $this->assertSame('DE', $field->countryCode);
@@ -128,7 +134,7 @@ final class ZipCodeFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['zip' => '8000', 'countryCode' => 'DE']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['zip' => '8000', 'countryCode' => 'DE']));
 
         $this->assertFalse($isValid);
     }
@@ -137,7 +143,7 @@ final class ZipCodeFieldValueTest extends TestCase
     {
         $field = new ZipCodeField(name: 'zip', label: HtmlText::encoded(textContent: 'Zip'), countryCode: 'AT');
 
-        $this->assertTrue($field->validate(inputData: ['zip' => '1010']));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['zip' => '1010'])));
         $this->assertSame('AT', $field->countryCode);
     }
 
@@ -149,7 +155,7 @@ final class ZipCodeFieldValueTest extends TestCase
             countryCodeFieldName: 'country'
         );
 
-        $field->validate(inputData: ['zip' => '12345', 'country' => 'DE', 'countryCode' => 'AT']);
+        $field->validate(input: FormInput::fromArray(data: ['zip' => '12345', 'country' => 'DE', 'countryCode' => 'AT']));
 
         $this->assertSame('DE', $field->countryCode);
     }
@@ -158,23 +164,14 @@ final class ZipCodeFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertTrue($field->validate(inputData: ['zip' => 'SW1A 1AA', 'countryCode' => 'GB']));
-    }
-
-    public function testValidateInputReadsTheCountryCodeFromTheFormInput(): void
-    {
-        $field = $this->createField();
-
-        $isValid = $field->validateInput(input: FormInput::fromArray(data: ['zip' => '12345', 'countryCode' => 'DE']));
-
-        $this->assertTrue($isValid);
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['zip' => 'SW1A 1AA', 'countryCode' => 'GB'])));
     }
 
     public function testValueIsEmptyStringAfterValidationWithMissingKey(): void
     {
         $field = $this->createField(value: '8000');
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertSame('', $field->getValueAsString());
     }
 
@@ -182,7 +179,7 @@ final class ZipCodeFieldValueTest extends TestCase
     {
         $field = $this->createField(value: '8000');
 
-        $isValid = $field->validate(inputData: ['zip' => ['x']]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['zip' => ['x']]));
 
         $this->assertFalse($isValid);
         $this->assertSame(1, $field->errorCollection->count());
@@ -193,7 +190,7 @@ final class ZipCodeFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['zip' => '8000', 'countryCode' => ['x']]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['zip' => '8000', 'countryCode' => ['x']]));
 
         $this->assertTrue($isValid);
         $this->assertSame('CH', $field->countryCode);

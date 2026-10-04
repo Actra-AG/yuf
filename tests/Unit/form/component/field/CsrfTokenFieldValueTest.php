@@ -13,7 +13,6 @@ use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\security\CsrfTokenSource;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
-use LogicException;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -33,7 +32,7 @@ final class CsrfTokenFieldValueTest extends TestCase
      */
     private function validate(CsrfTokenField $field, array $data, array $query = []): bool
     {
-        return $field->validateInput(input: FormInput::fromArray(data: $data, query: $query));
+        return $field->validate(input: FormInput::fromArray(data: $data, query: $query));
     }
 
     public function testNameIsTheCsrfFieldName(): void
@@ -55,11 +54,11 @@ final class CsrfTokenFieldValueTest extends TestCase
         $this->assertFalse($reflection->hasMethod(name: 'setInitialValue'));
     }
 
-    public function testBridgeSetterThrows(): void
+    public function testFieldHasNoSetter(): void
     {
-        $this->expectException(LogicException::class);
+        $reflection = new ReflectionClass(objectOrClass: CsrfTokenField::class);
 
-        $this->createField()->setValue(value: 'abc');
+        $this->assertFalse($reflection->hasMethod(name: 'setValue'));
     }
 
     public function testValidTokenIsAccepted(): void
@@ -191,12 +190,12 @@ final class CsrfTokenFieldValueTest extends TestCase
         $this->assertFalse($isValid);
     }
 
-    public function testArrayBasedValidateHasNoQueryString(): void
+    public function testInputWithoutQueryStringHasNoTokenFallback(): void
     {
         $field = $this->createField();
 
-        $this->assertTrue($field->validate(inputData: ['csrftoken' => 'expected-token']));
-        $this->assertFalse($this->createField()->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['csrftoken' => 'expected-token'])));
+        $this->assertFalse($this->createField()->validate(input: FormInput::fromArray(data: [])));
     }
 
     public function testEachValidationChecksTheNewInput(): void

@@ -10,7 +10,9 @@ namespace actra\yuf\tests\Unit\form\renderer;
 
 use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\FileField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
+use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\InMemoryFileUploadStorage;
@@ -28,6 +30,11 @@ final class FileFieldMarkupTest extends TestCase
     private const string FIRST_PATH = '/tmp/v332files/a';
     private const string SECOND_PATH = '/tmp/v332files/b';
     private static int $formCounter = 0;
+
+    protected function setUp(): void
+    {
+        FormNameRegistry::reset();
+    }
 
     /**
      * @param list<string> $names
@@ -87,7 +94,7 @@ final class FileFieldMarkupTest extends TestCase
         );
         $form->addField(formField: $field);
 
-        $field->validate(inputData: $inputData + ['file_UID' => FileFieldMarkupTest::POINTER]);
+        $field->validate(input: $this->request($inputData + ['file_UID' => FileFieldMarkupTest::POINTER]));
 
         $this->assertSame(str_replace(search: '{form}', replace: $formName, subject: $expectedHtml), $form->render());
     }
@@ -416,7 +423,7 @@ final class FileFieldMarkupTest extends TestCase
             storage: $storage
         );
         $field->messages = FormMessages::german();
-        $field->validate(inputData: ['file_UID' => FileFieldMarkupTest::POINTER]);
+        $field->validate(input: $this->request(['file_UID' => FileFieldMarkupTest::POINTER]));
 
         return $field;
     }
@@ -519,5 +526,13 @@ final class FileFieldMarkupTest extends TestCase
         $field->messages = new FormMessages(removeFile: 'x<y');
 
         $this->assertStringContainsString('>x&lt;y</button>', $field->render());
+    }
+
+    /**
+     * @param array<array-key, mixed> $request Posted values and uploads in one array (`FormInput` reads both from it)
+     */
+    private function request(array $request): FormInput
+    {
+        return FormInput::fromArray(data: [], files: $request);
     }
 }

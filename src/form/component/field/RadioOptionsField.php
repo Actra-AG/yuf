@@ -14,12 +14,11 @@ use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\DefinitionListRenderer;
 use actra\yuf\form\renderer\LegendAndListRenderer;
 use actra\yuf\form\renderer\RadioOptionsRenderer;
-use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\html\HtmlText;
 
 class RadioOptionsField extends SingleOptionsField
 {
-    private ?RequiredRule $defaultRequiredRule = null;
+    private bool $hasDefaultRequiredMessage = false;
 
     public function __construct(
         string $name,
@@ -38,12 +37,12 @@ class RadioOptionsField extends SingleOptionsField
         );
         // Mandatory rule: In a field with radio options it is always required to choose one of those options
         if ($requiredError === null) {
-            $this->defaultRequiredRule = new RequiredRule(
-                defaultErrorMessage: HtmlText::unencoded(textContent: $this->messages->selectOneOption)
+            $this->hasDefaultRequiredMessage = true;
+            $this->addRequiredRule(
+                errorMessage: HtmlText::unencoded(textContent: $this->messages->selectOneOption)
             );
-            $this->addRule(formRule: $this->defaultRequiredRule);
         } else {
-            $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
+            $this->addRequiredRule(errorMessage: $requiredError);
         }
         switch ($layout) {
             case RadioOptionsLayout::DEFINITION_LIST:
@@ -64,9 +63,11 @@ class RadioOptionsField extends SingleOptionsField
      */
     public function validateCurrentValue(): bool
     {
-        $this->defaultRequiredRule?->setErrorMessage(
-            errorMessage: HtmlText::unencoded(textContent: $this->messages->selectOneOption)
-        );
+        if ($this->hasDefaultRequiredMessage) {
+            $this->addRequiredRule(
+                errorMessage: HtmlText::unencoded(textContent: $this->messages->selectOneOption)
+            );
+        }
 
         return parent::validateCurrentValue();
     }

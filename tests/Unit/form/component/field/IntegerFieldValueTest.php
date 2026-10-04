@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\IntegerField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\InitialValueIntegerField;
@@ -16,7 +17,6 @@ use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
-use TypeError;
 use UnexpectedValueException;
 
 /**
@@ -88,7 +88,7 @@ final class IntegerFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertTrue($field->validate(inputData: ['amount' => $input]));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['amount' => $input])));
         $this->assertSame($expected, $field->getValueAsInt());
     }
 
@@ -119,7 +119,7 @@ final class IntegerFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertFalse($field->validate(inputData: ['amount' => $input]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['amount' => $input])));
         $this->assertSame('The given value is invalid.', $field->errorCollection->getFirstError()->render());
         $this->assertStringContainsString(
             'value="' . htmlspecialchars(string: $input, flags: ENT_QUOTES) . '"',
@@ -131,7 +131,7 @@ final class IntegerFieldValueTest extends TestCase
     public function testGetterThrowsForInvalidInput(string $input): void
     {
         $field = $this->createField();
-        $field->validate(inputData: ['amount' => $input]);
+        $field->validate(input: FormInput::fromArray(data: ['amount' => $input]));
 
         $this->expectException(UnexpectedValueException::class);
         $this->expectExceptionMessage('field amount');
@@ -143,7 +143,7 @@ final class IntegerFieldValueTest extends TestCase
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
 
-        $field->validate(inputData: ['amount' => 'abc']);
+        $field->validate(input: FormInput::fromArray(data: ['amount' => 'abc']));
 
         $this->assertSame(1, $field->errorCollection->count());
     }
@@ -156,7 +156,7 @@ final class IntegerFieldValueTest extends TestCase
             individualInvalidError: HtmlText::encoded(textContent: 'Not a whole number')
         );
 
-        $field->validate(inputData: ['amount' => '1.5']);
+        $field->validate(input: FormInput::fromArray(data: ['amount' => '1.5']));
 
         $this->assertSame('Not a whole number', $field->errorCollection->getFirstError()->render());
     }
@@ -166,7 +166,7 @@ final class IntegerFieldValueTest extends TestCase
         $field = $this->createField();
         $field->messages = FormMessages::german();
 
-        $field->validate(inputData: ['amount' => 'abc']);
+        $field->validate(input: FormInput::fromArray(data: ['amount' => 'abc']));
 
         $this->assertSame('Der angegebene Wert ist ungültig.', $field->errorCollection->getFirstError()->render());
     }
@@ -176,7 +176,7 @@ final class IntegerFieldValueTest extends TestCase
         foreach (['', '   '] as $input) {
             $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
 
-            $this->assertFalse($field->validate(inputData: ['amount' => $input]));
+            $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['amount' => $input])));
             $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
         }
     }
@@ -185,7 +185,7 @@ final class IntegerFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 5);
 
-        $this->assertTrue($field->validate(inputData: ['amount' => '']));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['amount' => ''])));
         $this->assertNull($field->getValueAsInt());
     }
 
@@ -193,7 +193,7 @@ final class IntegerFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 5);
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertNull($field->getValueAsInt());
     }
 
@@ -201,7 +201,7 @@ final class IntegerFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 5);
 
-        $this->assertFalse($field->validate(inputData: ['amount' => ['1']]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['amount' => ['1']])));
         $this->assertNull($field->getValueAsInt());
         $this->assertSame(1, $field->errorCollection->count());
         $this->assertSame('The invalid input was ignored.', $field->errorCollection->getFirstError()->render());
@@ -210,7 +210,7 @@ final class IntegerFieldValueTest extends TestCase
     public function testPostedInputIsRenderedAsCanonicalNumber(): void
     {
         $field = $this->createField();
-        $field->validate(inputData: ['amount' => ' +007 ']);
+        $field->validate(input: FormInput::fromArray(data: ['amount' => ' +007 ']));
 
         $this->assertStringContainsString('value="7"', $field->render());
     }
@@ -219,10 +219,10 @@ final class IntegerFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 5);
 
-        $field->validate(inputData: ['amount' => ' 5 ']);
+        $field->validate(input: FormInput::fromArray(data: ['amount' => ' 5 ']));
         $this->assertFalse($field->valueHasChanged());
 
-        $field->validate(inputData: ['amount' => '6']);
+        $field->validate(input: FormInput::fromArray(data: ['amount' => '6']));
         $this->assertTrue($field->valueHasChanged());
     }
 
@@ -230,7 +230,7 @@ final class IntegerFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 5);
 
-        $field->validate(inputData: ['amount' => 'abc']);
+        $field->validate(input: FormInput::fromArray(data: ['amount' => 'abc']));
 
         $this->assertTrue($field->valueHasChanged());
     }
@@ -263,35 +263,13 @@ final class IntegerFieldValueTest extends TestCase
     public function testSetValueClearsKeptInvalidInputWithoutAnError(): void
     {
         $field = $this->createField();
-        $field->validate(inputData: ['amount' => 'abc']);
+        $field->validate(input: FormInput::fromArray(data: ['amount' => 'abc']));
         $errorCount = $field->errorCollection->count();
 
         $field->setValue(value: 3);
 
         $this->assertSame(3, $field->getValueAsInt());
         $this->assertSame($errorCount, $field->errorCollection->count());
-    }
-
-    /**
-     * @return iterable<string, array{string|float|bool|array<int, int>}>
-     */
-    public static function wrongTypeProvider(): iterable
-    {
-        yield 'string' => ['5'];
-        yield 'float' => [5.0];
-        yield 'bool' => [true];
-        yield 'array' => [[5]];
-    }
-
-    /**
-     * @param string|float|bool|array<int, int> $value
-     */
-    #[DataProvider('wrongTypeProvider')]
-    public function testSetValueRejectsAWrongType(string|float|bool|array $value): void
-    {
-        $this->expectException(TypeError::class);
-
-        $this->createField()->setValue(value: $value);
     }
 
     public function testSetInitialValueSetsCurrentAndInitialValue(): void
@@ -307,7 +285,7 @@ final class IntegerFieldValueTest extends TestCase
     public function testSetInitialValueAfterValidationThrows(): void
     {
         $field = new InitialValueIntegerField(name: 'amount', label: HtmlText::encoded(textContent: 'Amount'));
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $this->expectException(LogicException::class);
 

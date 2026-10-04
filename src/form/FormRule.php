@@ -8,9 +8,12 @@ declare(strict_types=1);
 
 namespace actra\yuf\form;
 
-use actra\yuf\form\component\FormField;
 use actra\yuf\html\HtmlText;
 
+/**
+ * Base of all rules: it only stores the error message. A rule extends the typed base that fits the value of the
+ * field it is added to: `StringRule`, `StringListRule`, `IntegerRule`, `FloatRule` or `DecimalRule`.
+ */
 abstract class FormRule
 {
     private HtmlText $validationErrorMessage;
@@ -19,15 +22,6 @@ abstract class FormRule
     {
         $this->validationErrorMessage = $defaultErrorMessage;
     }
-
-    /**
-     * Method to validate a form field.
-     *
-     * @param FormField $formField The field instance to check against
-     *
-     * @return bool
-     */
-    abstract public function validate(FormField $formField): bool;
 
     /**
      * Overwrite the error message for this rule.

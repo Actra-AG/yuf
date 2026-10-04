@@ -8,19 +8,19 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component;
 
-use ArrayObject;
-use DateTime;
 use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\FormComponent;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
-use actra\yuf\form\FormRule;
 use actra\yuf\form\listener\FormFieldListener;
-use actra\yuf\form\rule\RequiredRule;
-use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
 use LogicException;
-use UnexpectedValueException;
 
+/**
+ * A field of a form. It holds no value: the families of fields (text, options, boolean, files, ...) hold their value
+ * with a precise type and have their typed getters, setters and rules. This base owns what does not depend on the
+ * value: label, info, errors, listeners, the required check and the `validate()` template.
+ */
 abstract class FormField extends FormComponent
 {
     public ?HtmlText $fieldInfo = null;
@@ -37,27 +37,20 @@ abstract class FormField extends FormComponent
     /** @var FormFieldListener[] */
     protected array $listeners = [];
 
-    // Renderer options:
-    private mixed $value;
-    private mixed $originalValue = null;
-    /** @var FormRule[] */
-    private array $rules = [];
-    private bool $acceptArrayAsValue = false;
+    private ?HtmlText $requiredErrorMessage = null;
     private bool $inputReceived = false;
     private bool $inputRejected = false;
+    private bool $validatesInput = false;
 
     /**
      * @param string $name The internal name for this formField which is also used by the renderer (name="")
      * @param HtmlText $label The field label to be used by the renderer
-     * @param mixed $value The original value for this formField. Depending on the specific field, it can be a string,
-     *                     float, integer, and even an array. By default, it is null.
      * @param ?HtmlText $labelInfoText Additional text padded to the displayed label-name (see FileField max-Info, for
      *                                 example)
      */
     public function __construct(
         string    $name,
         HtmlText  $label,
-        mixed     $value = null,
         ?HtmlText $labelInfoText = null
     )
     {
@@ -65,189 +58,71 @@ abstract class FormField extends FormComponent
         $this->label = $label;
         parent::__construct(name: $name);
         $this->messages = new FormMessages();
-        $this->initializeLegacyValue(value: $value);
         $this->labelInfoText = $labelInfoText;
     }
 
     /**
-     * @internal Bridge until all fields have typed values (removed with `getRawValue()`): fields with a typed value
-     *           override this and keep their value themselves.
+     * The text of the current value for the renderer, HTML-encoded.
      */
-    protected function initializeLegacyValue(mixed $value): void
-    {
-        if (is_array(value: $value)) {
-            // If the value to be pre-filled is already an array, we can also accept an array as user input
-            $this->acceptArrayAsValue();
-        }
+    abstract public function renderValue(): string;
 
-        $this->setValue(value: $value);
-        $this->setOriginalValue(value: $value);
-    }
+    /**
+     * Whether the field has no value (the empty value of its type).
+     */
+    abstract public function isValueEmpty(): bool;
 
-    protected function acceptArrayAsValue(): void
+    /**
+     * Returns whether the current value differs from the initial value (the constructor value).
+     */
+    abstract public function valueHasChanged(): bool;
+
+    /**
+     * Reads the value of this field from the request. Input of the wrong shape is rejected with `rejectInput()`.
+     */
+    abstract protected function readInput(FormInput $input): void;
+
+    /**
+     * Hook for request input besides the field's own value (e.g. the country code of a phone number or the pointer
+     * of uploaded files). It runs before the value is read, so the value can depend on it.
+     */
+    protected function readAdditionalInput(FormInput $input): void
     {
-        $this->acceptArrayAsValue = true;
     }
 
     /**
-     * @internal Bridge until all fields have typed values: fields with a typed value have a typed setter instead.
+     * Hook: adds one error per failed rule. Called for input that was not rejected; the families check their typed
+     * rules here (never for an empty value).
      */
-    public function setValue(mixed $value): void
+    protected function checkRules(): void
     {
-        if (
-            is_array(value: $value)
-            && !$this->isArrayAsValueAllowed()
-        ) {
-            $this->addError(
-                errorMessage: $this->messages->invalidInput,
-                isEncodedForRendering: false
-            );
-
-            return;
-        }
-        if (is_string(value: $value)) {
-            $value = str_replace(
-                search: "\xE2\x80\x8B",
-                replace: '',
-                subject: $value
-            );
-        }
-
-        $this->value = $value;
-    }
-
-    protected function isArrayAsValueAllowed(): bool
-    {
-        return $this->acceptArrayAsValue;
-    }
-
-    public function renderValue(): string
-    {
-        $value = $this->getRawValue();
-        if ($value !== null && !is_scalar(value: $value)) {
-            throw new UnexpectedValueException(
-                message: 'The value of field ' . $this->name . ' cannot be rendered, it is of type '
-                . get_debug_type(value: $value) . '.'
-            );
-        }
-
-        return HtmlEncoder::encode(value: $value);
     }
 
     /**
-     * @internal Bridge until all fields have typed values: use the typed getter of the field.
+     * Hook: validates the fields that depend on this one (the children of a toggle field), after this field is valid.
      */
-    public function getRawValue(bool $returnNullIfEmpty = false): mixed
+    protected function validateChildFields(FormInput $input): void
     {
-        if ($this->isValueEmpty() && $returnNullIfEmpty) {
-            return null;
-        }
-
-        return $this->value;
-    }
-
-    public function isValueEmpty(): bool
-    {
-        if ($this->value === null) {
-            return true;
-        }
-
-        if (is_scalar(value: $this->value)) {
-            return (strlen(string: trim(string: (string)$this->value)) <= 0);
-        } elseif (is_array(value: $this->value)) {
-            return (count(value: array_filter(array: $this->value)) <= 0);
-        } elseif ($this->value instanceof ArrayObject) {
-            return (count(value: array_filter(array: (array)$this->value)) <= 0);
-        } elseif ($this->value instanceof DateTime) {
-            return false;
-        } else {
-            throw new UnexpectedValueException(message: 'Could not check value against emptiness');
-        }
     }
 
     /**
-     * @internal Bridge until all fields have typed values: the original value is the initial value of the field.
+     * Hook: validates the dependent fields with their current values, when `validateCurrentValue()` is called directly
+     * (not as part of `validate()`) and this field is valid.
      */
-    public function getOriginalValue(): mixed
+    protected function validateChildFieldsWithCurrentValues(): void
     {
-        return $this->originalValue;
     }
 
     /**
-     * @internal Bridge until all fields have typed values: set the initial value in the constructor.
+     * Adds the check that the field is not empty. Replaces an earlier required message.
      */
-    public function setOriginalValue(mixed $value): void
-    {
-        $this->originalValue = $value;
-    }
-
-    /**
-     * @return list<mixed>
-     */
-    public function getAddedValues(): array
-    {
-        if (!is_array(value: $this->value) || !is_array(value: $this->originalValue)) {
-            return [];
-        }
-
-        $addedValues = [];
-
-        foreach ($this->value as $selectedValue) {
-            if (!in_array(
-                needle: $selectedValue,
-                haystack: $this->originalValue
-            )) {
-                $addedValues[] = $selectedValue;
-            }
-        }
-
-        return $addedValues;
-    }
-
-    /**
-     * @return list<mixed>
-     */
-    public function getRemovedValues(): array
-    {
-        if (
-            !is_array(value: $this->value)
-            || !is_array(value: $this->originalValue)
-        ) {
-            return [];
-        }
-
-        $removedValues = [];
-
-        foreach ($this->originalValue as $originalValue) {
-            if (!in_array(
-                needle: $originalValue,
-                haystack: $this->value
-            )) {
-                $removedValues[] = $originalValue;
-            }
-        }
-
-        return $removedValues;
-    }
-
     public function addRequiredRule(HtmlText $errorMessage): void
     {
-        $this->addRule(new RequiredRule($errorMessage));
-    }
-
-    public function addRule(FormRule $formRule): void
-    {
-        $this->rules[] = $formRule;
+        $this->requiredErrorMessage = $errorMessage;
     }
 
     public function isRequired(): bool
     {
-        return $this->hasRule(ruleClassName: RequiredRule::class);
-    }
-
-    protected function hasRule(string $ruleClassName): bool
-    {
-        return array_any($this->rules, fn($rule) => get_class(object: $rule) === $ruleClassName);
+        return $this->requiredErrorMessage !== null;
     }
 
     public function addListener(FormFieldListener $formFieldListener): void
@@ -256,44 +131,33 @@ abstract class FormField extends FormComponent
     }
 
     /**
-     * Use the rules to validate the input data.
-     *
-     * @param array<array-key, mixed> $inputData : All input data
-     * @param bool $overwriteValue : Overwrite current value by value from inputData (true by default)
+     * Reads the input of the field from the request and validates it: runs the listeners, the required check and the
+     * rules of the field, then validates the dependent fields (see `validateChildFields()`) if it is valid.
      *
      * @return bool : Validation result (false on error)
-     * @internal The signature is a bridge until `validate(FormInput)` replaces it.
      */
-    public function validate(array $inputData, bool $overwriteValue = true): bool
+    final public function validate(FormInput $input): bool
     {
-        if ($overwriteValue) {
-            $this->startReadingInput();
-            $this->readInputData(inputData: $inputData);
-        } else {
-            $this->inputReceived = true;
+        $this->startReadingInput();
+        $this->readAdditionalInput(input: $input);
+        $this->readInput(input: $input);
+        // The children are validated with the input below, not with their current values
+        $this->validatesInput = true;
+        try {
+            $isValid = $this->validateCurrentValue();
+        } finally {
+            $this->validatesInput = false;
+        }
+        if ($isValid) {
+            $this->validateChildFields(input: $input);
         }
 
-        return $this->validateCurrentValue();
+        return !$this->hasErrors(withChildElements: true);
     }
 
     /**
-     * @param array<array-key, mixed> $inputData
-     * @internal Bridge until all fields have typed values: fields with a typed value read a `FormInput` instead.
-     */
-    protected function readInputData(array $inputData): void
-    {
-        $defaultValue = $this->isArrayAsValueAllowed() ? [] : null;
-        $this->setValue(
-            value: array_key_exists(
-                key: $this->name,
-                array: $inputData
-            ) ? $inputData[$this->name] : $defaultValue
-        );
-    }
-
-    /**
-     * Runs the listeners and rules on the current value, without reading input. Rules do not run for rejected input
-     * (the one error about the invalid input is enough).
+     * Runs the listeners, the required check and the rules on the current value, without reading input. Rules do not
+     * run for rejected input (the one error about the invalid input is enough).
      *
      * @return bool : Validation result (false on error)
      */
@@ -315,10 +179,9 @@ abstract class FormField extends FormComponent
             }
         }
 
-        foreach ($this->inputRejected ? [] : $this->rules as $formRule) {
-            if (!$formRule->validate(formField: $this)) {
-                $this->addErrorAsHtmlTextObject(errorMessageObject: $formRule->getErrorMessage());
-            }
+        if (!$this->inputRejected) {
+            $this->checkRequired();
+            $this->checkRules();
         }
 
         $hasErrors = $this->hasErrors(withChildElements: false);
@@ -347,8 +210,18 @@ abstract class FormField extends FormComponent
                 );
             }
         }
+        if (!$hasErrors && !$this->validatesInput) {
+            $this->validateChildFieldsWithCurrentValues();
+        }
 
         return !$this->hasErrors(withChildElements: true);
+    }
+
+    private function checkRequired(): void
+    {
+        if ($this->requiredErrorMessage !== null && $this->isValueEmpty()) {
+            $this->addErrorAsHtmlTextObject(errorMessageObject: $this->requiredErrorMessage);
+        }
     }
 
     /**
@@ -392,15 +265,5 @@ abstract class FormField extends FormComponent
     public function setRenderLabelFalse(): void
     {
         $this->renderLabel = false;
-    }
-
-    /**
-     * Returns whether the original value has changed (true) or not (false)
-     *
-     * @return bool
-     */
-    public function valueHasChanged(): bool
-    {
-        return ($this->value !== $this->originalValue);
     }
 }

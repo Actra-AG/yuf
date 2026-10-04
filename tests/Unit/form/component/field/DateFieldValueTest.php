@@ -9,12 +9,12 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\DateField;
+use actra\yuf\form\FormInput;
 use actra\yuf\html\HtmlText;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
-use TypeError;
 use UnexpectedValueException;
 
 /**
@@ -69,7 +69,7 @@ final class DateFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertTrue($field->validate(inputData: ['date' => $input]));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['date' => $input])));
         $this->assertSame(
             $expected . ' 00:00:00',
             $field->getValueAsDateTimeImmutable()?->format(format: 'Y-m-d H:i:s')
@@ -98,7 +98,7 @@ final class DateFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertFalse($field->validate(inputData: ['date' => $input]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['date' => $input])));
         $this->assertSame('Invalid', $field->errorCollection->getFirstError()->render());
         $this->assertSame(1, $field->errorCollection->count());
         $this->assertStringContainsString('value="' . $input . '"', $field->render());
@@ -108,7 +108,7 @@ final class DateFieldValueTest extends TestCase
     public function testGetterThrowsForInvalidDate(string $input): void
     {
         $field = $this->createField();
-        $field->validate(inputData: ['date' => $input]);
+        $field->validate(input: FormInput::fromArray(data: ['date' => $input]));
 
         $this->expectException(UnexpectedValueException::class);
         $this->expectExceptionMessage('field date');
@@ -121,7 +121,7 @@ final class DateFieldValueTest extends TestCase
         foreach (['', '  '] as $input) {
             $field = $this->createField(value: new DateTimeImmutable(datetime: '2020-01-02'));
 
-            $this->assertTrue($field->validate(inputData: ['date' => $input]));
+            $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['date' => $input])));
             $this->assertNull($field->getValueAsDateTimeImmutable());
         }
     }
@@ -130,7 +130,7 @@ final class DateFieldValueTest extends TestCase
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
 
-        $this->assertFalse($field->validate(inputData: ['date' => ' ']));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['date' => ' '])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
     }
 
@@ -138,7 +138,7 @@ final class DateFieldValueTest extends TestCase
     {
         $field = $this->createField(value: new DateTimeImmutable(datetime: '2020-02-03'));
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertNull($field->getValueAsDateTimeImmutable());
     }
 
@@ -146,7 +146,7 @@ final class DateFieldValueTest extends TestCase
     {
         $field = $this->createField(value: new DateTimeImmutable(datetime: '2020-01-02'));
 
-        $this->assertFalse($field->validate(inputData: ['date' => ['x']]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['date' => ['x']])));
         $this->assertNull($field->getValueAsDateTimeImmutable());
         $this->assertSame('The invalid input was ignored.', $field->errorCollection->getFirstError()->render());
     }
@@ -155,10 +155,10 @@ final class DateFieldValueTest extends TestCase
     {
         $field = $this->createField(value: new DateTimeImmutable(datetime: '2020-01-02'));
 
-        $field->validate(inputData: ['date' => '2.1.2020']);
+        $field->validate(input: FormInput::fromArray(data: ['date' => '2.1.2020']));
         $this->assertFalse($field->valueHasChanged());
 
-        $field->validate(inputData: ['date' => '2020-01-03']);
+        $field->validate(input: FormInput::fromArray(data: ['date' => '2020-01-03']));
         $this->assertTrue($field->valueHasChanged());
     }
 
@@ -184,18 +184,11 @@ final class DateFieldValueTest extends TestCase
     public function testSetValueClearsKeptInvalidInput(): void
     {
         $field = $this->createField();
-        $field->validate(inputData: ['date' => 'tomorrow']);
+        $field->validate(input: FormInput::fromArray(data: ['date' => 'tomorrow']));
 
         $field->setValue(value: new DateTimeImmutable(datetime: '2020-01-02'));
 
         $this->assertSame('2020-01-02', $field->getValueAsDateTimeImmutable()?->format(format: 'Y-m-d'));
-    }
-
-    public function testSetValueRejectsAString(): void
-    {
-        $this->expectException(TypeError::class);
-
-        $this->createField()->setValue(value: '2020-01-02');
     }
 
     public function testFieldHasNoGetValueAsString(): void

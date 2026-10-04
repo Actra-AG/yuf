@@ -11,6 +11,8 @@ namespace actra\yuf\form\component\field;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\InputShapeEnum;
+use actra\yuf\form\rule\StringListRule;
+use actra\yuf\form\rule\StringRule;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\html\HtmlText;
 use LogicException;
@@ -26,6 +28,10 @@ abstract class MultiOptionsField extends OptionsField
     private array $values = [];
     /** @var list<string> */
     private array $initialValues = [];
+    /** @var list<StringListRule> */
+    private array $rules = [];
+    /** @var list<StringRule> */
+    private array $keyRules = [];
 
     /**
      * @param list<string> $initialValues
@@ -133,6 +139,44 @@ abstract class MultiOptionsField extends OptionsField
         );
     }
 
+    /**
+     * Adds a rule for the list of selected keys (e.g. `MinCountRule`). Rules run for a non-empty selection only.
+     */
+    public function addRule(StringListRule $formRule): void
+    {
+        $this->rules[] = $formRule;
+    }
+
+    /**
+     * Adds a rule that is applied to every selected key; a rule that fails for one or more keys adds its error
+     * message once.
+     */
+    public function addEachRule(StringRule $formRule): void
+    {
+        $this->keyRules[] = $formRule;
+    }
+
+    protected function checkRules(): void
+    {
+        if ($this->isValueEmpty()) {
+            return;
+        }
+        foreach ($this->rules as $rule) {
+            if (!$rule->validate(values: $this->values)) {
+                $this->addErrorAsHtmlTextObject(errorMessageObject: $rule->getErrorMessage());
+            }
+        }
+        foreach ($this->keyRules as $rule) {
+            $allKeysValid = array_all(
+                array: $this->values,
+                callback: static fn(string $key): bool => $rule->validate(value: $key)
+            );
+            if (!$allKeysValid) {
+                $this->addErrorAsHtmlTextObject(errorMessageObject: $rule->getErrorMessage());
+            }
+        }
+    }
+
     public function isSelected(string $optionKey): bool
     {
         return in_array(needle: $optionKey, haystack: $this->values, strict: true);
@@ -200,34 +244,5 @@ abstract class MultiOptionsField extends OptionsField
     {
         $this->values = [];
         $this->rejectInput(errorMessage: $this->messages->invalidInput);
-    }
-
-    /**
-     * @return ($returnNullIfEmpty is true ? ?list<string> : list<string>)
-     * @internal Bridge until all fields have typed values: use `getValues()`.
-     */
-    public function getRawValue(bool $returnNullIfEmpty = false): ?array
-    {
-        return $returnNullIfEmpty && $this->isValueEmpty() ? null : $this->values;
-    }
-
-    /**
-     * @return list<string>
-     * @internal Bridge until all fields have typed values: the original value is the initial value.
-     */
-    public function getOriginalValue(): array
-    {
-        return $this->initialValues;
-    }
-
-    /**
-     * @internal Bridge until all fields have typed values.
-     * @throws LogicException Always: a multi field has a list of values.
-     */
-    public function setValue(mixed $value): void
-    {
-        throw new LogicException(
-            message: 'The field ' . $this->name . ' holds a list of values, use setValues() instead of setValue().'
-        );
     }
 }

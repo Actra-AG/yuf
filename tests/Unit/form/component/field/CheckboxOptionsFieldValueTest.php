@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\CheckboxOptionsField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -51,7 +52,7 @@ final class CheckboxOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['checkbox' => ['a', 'b']]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['checkbox' => ['a', 'b']]));
 
         $this->assertTrue($isValid);
         $this->assertSame(['a', 'b'], $field->getValues());
@@ -61,7 +62,7 @@ final class CheckboxOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(inputData: ['checkbox' => [4 => 'b', 1 => 'a']]);
+        $field->validate(input: FormInput::fromArray(data: ['checkbox' => [4 => 'b', 1 => 'a']]));
 
         $this->assertSame(['b', 'a'], $field->getValues());
     }
@@ -70,7 +71,7 @@ final class CheckboxOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValues: ['a']);
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertSame([], $field->getValues());
     }
 
@@ -81,7 +82,7 @@ final class CheckboxOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValues: ['a']);
 
-        $isValid = $field->validate(inputData: ['checkbox' => 'a']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['checkbox' => 'a']));
 
         $this->assertFalse($isValid);
         $this->assertSame([], $field->getValues());
@@ -92,7 +93,7 @@ final class CheckboxOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['checkbox' => ['a', 'x']]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['checkbox' => ['a', 'x']]));
 
         $this->assertFalse($isValid);
         $this->assertSame([], $field->getValues());
@@ -103,7 +104,7 @@ final class CheckboxOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertFalse($field->validate(inputData: ['checkbox' => ['a', ['b']]]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['checkbox' => ['a', ['b']]])));
         $this->assertSame([], $field->getValues());
     }
 
@@ -111,7 +112,7 @@ final class CheckboxOptionsFieldValueTest extends TestCase
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
 
-        $this->assertFalse($field->validate(inputData: []));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
         $this->assertTrue($field->isRequired());
     }
@@ -133,7 +134,7 @@ final class CheckboxOptionsFieldValueTest extends TestCase
         $field = $this->createField(initialValues: ['a']);
 
         $this->assertFalse($field->valueHasChanged());
-        $field->validate(inputData: ['checkbox' => ['a']]);
+        $field->validate(input: FormInput::fromArray(data: ['checkbox' => ['a']]));
         $this->assertFalse($field->valueHasChanged());
     }
 
@@ -163,7 +164,7 @@ final class CheckboxOptionsFieldValueTest extends TestCase
         $field = $this->createField();
         $inputData = $input === null ? [] : ['checkbox' => $input];
 
-        $this->assertSame($expectedValid, $field->validate(inputData: $inputData));
+        $this->assertSame($expectedValid, $field->validate(input: FormInput::fromArray(data: $inputData)));
         // Must not throw: a field is always readable
         $field->getValues();
     }

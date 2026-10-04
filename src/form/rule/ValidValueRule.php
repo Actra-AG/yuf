@@ -8,39 +8,20 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\rule;
 
-use ArrayObject;
-use actra\yuf\form\component\FormField;
-use actra\yuf\form\FormRule;
 use actra\yuf\html\HtmlText;
-use UnexpectedValueException;
 
-class ValidValueRule extends FormRule
+class ValidValueRule extends StringRule
 {
-    protected array $validValues;
-
-    public function __construct(array $validValues, HtmlText $errorMessage)
+    /**
+     * @param list<string> $validValues
+     */
+    public function __construct(protected array $validValues, HtmlText $errorMessage)
     {
-        parent::__construct($errorMessage);
-
-        $this->validValues = $validValues;
+        parent::__construct(defaultErrorMessage: $errorMessage);
     }
 
-    public function validate(FormField $formField): bool
+    public function validate(string $value): bool
     {
-        if ($formField->isValueEmpty()) {
-            return true;
-        }
-
-        $fieldValue = $formField->getRawValue();
-
-        if (is_scalar($fieldValue)) {
-            return in_array($fieldValue, $this->validValues);
-        }
-
-        if (is_array($fieldValue) || $fieldValue instanceof ArrayObject) {
-            return (count(array_diff($fieldValue, $this->validValues)) === 0);
-        }
-
-        throw new UnexpectedValueException('Could not handle field value for rule ' . __CLASS__);
+        return in_array(needle: $value, haystack: $this->validValues, strict: true);
     }
 }

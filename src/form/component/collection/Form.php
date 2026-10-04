@@ -14,6 +14,7 @@ use actra\yuf\form\component\FormField;
 use actra\yuf\form\FormCollection;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
+use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\FormComponent;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\DefaultFormRenderer;
@@ -22,12 +23,9 @@ use actra\yuf\html\HtmlText;
 use actra\yuf\security\CsrfToken;
 use actra\yuf\security\CsrfTokenSource;
 use actra\yuf\security\SessionCsrfTokenSource;
-use LogicException;
 
 class Form extends FormCollection
 {
-    /** @var list<string> */
-    private static array $formNameList = [];
     public readonly string $sentIndicator;
     /** @var list<string> */
     private(set) array $cssClasses = [];
@@ -43,13 +41,7 @@ class Form extends FormCollection
         public readonly FormMessages $messages = new FormMessages(),
         ?CsrfTokenSource $csrfTokenSource = null
     ) {
-        if (in_array(
-            needle: $name,
-            haystack: Form::$formNameList
-        )) {
-            throw new LogicException(message: 'A Form with the name "' . $name . '" has already been defined.');
-        }
-        Form::$formNameList[] = $name;
+        FormNameRegistry::register(name: $name);
         $this->sentIndicator = is_null(value: $individualSentIndicator) ? $name : $individualSentIndicator;
         parent::__construct(name: $name);
 
@@ -109,13 +101,17 @@ class Form extends FormCollection
         return ($component instanceof FormField);
     }
 
-    public function validate(): bool
+    /**
+     * Validates all fields with the request data if the form was sent.
+     *
+     * @param ?FormInput $input The request data, default: the current request (`FormInput::fromGlobals()`)
+     */
+    public function validate(?FormInput $input = null): bool
     {
-        if (!$this->isSent()) {
+        $input ??= FormInput::fromGlobals(methodPost: $this->methodPost);
+        if (!$this->isSent(input: $input)) {
             return false;
         }
-
-        $inputData = ($this->methodPost ? $_POST : $_GET) + $_FILES;
 
         foreach ($this->childComponents as $formComponent) {
             // The CSRF token is only checked if the other fields are valid (validateCsrf())
@@ -123,11 +119,11 @@ class Form extends FormCollection
                 continue;
             }
 
-            $formComponent->validate($inputData);
+            $formComponent->validate(input: $input);
         }
 
         if (!$this->hasErrors(withChildElements: true)) {
-            $this->validateCsrf(inputData: $inputData);
+            $this->validateCsrf(input: $input);
         }
 
         if (
@@ -141,18 +137,19 @@ class Form extends FormCollection
         return !$this->hasErrors(withChildElements: true);
     }
 
-    public function isSent(): bool
+    /**
+     * Whether the sent indicator is in the query string of the request.
+     *
+     * @param ?FormInput $input The request data, default: the current request (`FormInput::fromGlobals()`)
+     */
+    public function isSent(?FormInput $input = null): bool
     {
-        return array_key_exists(
-            key: $this->sentIndicator,
-            array: $_GET
-        );
+        $input ??= FormInput::fromGlobals(methodPost: $this->methodPost);
+
+        return $input->hasQueryKey(key: $this->sentIndicator);
     }
 
-    /**
-     * @param array<array-key, mixed> $inputData
-     */
-    private function validateCsrf(array $inputData): void
+    private function validateCsrf(FormInput $input): void
     {
         if (!$this->hasChildComponent(childComponentName: CsrfToken::getFieldName())) {
             // The Csrf protection has been disabled
@@ -162,9 +159,7 @@ class Form extends FormCollection
         if (!$csrfTokenField instanceof CsrfTokenField) {
             return;
         }
-        // The token falls back to the query string, so the query part (`$_GET`) is passed as well
-        $input = FormInput::fromArray(data: $inputData, query: $_GET);
-        if (!$csrfTokenField->validateInput(input: $input)) {
+        if (!$csrfTokenField->validate(input: $input)) {
             $this->addError(errorMessage: $this->messages->invalidCsrfToken, isEncodedForRendering: false);
         }
     }

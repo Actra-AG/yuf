@@ -9,12 +9,12 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\FloatField;
+use actra\yuf\form\FormInput;
 use actra\yuf\html\HtmlText;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
-use TypeError;
 use UnexpectedValueException;
 
 /**
@@ -80,7 +80,7 @@ final class FloatFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertTrue($field->validate(inputData: ['amount' => $input]));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['amount' => $input])));
         $this->assertSame($expected, $field->getValueAsFloat());
     }
 
@@ -104,7 +104,7 @@ final class FloatFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertFalse($field->validate(inputData: ['amount' => $input]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['amount' => $input])));
         $this->assertSame('The given value is invalid.', $field->errorCollection->getFirstError()->render());
         $this->assertStringContainsString(
             'value="' . htmlspecialchars(string: $input, flags: ENT_QUOTES) . '"',
@@ -116,7 +116,7 @@ final class FloatFieldValueTest extends TestCase
     public function testGetterThrowsForInvalidInput(string $input): void
     {
         $field = $this->createField();
-        $field->validate(inputData: ['amount' => $input]);
+        $field->validate(input: FormInput::fromArray(data: ['amount' => $input]));
 
         $this->expectException(UnexpectedValueException::class);
         $this->expectExceptionMessage('field amount');
@@ -128,7 +128,7 @@ final class FloatFieldValueTest extends TestCase
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
 
-        $this->assertFalse($field->validate(inputData: ['amount' => '  ']));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['amount' => '  '])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
     }
 
@@ -136,7 +136,7 @@ final class FloatFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 5.5);
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertNull($field->getValueAsFloat());
     }
 
@@ -144,7 +144,7 @@ final class FloatFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 5.5);
 
-        $this->assertFalse($field->validate(inputData: ['amount' => ['1']]));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['amount' => ['1']])));
         $this->assertNull($field->getValueAsFloat());
         $this->assertSame(1, $field->errorCollection->count());
     }
@@ -152,7 +152,7 @@ final class FloatFieldValueTest extends TestCase
     public function testPostedInputIsRenderedAsCanonicalNumber(): void
     {
         $field = $this->createField();
-        $field->validate(inputData: ['amount' => ' +007.50 ']);
+        $field->validate(input: FormInput::fromArray(data: ['amount' => ' +007.50 ']));
 
         $this->assertStringContainsString('value="7.5"', $field->render());
     }
@@ -182,10 +182,10 @@ final class FloatFieldValueTest extends TestCase
     {
         $field = $this->createField(initialValue: 1.5);
 
-        $field->validate(inputData: ['amount' => '1.50']);
+        $field->validate(input: FormInput::fromArray(data: ['amount' => '1.50']));
         $this->assertFalse($field->valueHasChanged());
 
-        $field->validate(inputData: ['amount' => '1.6']);
+        $field->validate(input: FormInput::fromArray(data: ['amount' => '1.6']));
         $this->assertTrue($field->valueHasChanged());
     }
 
@@ -220,18 +220,11 @@ final class FloatFieldValueTest extends TestCase
     public function testSetValueClearsKeptInvalidInput(): void
     {
         $field = $this->createField();
-        $field->validate(inputData: ['amount' => 'abc']);
+        $field->validate(input: FormInput::fromArray(data: ['amount' => 'abc']));
 
         $field->setValue(value: 1.5);
 
         $this->assertSame(1.5, $field->getValueAsFloat());
-    }
-
-    public function testSetValueRejectsAString(): void
-    {
-        $this->expectException(TypeError::class);
-
-        $this->createField()->setValue(value: '1.5');
     }
 
     /**

@@ -9,7 +9,6 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\field;
 
 use actra\yuf\common\ValidatedEmailAddress;
-use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\form\rule\ValidEmailAddressRule;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\form\settings\InputTypeValue;
@@ -39,7 +38,7 @@ final class EmailField extends SettableStringInputField
             maxLength: $maxLength
         );
         if (!is_null(value: $requiredError)) {
-            $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
+            $this->addRequiredRule(errorMessage: $requiredError);
         }
         $this->addRule(
             formRule: new ValidEmailAddressRule(

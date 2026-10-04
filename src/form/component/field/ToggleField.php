@@ -10,10 +10,10 @@ namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\component\FormField;
 use actra\yuf\form\FormComponent;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\ToggleFieldRenderer;
-use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\html\HtmlText;
 use Closure;
@@ -47,7 +47,7 @@ class ToggleField extends SingleOptionsField
         );
         $this->toggleChildren = new ToggleChildren(toggleField: $this);
         if ($requiredError !== null) {
-            $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
+            $this->addRequiredRule(errorMessage: $requiredError);
         }
         // The toggle markup has always been fixed (the renderer the form would set is not used)
         $this->setRenderer(renderer: $this->getDefaultRenderer());
@@ -92,18 +92,18 @@ class ToggleField extends SingleOptionsField
     }
 
     /**
-     * Validates the field, and the child fields of the selected option if the field itself is valid.
-     *
-     * @param array<array-key, mixed> $inputData
-     * @internal The signature is a bridge until `validate(FormInput)` replaces `validate(array)`.
+     * Validates the child fields of the selected options with the same input, after this field is valid.
      */
-    public function validate(array $inputData, bool $overwriteValue = true): bool
+    protected function validateChildFields(FormInput $input): void
     {
-        if (!parent::validate(inputData: $inputData, overwriteValue: $overwriteValue)) {
-            return false;
-        }
-        $this->toggleChildren->validateSelected(inputData: $inputData, overwriteValue: $overwriteValue);
+        $this->toggleChildren->validateSelected(input: $input);
+    }
 
-        return !$this->hasErrors(withChildElements: true);
+    /**
+     * Validates the child fields of the selected options with their current values, after this field is valid.
+     */
+    protected function validateChildFieldsWithCurrentValues(): void
+    {
+        $this->toggleChildren->validateSelectedCurrentValues();
     }
 }

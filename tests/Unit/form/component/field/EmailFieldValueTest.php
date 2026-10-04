@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\EmailField;
+use actra\yuf\form\FormInput;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -28,12 +29,12 @@ final class EmailFieldValueTest extends TestCase
 
     public function testValueIsEmptyStringAfterConstructionWithoutValue(): void
     {
-        $this->assertSame('', $this->createField()->getRawValue());
+        $this->assertSame('', $this->createField()->getValueAsString());
     }
 
     public function testValueIsStringAfterConstructionWithString(): void
     {
-        $this->assertSame('a@example.com', $this->createField(value: 'a@example.com')->getRawValue());
+        $this->assertSame('a@example.com', $this->createField(value: 'a@example.com')->getValueAsString());
     }
 
     /**
@@ -47,42 +48,42 @@ final class EmailFieldValueTest extends TestCase
     }
 
     #[DataProvider('validEmailProvider')]
-    public function testValidEmailIsNormalizedByRule(string $input, string $expected): void
+    public function testValidEmailIsNormalizedByField(string $input, string $expected): void
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['email' => $input]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['email' => $input]));
 
         $this->assertTrue($isValid);
-        $this->assertSame($expected, $field->getRawValue());
+        $this->assertSame($expected, $field->getValueAsString());
     }
 
     public function testInvalidEmailKeepsInputAsString(): void
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['email' => 'not an address']);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['email' => 'not an address']));
 
         $this->assertFalse($isValid);
-        $this->assertSame('not an address', $field->getRawValue());
+        $this->assertSame('not an address', $field->getValueAsString());
     }
 
     public function testValueIsEmptyStringAfterValidationWithMissingKey(): void
     {
         $field = $this->createField();
 
-        $this->assertTrue($field->validate(inputData: []));
-        $this->assertSame('', $field->getRawValue());
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
+        $this->assertSame('', $field->getValueAsString());
     }
 
     public function testArrayInputIsRejectedAndResetsValue(): void
     {
         $field = $this->createField(value: 'a@example.com');
 
-        $isValid = $field->validate(inputData: ['email' => ['x']]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['email' => ['x']]));
 
         $this->assertFalse($isValid);
-        $this->assertSame('', $field->getRawValue());
+        $this->assertSame('', $field->getValueAsString());
     }
 
     public function testConstructorValueIsNormalizedAsInput(): void
@@ -109,7 +110,7 @@ final class EmailFieldValueTest extends TestCase
     {
         $field = $this->createField(value: 'a@example.com');
 
-        $field->validate(inputData: ['email' => ' A@Example.com ']);
+        $field->validate(input: FormInput::fromArray(data: ['email' => ' A@Example.com ']));
 
         $this->assertFalse($field->valueHasChanged());
     }

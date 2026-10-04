@@ -11,17 +11,21 @@ namespace actra\yuf\form\component\field;
 use actra\yuf\form\component\FormField;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\InputShapeEnum;
+use actra\yuf\form\rule\StringRule;
 use actra\yuf\html\HtmlEncoder;
 use LogicException;
 
 /**
  * A field whose request value is one text. It owns the pipeline of the input text: `normalize()`, then `accept()`.
- * It has no public value getter or setter, because its subclasses have different value types.
+ * It has no public value getter or setter, because its subclasses have different value types. Its rules check the
+ * text (`addRule()`).
  */
 abstract class TextualField extends FormField
 {
     private string $text = '';
     private string $initialText = '';
+    /** @var list<StringRule> */
+    private array $rules = [];
 
     /**
      * Cleans the text before it is stored (posted input, setters and constructor values): removes zero-width spaces
@@ -78,7 +82,6 @@ abstract class TextualField extends FormField
      */
     final protected function readInput(FormInput $input): void
     {
-        $this->readAdditionalInput(input: $input);
         $text = $input->getText(name: $this->name);
         match ($input->getShape(name: $this->name)) {
             InputShapeEnum::TEXT => $this->accept(text: $this->normalize(input: $text ?? '')),
@@ -87,18 +90,31 @@ abstract class TextualField extends FormField
         };
     }
 
-    /**
-     * Hook for request input besides the field's own value (e.g. the country code of a phone number or a fallback
-     * token from the query string). It runs before the value is read, so the value can depend on it.
-     */
-    protected function readAdditionalInput(FormInput $input): void
-    {
-    }
-
     private function rejectTextInput(): void
     {
         $this->accept(text: '');
         $this->rejectInput(errorMessage: $this->messages->invalidInput);
+    }
+
+    /**
+     * Adds a rule for the text of the field (the normalized text, also of number and date fields). Rules run for a
+     * non-empty text only.
+     */
+    public function addRule(StringRule $formRule): void
+    {
+        $this->rules[] = $formRule;
+    }
+
+    protected function checkRules(): void
+    {
+        if ($this->isValueEmpty()) {
+            return;
+        }
+        foreach ($this->rules as $rule) {
+            if (!$rule->validate(value: $this->text)) {
+                $this->addErrorAsHtmlTextObject(errorMessageObject: $rule->getErrorMessage());
+            }
+        }
     }
 
     public function isValueEmpty(): bool
@@ -114,73 +130,5 @@ abstract class TextualField extends FormField
     public function renderValue(): string
     {
         return HtmlEncoder::encode(value: $this->text);
-    }
-
-    /**
-     * Validates the field with request data that carries the query part (the array based `validate()` has none).
-     *
-     * @internal Bridge until `validate(FormInput)` replaces `validate(array, bool)`.
-     */
-    final public function validateInput(FormInput $input): bool
-    {
-        $this->startReadingInput();
-        $this->readInput(input: $input);
-
-        return $this->validateCurrentValue();
-    }
-
-    /**
-     * @param array<array-key, mixed> $inputData
-     * @internal Bridge until `validate(FormInput)` replaces `validate(array)`.
-     */
-    protected function readInputData(array $inputData): void
-    {
-        $this->readInput(input: FormInput::fromArray(data: $inputData));
-    }
-
-    /**
-     * @internal Bridge until all fields have typed values.
-     */
-    protected function initializeLegacyValue(mixed $value): void
-    {
-    }
-
-    /**
-     * @return ($returnNullIfEmpty is true ? ?string : string)
-     * @internal Bridge until all fields have typed values: use `getValueAsString()` (or the typed getter).
-     */
-    public function getRawValue(bool $returnNullIfEmpty = false): ?string
-    {
-        return $returnNullIfEmpty && $this->isValueEmpty() ? null : $this->text;
-    }
-
-    /**
-     * @internal Bridge until all fields have typed values: fields with a public setter override it (the typed setter
-     *           `setValue(string)`), the others have none.
-     * @throws LogicException
-     */
-    public function setValue(mixed $value): void
-    {
-        throw new LogicException(message: 'The field ' . $this->name . ' has no setter.');
-    }
-
-    /**
-     * @internal Bridge until all fields have typed values: the initial value is the constructor value.
-     */
-    public function getOriginalValue(): string
-    {
-        return $this->initialText;
-    }
-
-    /**
-     * @internal Bridge until all fields have typed values.
-     * @throws LogicException Always: removed, pass the value to the constructor or use `setInitialValue()`.
-     */
-    public function setOriginalValue(mixed $value): void
-    {
-        throw new LogicException(
-            message: 'setOriginalValue() was removed. Pass the value to the constructor of field ' . $this->name
-            . ' or call setInitialValue() in a subclass.'
-        );
     }
 }

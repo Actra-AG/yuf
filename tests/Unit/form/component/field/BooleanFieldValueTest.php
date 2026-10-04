@@ -11,10 +11,11 @@ namespace actra\yuf\tests\Unit\form\component\field;
 use actra\yuf\form\component\field\BooleanField;
 use actra\yuf\form\component\field\CheckboxOptionsField;
 use actra\yuf\form\component\layout\CheckboxOptionsLayout;
+use actra\yuf\form\FormInput;
 use actra\yuf\html\HtmlText;
-use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 
 final class BooleanFieldValueTest extends TestCase
 {
@@ -43,7 +44,7 @@ final class BooleanFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['boolean' => ['checked']]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['boolean' => ['checked']]));
 
         $this->assertTrue($isValid);
         $this->assertTrue($field->isChecked());
@@ -53,7 +54,7 @@ final class BooleanFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertTrue($field->validate(inputData: ['boolean' => 'checked']));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['boolean' => 'checked'])));
         $this->assertTrue($field->isChecked());
     }
 
@@ -61,7 +62,7 @@ final class BooleanFieldValueTest extends TestCase
     {
         $field = $this->createField(isCheckedByDefault: true);
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertFalse($field->isChecked());
     }
 
@@ -89,7 +90,7 @@ final class BooleanFieldValueTest extends TestCase
     {
         $field = $this->createField(isCheckedByDefault: true, requiredError: HtmlText::encoded(textContent: 'R'));
 
-        $isValid = $field->validate(inputData: $inputData);
+        $isValid = $field->validate(input: FormInput::fromArray(data: $inputData));
 
         $this->assertFalse($isValid);
         $this->assertFalse($field->isChecked());
@@ -101,7 +102,7 @@ final class BooleanFieldValueTest extends TestCase
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Accept the terms'));
 
-        $this->assertFalse($field->validate(inputData: []));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertSame('Accept the terms', $field->errorCollection->getFirstError()->render());
         $this->assertTrue($field->isRequired());
     }
@@ -110,7 +111,7 @@ final class BooleanFieldValueTest extends TestCase
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Accept the terms'));
 
-        $this->assertTrue($field->validate(inputData: ['boolean' => ['checked']]));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['boolean' => ['checked']])));
     }
 
     public function testValueIsEmptyWhenNotChecked(): void
@@ -135,7 +136,7 @@ final class BooleanFieldValueTest extends TestCase
     {
         $field = $this->createField(isCheckedByDefault: true);
 
-        $field->validate(inputData: []);
+        $field->validate(input: FormInput::fromArray(data: []));
 
         $this->assertTrue($field->valueHasChanged());
     }
@@ -146,12 +147,9 @@ final class BooleanFieldValueTest extends TestCase
         $this->assertSame('', $this->createField()->renderValue());
     }
 
-    public function testLegacySetterIsNotAvailable(): void
+    public function testFieldHasNoSetValue(): void
     {
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('setChecked()');
-
-        $this->createField()->setValue(value: true);
+        $this->assertFalse(new ReflectionClass(objectOrClass: BooleanField::class)->hasMethod(name: 'setValue'));
     }
 
     public function testAllLayoutsAreAccepted(): void

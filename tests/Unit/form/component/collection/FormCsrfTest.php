@@ -10,14 +10,16 @@ namespace actra\yuf\tests\Unit\form\component\collection;
 
 use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\TextField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
+use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The CSRF protection of `Form::validate()`, with an in-memory token source (token `expected-token`). `validate()`
- * still reads the superglobals, so they are restored after each test.
+ * The CSRF protection of `Form::validate()`, with an in-memory token source (token `expected-token`) and the request
+ * passed as `FormInput`.
  */
 final class FormCsrfTest extends TestCase
 {
@@ -26,26 +28,9 @@ final class FormCsrfTest extends TestCase
 
     private static int $formCounter = 0;
 
-    /** @var array<array-key, mixed> */
-    private array $savedGet;
-    /** @var array<array-key, mixed> */
-    private array $savedPost;
-    /** @var array<array-key, mixed> */
-    private array $savedFiles;
-
     protected function setUp(): void
     {
-        $this->savedGet = $_GET;
-        $this->savedPost = $_POST;
-        $this->savedFiles = $_FILES;
-        $_FILES = [];
-    }
-
-    protected function tearDown(): void
-    {
-        $_GET = $this->savedGet;
-        $_POST = $this->savedPost;
-        $_FILES = $this->savedFiles;
+        FormNameRegistry::reset();
     }
 
     private function createForm(
@@ -68,19 +53,16 @@ final class FormCsrfTest extends TestCase
      */
     private function send(Form $form, array $post, array $query = []): bool
     {
-        $_GET = [$form->sentIndicator => ''] + $query;
-        $_POST = $post;
-
-        return $form->validate();
+        return $form->validate(
+            input: FormInput::fromArray(data: $post, query: [$form->sentIndicator => ''] + $query)
+        );
     }
 
     public function testFormIsNotValidatedIfItWasNotSent(): void
     {
         $form = $this->createForm();
-        $_GET = [];
-        $_POST = ['csrftoken' => 'wrong'];
 
-        $this->assertFalse($form->validate());
+        $this->assertFalse($form->validate(input: FormInput::fromArray(data: ['csrftoken' => 'wrong'])));
         $this->assertFalse($form->hasErrors(withChildElements: true));
     }
 
@@ -143,10 +125,9 @@ final class FormCsrfTest extends TestCase
     public function testFormWithGetMethodReadsTheTokenFromTheQueryString(): void
     {
         $form = $this->createForm(methodPost: false);
-        $_GET = [$form->sentIndicator => '', 'csrftoken' => 'expected-token'];
-        $_POST = [];
+        $query = [$form->sentIndicator => '', 'csrftoken' => 'expected-token'];
 
-        $this->assertTrue($form->validate());
+        $this->assertTrue($form->validate(input: FormInput::fromArray(data: $query, query: $query)));
     }
 
     public function testTokenIsOnlyCheckedIfTheOtherFieldsAreValid(): void

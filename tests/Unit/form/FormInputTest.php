@@ -340,4 +340,75 @@ final class FormInputTest extends TestCase
 
         $this->assertSame(InputShapeEnum::INVALID, $input->getShape(name: 'file'));
     }
+
+    /**
+     * @param array<array-key, mixed> $get
+     * @param array<array-key, mixed> $post
+     * @param array<array-key, mixed> $files
+     * @param callable(): void $test
+     */
+    private function withGlobals(array $get, array $post, array $files, callable $test): void
+    {
+        $savedGet = $_GET;
+        $savedPost = $_POST;
+        $savedFiles = $_FILES;
+        $_GET = $get;
+        $_POST = $post;
+        $_FILES = $files;
+        try {
+            $test();
+        } finally {
+            $_GET = $savedGet;
+            $_POST = $savedPost;
+            $_FILES = $savedFiles;
+        }
+    }
+
+    public function testFromGlobalsOfAPostFormReadsThePostedValuesAndTheQueryPart(): void
+    {
+        $this->withGlobals(
+            get: ['contact' => '', 'csrftoken' => 'fallback', 'name' => 'from get'],
+            post: ['name' => 'from post', 'tags' => ['a', 'b']],
+            files: [],
+            test: function (): void {
+                $input = FormInput::fromGlobals(methodPost: true);
+
+                $this->assertSame('from post', $input->getText(name: 'name'));
+                $this->assertSame(['a', 'b'], $input->getList(name: 'tags'));
+                $this->assertTrue($input->hasQueryKey(key: 'contact'));
+                $this->assertSame('fallback', $input->getQueryText(key: 'csrftoken'));
+            }
+        );
+    }
+
+    public function testFromGlobalsOfAGetFormReadsTheValuesFromTheQueryString(): void
+    {
+        $this->withGlobals(
+            get: ['contact' => '', 'name' => 'from get'],
+            post: ['name' => 'from post'],
+            files: [],
+            test: function (): void {
+                $input = FormInput::fromGlobals(methodPost: false);
+
+                $this->assertSame('from get', $input->getText(name: 'name'));
+                $this->assertTrue($input->hasQueryKey(key: 'contact'));
+            }
+        );
+    }
+
+    public function testFromGlobalsNarrowsLikeFromArray(): void
+    {
+        $this->withGlobals(
+            get: [],
+            post: ['nested' => [['x']], 'number' => 5],
+            files: ['file' => FormInputTest::singleFile()],
+            test: function (): void {
+                $input = FormInput::fromGlobals(methodPost: true);
+
+                $this->assertSame(InputShapeEnum::INVALID, $input->getShape(name: 'nested'));
+                $this->assertSame(InputShapeEnum::INVALID, $input->getShape(name: 'number'));
+                $this->assertCount(1, $input->getUploads(name: 'file'));
+            }
+        );
+    }
 }

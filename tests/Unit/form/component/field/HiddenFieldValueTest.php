@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\HiddenField;
+use actra\yuf\form\FormInput;
 use PHPUnit\Framework\TestCase;
 
 final class HiddenFieldValueTest extends TestCase
@@ -27,7 +28,7 @@ final class HiddenFieldValueTest extends TestCase
     {
         $field = new HiddenField(name: 'hidden');
 
-        $field->validate(inputData: ['hidden' => ' a ']);
+        $field->validate(input: FormInput::fromArray(data: ['hidden' => ' a ']));
 
         $this->assertSame(' a ', $field->getValueAsString());
     }
@@ -41,7 +42,7 @@ final class HiddenFieldValueTest extends TestCase
     {
         $field = new HiddenField(name: 'hidden');
 
-        $field->validate(inputData: ['hidden' => "a\u{200B}b"]);
+        $field->validate(input: FormInput::fromArray(data: ['hidden' => "a\u{200B}b"]));
 
         $this->assertSame('ab', $field->getValueAsString());
     }
@@ -50,7 +51,7 @@ final class HiddenFieldValueTest extends TestCase
     {
         $field = new HiddenField(name: 'hidden', value: '5');
 
-        $this->assertTrue($field->validate(inputData: []));
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: [])));
 
         $this->assertSame('', $field->getValueAsString());
     }
@@ -59,7 +60,7 @@ final class HiddenFieldValueTest extends TestCase
     {
         $field = new HiddenField(name: 'hidden', value: '5');
 
-        $isValid = $field->validate(inputData: ['hidden' => ['x']]);
+        $isValid = $field->validate(input: FormInput::fromArray(data: ['hidden' => ['x']]));
 
         $this->assertFalse($isValid);
         $this->assertSame('', $field->getValueAsString());

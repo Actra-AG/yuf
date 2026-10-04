@@ -10,7 +10,9 @@ namespace actra\yuf\tests\Unit\form\component\collection;
 
 use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\TextField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
+use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\TestCase;
 
@@ -22,6 +24,11 @@ final class FormMessagesHandoverTest extends TestCase
     private function createField(): TextField
     {
         return new TextField(name: 'field', label: HtmlText::encoded(textContent: 'Label'));
+    }
+
+    protected function setUp(): void
+    {
+        FormNameRegistry::reset();
     }
 
     public function testFieldWithoutFormUsesEnglishDefaults(): void
@@ -45,7 +52,7 @@ final class FormMessagesHandoverTest extends TestCase
         $field = $this->createField();
 
         $form->addField(formField: $field);
-        $field->validate(inputData: ['field' => ['x']]);
+        $field->validate(input: FormInput::fromArray(data: ['field' => ['x']]));
 
         $this->assertSame(
             'Die ungültige Eingabe wurde ignoriert.',

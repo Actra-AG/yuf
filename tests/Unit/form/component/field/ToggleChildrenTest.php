@@ -13,7 +13,9 @@ use actra\yuf\form\component\field\MultiToggleField;
 use actra\yuf\form\component\field\TextField;
 use actra\yuf\form\component\field\ToggleField;
 use actra\yuf\form\component\FormField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
+use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\DefaultComponentRenderer;
@@ -35,6 +37,11 @@ final class ToggleChildrenTest extends TestCase
         $formOptions->addItem(key: 'b', htmlText: HtmlText::encoded(textContent: 'B'));
 
         return $formOptions;
+    }
+
+    protected function setUp(): void
+    {
+        FormNameRegistry::reset();
     }
 
     private function createToggle(?string $initialValue = null): ToggleField
@@ -107,7 +114,7 @@ final class ToggleChildrenTest extends TestCase
         $toggle = $this->createToggle(initialValue: 'a');
         $toggle->addChildField(mainOption: 'a', childField: $this->createChild(name: 'childA'));
 
-        $isValid = $toggle->validate(inputData: ['toggle' => 'a', 'childA' => '']);
+        $isValid = $toggle->validate(input: FormInput::fromArray(data: ['toggle' => 'a', 'childA' => '']));
 
         $this->assertFalse($isValid);
         $this->assertFalse($toggle->hasErrors(withChildElements: false));
@@ -122,7 +129,7 @@ final class ToggleChildrenTest extends TestCase
         $toggle->addChildField(mainOption: 'a', childField: $childA);
         $toggle->addChildField(mainOption: 'b', childField: $childB);
 
-        $isValid = $toggle->validate(inputData: ['toggle' => 'b', 'childA' => '', 'childB' => 'ok']);
+        $isValid = $toggle->validate(input: FormInput::fromArray(data: ['toggle' => 'b', 'childA' => '', 'childB' => 'ok']));
 
         $this->assertTrue($isValid);
         $this->assertSame('ok', $childB->getValueAsString());
@@ -136,7 +143,7 @@ final class ToggleChildrenTest extends TestCase
         $toggle->addChildField(mainOption: 'a', childField: $this->createChild(name: 'childA'));
         $toggle->addChildField(mainOption: 'b', childField: $this->createChild(name: 'childB'));
 
-        $isValid = $toggle->validate(inputData: ['toggle' => ['a', 'b'], 'childA' => 'x']);
+        $isValid = $toggle->validate(input: FormInput::fromArray(data: ['toggle' => ['a', 'b'], 'childA' => 'x']));
 
         $this->assertFalse($isValid);
         $this->assertTrue($toggle->getChildField(mainOption: 'b', fieldName: 'childB')->hasErrors(false));
@@ -148,7 +155,7 @@ final class ToggleChildrenTest extends TestCase
         $child = $this->createChild(name: 'childA');
         $toggle->addChildField(mainOption: 'a', childField: $child);
 
-        $isValid = $toggle->validate(inputData: ['toggle' => 'x', 'childA' => '']);
+        $isValid = $toggle->validate(input: FormInput::fromArray(data: ['toggle' => 'x', 'childA' => '']));
 
         $this->assertFalse($isValid);
         $this->assertFalse($child->hasErrors(withChildElements: false));
@@ -160,7 +167,7 @@ final class ToggleChildrenTest extends TestCase
         $child = $this->createChild(name: 'childA');
         $toggle->addChildField(mainOption: 'a', childField: $child);
 
-        $this->assertTrue($toggle->validate(inputData: []));
+        $this->assertTrue($toggle->validate(input: FormInput::fromArray(data: [])));
     }
 
     public function testChildrenGetTheFormOfTheToggleFieldWhenItIsAddedLater(): void
@@ -171,7 +178,7 @@ final class ToggleChildrenTest extends TestCase
         $form = new Form(name: 'toggleChildrenLaterForm', messages: FormMessages::german());
 
         $form->addField(formField: $toggle);
-        $toggle->validate(inputData: ['toggle' => 'a', 'childA' => ['x']]);
+        $toggle->validate(input: FormInput::fromArray(data: ['toggle' => 'a', 'childA' => ['x']]));
 
         $this->assertSame($form, $child->topFormComponent);
         $this->assertSame(
@@ -200,7 +207,7 @@ final class ToggleChildrenTest extends TestCase
         $toggle->addChildField(mainOption: 'a', childField: $this->createChild(name: 'childA'));
         $form->addField(formField: $toggle);
 
-        $toggle->validate(inputData: ['toggle' => 'a']);
+        $toggle->validate(input: FormInput::fromArray(data: ['toggle' => 'a']));
 
         $this->assertTrue($form->hasErrors(withChildElements: true));
     }
@@ -250,5 +257,44 @@ final class ToggleChildrenTest extends TestCase
         $this->expectException(LogicException::class);
 
         $toggle->setRenderer(renderer: $toggle->getDefaultRenderer());
+    }
+
+    public function testValidateCurrentValueValidatesTheChildrenOfTheSelectedOption(): void
+    {
+        $toggle = $this->createToggle(initialValue: 'a');
+        $selectedChild = $this->createChild(name: 'childA');
+        $otherChild = $this->createChild(name: 'childB');
+        $toggle->addChildField(mainOption: 'a', childField: $selectedChild);
+        $toggle->addChildField(mainOption: 'b', childField: $otherChild);
+
+        $this->assertFalse($toggle->validateCurrentValue());
+        $this->assertTrue($selectedChild->hasErrors(withChildElements: false));
+        $this->assertFalse($otherChild->hasErrors(withChildElements: false));
+    }
+
+    public function testValidateCurrentValueOfAMultiToggleValidatesTheChildrenOfAllSelectedOptions(): void
+    {
+        $toggle = $this->createMultiToggle(initialValues: ['a', 'b']);
+        $childA = $this->createChild(name: 'childA');
+        $childB = $this->createChild(name: 'childB');
+        $toggle->addChildField(mainOption: 'a', childField: $childA);
+        $toggle->addChildField(mainOption: 'b', childField: $childB);
+
+        $this->assertFalse($toggle->validateCurrentValue());
+        $this->assertTrue($childA->hasErrors(withChildElements: false));
+        $this->assertTrue($childB->hasErrors(withChildElements: false));
+    }
+
+    public function testValidateWithInputValidatesTheChildrenOnlyOnceWithTheInput(): void
+    {
+        $toggle = $this->createToggle();
+        $child = $this->createChild(name: 'childA');
+        $toggle->addChildField(mainOption: 'a', childField: $child);
+
+        $isValid = $toggle->validate(input: FormInput::fromArray(data: ['toggle' => 'a', 'childA' => 'value']));
+
+        $this->assertTrue($isValid);
+        $this->assertSame('value', $child->getValueAsString());
+        $this->assertFalse($child->hasErrors(withChildElements: false));
     }
 }

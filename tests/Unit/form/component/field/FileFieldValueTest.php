@@ -9,18 +9,19 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\FileField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\InMemoryFileUploadStorage;
-use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 use stdClass;
 
 /**
- * The upload logic of the file field with the in-memory storage (the session storage has its own test). `validate()`
- * gets the merged request array (`$_POST + $_FILES`) until `validate(FormInput)` exists.
+ * The upload logic of the file field with the in-memory storage (the session storage has its own test). The request is
+ * built by `request()` from one array of posted values and `$_FILES` entries.
  */
 final class FileFieldValueTest extends TestCase
 {
@@ -87,7 +88,7 @@ final class FileFieldValueTest extends TestCase
      */
     private function errorsOf(FileField $field, array $inputData): array
     {
-        $field->validate(inputData: $inputData);
+        $field->validate(input: $this->request($inputData));
 
         return array_values(
             array: array_map(
@@ -153,7 +154,7 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $valid = $field->validate(inputData: $this->uploads(names: ['a.txt', 'b.txt']));
+        $valid = $field->validate(input: $this->request($this->uploads(names: ['a.txt', 'b.txt'])));
 
         $this->assertTrue($valid);
         $this->assertSame(['a.txt', 'b.txt'], $this->fileNames($field));
@@ -168,8 +169,7 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(
-            inputData: [
+        $field->validate(input: $this->request([
                 'file' => [
                     'name' => ' single.txt ',
                     'type' => 'text/plain',
@@ -177,8 +177,7 @@ final class FileFieldValueTest extends TestCase
                     'error' => UPLOAD_ERR_OK,
                     'size' => 4,
                 ],
-            ]
-        );
+            ]));
 
         $files = array_values(array: $field->getFiles());
         $this->assertCount(1, $files);
@@ -191,7 +190,7 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(inputData: $this->uploads(names: ['a.txt']));
+        $field->validate(input: $this->request($this->uploads(names: ['a.txt'])));
 
         foreach ($field->getFiles() as $hash => $file) {
             $this->assertSame(sha1(string: $file->path), $hash);
@@ -203,7 +202,7 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(inputData: $this->uploads(names: ['../../etc/passwd']));
+        $field->validate(input: $this->request($this->uploads(names: ['../../etc/passwd'])));
 
         $file = array_values(array: $field->getFiles())[0];
         $this->assertStringNotContainsString('passwd', $file->path);
@@ -214,9 +213,7 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $valid = $field->validate(
-            inputData: $this->uploads(names: [''], errors: [UPLOAD_ERR_NO_FILE], sizes: [0])
-        );
+        $valid = $field->validate(input: $this->request($this->uploads(names: [''], errors: [UPLOAD_ERR_NO_FILE], sizes: [0])));
 
         $this->assertTrue($valid);
         $this->assertSame([], $field->getFiles());
@@ -226,13 +223,11 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField(maxFileUploadCount: 1);
 
-        $field->validate(
-            inputData: $this->uploads(
+        $field->validate(input: $this->request($this->uploads(
                 names: ['', 'a.txt'],
                 errors: [UPLOAD_ERR_NO_FILE, UPLOAD_ERR_OK],
                 sizes: [0, 5]
-            )
-        );
+            )));
 
         $this->assertSame(['a.txt'], $this->fileNames($field));
     }
@@ -316,13 +311,11 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $valid = $field->validate(
-            inputData: $this->uploads(
+        $valid = $field->validate(input: $this->request($this->uploads(
                 names: ['big.txt', 'good.txt'],
                 errors: [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_OK],
                 sizes: [0, 5]
-            )
-        );
+            )));
 
         $this->assertFalse($valid);
         $this->assertSame(['good.txt'], $this->fileNames($field));
@@ -412,12 +405,12 @@ final class FileFieldValueTest extends TestCase
     public function testFilesAreKeptWhenValidationFailsAndTheFormIsShownAgain(): void
     {
         $firstRequest = $this->createField();
-        $firstRequest->validate(inputData: $this->uploads(names: ['a.txt']));
+        $firstRequest->validate(input: $this->request($this->uploads(names: ['a.txt'])));
         $pointer = $firstRequest->uniqueSessFileStorePointer;
 
         // The next request builds a new field; the form carries the pointer of the field as a hidden input
         $secondRequest = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
-        $valid = $secondRequest->validate(inputData: ['file_UID' => $pointer]);
+        $valid = $secondRequest->validate(input: $this->request(['file_UID' => $pointer]));
 
         $this->assertTrue($valid);
         $this->assertSame(['a.txt'], $this->fileNames($secondRequest));
@@ -429,7 +422,7 @@ final class FileFieldValueTest extends TestCase
         $field = $this->createField();
         $this->storage->preload('ptr', $this->storedFile());
 
-        $field->validate(inputData: $this->uploads(names: ['new.txt']) + ['file_UID' => 'ptr']);
+        $field->validate(input: $this->request($this->uploads(names: ['new.txt']) + ['file_UID' => 'ptr']));
 
         $this->assertSame(['old.txt', 'new.txt'], $this->fileNames($field));
         $this->assertSame($field->getFiles(), $this->storage->getSavedFiles(pointer: 'ptr'));
@@ -442,7 +435,7 @@ final class FileFieldValueTest extends TestCase
         $this->storage->preload('ptr', $file);
         $this->storage->vanish($file);
 
-        $field->validate(inputData: ['file_UID' => 'ptr']);
+        $field->validate(input: $this->request(['file_UID' => 'ptr']));
 
         $this->assertSame([], $field->getFiles());
     }
@@ -466,7 +459,7 @@ final class FileFieldValueTest extends TestCase
         $field = $this->createField();
         $ownPointer = $field->uniqueSessFileStorePointer;
 
-        $field->validate(inputData: ['file_UID' => $pointer]);
+        $field->validate(input: $this->request(['file_UID' => $pointer]));
 
         $this->assertSame($ownPointer, $field->uniqueSessFileStorePointer);
     }
@@ -475,7 +468,7 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(inputData: ['file_UID' => ' abc_1 ']);
+        $field->validate(input: $this->request(['file_UID' => ' abc_1 ']));
 
         $this->assertSame('abc_1', $field->uniqueSessFileStorePointer);
     }
@@ -485,7 +478,7 @@ final class FileFieldValueTest extends TestCase
         $field = $this->createField();
         $ownPointer = $field->uniqueSessFileStorePointer;
 
-        $field->validate(inputData: ['file_UID' => ['x']]);
+        $field->validate(input: $this->request(['file_UID' => ['x']]));
 
         $this->assertSame($ownPointer, $field->uniqueSessFileStorePointer);
     }
@@ -497,7 +490,7 @@ final class FileFieldValueTest extends TestCase
         $second = $this->storedFile(name: 'second.txt', path: '/stored/2');
         $this->storage->preload('ptr', $first, $second);
 
-        $field->validate(inputData: ['file_UID' => 'ptr', 'file_removeAttachment' => $first->getHash()]);
+        $field->validate(input: $this->request(['file_UID' => 'ptr', 'file_removeAttachment' => $first->getHash()]));
 
         $this->assertSame(['second.txt'], $this->fileNames($field));
         $this->assertSame([$first], $this->storage->getDeletedFiles());
@@ -513,7 +506,7 @@ final class FileFieldValueTest extends TestCase
         $field = $this->createField();
         $this->storage->preload('ptr', $this->storedFile());
 
-        $field->validate(inputData: ['file_UID' => 'ptr', 'file_removeAttachment' => 'unknown']);
+        $field->validate(input: $this->request(['file_UID' => 'ptr', 'file_removeAttachment' => 'unknown']));
 
         $this->assertSame(['old.txt'], $this->fileNames($field));
         $this->assertSame([], $this->storage->getDeletedFiles());
@@ -524,7 +517,7 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(inputData: []);
+        $field->validate(input: $this->request([]));
 
         $this->assertSame([], $field->getRemovedValues());
     }
@@ -535,12 +528,10 @@ final class FileFieldValueTest extends TestCase
         $file = $this->storedFile();
         $this->storage->preload('ptr', $file);
 
-        $field->validate(
-            inputData: $this->uploads(names: ['new.txt']) + [
+        $field->validate(input: $this->request($this->uploads(names: ['new.txt']) + [
                 'file_UID' => 'ptr',
                 'file_removeAttachment' => $file->getHash(),
-            ]
-        );
+            ]));
 
         $this->assertSame(['new.txt'], $this->fileNames($field));
     }
@@ -556,7 +547,7 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
 
-        $this->assertTrue($field->validate(inputData: $this->uploads(names: ['a.txt'])));
+        $this->assertTrue($field->validate(input: $this->request($this->uploads(names: ['a.txt']))));
     }
 
     public function testRemovingTheLastFileBringsBackTheRequiredError(): void
@@ -648,7 +639,7 @@ final class FileFieldValueTest extends TestCase
         $field = $this->createField();
         $this->storage->preload('ptr', $this->storedFile());
 
-        $valid = $field->validate(inputData: ['file' => $input, 'file_UID' => 'ptr']);
+        $valid = $field->validate(input: $this->request(['file' => $input, 'file_UID' => 'ptr']));
 
         $this->assertTrue($valid);
         $this->assertSame(['old.txt'], $this->fileNames($field));
@@ -659,7 +650,7 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(inputData: []);
+        $field->validate(input: $this->request([]));
 
         $this->assertSame(1, $this->storage->getExpiredRemovalCount());
     }
@@ -668,7 +659,7 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
 
-        $valid = $field->validate(inputData: $this->uploads(names: ['a.txt']), overwriteValue: false);
+        $valid = $field->validateCurrentValue();
 
         $this->assertFalse($valid);
         $this->assertSame([], $field->getFiles());
@@ -687,7 +678,7 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField();
         $this->storage->preload('ptr', $this->storedFile());
-        $field->validate(inputData: ['file_UID' => 'ptr']);
+        $field->validate(input: $this->request(['file_UID' => 'ptr']));
 
         $field->clearData();
 
@@ -700,7 +691,7 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(inputData: $this->uploads(names: ['a.txt', 'b.txt']));
+        $field->validate(input: $this->request($this->uploads(names: ['a.txt', 'b.txt'])));
 
         $this->assertSame(array_values(array: $field->getFiles()), $field->getAddedValues());
         $this->assertTrue($field->valueHasChanged());
@@ -714,15 +705,19 @@ final class FileFieldValueTest extends TestCase
 
     public function testFieldHasNoSetter(): void
     {
-        $this->expectException(LogicException::class);
-
-        $this->createField()->setValue(value: []);
+        $this->assertFalse(new ReflectionClass(objectOrClass: FileField::class)->hasMethod(name: 'setValue'));
     }
 
     public function testFieldHasNoOriginalValueSetter(): void
     {
-        $this->expectException(LogicException::class);
+        $this->assertFalse(new ReflectionClass(objectOrClass: FileField::class)->hasMethod(name: 'setOriginalValue'));
+    }
 
-        $this->createField()->setOriginalValue(value: []);
+    /**
+     * @param array<array-key, mixed> $request Posted values and uploads in one array (`FormInput` reads both from it)
+     */
+    private function request(array $request): FormInput
+    {
+        return FormInput::fromArray(data: [], files: $request);
     }
 }
