@@ -1,6 +1,6 @@
 # Plan: Form fields with typed values (v4)
 
-Status: done (2026-10-04, tasks 1 to 7, form refactoring complete; v4.0.0 release steps are open, see Task 7 notes). Builds on
+Status: done (2026-10-04, tasks 1 to 7, form refactoring complete; released as v4.0.0). Builds on
 [docs/form-typed-values/plan.md](../form-typed-values/plan.md) (v3.3.0), which must be released first.
 
 ## Goal

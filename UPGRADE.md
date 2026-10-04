@@ -4,7 +4,7 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
-## [v4.0.0] – unreleased
+## [v4.0.0] – 2026-10-04
 
 ### ⚙️ Backend & API
 
