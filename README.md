@@ -166,7 +166,7 @@ $form->addField(formField: $quantity);
 
 if ($form->validate()) { // reads the current request, only if the form was sent
     $customer = $name->getValueAsString();
-    $amount = $quantity->getValueAsInt(); // ?int, null if empty
+    $amount = $quantity->getValueAsInt(); // ?int, null if empty (optional field)
 }
 echo $form->render();
 ```
@@ -190,6 +190,31 @@ a number field, a manipulated array) throws an `UnexpectedValueException` naming
 | `CheckboxOptionsField`, `MultiSelectOptionsField`, `MultiToggleField`     | `list<string>`                | `getValues()`                       |
 | `BooleanField`                                                            | `bool`                        | `isChecked()`                       |
 | `FileField`                                                               | `array<string, UploadedFile>` | `getFiles()`                        |
+
+#### Optional vs. required value
+
+The getters of the numeric, date and time fields return `null` for an empty field. For a field with a required rule
+(e.g. a `requiredError` in the constructor) the value is never empty after a successful `validate()`: use the
+`getRequiredValueAs...()` getter, which returns the type without `null`, so no cast, `?? 0` or own wrapper is needed.
+
+| Field                                  | Optional field (nullable) | Required field after `validate()`            |
+|:---------------------------------------|:--------------------------|:---------------------------------------------|
+| `IntegerField`, `NumericField`, `HiddenIntegerField` | `?int` `getValueAsInt()` | `int` `getRequiredValueAsInt()`          |
+| `FloatField`                           | `?float` `getValueAsFloat()` | `float` `getRequiredValueAsFloat()`       |
+| `DecimalField`                         | `?string` `getValueAsDecimal()` | `string` `getRequiredValueAsDecimal()` |
+| `DateField`                            | `?DateTimeImmutable` `getValueAsDateTimeImmutable()` | `DateTimeImmutable` `getRequiredValueAsDateTimeImmutable()` |
+| `TimeField`                            | `?TimeOfDay` `getValueAsTimeOfDay()` | `TimeOfDay` `getRequiredValueAsTimeOfDay()` |
+
+An empty field throws a `FormFieldValueMissingException` (a `LogicException`, it is a programming error): the message
+says whether the field is not required (use the nullable getter) or was not validated / is empty. Input that is not
+valid still throws the `UnexpectedValueException` of the nullable getter. Never returns a default value.
+
+```php
+$date = new DateField(name: 'start', label: $label, value: null, invalidError: $invalid, requiredError: $required);
+if ($form->validate()) {
+    $start = $date->getRequiredValueAsDateTimeImmutable(); // DateTimeImmutable
+}
+```
 
 The setters have the type of the value: `setValue(string)`, `setValue(?int)`, `setValue(?DateTimeImmutable)`,
 `setValues(list<string>)`, `setChecked(bool)`. `PasswordField`, `CsrfTokenField` and `FileField` have none.

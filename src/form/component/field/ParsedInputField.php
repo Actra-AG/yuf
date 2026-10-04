@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
+use actra\yuf\form\FormFieldValueMissingException;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
@@ -69,6 +70,18 @@ abstract class ParsedInputField extends InputField
         throw new UnexpectedValueException(
             message: 'The value of field ' . $this->name . ' cannot be read as ' . $type . ', it is not valid: "'
             . (strlen(string: $text) > 40 ? substr(string: $text, offset: 0, length: 40) . '...' : $text) . '"'
+        );
+    }
+
+    /**
+     * @param string $nullableGetter The nullable getter named in the message, e.g. `getValueAsInt`.
+     */
+    final protected function valueMissing(string $nullableGetter): FormFieldValueMissingException
+    {
+        return FormFieldValueMissingException::forField(
+            fieldName: $this->name,
+            isRequired: $this->isRequired(),
+            nullableGetter: $nullableGetter
         );
     }
 

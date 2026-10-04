@@ -4,6 +4,25 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.4.0] – 2026-10-04
+
+### 🧩 Forms
+
+* **Non-null getters for required fields.** `IntegerField` (and `NumericField`), `HiddenIntegerField`, `FloatField`,
+  `DecimalField`, `DateField` and `TimeField` got `getRequiredValueAsInt(): int`, `getRequiredValueAsFloat(): float`,
+  `getRequiredValueAsDecimal(): string`, `getRequiredValueAsDateTimeImmutable(): DateTimeImmutable` and
+  `getRequiredValueAsTimeOfDay(): TimeOfDay`. They are meant for a required field after a successful `validate()`.
+* An empty field throws the new `actra\yuf\form\FormFieldValueMissingException` (extends `LogicException`). Its
+  message names the field and says whether it is not required (use the nullable getter) or has no value (not validated
+  yet / empty). A default value is never returned. Invalid input still throws `UnexpectedValueException`.
+* The nullable getters are unchanged. No breaking changes.
+* **Migration hint:** replace `(int)$field->getValueAsInt()`, `$field->getValueAsInt() ?? 0`,
+  `(float)$field->getValueAsDecimal()` and own "required value" helpers (e.g. `RequiredDate::of($field)`) with the
+  `getRequiredValueAs...()` getter of the field. Keep the nullable getter for optional fields. See the README section
+  "Optional vs. required value".
+
+---
+
 ## [v4.3.0] – 2026-10-04
 
 ### ⚙️ Backend & API

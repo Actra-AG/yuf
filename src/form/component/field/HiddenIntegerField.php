@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\AmountParser;
+use actra\yuf\form\FormFieldValueMissingException;
 use actra\yuf\form\renderer\HiddenFieldRenderer;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
@@ -69,6 +70,18 @@ final class HiddenIntegerField extends ParsedInputField
         $this->assertValueCanBeRead(type: 'integer');
 
         return $this->value;
+    }
+
+    /**
+     * Returns the value of a required field. Use it after a successful `validate()`, the nullable getter for an
+     * optional field.
+     *
+     * @throws FormFieldValueMissingException If the field is empty (not validated yet, or not required).
+     * @throws UnexpectedValueException If the field holds input that is not valid.
+     */
+    public function getRequiredValueAsInt(): int
+    {
+        return $this->getValueAsInt() ?? throw $this->valueMissing(nullableGetter: 'getValueAsInt');
     }
 
     /**

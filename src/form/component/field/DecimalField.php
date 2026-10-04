@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\AmountParser;
+use actra\yuf\form\FormFieldValueMissingException;
 use actra\yuf\form\rule\DecimalRule;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\settings\InputTypeEnum;
@@ -111,6 +112,18 @@ final class DecimalField extends ParsedInputField
         $this->assertValueCanBeRead(type: 'decimal');
 
         return $this->value;
+    }
+
+    /**
+     * Returns the value of a required field. Use it after a successful `validate()`, the nullable getter for an
+     * optional field.
+     *
+     * @throws FormFieldValueMissingException If the field is empty (not validated yet, or not required).
+     * @throws UnexpectedValueException If the field holds input that is not valid.
+     */
+    public function getRequiredValueAsDecimal(): string
+    {
+        return $this->getValueAsDecimal() ?? throw $this->valueMissing(nullableGetter: 'getValueAsDecimal');
     }
 
     /**

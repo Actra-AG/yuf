@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\field;
 
 use actra\yuf\common\TimeOfDay;
+use actra\yuf\form\FormFieldValueMissingException;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
@@ -73,6 +74,18 @@ final class TimeField extends ParsedInputField
         $this->assertValueCanBeRead(type: 'time');
 
         return $this->value;
+    }
+
+    /**
+     * Returns the value of a required field. Use it after a successful `validate()`, the nullable getter for an
+     * optional field.
+     *
+     * @throws FormFieldValueMissingException If the field is empty (not validated yet, or not required).
+     * @throws UnexpectedValueException If the field holds input that is not valid.
+     */
+    public function getRequiredValueAsTimeOfDay(): TimeOfDay
+    {
+        return $this->getValueAsTimeOfDay() ?? throw $this->valueMissing(nullableGetter: 'getValueAsTimeOfDay');
     }
 
     /**
