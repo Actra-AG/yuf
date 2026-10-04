@@ -118,7 +118,7 @@ class TextAreaField extends TextualField
         $lines = $this->getValues();
         foreach ($this->lineRules as $rule) {
             if (!array_all(array: $lines, callback: static fn(string $line): bool => $rule->validate(value: $line))) {
-                $this->addErrorAsHtmlTextObject(errorMessageObject: $rule->getErrorMessage());
+                $this->addError(errorMessage: $rule->getErrorMessage());
             }
         }
     }

@@ -17,7 +17,7 @@ use actra\yuf\html\HtmlText;
 class DefinitionListRenderer extends FormRenderer
 {
     private FormField $formField;
-    /** @var HtmlTag[] */
+    /** @var list<HtmlTag> */
     private array $htmlTagsBeforeFormField = [];
 
     public function __construct(FormField $formField)
@@ -63,8 +63,7 @@ class DefinitionListRenderer extends FormRenderer
                 $divTag->addHtmlTagAttribute(new HtmlTagAttribute('class', 'form-toggle-content-item', true));
             }
             $defaultFormFieldRenderer = $formField->getDefaultRenderer();
-            $defaultFormFieldRenderer->prepare();
-            $divTag->addTag($defaultFormFieldRenderer->getHtmlTag());
+            $divTag->addTag($defaultFormFieldRenderer->prepareHtmlTag());
 
             FormRenderer::addErrorsToParentHtmlTag($formField, $divTag);
             if (!is_null($formField->fieldInfo)) {
@@ -106,18 +105,18 @@ class DefinitionListRenderer extends FormRenderer
         }
 
         $defaultFormFieldRenderer = $formField->getDefaultRenderer();
-        $defaultFormFieldRenderer->prepare();
+        $fieldTag = $defaultFormFieldRenderer->prepareHtmlTag();
 
         if (!is_null($additionalColumnContent)) {
             $column1 = new HtmlTag('div', false, [new HtmlTagAttribute('class', 'form-col-1', true)]);
-            $column1->addTag($defaultFormFieldRenderer->getHtmlTag());
+            $column1->addTag($fieldTag);
             $ddTag->addTag($column1);
 
             $column2 = new HtmlTag('div', false, [new HtmlTagAttribute('class', 'form-col-2', true)]);
             $column2->addText($additionalColumnContent);
             $ddTag->addTag($column2);
         } else {
-            $ddTag->addTag($defaultFormFieldRenderer->getHtmlTag());
+            $ddTag->addTag($fieldTag);
         }
 
         FormRenderer::addErrorsToParentHtmlTag($formField, $ddTag);

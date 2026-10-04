@@ -10,7 +10,7 @@ namespace actra\yuf\form\component\field;
 
 use actra\yuf\datacheck\validatorTypes\ZipCodeValidator;
 use actra\yuf\form\FormInput;
-use actra\yuf\form\settings\AutoCompleteValue;
+use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlText;
 
 /**
@@ -28,7 +28,7 @@ final class ZipCodeField extends TextField
         private(set) string $countryCode = 'CH',
         private readonly string $countryCodeFieldName = 'countryCode',
         ?string $placeholder = null,
-        ?AutoCompleteValue $autoComplete = null,
+        ?AutoCompleteEnum $autoComplete = null,
         ?int $maxLength = null
     ) {
         parent::__construct(
@@ -66,10 +66,10 @@ final class ZipCodeField extends TextField
     private function addInvalidZipCodeError(): void
     {
         if ($this->individualInvalidError === null) {
-            $this->addError(errorMessage: $this->messages->invalidZipCode, isEncodedForRendering: false);
+            $this->addError(errorMessage: HtmlText::unencoded(textContent: $this->messages->invalidZipCode));
 
             return;
         }
-        $this->addErrorAsHtmlTextObject(errorMessageObject: $this->individualInvalidError);
+        $this->addError(errorMessage: $this->individualInvalidError);
     }
 }

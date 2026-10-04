@@ -10,8 +10,8 @@ namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\AmountParser;
 use actra\yuf\form\rule\DecimalRule;
-use actra\yuf\form\settings\AutoCompleteValue;
-use actra\yuf\form\settings\InputTypeValue;
+use actra\yuf\form\settings\AutoCompleteEnum;
+use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
 use InvalidArgumentException;
 use UnexpectedValueException;
@@ -45,7 +45,7 @@ final class DecimalField extends ParsedInputField
         ?HtmlText $individualInvalidError = null,
         ?HtmlText $requiredError = null,
         ?string $placeholder = null,
-        ?AutoCompleteValue $autoComplete = null,
+        ?AutoCompleteEnum $autoComplete = null,
         ?int $maxLength = null
     ) {
         if ($scale < 0) {
@@ -54,7 +54,7 @@ final class DecimalField extends ParsedInputField
             );
         }
         parent::__construct(
-            inputType: InputTypeValue::TEXT,
+            inputType: InputTypeEnum::TEXT,
             name: $name,
             label: $label,
             invalidError: $individualInvalidError,
@@ -95,7 +95,7 @@ final class DecimalField extends ParsedInputField
         }
         foreach ($this->valueRules as $rule) {
             if (!$rule->validate(value: $this->value)) {
-                $this->addErrorAsHtmlTextObject(errorMessageObject: $rule->getErrorMessage());
+                $this->addError(errorMessage: $rule->getErrorMessage());
             }
         }
     }

@@ -151,42 +151,102 @@ The `tst:if` tag can check whether a snippet file exists in the configured snipp
 
 The value of `against` is resolved relative to `Core::get()->snippetsDirectory`.
 
-## Form Field Values
+## Forms
 
-Form fields return their value with a type, so no casting is needed (PHPStan level 10 friendly):
-
-- **String:** `getValueAsString(): string` on `InputField` (e.g. `TextField`, `HiddenField`), `TextAreaField`,
-  `RadioOptionsField`, `SelectOptionsField` and `ToggleField` (single selection).
-- **Numeric:** `getValueAsInt(): ?int` and `getValueAsFloat(): ?float` on `AmountField`/`NumericField`,
-  `getValueAsInt(): ?int` on `HiddenField` (`null` for an empty value).
-- **List:** `getValues(): array` (`list<string>`) on `CheckboxOptionsField`, `SelectOptionsField`, `ToggleField` and
-  `TextAreaField` (one entry per line, trimmed, without empty lines).
-- **Date:** `DateField::getValueAsDateTimeImmutable(): ?DateTimeImmutable`.
-- **Boolean:** `BooleanField::isChecked(): bool`.
+A `Form` holds fields. Every field stores and returns its value with a precise type, so no casting is needed (PHPStan
+level 10 friendly). The form texts it creates itself (e.g. "The invalid input was ignored.") are English;
+`FormMessages::german()` has the German texts of yuf v3, your own texts are named arguments of `FormMessages`.
 
 ```php
-$quantityField = new AmountField(
-    name: 'quantity',
-    label: HtmlText::encoded(textContent: 'Quantity'),
-    valueIsFloat: false
-);
-$idField = new HiddenField(name: 'id', value: $id, valueIsInt: true);
-$form = new Form(name: 'order');
-$form->addField(formField: $quantityField);
-$form->addField(formField: $idField);
+$form = new Form(name: 'order', messages: FormMessages::german());
+$name = new TextField(name: 'customer', label: HtmlText::encoded(textContent: 'Name'), requiredError: $requiredError);
+$quantity = new IntegerField(name: 'quantity', label: HtmlText::encoded(textContent: 'Quantity'));
+$form->addField(formField: $name);
+$form->addField(formField: $quantity);
 
-if ($form->validate()) {
-    $quantity = $quantityField->getValueAsInt(); // ?int, null if empty
-    $id = $idField->getValueAsInt();
+if ($form->validate()) { // reads the current request, only if the form was sent
+    $customer = $name->getValueAsString();
+    $amount = $quantity->getValueAsInt(); // ?int, null if empty
 }
+echo $form->render();
 ```
 
-Hidden IDs should be declared with `HiddenField(..., valueIsInt: true)`: manipulated input then becomes a validation
-error instead of an exception.
+### Typed values
 
-Call the getters after a successful validation. A value that cannot be converted (e.g. text in a numeric field,
-a number outside the `int` range, a manipulated array) throws an `UnexpectedValueException`. List getters do not
-check the values against the options and drop empty (`''`/`null`) entries.
+Each field class has the getter (and the setter) of its value type; a getter that does not fit does not exist, so a
+wrong call is a PHPStan error. Call the getters after a successful validation: a value that cannot be converted (text in
+a number field, a manipulated array) throws an `UnexpectedValueException` naming the field.
+
+| Field                                                                     | Value                         | Getter                              |
+|:--------------------------------------------------------------------------|:------------------------------|:------------------------------------|
+| `TextField`, `EmailField`, `PhoneNumberField`, `HiddenField`, `ZipCodeField`, `IbanNumberField`, `PasswordField` | `string` | `getValueAsString()` |
+| `TextAreaField`                                                           | `string`                      | `getValueAsString()`, `getValues()` |
+| `IntegerField`, `NumericField`, `HiddenIntegerField`                      | `?int`                        | `getValueAsInt()`                   |
+| `FloatField`                                                              | `?float`                      | `getValueAsFloat()`                 |
+| `DecimalField` (money, bcmath, `scale` required)                          | `?string`, e.g. `'12.50'`     | `getValueAsDecimal()`               |
+| `DateField`                                                               | `?DateTimeImmutable`          | `getValueAsDateTimeImmutable()`     |
+| `TimeField`                                                               | `?TimeOfDay`                  | `getValueAsTimeOfDay()`             |
+| `RadioOptionsField`, `SelectOptionsField`, `ToggleField`                  | `string` (`''` = none)        | `getValueAsString()`                |
+| `CheckboxOptionsField`, `MultiSelectOptionsField`, `MultiToggleField`     | `list<string>`                | `getValues()`                       |
+| `BooleanField`                                                            | `bool`                        | `isChecked()`                       |
+| `FileField`                                                               | `array<string, UploadedFile>` | `getFiles()`                        |
+
+The setters have the type of the value: `setValue(string)`, `setValue(?int)`, `setValue(?DateTimeImmutable)`,
+`setValues(list<string>)`, `setChecked(bool)`. `PasswordField`, `CsrfTokenField` and `FileField` have none.
+`getValues()` of a `TextAreaField` returns one entry per line (trimmed, without empty lines).
+
+The constructor value (`value` or `initialValue`) is the initial value; `valueHasChanged()` compares the current value
+with it. A subclass that fills the field after `parent::__construct()` uses the protected `setInitialValue()`.
+Invalid input (a manipulated array, an option that does not exist) resets the value, adds one error and skips the other
+rules. `PasswordField` is never rendered back and `CsrfTokenField` has no getter.
+
+```php
+$password = new PasswordField(
+    name: 'password',
+    label: HtmlText::encoded(textContent: 'Password'),
+    requiredError: $requiredError,
+    purpose: PasswordPurposeEnum::NEW // CURRENT for a login: sets autocomplete="new-password" / "current-password"
+);
+$price = new DecimalField(name: 'price', label: HtmlText::encoded(textContent: 'Price'), scale: 2, initialValue: '12.50');
+$agree = new BooleanField(name: 'agree', label: HtmlText::encoded(textContent: 'I agree'), isCheckedByDefault: false);
+$tags = new MultiSelectOptionsField(name: 'tags', label: $label, formOptions: $options, initialValues: ['a']);
+```
+
+### Rules
+
+Rules are small pure predicates with a typed parameter; the field calls them for a non-empty value only. Add them with
+`addRule()` (text), `addValueRule()` (`IntegerField`, `FloatField`, `DecimalField`) or `addEachRule()` (every line of a
+`TextAreaField`, every key of a multi field). A custom rule extends the base that fits the value (`StringRule`,
+`StringListRule`, `IntegerRule`, `FloatRule`, `DecimalRule`):
+
+```php
+class NoSpacesRule extends StringRule
+{
+    public function validate(string $value): bool
+    {
+        return !str_contains($value, ' ');
+    }
+}
+
+$name->addRule(formRule: new MinLengthRule(minLength: 3, errorMessage: $tooShort));
+$name->addRule(formRule: new NoSpacesRule(defaultErrorMessage: $noSpaces));
+$quantity->addValueRule(formRule: new IntegerMinRule(min: 1, errorMessage: $atLeastOne));
+```
+
+### Request data
+
+`validate()` and `isSent()` read the current request. Pass a `FormInput` to validate other data, e.g. in a test (no
+superglobals needed); the sent indicator (`?order`) is part of the query:
+
+```php
+$input = FormInput::fromArray(data: ['customer' => 'Ann', 'quantity' => '2'], query: ['order' => '']);
+$isValid = $form->validate(input: $input);
+```
+
+`FileField` keeps uploaded files in a `FileUploadStorage` (default: session and temp directory) and the CSRF field
+gets its token from a `CsrfTokenSource` (default: session). Both can be replaced with the constructor arguments
+`storage` and `csrfTokenSource` of the field or `Form`. Code that upgrades from v3 finds the changes in
+[UPGRADE.md](UPGRADE.md).
 
 ## Documentation
 

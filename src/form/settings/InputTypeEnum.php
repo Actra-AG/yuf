@@ -8,7 +8,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\settings;
 
-enum InputTypeValue: string
+enum InputTypeEnum: string
 {
     case BUTTON = 'button';
     case CHECKBOX = 'checkbox';

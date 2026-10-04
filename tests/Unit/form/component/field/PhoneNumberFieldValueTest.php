@@ -252,6 +252,6 @@ final class PhoneNumberFieldValueTest extends TestCase
 
         $this->assertTrue($field->hasErrors(withChildElements: true));
         $this->assertSame('&quot;&gt;&lt;b&gt;x', $field->renderValue());
-        $this->assertStringNotContainsString('"><b>', (string)$field->getHtmlTag()?->render());
+        $this->assertStringNotContainsString('"><b>', $field->getHtmlTag()->render());
     }
 }

@@ -10,7 +10,7 @@ namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\component\FormField;
 use actra\yuf\form\FormOptions;
-use actra\yuf\form\settings\AutoCompleteValue;
+use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlText;
 
 /**
@@ -28,7 +28,7 @@ abstract class OptionsField extends FormField
         string $name,
         HtmlText $label,
         public FormOptions $formOptions,
-        public readonly ?AutoCompleteValue $autoComplete
+        public readonly ?AutoCompleteEnum $autoComplete
     ) {
         parent::__construct(
             name: $name,

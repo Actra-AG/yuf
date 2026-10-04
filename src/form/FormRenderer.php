@@ -61,6 +61,10 @@ abstract class FormRenderer
 
     public static function addFieldInfoToParentHtmlTag(FormField $formFieldWithFieldInfo, HtmlTag $parentHtmlTag): void
     {
+        $fieldInfo = $formFieldWithFieldInfo->fieldInfo;
+        if ($fieldInfo === null) {
+            return;
+        }
         $divTag = new HtmlTag(name: 'div', selfClosing: false, htmlTagAttributes: [
             new HtmlTagAttribute(name: 'class', value: 'form-input-info', valueIsEncodedForRendering: true),
             new HtmlTagAttribute(
@@ -69,7 +73,7 @@ abstract class FormRenderer
                 valueIsEncodedForRendering: true
             ),
         ]);
-        $divTag->addText(htmlText: $formFieldWithFieldInfo->fieldInfo);
+        $divTag->addText(htmlText: $fieldInfo);
         $parentHtmlTag->addTag(htmlTag: $divTag);
     }
 
@@ -102,6 +106,20 @@ abstract class FormRenderer
 
     /** The descending classes must use this method to prepare the base Tag-Element */
     abstract public function prepare(): void;
+
+    /**
+     * Prepares the renderer and returns its base Tag-Element. Use this to render a component through its renderer.
+     *
+     * @throws LogicException If `prepare()` did not set a base Tag-Element
+     */
+    final public function prepareHtmlTag(): HtmlTag
+    {
+        $this->prepare();
+
+        return $this->htmlTag ?? throw new LogicException(
+            message: static::class . '::prepare() must set the base Tag-Element with setHtmlTag().'
+        );
+    }
 
     /**
      * Get the current base Tag-Element for this renderer

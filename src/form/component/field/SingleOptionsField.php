@@ -12,7 +12,7 @@ use actra\yuf\form\FormInput;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\InputShapeEnum;
 use actra\yuf\form\rule\StringRule;
-use actra\yuf\form\settings\AutoCompleteValue;
+use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
 use LogicException;
@@ -32,7 +32,7 @@ abstract class SingleOptionsField extends OptionsField
         HtmlText $label,
         FormOptions $formOptions,
         ?string $initialValue,
-        ?AutoCompleteValue $autoComplete
+        ?AutoCompleteEnum $autoComplete
     ) {
         parent::__construct(
             name: $name,
@@ -87,7 +87,7 @@ abstract class SingleOptionsField extends OptionsField
         }
         foreach ($this->rules as $rule) {
             if (!$rule->validate(value: $this->value)) {
-                $this->addErrorAsHtmlTextObject(errorMessageObject: $rule->getErrorMessage());
+                $this->addError(errorMessage: $rule->getErrorMessage());
             }
         }
     }

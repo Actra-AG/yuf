@@ -13,7 +13,7 @@ use actra\yuf\form\FormOptions;
 use actra\yuf\form\InputShapeEnum;
 use actra\yuf\form\rule\StringListRule;
 use actra\yuf\form\rule\StringRule;
-use actra\yuf\form\settings\AutoCompleteValue;
+use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlText;
 use LogicException;
 use TypeError;
@@ -41,7 +41,7 @@ abstract class MultiOptionsField extends OptionsField
         HtmlText $label,
         FormOptions $formOptions,
         array $initialValues,
-        ?AutoCompleteValue $autoComplete
+        ?AutoCompleteEnum $autoComplete
     ) {
         parent::__construct(
             name: $name,
@@ -88,13 +88,15 @@ abstract class MultiOptionsField extends OptionsField
     }
 
     /**
-     * @param array<array-key, mixed> $values
+     * @param list<string> $values
      * @return list<string>
      */
     private function toKeyList(array $values): array
     {
         $keys = [];
         foreach ($values as $value) {
+            // PHP cannot check the entry types of an array parameter, projects without static analysis can pass others
+            // @phpstan-ignore function.alreadyNarrowedType (runtime guard for callers that are not analysed)
             if (!is_string(value: $value)) {
                 throw new TypeError(
                     message: 'The values of field ' . $this->name . ' must be strings, ' . get_debug_type(value: $value)
@@ -163,7 +165,7 @@ abstract class MultiOptionsField extends OptionsField
         }
         foreach ($this->rules as $rule) {
             if (!$rule->validate(values: $this->values)) {
-                $this->addErrorAsHtmlTextObject(errorMessageObject: $rule->getErrorMessage());
+                $this->addError(errorMessage: $rule->getErrorMessage());
             }
         }
         foreach ($this->keyRules as $rule) {
@@ -172,7 +174,7 @@ abstract class MultiOptionsField extends OptionsField
                 callback: static fn(string $key): bool => $rule->validate(value: $key)
             );
             if (!$allKeysValid) {
-                $this->addErrorAsHtmlTextObject(errorMessageObject: $rule->getErrorMessage());
+                $this->addError(errorMessage: $rule->getErrorMessage());
             }
         }
     }

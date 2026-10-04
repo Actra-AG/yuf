@@ -9,7 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\component\FormField;
-use actra\yuf\form\component\layout\CheckboxOptionsLayout;
+use actra\yuf\form\component\layout\CheckboxOptionsLayoutEnum;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\InputShapeEnum;
@@ -36,7 +36,7 @@ class BooleanField extends FormField
         HtmlText $label,
         bool $isCheckedByDefault,
         ?HtmlText $requiredError = null,
-        CheckboxOptionsLayout $layout = CheckboxOptionsLayout::CHECKBOX_ITEM
+        CheckboxOptionsLayoutEnum $layout = CheckboxOptionsLayoutEnum::CHECKBOX_ITEM
     ) {
         parent::__construct(
             name: $name,
@@ -47,16 +47,16 @@ class BooleanField extends FormField
             $this->addRequiredRule(errorMessage: $requiredError);
         }
         match ($layout) {
-            CheckboxOptionsLayout::DEFINITION_LIST => $this->setRenderer(
+            CheckboxOptionsLayoutEnum::DEFINITION_LIST => $this->setRenderer(
                 renderer: new DefinitionListRenderer(formField: $this)
             ),
-            CheckboxOptionsLayout::LEGEND_AND_LIST => $this->setRenderer(
+            CheckboxOptionsLayoutEnum::LEGEND_AND_LIST => $this->setRenderer(
                 renderer: new BooleanFieldListRenderer(booleanField: $this, withLegend: true)
             ),
-            CheckboxOptionsLayout::CHECKBOX_ITEM => $this->setRenderer(
+            CheckboxOptionsLayoutEnum::CHECKBOX_ITEM => $this->setRenderer(
                 renderer: new CheckboxItemRenderer(checkboxOptionsField: $this)
             ),
-            CheckboxOptionsLayout::NONE => null,
+            CheckboxOptionsLayoutEnum::NONE => null,
         };
     }
 

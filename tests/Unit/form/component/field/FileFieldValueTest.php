@@ -90,11 +90,9 @@ final class FileFieldValueTest extends TestCase
     {
         $field->validate(input: $this->request($inputData));
 
-        return array_values(
-            array: array_map(
-                callback: static fn(HtmlText $error): string => $error->render(),
-                array: $field->errorCollection->listErrors()
-            )
+        return array_map(
+            callback: static fn(HtmlText $error): string => $error->render(),
+            array: $field->errorCollection->listErrors()
         );
     }
 

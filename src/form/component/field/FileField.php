@@ -178,8 +178,8 @@ final class FileField extends FormField
             callback: static fn(UploadInput $upload): bool => $upload->error !== UPLOAD_ERR_NO_FILE
         );
         if (count(value: $files) + count(value: $newUploads) > $this->maxFileUploadCount) {
-            $this->addErrorAsHtmlTextObject(
-                errorMessageObject: $this->buildMessage(
+            $this->addError(
+                errorMessage: $this->buildMessage(
                     individualMessage: $this->tooManyFilesErrMsg,
                     defaultMessage: $this->messages->tooManyFiles,
                     placeholder: '[max]',
@@ -211,8 +211,8 @@ final class FileField extends FormField
             return null;
         }
         if (array_any(array: $files, callback: static fn(UploadedFile $file): bool => $file->name === $upload->name)) {
-            $this->addErrorAsHtmlTextObject(
-                errorMessageObject: $this->buildMessage(
+            $this->addError(
+                errorMessage: $this->buildMessage(
                     individualMessage: $this->alreadyExistsErrorMessage,
                     defaultMessage: $this->messages->duplicateFile,
                     placeholder: '[fileName]',
@@ -247,8 +247,8 @@ final class FileField extends FormField
 
     private function addFileError(string $message, string $fileName): void
     {
-        $this->addErrorAsHtmlTextObject(
-            errorMessageObject: HtmlText::encoded(
+        $this->addError(
+            errorMessage: HtmlText::encoded(
                 textContent: HtmlEncoder::encodeKeepQuotes(value: $message) . ' ' . HtmlEncoder::encode(
                     value: $fileName
                 )

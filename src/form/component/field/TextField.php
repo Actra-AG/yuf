@@ -8,8 +8,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
-use actra\yuf\form\settings\AutoCompleteValue;
-use actra\yuf\form\settings\InputTypeValue;
+use actra\yuf\form\settings\AutoCompleteEnum;
+use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
 
 class TextField extends SettableStringInputField
@@ -20,11 +20,11 @@ class TextField extends SettableStringInputField
         ?string $value = null,
         ?HtmlText $requiredError = null,
         ?string $placeholder = null,
-        ?AutoCompleteValue $autoComplete = null,
+        ?AutoCompleteEnum $autoComplete = null,
         ?int $maxLength = null
     ) {
         parent::__construct(
-            inputType: InputTypeValue::TEXT,
+            inputType: InputTypeEnum::TEXT,
             name: $name,
             label: $label,
             value: $value,

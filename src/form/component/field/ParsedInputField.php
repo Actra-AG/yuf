@@ -8,8 +8,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
-use actra\yuf\form\settings\AutoCompleteValue;
-use actra\yuf\form\settings\InputTypeValue;
+use actra\yuf\form\settings\AutoCompleteEnum;
+use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
 use UnexpectedValueException;
 
@@ -21,13 +21,13 @@ use UnexpectedValueException;
 abstract class ParsedInputField extends InputField
 {
     public function __construct(
-        InputTypeValue $inputType,
+        InputTypeEnum $inputType,
         string $name,
         HtmlText $label,
         private readonly ?HtmlText $invalidError,
         ?HtmlText $requiredError,
         ?string $placeholder,
-        ?AutoCompleteValue $autoComplete,
+        ?AutoCompleteEnum $autoComplete,
         ?int $maxLength = null
     ) {
         parent::__construct(
@@ -76,9 +76,9 @@ abstract class ParsedInputField extends InputField
     {
         if ($this->holdsUnparsableText()) {
             if ($this->invalidError === null) {
-                $this->addError(errorMessage: $this->messages->invalidValue, isEncodedForRendering: false);
+                $this->addError(errorMessage: HtmlText::unencoded(textContent: $this->messages->invalidValue));
             } else {
-                $this->addErrorAsHtmlTextObject(errorMessageObject: $this->invalidError);
+                $this->addError(errorMessage: $this->invalidError);
             }
         }
 

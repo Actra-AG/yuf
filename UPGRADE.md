@@ -8,7 +8,54 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ### ⚙️ Backend & API
 
-* **Form Fields (typed values, part 1: text fields):** `TextField`, `EmailField`, `PhoneNumberField`, `HiddenField`,
+* ⚠️ **Form migration checklist (the common steps of the new typed form API, in this order):**
+    1. Add `messages: FormMessages::german()` to every `new Form(...)` to keep the German texts (the default is
+       English).
+    2. Rename the enums: `InputTypeValue` to `InputTypeEnum`, `AutoCompleteValue` to `AutoCompleteEnum`,
+       `RadioOptionsLayout` to `RadioOptionsLayoutEnum`, `CheckboxOptionsLayout` to `CheckboxOptionsLayoutEnum`.
+    3. Replace `AmountField` with `IntegerField`, `FloatField` or `DecimalField(scale:)`, `HiddenField(valueIsInt: true)`
+       with `HiddenIntegerField`, and the `acceptMultipleSelections`/`multiple` flags with `MultiSelectOptionsField`/
+       `MultiToggleField`.
+    4. Give every `PasswordField` a `purpose: PasswordPurposeEnum::CURRENT` (login) or `::NEW`; replace the `autoComplete`
+       argument.
+    5. Replace `getRawValue()` with the typed getter (`getValueAsString()`, `getValueAsInt()`, `getValueAsFloat()`,
+       `getValueAsDecimal()`, `getValueAsDateTimeImmutable()`, `getValueAsTimeOfDay()`, `getValues()`, `isChecked()`,
+       `getFiles()`); `getValueAsString()` of numbers, dates and times is gone (format the typed value).
+    6. Replace `setValue(mixed)` + `setOriginalValue()` with the constructor value, the typed `setValue()` /
+       `setValues()` / `setChecked()` or, in a subclass, the protected `setInitialValue()`.
+    7. Replace custom rules that extend `FormRule` with a typed base (`StringRule`, `IntegerRule`, ...); replace
+       `RequiredRule`, `MinValueRule`, `MaxValueRule`, `ValueBetweenRule`, `ValidAmountRule`, `ValidDateRule`,
+       `ValidTimeRule`, `ZipCodeRule`, `PhoneNumberRule`, `ValidCsrfTokenValue`, `NoArrayRule` and
+       `ValidateAgainstOptions` (table below).
+    8. Replace overrides of `FormField::validate(array, bool)` with rules or listeners; calls become
+       `validate(input: FormInput::fromArray(...))` (`$form->validate()` is unchanged).
+    9. Replace `addError(string, bool)` and `addErrorAsHtmlTextObject()` with `addError(HtmlText)`.
+    10. Replace `FileDataModel`, `FileField::ERRMSG_*`/`VALUE_*` and `tmp_name` with `UploadedFile` (`path`) and
+        `FormMessages`.
+    11. Run PHPStan: the typed API turns wrong getters, setters and rule types into static errors.
+* **Form: removed and renamed classes, methods and arguments (overview):** details follow in the topics below.
+
+  | v3 | v4 |
+  |:--|:--|
+  | `AmountField(valueIsFloat: ...)` | `IntegerField`, `FloatField`, `DecimalField(scale:)` |
+  | `HiddenField(valueIsInt: true)`, `HiddenField::getValueAsInt()` | `HiddenIntegerField` |
+  | `SelectOptionsField(acceptMultipleSelections: true)`, `ToggleField(multiple: true)` | `MultiSelectOptionsField`, `MultiToggleField` |
+  | `BooleanField` as `CheckboxOptionsField` (`getValues()`) | `BooleanField extends FormField`, `isChecked()`, `setChecked()` |
+  | `PasswordField(autoComplete: ...)` | `PasswordField(purpose: PasswordPurposeEnum)` |
+  | `DateTimeFieldCore`, `getValueAsString()` of numbers/dates/times | `getValueAsDateTimeImmutable()`, `getValueAsTimeOfDay()` (`TimeOfDay`), typed getters |
+  | `getRawValue()`, `getOriginalValue()`, `setOriginalValue()`, `setValue(mixed)` | typed getters and setters, protected `setInitialValue()` |
+  | `FormField::validate(array, bool $overwriteValue)` | `validate(FormInput)`, `validateCurrentValue()` |
+  | `FileDataModel`, `FileField::VALUE_*`, `ERRMSG_*`, `FileField::setValue()` | `UploadedFile`, `UploadInput`, `FormMessages`, `FileUploadStorage` |
+  | `RequiredRule` | `addRequiredRule(HtmlText)` |
+  | `MinValueRule`, `MaxValueRule`, `ValueBetweenRule` | `IntegerMinRule`/`IntegerMaxRule`, `FloatMinRule`/`FloatMaxRule`, `DecimalMinRule`/`DecimalMaxRule` |
+  | `MinLengthRule`/`MaxLengthRule` on lists | `MinCountRule`, `MaxCountRule` |
+  | `ValidAmountRule`, `FloatValueRule`, `NumericValueRule`, `ValidDateRule`, `ValidTimeRule`, `NoArrayRule`, `ValidateAgainstOptions` | removed, the field checks its input |
+  | `ZipCodeRule`, `PhoneNumberRule`, `ValidCsrfTokenValue` | removed, `ZipCodeValidator`, the fields, `CsrfTokenSource` |
+  | `FormRule::validate(FormField)` | typed bases `StringRule`, `StringListRule`, `IntegerRule`, `FloatRule`, `DecimalRule` |
+  | `addError(string, bool)`, `addErrorAsHtmlTextObject()` | `addError(HtmlText)` |
+  | `InputTypeValue`, `AutoCompleteValue`, `RadioOptionsLayout`, `CheckboxOptionsLayout` | `InputTypeEnum`, `AutoCompleteEnum`, `RadioOptionsLayoutEnum`, `CheckboxOptionsLayoutEnum` |
+  | hard-coded German texts, `FormControl` "Abbrechen" | `FormMessages`, `FormMessages::german()` |
+* **Form fields: text fields:** `TextField`, `EmailField`, `PhoneNumberField`, `HiddenField`,
   `PasswordField`, `TextAreaField` (and the fields built on them: `ZipCodeField`, `IbanNumberField`) now store a
   `string`, not `mixed`. New class hierarchy: `FormField` > `TextualField` >
   `InputField` > `StringInputField` (value, `getValueAsString()`, no public setter) > `SettableStringInputField`
@@ -35,13 +82,13 @@ This document tracks relevant changes and upgrade instructions for developers.
       previous value stays. The value is reset to `''`, exactly one error "invalid input" is added and the rules do not
       run (no second "required" error). `validate()` returns `false`.
     * ⚠️ **Normalization:** `TextField` and the fields built on it (also `ZipCodeField`, `IbanNumberField`; the number
-      and date fields are in part 3) store the trimmed text without zero-width spaces (U+200B), also for constructor
+      and date fields are described below) store the trimmed text without zero-width spaces (U+200B), also for constructor
       values and setters. `EmailField` stores a valid address in its canonical form, `TextAreaField` and `HiddenField`
       remove only zero-width spaces (not trimmed), `PasswordField` is not normalized at all (v3 removed U+200B).
       An empty field has the value `''` (`getRawValue()` returned `null` for a missing key).
     * ⚠️ **`HiddenField` is string-only:** the constructor accepts `?string`, not `int|float|bool`
       (`new HiddenField(name: 'id', value: (string)$id, valueIsInt: true)`). `HiddenIntegerField` replaces the
-      `valueIsInt` flag (part 3).
+      `valueIsInt` flag (see "numbers, date and time").
     * ⚠️ **`TextAreaField` is string-only:** the array value (one entry per line) is removed. Use the string value and
       `getValues()` (trimmed lines, no empty lines):
       ```php
@@ -55,7 +102,7 @@ This document tracks relevant changes and upgrade instructions for developers.
       $field->setValue(implode(PHP_EOL, $nameserversFromDatabase));
       ```
       A subclass that overrode `validate()` to parse the lines must move its checks into rules: the per-line rule
-      `addEachRule()` (part 6).
+      `addEachRule()` (see "Form rules").
     * ⚠️ **`PasswordField`:** the free `autoComplete` argument is replaced by the required argument
       `PasswordPurposeEnum $purpose` (`CURRENT`: login or confirming the password, `NEW`: registration, password
       change, reset). The field always renders the matching `autocomplete` attribute. A password field without
@@ -71,12 +118,12 @@ This document tracks relevant changes and upgrade instructions for developers.
       ```
     * ⚠️ **`final` classes:** `EmailField`, `PasswordField` and `PhoneNumberField` are `final`. Customize them with the
       constructor, setters, rules, listeners and the renderer. `TextField` and `TextAreaField` stay open
-      (`HiddenField`, `ZipCodeField`, `IbanNumberField` and `CsrfTokenField` are `final` since part 4).
+      (`HiddenField`, `ZipCodeField`, `IbanNumberField` and `CsrfTokenField` are `final` as well).
     * ⚠️ `InputFieldRenderer` takes an `InputField` only (it already read the `inputType` of the field, which an
       `OptionsField` does not have).
     * The v3.3.0 getters stay: `getValueAsString()` (now on `StringInputField` and `TextAreaField`), `getValues()` of
       `TextAreaField`.
-* **Form Fields (typed values, part 2: option fields):** `OptionsField` is split by value type. `SingleOptionsField`
+* **Form fields: option fields and `BooleanField`:** `OptionsField` is split by value type. `SingleOptionsField`
   (value `string`, the option key, `''` = nothing selected) is the base of `RadioOptionsField`, `SelectOptionsField` and
   `ToggleField`; `MultiOptionsField` (value `list<string>`, empty is `[]`) is the base of `CheckboxOptionsField` and the
   new `MultiSelectOptionsField` and `MultiToggleField`. `BooleanField` has a `bool` value. The option fields stay
@@ -112,14 +159,14 @@ This document tracks relevant changes and upgrade instructions for developers.
       (`FormMessages::invalidOption`, `[field]` is the field name) is added and the other rules do not run (no second
       "required" error). An array posted to a single field is invalid input (v3 kept the previous value). Empty keys
       in a multi list (`['', 'a']`) are dropped, so `['0']` is a normal selection. `ValidateAgainstOptions` is not
-      added to the fields any more (the check is part of reading the input; the class is removed, part 6).
+      added to the fields any more (the check is part of reading the input; the class is removed).
     * ⚠️ **Typed setters and initial value:** constructor values and setters have the type of the value
       (`?string`, `list<string>`, a wrong type is a `TypeError`; keys are not checked against the options). The public
       setters change only the current value, the initial value stays, `valueHasChanged()` compares with it. A subclass
       fills the field after `parent::__construct()` with the protected `setInitialValue(?string)` (single),
       `setInitialValues(list<string>)` (multi) or `setInitiallyChecked(bool)` (`BooleanField`): current and initial
       value, a `LogicException` once the field was validated. `setOriginalValue()` and `getOriginalValue()` are
-      removed (part 6).
+      removed.
       ```php
       // Before
       $field->setValue($row->status);               // single
@@ -171,7 +218,7 @@ This document tracks relevant changes and upgrade instructions for developers.
       custom renderer reads `isSelected($optionKey)` instead of `getRawValue()`. `SelectOptionsField::$cssClasses`,
       `$renderEmptyValueOption` and `$placeholder` are still readable but no longer `readonly` (`private(set)`);
       `SelectOptionsField::getDataAttributes()` has the type `array<string, string>`.
-* **Form Fields (typed values, part 3: numbers, date and time):** `AmountField`, `DateTimeFieldCore`,
+* **Form fields: numbers, date and time:** `AmountField`, `DateTimeFieldCore`,
   `ValidAmountRule`, `ValidDateRule` and `ValidTimeRule` are removed. The fields parse their text themselves (an
   `AmountParser`/date/time parser in `accept()`) and hold a typed value. New classes: `IntegerField` (`?int`),
   `FloatField` (`?float`), `DecimalField` (`?string`, bcmath, for money), `HiddenIntegerField` (`?int`),
@@ -267,11 +314,12 @@ This document tracks relevant changes and upgrade instructions for developers.
       its scale (`12.5` renders `12.50`). Invalid input is rendered as posted (trimmed). The HTML structure and
       attributes of all fields are unchanged.
     * ⚠️ **Removed rules:** `ValidAmountRule`, `ValidDateRule`, `ValidTimeRule` (the field checks its input; a rule
-      that read them is not needed). `FloatValueRule` and `NumericValueRule` are removed in part 6. A custom rule that used `ValidAmountRule` on a text field validates the text itself with
-      `AmountParser::isInteger()`, `isDecimal()`, `toInt()`, `toFloat()` or the new `toDecimal(value, scale)`.
-    * ⚠️ **`MinValueRule`/`MaxValueRule`/`ValueBetweenRule`:** replaced by the typed numeric rules, see part 6.
+      that read them is not needed), `FloatValueRule` and `NumericValueRule` too. A custom rule that used
+      `ValidAmountRule` on a text field validates the text itself with `AmountParser::isInteger()`, `isDecimal()`,
+      `toInt()`, `toFloat()` or the new `toDecimal(value, scale)`.
+    * ⚠️ **`MinValueRule`/`MaxValueRule`/`ValueBetweenRule`:** replaced by the typed numeric rules, see "Form rules".
     * ⚠️ `HiddenFieldRenderer` takes an `InputField` (was `HiddenField`) so that it renders `HiddenIntegerField` too.
-* **Form Fields (typed values, part 4: phone number, zip code, IBAN, CSRF token):** the checks that belong to one
+* **Form fields: phone number, zip code, IBAN, CSRF token:** the checks that belong to one
   field moved from rules into the fields and into two pure validators. New `ZipCodeValidator::validate(zipCode,
   countryCode)` and `IbanValidator::validate(input)` (`actra\yuf\datacheck\validatorTypes`, no global state, usable
   without a form). `ZipCodeField`, `IbanNumberField` and `HiddenField` are now `final`.
@@ -325,8 +373,8 @@ This document tracks relevant changes and upgrade instructions for developers.
       scripting vulnerability, fixed). Everything else is unchanged (checked against the HTML of v3.3.1); posted zip
       codes and IBANs are rendered trimmed (see the normalization note above).
     * The hook `readAdditionalInput(FormInput)` reads input besides the field's own value (country code, fallback
-      token), see part 6.
-* **Form Fields (typed values, part 5: file field):** `FileField` no longer touches `$_SESSION`, `$_SERVER`, `$_FILES`
+      token, upload pointer).
+* **Form fields: `FileField`:** `FileField` no longer touches `$_SESSION`, `$_SERVER`, `$_FILES`
   or the file system itself. It reads the uploads from `FormInput::getUploads()` and keeps the files between the
   requests in a `FileUploadStorage`. The default `SessionFileUploadStorage` does what v3 did (session list of the files,
   directory below the temp directory); tests and projects with other needs pass their own storage. `FileField` is now
@@ -390,8 +438,9 @@ This document tracks relevant changes and upgrade instructions for developers.
       empties `getFiles()`.
 * **Form messages:** the German texts of the form code ("Die ungültige Eingabe wurde ignoriert.", "Der angegebene Wert
   ist ungültig.", ...) are no longer hard-coded. New `FormMessages` with English defaults and `FormMessages::german()`
-  with the v3 texts; the form hands them to its fields.
-  ⚠️ **Attention:** without the argument the fields show the English texts.
+  with the v3 texts; the form hands them to its fields and to its `FormControl` (the cancel link text "Abbrechen",
+  see "Form components, errors and renderers"; the message list is in `FormMessages`).
+  ⚠️ **Attention:** without the argument the fields and the `FormControl` show the English texts.
   ```php
   // Before: German texts hard-coded
   $form = new Form(name: 'contact');
@@ -406,10 +455,7 @@ This document tracks relevant changes and upgrade instructions for developers.
   uploads of an input of `$_FILES` as `list<UploadInput>` (single and `name[]` structure) and `hasMalformedUpload(name)`
   tells that the structure was manipulated.
   `FormField::validateCurrentValue()` runs the listeners and rules without reading input.
-* **Form Fields (typed values, part 6: rules, validation and global state):** the last part of the typed values. The
-  temporary bridge of the earlier parts (`getRawValue()`, `setValue(mixed)`, `getOriginalValue()`,
-  `setOriginalValue()`, `validate(array, bool)`, `TextualField::validateInput()`) is gone, every setter has its real
-  type, and rules get typed values.
+* **Form rules:** rules get typed values (no `getRawValue()`, no `mixed`).
     * ⚠️ **Typed rules:** `FormRule` no longer has `validate(FormField)` (it only stores the error message). A rule
       extends the base that fits the value, and is a pure predicate that is called for a non-empty value only (no empty
       check, no `setValue()`):
@@ -485,6 +531,8 @@ This document tracks relevant changes and upgrade instructions for developers.
     * ⚠️ **Removed rules:** `RequiredRule`, `FloatValueRule`, `NumericValueRule` (the number fields parse their
       input), `NoArrayRule` (array input is rejected when the input is read), `ValidateAgainstOptions` (the option
       check is part of reading the input of an options field), `ValueBetweenRule`, `MinValueRule`, `MaxValueRule`.
+* **Form validation and request data:** `getRawValue()`, `setValue(mixed)`, `getOriginalValue()`,
+  `setOriginalValue()` and `validate(array, bool)` are gone; every setter has its real type.
     * ⚠️ **`validate(array)` becomes `validate(FormInput)`:** `FormField::validate(FormInput $input): bool` is a
       `final` template (read the additional input, read the value, run listeners, check the required rule and the
       rules, validate the children of a toggle field if the field is valid). A subclass can no longer override it;
@@ -531,6 +579,77 @@ This document tracks relevant changes and upgrade instructions for developers.
       an unparsable number or date still gets its error before the other rules, and the rules for the typed value
       (`addValueRule()`) do not run for it. A text rule runs for the text of a number or date field too (the canonical
       text when the value is valid).
+
+* **Form enums renamed:** every fixed set of values of the form code ends with `Enum`. The namespaces and the cases
+  are unchanged:
+
+  | v3 | v4 |
+  |:--|:--|
+  | `actra\yuf\form\settings\InputTypeValue` | `InputTypeEnum` |
+  | `actra\yuf\form\settings\AutoCompleteValue` | `AutoCompleteEnum` |
+  | `actra\yuf\form\component\layout\RadioOptionsLayout` | `RadioOptionsLayoutEnum` |
+  | `actra\yuf\form\component\layout\CheckboxOptionsLayout` | `CheckboxOptionsLayoutEnum` |
+
+  ```php
+  // Before
+  use actra\yuf\form\settings\AutoCompleteValue;
+  new TextField(name: 'given', label: $label, autoComplete: AutoCompleteValue::GIVEN_NAME);
+  new RadioOptionsField(name: 'r', label: $label, formOptions: $options, initialValue: null,
+      layout: RadioOptionsLayout::DEFINITION_LIST);
+
+  // After
+  use actra\yuf\form\settings\AutoCompleteEnum;
+  new TextField(name: 'given', label: $label, autoComplete: AutoCompleteEnum::GIVEN_NAME);
+  new RadioOptionsField(name: 'r', label: $label, formOptions: $options, initialValue: null,
+      layout: RadioOptionsLayoutEnum::DEFINITION_LIST);
+  ```
+  New in v4: `PasswordPurposeEnum` and `InputShapeEnum`.
+* **Form components, errors and renderers:**
+    * ⚠️ **`addError(HtmlText)`:** `FormComponent::addError(string $errorMessage, bool $isEncodedForRendering)` and
+      `addErrorAsHtmlTextObject(HtmlText)` are replaced by one method, `addError(HtmlText $errorMessage)`. The flag
+      is gone: the `HtmlText` says whether the text is encoded.
+      ```php
+      // Before
+      $field->addError(errorMessage: 'Name < 3', isEncodedForRendering: false);
+      $field->addError(errorMessage: '<b>Name</b> is wrong', isEncodedForRendering: true);
+      $field->addErrorAsHtmlTextObject(errorMessageObject: $htmlText);
+
+      // After
+      $field->addError(errorMessage: HtmlText::unencoded(textContent: 'Name < 3'));
+      $field->addError(errorMessage: HtmlText::encoded(textContent: '<b>Name</b> is wrong'));
+      $field->addError(errorMessage: $htmlText);
+      ```
+    * ⚠️ **`FormControl` cancel text:** the default text of the cancel link comes from `FormMessages::$cancel` (English
+      "Cancel"; `FormMessages::german()` gives the v3 text "Abbrechen"). A `FormControl` in a form uses the messages of
+      that form, also when added with `addChildComponent()`; without a form it uses the English default (pass
+      `cancelLabel` there). An individual `cancelLabel` argument wins as before.
+      `FormControl::$cancelLabel` is never `null` any more (it is computed from the individual label or the messages).
+      ```php
+      // Before: "Abbrechen" was hard-coded
+      $form->addComponent(formComponent: new FormControl(name: 'save', submitLabel: $save, cancelLink: '/list'));
+
+      // After: keep it with one argument of the form
+      $form = new Form(name: 'edit', messages: FormMessages::german());
+      ```
+    * ⚠️ **`FormComponent::getHtmlTag()` returns `HtmlTag`** (was `?HtmlTag`), and `render()` no longer returns `''`
+      for a missing tag: a component always has a tag. An override must return an `HtmlTag` too. New
+      `FormRenderer::prepareHtmlTag(): HtmlTag` (`final`) prepares the renderer and returns its base tag (throws a
+      `LogicException` if `prepare()` did not call `setHtmlTag()`); the form renderers use it instead of
+      `prepare()` followed by `getHtmlTag()`. A custom renderer that renders a nested renderer does the same.
+      `FormRenderer::getHtmlTag(): ?HtmlTag` and `prepare()` are unchanged.
+    * ⚠️ **`FormRenderer::addFieldInfoToParentHtmlTag()`** adds nothing for a field without `fieldInfo` (v3 failed with a
+      `TypeError`).
+    * **Typed collections:** `FormInfo` takes `list<string>` for `dlClasses`, `dtClasses` and `ddClasses`;
+      `FormCollection::$childComponents` is `array<int|string, FormComponent>` (numeric names are `int` keys in PHP);
+      `Form::getAllFields()` returns `list<FormField>`. `ErrorCollection` is `final`, `listErrors()` returns
+      `list<HtmlText>` and `getFirstError()` throws a `LogicException` for an empty collection (v3 failed with a `TypeError`).
+      `Form`, `FormCollection`, `FormComponent`, `FormInfo`, `FormControl`, `FormSubHeadline` and all renderers stay
+      non-final (extension points).
+* **Form HTML:** the markup of all fields and layouts is unchanged (pinned by tests against the HTML of v3.3.x) with
+  these deliberate exceptions, all listed above: texts that now come from `FormMessages` (English without
+  `FormMessages::german()`, the `FormControl` cancel text included), canonical rendering of number values (`'+007'`
+  renders `7`, `'7.50'` in a `FloatField` renders `7.5`), posted zip codes and IBANs are trimmed, an invalid phone
+  number is HTML-encoded (security fix) and a `PasswordField` is never rendered back.
 
 ---
 

@@ -1,6 +1,6 @@
 # Plan: Form fields with typed values (v4)
 
-Status: planned, design approved (2026-10-04), refined in review. Builds on
+Status: done (2026-10-04, tasks 1 to 7, form refactoring complete; v4.0.0 release steps are open, see Task 7 notes). Builds on
 [docs/form-typed-values/plan.md](../form-typed-values/plan.md) (v3.3.0), which must be released first.
 
 ## Goal
@@ -819,6 +819,65 @@ Review changes (user decisions):
 Verify: `phpstan-baseline.neon` has no entries for `src/form/`; `example/` and the yuf skeleton still work.
 
 Handover notes:
+
+Done (2026-10-04), `ddev composer check` green (1276 tests), `phpstan-baseline.neon` has no entry for `src/form/` any
+more (17 entries / 13 blocks removed, none added; 783 errors remain in the baseline, all outside `src/form/`).
+`example/` returns 200 with "Hello World!". The yuf skeleton (`../yuf-skeleton`) uses only `auth`, `core` and `html`
+classes, nothing form related: unaffected.
+
+**What was done**
+
+- **Baseline:** `FormRenderer::prepareHtmlTag(): HtmlTag` (`final`, prepares and returns the base tag, `LogicException`
+  if `prepare()` forgot `setHtmlTag()`) replaces `prepare()` + nullable `getHtmlTag()` in `FormComponent`,
+  `DefinitionListRenderer`, `LegendAndListRenderer`, `BooleanFieldListRenderer`; `FormComponent::getHtmlTag()` returns
+  `HtmlTag` (was `?HtmlTag`, `render()` lost its `''` branch); `addFieldInfoToParentHtmlTag()` ignores a missing info;
+  `FormInfo` class lists are `list<string>`; `ErrorCollection` is `final`, `list<HtmlText>`, `getFirstError()` throws a
+  `LogicException` for an empty collection; `FormControl::$cancelLabel` is a non-null property hook.
+- **Enums:** `InputTypeEnum`, `AutoCompleteEnum`, `RadioOptionsLayoutEnum`, `CheckboxOptionsLayoutEnum` (files moved,
+  all usages in `src/`, `tests/` updated; no usage in `example/` or the skeleton).
+- **`addError(HtmlText)`:** `addError(string, bool)` and `addErrorAsHtmlTextObject()` are replaced by
+  `addError(errorMessage: HtmlText)` everywhere.
+- **`FormControl` cancel text** from `FormMessages::$cancel`: resolved from the form the control belongs to (review
+  change: also when added with `addChildComponent()`, via the parent chain); without a form the English default. The
+  individual `cancelLabel` argument wins.
+- **Collections typing:** `FormCollection::$childComponents` `array<int|string, FormComponent>`, `Form::getAllFields()`
+  `list<FormField>`, listener and tag lists `list<...>`. The `mixed` phpdoc of `MultiOptionsField::toKeyList()` is gone
+  (`list<string>`, runtime guard with a `@phpstan-ignore function.alreadyNarrowedType` and reason). `grep mixed
+  src/form` now only finds `FormInput` and the session storage.
+- **`final`:** checked the remaining classes against design 3.12/decision 9: all as designed (collections, components,
+  renderers, rules, option fields stay open, `ErrorCollection` final).
+- **README.md:** the "Form Field Values" section is replaced by "Forms" (form example with `FormMessages::german()`,
+  getter table per field type, setters, `PasswordPurposeEnum`, typed rules with a custom `StringRule`, `FormInput`,
+  storage/token source). `tests/Unit/form/ReadmeExamplesTest` runs the examples (named arguments verified).
+- **UPGRADE.md `[v4.0.0]`:** migration checklist (11 steps) and an overview table (v3 -> v4) at the top, the "part N"
+  headings and cross references and the bridge wording replaced by topic names, new sections "Form enums renamed" and
+  "Form components, errors and renderers" (`addError`, `FormControl`, `getHtmlTag()`, typed collections), "Form HTML"
+  summary. The v3 "Before" example of the password field uses `AutoCompleteValue` (the old name) again.
+- **End to end test:** `tests/Unit/form/FormEndToEndTest` (one form with 15 fields incl. toggle child, file field with
+  `InMemoryFileUploadStorage`, CSRF with `InMemoryCsrfTokenSource`; valid and invalid `FormInput`, all typed getters,
+  render). New `FormComponentTest` (`addError`, `ErrorCollection`, `FormControl`, `FormInfo`, `FormSubHeadline`).
+
+**Deviations (and why)**
+
+1. `FormRenderer::prepareHtmlTag()` is new API (the design called the `prepare()`/`getHtmlTag()` two-phase API out of
+   scope for the redesign, but the baseline entries need a non-null result). `prepare()` and `getHtmlTag(): ?HtmlTag`
+   are unchanged.
+2. `FormComponent::getHtmlTag()` narrowed to `HtmlTag`: a subclass override with `?HtmlTag` breaks (documented).
+3. `addErrorAsHtmlTextObject()` is removed instead of kept as an alias (design: "`addError(HtmlText)` only").
+4. Custom rule examples: a rule without own constructor takes `defaultErrorMessage:` (design/UPGRADE examples of the
+   earlier tasks said `errorMessage:`; README and tests use the real name, the UPGRADE example already used it).
+
+**HTML:** no change in the field and layout markup (all pinned markup tests unchanged and green). Only the default
+cancel text of `FormControl` is English without `FormMessages::german()` (design table), listed in `UPGRADE.md`.
+
+**Open for v4.0.0 beyond forms**
+
+- `UPGRADE.md` of the v4.0.0 section only covers forms; the release needs the date and the Git tag (v4.0.0; merge `v4`
+  into `main`). No other area was migrated.
+- Public mutable properties of `FormField` (`id`, `fieldInfo`, `autoFocus`, ...) and the two-phase renderer API were not
+  redesigned (design 3.12 "out of scope").
+- `NullField` and `FormSubHeadline` were not touched (no value, no baseline entries).
+- `DateField`/`TimeField` constructor values are required positional arguments (kept from v3).
 
 ## Out of scope (separate plans)
 

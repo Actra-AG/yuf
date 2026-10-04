@@ -34,7 +34,7 @@ abstract class FormField extends FormComponent
     public bool $autoFocus = false;
     /** The texts of the form; set by `Form::addField()`, a field without a form uses the English defaults. */
     public FormMessages $messages;
-    /** @var FormFieldListener[] */
+    /** @var list<FormFieldListener> */
     protected array $listeners = [];
 
     private ?HtmlText $requiredErrorMessage = null;
@@ -220,7 +220,7 @@ abstract class FormField extends FormComponent
     private function checkRequired(): void
     {
         if ($this->requiredErrorMessage !== null && $this->isValueEmpty()) {
-            $this->addErrorAsHtmlTextObject(errorMessageObject: $this->requiredErrorMessage);
+            $this->addError(errorMessage: $this->requiredErrorMessage);
         }
     }
 
@@ -239,7 +239,7 @@ abstract class FormField extends FormComponent
     final protected function rejectInput(string $errorMessage): void
     {
         $this->inputRejected = true;
-        $this->addError(errorMessage: $errorMessage, isEncodedForRendering: false);
+        $this->addError(errorMessage: HtmlText::unencoded(textContent: $errorMessage));
     }
 
     /**

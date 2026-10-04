@@ -10,7 +10,7 @@ namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\BooleanField;
 use actra\yuf\form\component\field\CheckboxOptionsField;
-use actra\yuf\form\component\layout\CheckboxOptionsLayout;
+use actra\yuf\form\component\layout\CheckboxOptionsLayoutEnum;
 use actra\yuf\form\FormInput;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -154,7 +154,7 @@ final class BooleanFieldValueTest extends TestCase
 
     public function testAllLayoutsAreAccepted(): void
     {
-        foreach (CheckboxOptionsLayout::cases() as $layout) {
+        foreach (CheckboxOptionsLayoutEnum::cases() as $layout) {
             $field = new BooleanField(
                 name: 'boolean',
                 label: HtmlText::encoded(textContent: 'Boolean'),

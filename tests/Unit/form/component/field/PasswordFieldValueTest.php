@@ -10,7 +10,7 @@ namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\PasswordField;
 use actra\yuf\form\FormInput;
-use actra\yuf\form\settings\AutoCompleteValue;
+use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -81,7 +81,7 @@ final class PasswordFieldValueTest extends TestCase
 
         $field->validate(input: FormInput::fromArray(data: ['password' => 'secret']));
 
-        $this->assertStringNotContainsString('secret', (string)$field->getHtmlTag()?->render());
+        $this->assertStringNotContainsString('secret', $field->getHtmlTag()->render());
     }
 
     public function testFieldHasNoSetter(): void
@@ -104,11 +104,11 @@ final class PasswordFieldValueTest extends TestCase
         $field = $this->createField(purpose: $purpose);
 
         $this->assertSame($expected, $field->autoComplete?->value);
-        $this->assertStringContainsString('autocomplete="' . $expected . '"', (string)$field->getHtmlTag()?->render());
+        $this->assertStringContainsString('autocomplete="' . $expected . '"', $field->getHtmlTag()->render());
     }
 
     public function testAutocompleteEnumValuesAreTheOnesOfThePurposes(): void
     {
-        $this->assertSame(AutoCompleteValue::CURRENT_PASSWORD, $this->createField()->autoComplete);
+        $this->assertSame(AutoCompleteEnum::CURRENT_PASSWORD, $this->createField()->autoComplete);
     }
 }

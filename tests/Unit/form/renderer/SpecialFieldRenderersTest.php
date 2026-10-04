@@ -17,7 +17,7 @@ use actra\yuf\form\component\field\ZipCodeField;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\form\FormNameRegistry;
-use actra\yuf\form\settings\AutoCompleteValue;
+use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
@@ -184,7 +184,7 @@ final class SpecialFieldRenderersTest extends TestCase
             value: null,
             invalidErrorMessage: $this->text('Invalid'),
             placeholder: 'p',
-            autoComplete: AutoCompleteValue::TEL
+            autoComplete: AutoCompleteEnum::TEL
         );
 
         $this->assertSame(

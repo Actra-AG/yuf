@@ -15,7 +15,7 @@ use actra\yuf\form\component\field\MultiToggleField;
 use actra\yuf\form\component\field\RadioOptionsField;
 use actra\yuf\form\component\field\SelectOptionsField;
 use actra\yuf\form\component\field\ToggleField;
-use actra\yuf\form\component\layout\CheckboxOptionsLayout;
+use actra\yuf\form\component\layout\CheckboxOptionsLayoutEnum;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
@@ -122,7 +122,7 @@ final class OptionsFieldRenderersTest extends TestCase
             label: $this->label(),
             formOptions: $formOptions,
             initialValues: ['yes'],
-            layout: CheckboxOptionsLayout::CHECKBOX_ITEM
+            layout: CheckboxOptionsLayoutEnum::CHECKBOX_ITEM
         );
 
         $this->assertStringContainsString(
@@ -140,7 +140,7 @@ final class OptionsFieldRenderersTest extends TestCase
             label: $this->label(),
             formOptions: $formOptions,
             initialValues: [],
-            layout: CheckboxOptionsLayout::CHECKBOX_ITEM
+            layout: CheckboxOptionsLayoutEnum::CHECKBOX_ITEM
         );
 
         $this->assertStringContainsString('<input type="checkbox" name="c[]" id="c" value="yes">', $field->render());

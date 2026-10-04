@@ -747,7 +747,7 @@ class NoSpacesRule extends StringRule
         return !str_contains($value, ' ');
     }
 }
-$field->addRule(new NoSpacesRule(errorMessage: $message));   // addRule() takes a StringRule, a FormRule is rejected
+$field->addRule(new NoSpacesRule(defaultErrorMessage: $message));   // addRule() takes a StringRule, a FormRule is rejected
 // int value: extends IntegerRule + addValueRule(); list of strings: extends StringListRule on a multi option field
 ```
 

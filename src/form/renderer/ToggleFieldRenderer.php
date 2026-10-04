@@ -129,10 +129,7 @@ class ToggleFieldRenderer extends FormRenderer
                     renderer: $this->toggleChildren->createDefaultChildRenderer(childComponent: $childComponent)
                 );
             }
-            $childHtmlTag = $childComponent->getHtmlTag();
-            if ($childHtmlTag !== null) {
-                $divTag->addTag(htmlTag: $childHtmlTag);
-            }
+            $divTag->addTag(htmlTag: $childComponent->getHtmlTag());
         }
 
         return $divTag;

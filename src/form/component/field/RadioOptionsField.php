@@ -8,7 +8,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
-use actra\yuf\form\component\layout\RadioOptionsLayout;
+use actra\yuf\form\component\layout\RadioOptionsLayoutEnum;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\DefinitionListRenderer;
@@ -26,7 +26,7 @@ class RadioOptionsField extends SingleOptionsField
         FormOptions $formOptions,
         ?string $initialValue,
         ?HtmlText $requiredError = null,
-        RadioOptionsLayout $layout = RadioOptionsLayout::LEGEND_AND_LIST
+        RadioOptionsLayoutEnum $layout = RadioOptionsLayoutEnum::LEGEND_AND_LIST
     ) {
         parent::__construct(
             name: $name,
@@ -45,14 +45,14 @@ class RadioOptionsField extends SingleOptionsField
             $this->addRequiredRule(errorMessage: $requiredError);
         }
         switch ($layout) {
-            case RadioOptionsLayout::DEFINITION_LIST:
+            case RadioOptionsLayoutEnum::DEFINITION_LIST:
                 $this->setRenderer(renderer: new DefinitionListRenderer(formField: $this));
                 break;
 
-            case RadioOptionsLayout::LEGEND_AND_LIST:
+            case RadioOptionsLayoutEnum::LEGEND_AND_LIST:
                 $this->setRenderer(renderer: new LegendAndListRenderer(optionsField: $this));
                 break;
-            case RadioOptionsLayout::NONE:
+            case RadioOptionsLayoutEnum::NONE:
                 break;
         }
     }

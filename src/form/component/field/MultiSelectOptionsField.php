@@ -11,7 +11,7 @@ namespace actra\yuf\form\component\field;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\SelectOptionsRenderer;
-use actra\yuf\form\settings\AutoCompleteValue;
+use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlText;
 
 /**
@@ -36,7 +36,7 @@ class MultiSelectOptionsField extends MultiOptionsField
         bool $renderAsChosenEnhancedField = false,
         bool $renderEmptyValueOption = true,
         ?string $placeholder = null,
-        ?AutoCompleteValue $autoComplete = null
+        ?AutoCompleteEnum $autoComplete = null
     ) {
         parent::__construct(
             name: $name,

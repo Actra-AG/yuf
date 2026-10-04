@@ -11,7 +11,7 @@ namespace actra\yuf\form\component\field;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\InputShapeEnum;
 use actra\yuf\form\renderer\HiddenFieldRenderer;
-use actra\yuf\form\settings\InputTypeValue;
+use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
 use actra\yuf\security\CsrfToken;
@@ -34,7 +34,7 @@ final class CsrfTokenField extends InputField
     public function __construct(private readonly CsrfTokenSource $tokenSource = new SessionCsrfTokenSource())
     {
         parent::__construct(
-            inputType: InputTypeValue::HIDDEN,
+            inputType: InputTypeEnum::HIDDEN,
             name: CsrfToken::getFieldName(),
             label: HtmlText::encoded(textContent: ''),
             placeholder: null,
@@ -72,7 +72,7 @@ final class CsrfTokenField extends InputField
     public function validateCurrentValue(): bool
     {
         if (!$this->postedTokenIsValid && !$this->hasErrors(withChildElements: false)) {
-            $this->addError(errorMessage: $this->messages->invalidCsrfToken, isEncodedForRendering: false);
+            $this->addError(errorMessage: HtmlText::unencoded(textContent: $this->messages->invalidCsrfToken));
         }
 
         return parent::validateCurrentValue();

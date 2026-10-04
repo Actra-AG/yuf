@@ -10,6 +10,7 @@ namespace actra\yuf\form\component\collection;
 
 use Exception;
 use actra\yuf\form\component\field\CsrfTokenField;
+use actra\yuf\form\component\FormControl;
 use actra\yuf\form\component\FormField;
 use actra\yuf\form\FormCollection;
 use actra\yuf\form\FormInput;
@@ -79,6 +80,9 @@ class Form extends FormCollection
 
     public function addComponent(FormComponent $formComponent): void
     {
+        if ($formComponent instanceof FormControl) {
+            $formComponent->messages = $this->messages;
+        }
         $this->addChildComponent(formComponent: $formComponent);
     }
 
@@ -131,7 +135,7 @@ class Form extends FormCollection
             && !$this->hasErrors(withChildElements: false)
             && !is_null(value: $this->globalErrorMessage)
         ) {
-            $this->addErrorAsHtmlTextObject(errorMessageObject: $this->globalErrorMessage);
+            $this->addError(errorMessage: $this->globalErrorMessage);
         }
 
         return !$this->hasErrors(withChildElements: true);
@@ -160,7 +164,7 @@ class Form extends FormCollection
             return;
         }
         if (!$csrfTokenField->validate(input: $input)) {
-            $this->addError(errorMessage: $this->messages->invalidCsrfToken, isEncodedForRendering: false);
+            $this->addError(errorMessage: HtmlText::unencoded(textContent: $this->messages->invalidCsrfToken));
         }
     }
 
@@ -183,14 +187,14 @@ class Form extends FormCollection
                 $this->globalErrorMessage
             )
         ) {
-            $this->addErrorAsHtmlTextObject(errorMessageObject: $this->globalErrorMessage);
+            $this->addError(errorMessage: $this->globalErrorMessage);
         }
 
         return parent::render();
     }
 
     /**
-     * @return FormField[]
+     * @return list<FormField>
      */
     public function getAllFields(): array
     {

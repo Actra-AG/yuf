@@ -8,7 +8,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
-use actra\yuf\form\settings\InputTypeValue;
+use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
 
@@ -27,7 +27,7 @@ final class PasswordField extends StringInputField
         ?int $maxLength = null
     ) {
         parent::__construct(
-            inputType: InputTypeValue::PASSWORD,
+            inputType: InputTypeEnum::PASSWORD,
             name: $name,
             label: $label,
             value: null,

@@ -34,8 +34,7 @@ class LegendAndListRenderer extends FormRenderer
             );
         }
         $defaultFormFieldRenderer = $optionsField->getDefaultRenderer();
-        $defaultFormFieldRenderer->prepare();
-        $fieldsetTag->addTag(htmlTag: $defaultFormFieldRenderer->getHtmlTag());
+        $fieldsetTag->addTag(htmlTag: $defaultFormFieldRenderer->prepareHtmlTag());
         FormRenderer::addErrorsToParentHtmlTag(
             formComponentWithErrors: $optionsField,
             parentHtmlTag: $fieldsetTag

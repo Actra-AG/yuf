@@ -13,7 +13,10 @@ use LogicException;
 
 abstract class FormCollection extends FormComponent
 {
-    /** @var FormComponent[] : Array with all child components, which can also be collections */
+    /**
+     * @var array<int|string, FormComponent> The child components by name (numeric names become int keys), can also be
+     *     collections
+     */
     private(set) array $childComponents = [];
 
     final public function addChildComponent(FormComponent $formComponent): void

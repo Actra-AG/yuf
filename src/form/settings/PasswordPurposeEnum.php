@@ -19,11 +19,11 @@ enum PasswordPurposeEnum
     /** Registration, password change, password reset */
     case NEW;
 
-    public function autoComplete(): AutoCompleteValue
+    public function autoComplete(): AutoCompleteEnum
     {
         return match ($this) {
-            PasswordPurposeEnum::CURRENT => AutoCompleteValue::CURRENT_PASSWORD,
-            PasswordPurposeEnum::NEW => AutoCompleteValue::NEW_PASSWORD,
+            PasswordPurposeEnum::CURRENT => AutoCompleteEnum::CURRENT_PASSWORD,
+            PasswordPurposeEnum::NEW => AutoCompleteEnum::NEW_PASSWORD,
         };
     }
 }

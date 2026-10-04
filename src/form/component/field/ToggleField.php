@@ -14,7 +14,7 @@ use actra\yuf\form\FormInput;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\ToggleFieldRenderer;
-use actra\yuf\form\settings\AutoCompleteValue;
+use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlText;
 use Closure;
 
@@ -36,7 +36,7 @@ class ToggleField extends SingleOptionsField
         ?string $initialValue,
         ?HtmlText $requiredError = null,
         private readonly bool $displayLegend = true,
-        ?AutoCompleteValue $autoComplete = null
+        ?AutoCompleteEnum $autoComplete = null
     ) {
         parent::__construct(
             name: $name,

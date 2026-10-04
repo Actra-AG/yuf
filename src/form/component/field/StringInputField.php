@@ -8,8 +8,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
-use actra\yuf\form\settings\AutoCompleteValue;
-use actra\yuf\form\settings\InputTypeValue;
+use actra\yuf\form\settings\AutoCompleteEnum;
+use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
 use LogicException;
 
@@ -19,12 +19,12 @@ use LogicException;
 abstract class StringInputField extends InputField
 {
     public function __construct(
-        InputTypeValue $inputType,
+        InputTypeEnum $inputType,
         string $name,
         HtmlText $label,
         ?string $value,
         ?string $placeholder,
-        ?AutoCompleteValue $autoComplete,
+        ?AutoCompleteEnum $autoComplete,
         ?int $maxLength = null
     ) {
         parent::__construct(

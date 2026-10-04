@@ -9,8 +9,8 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\FormInput;
-use actra\yuf\form\settings\AutoCompleteValue;
-use actra\yuf\form\settings\InputTypeValue;
+use actra\yuf\form\settings\AutoCompleteEnum;
+use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
 use actra\yuf\phone\PhoneNumber;
@@ -38,12 +38,12 @@ final class PhoneNumberField extends SettableStringInputField
         public readonly string $countryCodeFieldName = 'countryCode',
         public readonly bool $renderInternalFormat = false,
         ?string $placeholder = null,
-        ?AutoCompleteValue $autoComplete = null
+        ?AutoCompleteEnum $autoComplete = null
     ) {
         // The value is normalized in the parent constructor, which needs the country code.
         $this->countryCode = $countryCode;
         parent::__construct(
-            inputType: InputTypeValue::TEL,
+            inputType: InputTypeEnum::TEL,
             name: $name,
             label: $label,
             value: $value,
@@ -79,7 +79,7 @@ final class PhoneNumberField extends SettableStringInputField
     public function validateCurrentValue(): bool
     {
         if (!$this->isValueEmpty() && $this->parsePhoneNumber(text: $this->getValueAsString()) === null) {
-            $this->addErrorAsHtmlTextObject(errorMessageObject: $this->invalidErrorMessage);
+            $this->addError(errorMessage: $this->invalidErrorMessage);
         }
 
         return parent::validateCurrentValue();

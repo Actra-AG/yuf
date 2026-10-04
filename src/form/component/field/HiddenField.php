@@ -9,7 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\renderer\HiddenFieldRenderer;
-use actra\yuf\form\settings\InputTypeValue;
+use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
 
 final class HiddenField extends SettableStringInputField
@@ -17,7 +17,7 @@ final class HiddenField extends SettableStringInputField
     public function __construct(string $name, ?string $value = null)
     {
         parent::__construct(
-            inputType: InputTypeValue::HIDDEN,
+            inputType: InputTypeEnum::HIDDEN,
             name: $name,
             label: HtmlText::encoded(textContent: ''),
             value: $value,

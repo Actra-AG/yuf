@@ -15,6 +15,11 @@ use actra\yuf\html\HtmlText;
 
 class FormInfo extends FormComponent
 {
+    /**
+     * @param list<string> $dlClasses
+     * @param list<string> $dtClasses
+     * @param list<string> $ddClasses
+     */
     public function __construct(
         public readonly HtmlText $title,
         public readonly HtmlText $content,

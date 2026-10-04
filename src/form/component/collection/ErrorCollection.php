@@ -9,10 +9,11 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\collection;
 
 use actra\yuf\html\HtmlText;
+use LogicException;
 
-class ErrorCollection
+final class ErrorCollection
 {
-    /** @var HtmlText[] */
+    /** @var list<HtmlText> */
     private array $errors = [];
 
     public function add(HtmlText $errorMessageObject): void
@@ -21,7 +22,7 @@ class ErrorCollection
     }
 
     /**
-     * @return HtmlText[]
+     * @return list<HtmlText>
      */
     public function listErrors(): array
     {
@@ -40,6 +41,6 @@ class ErrorCollection
 
     public function getFirstError(): HtmlText
     {
-        return current(array: $this->errors);
+        return $this->errors[0] ?? throw new LogicException(message: 'The error collection has no errors.');
     }
 }

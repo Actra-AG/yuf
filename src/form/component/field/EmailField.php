@@ -10,8 +10,8 @@ namespace actra\yuf\form\component\field;
 
 use actra\yuf\common\ValidatedEmailAddress;
 use actra\yuf\form\rule\ValidEmailAddressRule;
-use actra\yuf\form\settings\AutoCompleteValue;
-use actra\yuf\form\settings\InputTypeValue;
+use actra\yuf\form\settings\AutoCompleteEnum;
+use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
 
 final class EmailField extends SettableStringInputField
@@ -25,11 +25,11 @@ final class EmailField extends SettableStringInputField
         bool $dnsCheck = true,
         bool $trueOnDnsError = true,
         ?string $placeholder = null,
-        ?AutoCompleteValue $autoComplete = null,
+        ?AutoCompleteEnum $autoComplete = null,
         ?int $maxLength = null
     ) {
         parent::__construct(
-            inputType: InputTypeValue::EMAIL,
+            inputType: InputTypeEnum::EMAIL,
             name: $name,
             label: $label,
             value: $value,

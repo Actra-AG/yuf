@@ -9,7 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\field;
 
 use actra\yuf\datacheck\validatorTypes\IbanValidator;
-use actra\yuf\form\settings\AutoCompleteValue;
+use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlText;
 
 /**
@@ -25,7 +25,7 @@ final class IbanNumberField extends TextField
         private readonly HtmlText $invalidError,
         ?HtmlText $requiredError = null,
         ?string $placeholder = null,
-        ?AutoCompleteValue $autoComplete = null
+        ?AutoCompleteEnum $autoComplete = null
     ) {
         parent::__construct(
             name: $name,
@@ -48,7 +48,7 @@ final class IbanNumberField extends TextField
         if ($this->isValueEmpty() || IbanValidator::validate(input: $this->getValueAsString())) {
             return true;
         }
-        $this->addErrorAsHtmlTextObject(errorMessageObject: $this->invalidError);
+        $this->addError(errorMessage: $this->invalidError);
 
         return false;
     }

@@ -8,7 +8,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
-use actra\yuf\form\component\layout\CheckboxOptionsLayout;
+use actra\yuf\form\component\layout\CheckboxOptionsLayoutEnum;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\CheckboxItemRenderer;
@@ -28,7 +28,7 @@ class CheckboxOptionsField extends MultiOptionsField
         FormOptions $formOptions,
         array $initialValues,
         ?HtmlText $requiredError = null,
-        CheckboxOptionsLayout $layout = CheckboxOptionsLayout::LEGEND_AND_LIST
+        CheckboxOptionsLayoutEnum $layout = CheckboxOptionsLayoutEnum::LEGEND_AND_LIST
     ) {
         parent::__construct(
             name: $name,
@@ -41,16 +41,16 @@ class CheckboxOptionsField extends MultiOptionsField
             $this->addRequiredRule(errorMessage: $requiredError);
         }
         switch ($layout) {
-            case CheckboxOptionsLayout::DEFINITION_LIST:
+            case CheckboxOptionsLayoutEnum::DEFINITION_LIST:
                 $this->setRenderer(renderer: new DefinitionListRenderer(formField: $this));
                 break;
-            case CheckboxOptionsLayout::LEGEND_AND_LIST:
+            case CheckboxOptionsLayoutEnum::LEGEND_AND_LIST:
                 $this->setRenderer(renderer: new LegendAndListRenderer(optionsField: $this));
                 break;
-            case CheckboxOptionsLayout::CHECKBOX_ITEM:
+            case CheckboxOptionsLayoutEnum::CHECKBOX_ITEM:
                 $this->setRenderer(renderer: new CheckboxItemRenderer(checkboxOptionsField: $this));
                 break;
-            case CheckboxOptionsLayout::NONE:
+            case CheckboxOptionsLayoutEnum::NONE:
                 break;
         }
     }

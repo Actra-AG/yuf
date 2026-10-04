@@ -112,7 +112,7 @@ abstract class TextualField extends FormField
         }
         foreach ($this->rules as $rule) {
             if (!$rule->validate(value: $this->text)) {
-                $this->addErrorAsHtmlTextObject(errorMessageObject: $rule->getErrorMessage());
+                $this->addError(errorMessage: $rule->getErrorMessage());
             }
         }
     }

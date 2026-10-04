@@ -8,7 +8,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\layout;
 
-enum CheckboxOptionsLayout: int
+enum CheckboxOptionsLayoutEnum: int
 {
     case NONE = 0;
     case DEFINITION_LIST = 1;

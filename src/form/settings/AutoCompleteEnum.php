@@ -9,7 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\form\settings;
 
 // See https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete
-enum AutoCompleteValue: string
+enum AutoCompleteEnum: string
 {
     case OFF = 'off';
     case ON = 'on';

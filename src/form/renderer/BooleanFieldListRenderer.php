@@ -10,7 +10,7 @@ namespace actra\yuf\form\renderer;
 
 use actra\yuf\form\component\field\BooleanField;
 use actra\yuf\form\component\field\CheckboxOptionsField;
-use actra\yuf\form\component\layout\CheckboxOptionsLayout;
+use actra\yuf\form\component\layout\CheckboxOptionsLayoutEnum;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlText;
@@ -34,11 +34,7 @@ class BooleanFieldListRenderer extends FormRenderer
         $renderer = $this->withLegend
             ? new LegendAndListRenderer(optionsField: $optionsField)
             : new CheckboxOptionsRenderer(checkboxOptionsField: $optionsField);
-        $renderer->prepare();
-        $htmlTag = $renderer->getHtmlTag();
-        if ($htmlTag !== null) {
-            $this->setHtmlTag(htmlTag: $htmlTag);
-        }
+        $this->setHtmlTag(htmlTag: $renderer->prepareHtmlTag());
     }
 
     private function createOptionsField(): CheckboxOptionsField
@@ -51,7 +47,7 @@ class BooleanFieldListRenderer extends FormRenderer
             label: $field->label,
             formOptions: $formOptions,
             initialValues: $field->isChecked() ? [BooleanField::CHECKED_KEY] : [],
-            layout: CheckboxOptionsLayout::NONE
+            layout: CheckboxOptionsLayoutEnum::NONE
         );
         $optionsField->id = $field->id;
         $optionsField->fieldInfo = $field->fieldInfo;
@@ -64,7 +60,7 @@ class BooleanFieldListRenderer extends FormRenderer
             $optionsField->addRequiredRule(errorMessage: HtmlText::encoded(textContent: ''));
         }
         foreach ($field->errorCollection->listErrors() as $error) {
-            $optionsField->addErrorAsHtmlTextObject(errorMessageObject: $error);
+            $optionsField->addError(errorMessage: $error);
         }
 
         return $optionsField;

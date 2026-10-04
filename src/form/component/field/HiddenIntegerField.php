@@ -10,7 +10,7 @@ namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\AmountParser;
 use actra\yuf\form\renderer\HiddenFieldRenderer;
-use actra\yuf\form\settings\InputTypeValue;
+use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
 use UnexpectedValueException;
 
@@ -25,7 +25,7 @@ final class HiddenIntegerField extends ParsedInputField
     public function __construct(string $name, ?int $value = null)
     {
         parent::__construct(
-            inputType: InputTypeValue::HIDDEN,
+            inputType: InputTypeEnum::HIDDEN,
             name: $name,
             label: HtmlText::encoded(textContent: ''),
             invalidError: null,

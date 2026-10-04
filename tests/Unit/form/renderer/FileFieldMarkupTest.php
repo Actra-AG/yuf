@@ -461,7 +461,7 @@ final class FileFieldMarkupTest extends TestCase
     public function testFieldWithFilesAndErrorEqualsV332(): void
     {
         $field = $this->createFieldWithTwoFiles(maxFileUploadCount: 3);
-        $field->addError(errorMessage: 'Boom', isEncodedForRendering: false);
+        $field->addError(errorMessage: HtmlText::unencoded(textContent: 'Boom'));
 
         $this->assertSame(
             '<div class="fileupload" data-max-files="1"><ul class="fileupload-list"><li>'
