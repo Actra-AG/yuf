@@ -39,6 +39,15 @@ composer require actra/yuf
 
 ## Quick Start
 
+The easiest way to start a new project is the [yuf skeleton](https://github.com/Actra-AG/yuf-skeleton), a minimal
+"Hello World" application:
+
+```bash
+composer create-project actra/yuf-skeleton my-project
+```
+
+To set up a project manually:
+
 1. Create a `.env.php` file based on `.env.example.php`.
 2. Create an `index.php` in your document root based on `index.example.php`.
 3. Initialize the Framework Core and provide the path to `Autoloader.php` if not using the default.
@@ -160,7 +169,8 @@ composer install
 composer check
 ```
 
-With DDEV: `ddev start`, then prefix the commands with `ddev` (e.g. `ddev composer check`).
+With DDEV: `ddev start`, then prefix the commands with `ddev` (e.g. `ddev composer check`). The "Hello World" example in
+`example/` (using the sources of this repository) is then available at https://yuf.ddev.site/.
 
 ## License
 

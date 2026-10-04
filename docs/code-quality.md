@@ -34,8 +34,9 @@ Every task and every commit must end with a green `composer check`.
 
 ## 3. PHPStan
 
-- `phpstan.neon` in the project root: `level: 10`, `phpVersion: 80500`, analysed paths `src/` and `tests/`. Only the
-  generated phone number metadata (`src/phone/data/`) is excluded. Do not lower the level or add exclusions.
+- `phpstan.neon` in the project root: `level: 10`, `phpVersion: 80500`, analysed paths `src/`, `tests/` and the PHP code
+  of `example/`. Only generated code (phone number metadata in `src/phone/data/`, the example's template cache) is
+  excluded. Do not lower the level or add exclusions.
 - **Baseline for legacy code:** existing errors go into `phpstan-baseline.neon`.
     - New files must not appear in the baseline. `tests/` never has baseline entries.
     - When you change an existing file, fix its baseline entries and regenerate the baseline. The baseline may only
@@ -71,7 +72,7 @@ Every task and every commit must end with a green `composer check`.
 
   declare(strict_types=1);
   ```
-  `tests/Unit/FileHeaderTest.php` enforces this for `src/` and `tests/`.
+  `tests/Unit/FileHeaderTest.php` enforces this for `src/`, `tests/` and `example/`.
 - `final` classes by default. `readonly` classes or properties for value objects. Non-final only for intended
   extension points.
 - Fully typed properties, parameters, constants and return types. No `mixed` in own code. PHPDoc only for what PHP

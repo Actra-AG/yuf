@@ -1,0 +1,13 @@
+# Front controller: all requests for non-existent files and directories go to index.php
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Pass the Authorization header to PHP (needed for Bearer or Basic Auth with FastCGI)
+  RewriteCond %{HTTP:Authorization} ^(.*)
+  RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
+
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(.*)$ index.php [L]
+</IfModule>

@@ -30,8 +30,12 @@ final class FileHeaderTest extends TestCase
     public function testEveryPhpFileStartsWithCopyrightHeaderAndStrictTypesDeclaration(): void
     {
         $invalidFilePaths = [];
-        foreach (['src', 'tests'] as $directoryName) {
+        foreach (['src', 'tests', 'example'] as $directoryName) {
             foreach ($this->listPhpFilePaths(directoryPath: __DIR__ . '/../../' . $directoryName) as $filePath) {
+                if (str_contains(haystack: $filePath, needle: '/example/app/cache/')) {
+                    // Compiled templates, generated at runtime
+                    continue;
+                }
                 $content = (string)file_get_contents(filename: $filePath);
                 if (!str_starts_with(haystack: $content, needle: FileHeaderTest::EXPECTED_HEADER)) {
                     $invalidFilePaths[] = $filePath;

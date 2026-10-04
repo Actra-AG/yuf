@@ -23,6 +23,8 @@ Persistent instructions for developers and AI assistants working in this reposit
   PHPStan baseline may only shrink.
 - Without local PHP 8.5, run PHP and Composer commands through DDEV (`ddev composer check`). If DDEV is not running,
   ask the user to start it (`ddev start`).
+- `example/` is a minimal running app (https://yuf.ddev.site/) using the sources of `src/`. Keep it working when changing
+  the library, and check it in the browser after changes to routing, views, templates or HTML output.
 
 ## Refactoring workflow
 
