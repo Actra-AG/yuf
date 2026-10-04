@@ -52,7 +52,8 @@ Persistent instructions for developers and AI assistants working in this reposit
 - Never run `git commit`, `git add` or `git push` on your own. Prepare the commit message and let the user commit.
 - Inspect the actual changes (`git status`, `git diff`, `git diff --staged`) before proposing a commit message.
 - Commit messages follow the existing history (Conventional Commits): `type(scope): summary`, `!` for breaking
-  changes, followed by a `- ` bullet list of the changes and an optional `Attention:` paragraph.
+  changes, then an empty line, a `- ` bullet list of the changes and an optional `Attention:` paragraph. Without the
+  empty line, Git treats the whole message as subject.
 
 ## Before commit suggestions
 
