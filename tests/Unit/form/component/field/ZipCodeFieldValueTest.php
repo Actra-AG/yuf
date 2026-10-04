@@ -1,0 +1,111 @@
+<?php
+/**
+ * @copyright Actra AG - https://www.actra.ch
+ * @license   MIT
+ */
+
+declare(strict_types=1);
+
+namespace actra\yuf\tests\Unit\form\component\field;
+
+use actra\yuf\form\component\field\ZipCodeField;
+use actra\yuf\html\HtmlText;
+use PHPUnit\Framework\TestCase;
+use TypeError;
+
+final class ZipCodeFieldValueTest extends TestCase
+{
+    private function createField(): ZipCodeField
+    {
+        return new ZipCodeField(
+            name: 'zip',
+            label: HtmlText::encoded(textContent: 'Zip')
+        );
+    }
+
+    public function testValueIsNullAfterConstructionWithoutValue(): void
+    {
+        $this->assertNull($this->createField()->getRawValue());
+    }
+
+    public function testValueIsStringAfterConstructionWithString(): void
+    {
+        $field = new ZipCodeField(
+            name: 'zip',
+            label: HtmlText::encoded(textContent: 'Zip'),
+            value: '8000'
+        );
+
+        $this->assertSame('8000', $field->getRawValue());
+    }
+
+    public function testValidZipCodeIsStoredUnchanged(): void
+    {
+        $field = $this->createField();
+
+        $isValid = $field->validate(inputData: ['zip' => '8000']);
+
+        $this->assertTrue($isValid);
+        $this->assertSame('8000', $field->getRawValue());
+    }
+
+    public function testSurroundingWhitespaceIsAcceptedByRuleButNotRemovedFromValue(): void
+    {
+        $field = $this->createField();
+
+        $isValid = $field->validate(inputData: ['zip' => ' 8000 ']);
+
+        $this->assertTrue($isValid);
+        $this->assertSame(' 8000 ', $field->getRawValue());
+    }
+
+    public function testInvalidZipCodeKeepsInputAsString(): void
+    {
+        $field = $this->createField();
+
+        $isValid = $field->validate(inputData: ['zip' => 'x']);
+
+        $this->assertFalse($isValid);
+        $this->assertSame('x', $field->getRawValue());
+    }
+
+    public function testCountryCodeFromInputDataIsUsedForValidation(): void
+    {
+        $field = $this->createField();
+
+        $isValid = $field->validate(inputData: ['zip' => '12345', 'countryCode' => 'DE']);
+
+        $this->assertTrue($isValid);
+        $this->assertSame('DE', $field->countryCode);
+    }
+
+    public function testValueIsNullAfterValidationWithMissingKey(): void
+    {
+        $field = $this->createField();
+
+        $this->assertTrue($field->validate(inputData: []));
+        $this->assertNull($field->getRawValue());
+    }
+
+    public function testArrayInputIsRejectedAndKeepsPreviousValue(): void
+    {
+        $field = $this->createField();
+
+        $isValid = $field->validate(inputData: ['zip' => ['x']]);
+
+        $this->assertFalse($isValid);
+        $this->assertNull($field->getRawValue());
+    }
+
+    /**
+     * Known oddity (not part of the fixes in v3.3.0): the country code input is not checked for its type.
+     */
+    public function testArrayAsCountryCodeInputThrowsTypeError(): void
+    {
+        $field = $this->createField();
+
+        $this->expectException(TypeError::class);
+
+        $field->validate(inputData: ['zip' => '8000', 'countryCode' => ['x']]);
+    }
+}

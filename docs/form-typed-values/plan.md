@@ -65,11 +65,52 @@ Verify: table covers every field class; `ddev composer check` green.
 
 Handover notes:
 
+Done (2026-10-04): `docs/form-typed-values/value-types.md` (table per class, normalizing rules, 15 notes with
+file:line) and 17 characterization test classes in `tests/Unit/form/component/field/` (`*FieldValueTest.php`, 189 tests
+in the suite). No change in `src/`. `ddev composer check` is green without baseline changes.
+
+Findings relevant for the next tasks:
+
+- **Rejected array input keeps the previous value** (no reset to `null`) and the rules still run on it. Typed getters
+  must expect the previous value (e.g. the constructor value) after array input.
+- **Value types after validation**: single-value fields hold `?string` (posted string or `null`). Exceptions by
+  construction: `HiddenField`/`InputField` keep `int|float|bool` from the constructor until the first string input
+  (and after rejected array input); `AmountField`/`NumericField` hold `''` instead of `null` after construction.
+- **Multiple fields are not always arrays** (Task 5): `SelectOptionsField` (multiple) and `CheckboxOptionsField` keep a
+  posted/constructed string as `string`; only `ToggleField` (multiple) wraps. `ToggleField` (multiple) starts with
+  `[null]` (null constructor value), `['']` for posted `''`. Single `SelectOptionsField`/`ToggleField` constructed with
+  an array value accept arrays. `getValues()` must handle `string`, `array` and `null` entries.
+- `isValueEmpty()` uses `array_filter()`: `'0'` entries and `false` count as empty (pinned for `TextAreaField`,
+  `HiddenField`).
+- Invalid option values are stored (`['x']`, `[['a']]`): `getValues()` must decide what to do with nested arrays
+  after a failed validation (`ValidateAgainstOptions` marks them invalid).
+- `ZipCodeField` and `PhoneNumberField`: array `countryCode` input throws a `TypeError` (pinned; Task 2 covers the
+  phone field, the zip field needs the same fix, which is not mentioned in Task 2 yet).
+- `DateField::getValueAsDateTimeImmutable()` throws a `TypeError` for `null` (pinned, Task 3 fixes it).
+- `AmountField`: integer fields accept `'1.5'`, `' 12 '` and `'1e3'`; float fields accept `' 1.5 '` and `'1e3'`
+  (pinned, Task 2 changes these tests).
+- `FormField::setOriginalValue()` does not strip zero-width spaces while `setValue()` does: `valueHasChanged()` is
+  `true` right after construction (pinned in `TextFieldValueTest`, not fixed).
+- `ValidateAgainstOptions` passes an `int` entry to `FormOptions::exists(string)` under `strict_types` (`TypeError`);
+  only reachable via project code, not via posted data. Not tested.
+
+Not testable in isolation: `FileField::validate()` with `overwriteValue = true` and uploads (temp directory from
+`$_SERVER['SERVER_NAME']`, file system), `CsrfTokenField::getHtmlTag()` (session token). `FileField` is tested with a
+temporary `$_SESSION` (saved and restored in `setUp()`/`tearDown()`), `CsrfTokenField` only before rendering.
+`EmailField` is tested with `dnsCheck: false`.
+
+Known-bug tests to update when fixing: `PhoneNumberFieldValueTest` (2x `TypeError`),
+`AmountFieldValueTest::testIntegerFieldAcceptsDecimalStringBecauseOfKnownBug` and
+`testNumericFieldBehavesLikeIntegerAmountField`, `DateTimeFieldValueTest::
+testGetValueAsDateTimeImmutableThrowsTypeErrorForNullBecauseOfKnownBug`, `ZipCodeFieldValueTest::
+testArrayAsCountryCodeInputThrowsTypeError`.
+
 ### Task 2: Fix input-handling bugs
 
 1. `PhoneNumberField::validate()` calls `trim()` on the input before the array check, so posting `name[]=x` throws a
    `TypeError`. Only trim strings and leave arrays to the normal rejection in `setValue()`. Check the country code input
-   (`countryCodeFieldName`) the same way.
+   (`countryCodeFieldName`) the same way; `ZipCodeField` has the same `TypeError` for an array country code (found in
+   task 1), fix it there too.
 2. `ValidAmountRule` checks integers with `is_float($value)`, which is always `false` for posted strings, so an integer
    `AmountField`/`NumericField` accepts `"1.5"`. Integer fields must only accept integer values (`int`, or a string
    with optional sign and digits only, after trimming). Decide and document how exponent notation (`"1e3"`) and

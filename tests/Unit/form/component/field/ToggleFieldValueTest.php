@@ -1,0 +1,154 @@
+<?php
+/**
+ * @copyright Actra AG - https://www.actra.ch
+ * @license   MIT
+ */
+
+declare(strict_types=1);
+
+namespace actra\yuf\tests\Unit\form\component\field;
+
+use actra\yuf\form\component\field\ToggleField;
+use actra\yuf\form\FormOptions;
+use actra\yuf\html\HtmlText;
+use PHPUnit\Framework\TestCase;
+
+final class ToggleFieldValueTest extends TestCase
+{
+    /**
+     * @param null|string|list<string> $initialValue
+     */
+    private function createField(null|string|array $initialValue = null, bool $multiple = false): ToggleField
+    {
+        $formOptions = new FormOptions();
+        $formOptions->addItem(key: 'a', htmlText: HtmlText::encoded(textContent: 'A'));
+        $formOptions->addItem(key: 'b', htmlText: HtmlText::encoded(textContent: 'B'));
+
+        return new ToggleField(
+            name: 'toggle',
+            label: HtmlText::encoded(textContent: 'Toggle'),
+            formOptions: $formOptions,
+            initialValue: $initialValue,
+            multiple: $multiple
+        );
+    }
+
+    public function testSingleFieldValueIsNullAfterConstructionWithoutValue(): void
+    {
+        $this->assertNull($this->createField()->getRawValue());
+    }
+
+    public function testSingleFieldValueIsStringAfterConstructionWithString(): void
+    {
+        $this->assertSame('b', $this->createField(initialValue: 'b')->getRawValue());
+    }
+
+    public function testSingleFieldValueIsArrayAfterConstructionWithArray(): void
+    {
+        $this->assertSame(['a'], $this->createField(initialValue: ['a'])->getRawValue());
+    }
+
+    public function testSingleFieldStoresStringInput(): void
+    {
+        $field = $this->createField();
+
+        $isValid = $field->validate(inputData: ['toggle' => 'a']);
+
+        $this->assertTrue($isValid);
+        $this->assertSame('a', $field->getRawValue());
+    }
+
+    public function testSingleFieldValueIsNullAfterValidationWithMissingKey(): void
+    {
+        $field = $this->createField(initialValue: 'a');
+
+        $this->assertTrue($field->validate(inputData: []));
+        $this->assertNull($field->getRawValue());
+    }
+
+    public function testSingleFieldRejectsArrayInputAndKeepsPreviousValue(): void
+    {
+        $field = $this->createField(initialValue: 'b');
+
+        $isValid = $field->validate(inputData: ['toggle' => ['a']]);
+
+        $this->assertFalse($isValid);
+        $this->assertSame('b', $field->getRawValue());
+    }
+
+    public function testSingleFieldStoresUnknownOptionButIsInvalid(): void
+    {
+        $field = $this->createField();
+
+        $isValid = $field->validate(inputData: ['toggle' => 'x']);
+
+        $this->assertFalse($isValid);
+        $this->assertSame('x', $field->getRawValue());
+    }
+
+    /**
+     * ODDITY: a multiple field without initial value does not start with an empty array but with [null].
+     */
+    public function testMultipleFieldValueIsArrayWithNullAfterConstructionWithoutValue(): void
+    {
+        $this->assertSame([null], $this->createField(multiple: true)->getRawValue());
+    }
+
+    public function testMultipleFieldWrapsStringInitialValueIntoArray(): void
+    {
+        $this->assertSame(['a'], $this->createField(initialValue: 'a', multiple: true)->getRawValue());
+    }
+
+    public function testMultipleFieldKeepsArrayInitialValue(): void
+    {
+        $this->assertSame(['a', 'b'], $this->createField(initialValue: ['a', 'b'], multiple: true)->getRawValue());
+    }
+
+    public function testMultipleFieldStoresArrayInput(): void
+    {
+        $field = $this->createField(multiple: true);
+
+        $isValid = $field->validate(inputData: ['toggle' => ['a', 'b']]);
+
+        $this->assertTrue($isValid);
+        $this->assertSame(['a', 'b'], $field->getRawValue());
+    }
+
+    public function testMultipleFieldWrapsStringInputIntoArray(): void
+    {
+        $field = $this->createField(multiple: true);
+
+        $isValid = $field->validate(inputData: ['toggle' => 'a']);
+
+        $this->assertTrue($isValid);
+        $this->assertSame(['a'], $field->getRawValue());
+    }
+
+    public function testMultipleFieldWrapsEmptyStringIntoArray(): void
+    {
+        $field = $this->createField(multiple: true);
+
+        $isValid = $field->validate(inputData: ['toggle' => '']);
+
+        $this->assertTrue($isValid);
+        $this->assertSame([''], $field->getRawValue());
+    }
+
+    public function testMultipleFieldValueIsEmptyArrayAfterValidationWithMissingKey(): void
+    {
+        $field = $this->createField(initialValue: 'a', multiple: true);
+
+        $this->assertTrue($field->validate(inputData: []));
+        $this->assertSame([], $field->getRawValue());
+    }
+
+    public function testMultipleFieldStoresUnknownOptionsButIsInvalid(): void
+    {
+        $field = $this->createField(multiple: true);
+
+        $isValid = $field->validate(inputData: ['toggle' => ['x']]);
+
+        $this->assertFalse($isValid);
+        $this->assertSame(['x'], $field->getRawValue());
+    }
+}
