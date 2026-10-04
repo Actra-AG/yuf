@@ -1573,18 +1573,6 @@ parameters:
 			path: src/db/DbRuntimeException.php
 
 		-
-			message: '#^Method actra\\yuf\\db\\DbSelectStmt\:\:ExecuteAndFetch\(\) has parameter \$parameters with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/db/DbSelectStmt.php
-
-		-
-			message: '#^Method actra\\yuf\\db\\DbSelectStmt\:\:ExecuteAndFetch\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/db/DbSelectStmt.php
-
-		-
 			message: '#^Property actra\\yuf\\db\\DbSettingsModel\:\:\$instances type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1

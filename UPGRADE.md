@@ -4,6 +4,28 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.3.0] – 2026-10-04
+
+### ⚙️ Backend & API
+
+* **Typed database rows.** New `actra\yuf\db\DbRow` with typed getters (`getString`, `getInt`, `getFloat`,
+  `getDecimal`, `getBool`, `getDateTimeImmutable`, `getEnum` and the `getNullable...` variants, `has()`). A missing
+  column, `NULL` in a non-nullable getter or a wrong type throws the new `DbRowValueException` (extends
+  `UnexpectedValueException`). See the README section "Typed database rows".
+* New `FrameworkDB::selectRows(): list<DbRow>` and `FrameworkDB::selectRow(): ?DbRow` (at most one row, more throws the
+  new `DbRowCountException`); `DbSelectStmt` got `executeAndFetchRows()` and `executeAndFetchRow()`. For a `DbQuery`
+  pass `$data->query` and `$data->params` of its `DbQueryData`.
+* `select()` and `DbSelectStmt::ExecuteAndFetch()` are unchanged. New code should use the typed methods.
+* `getInt()` accepts `int` and strictly integer-formatted strings (`'-12'`), `getFloat()` also numeric strings,
+  `getDecimal()` `string` (DECIMAL columns) and `int` but no `float`, `getBool()` `0`, `1`, `'0'`, `'1'`.
+* ⏰ `getDateTimeImmutable()` parses DATE/DATETIME/TIMESTAMP values in the PHP default time zone. The time zone of the
+  database session must match it, otherwise TIMESTAMP values are shifted.
+* No breaking changes.
+* **Migration hint:** replace casts such as `(string)$row->name` or `ScalarCast::toString($row->name)` with
+  `$row->getString(column: 'name')` after switching `select()` to `selectRows()`.
+
+---
+
 ## [v4.2.0] – 2026-10-04
 
 ### ⚙️ Backend & API

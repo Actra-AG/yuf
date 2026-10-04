@@ -161,6 +161,33 @@ class FrameworkDB extends PDO
     }
 
     /**
+     * Like select(), but returns typed rows (see DbRow) instead of untyped stdClass objects.
+     *
+     * @param list<mixed> $parameters list of parameter values to bind to the prepared sql statement in correct order
+     *
+     * @return list<DbRow>
+     * @throws DbRuntimeException
+     */
+    public function selectRows(string $sql, array $parameters = [], bool $logQuery = false): array
+    {
+        return $this->prepareSelect(query: $sql, logQuery: $logQuery)->executeAndFetchRows(parameters: $parameters);
+    }
+
+    /**
+     * Selects at most one typed row.
+     *
+     * @param list<mixed> $parameters list of parameter values to bind to the prepared sql statement in correct order
+     *
+     * @return DbRow|null null if the query returns no row
+     * @throws DbRuntimeException
+     * @throws DbRowCountException If the query returns more than one row.
+     */
+    public function selectRow(string $sql, array $parameters = [], bool $logQuery = false): ?DbRow
+    {
+        return $this->prepareSelect(query: $sql, logQuery: $logQuery)->executeAndFetchRow(parameters: $parameters);
+    }
+
+    /**
      * This method is a shorthand for "(prepare($sql))->execute($parameters)"
      *
      * @param string $sql : valid SQL statement

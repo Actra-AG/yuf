@@ -265,6 +265,74 @@ $logger = new Logger(
 );
 ```
 
+## Typed database rows
+
+`FrameworkDB::select()` returns untyped `stdClass` rows. `selectRows()` and `selectRow()` return `DbRow` objects whose
+getters narrow the value once and throw a `DbRowValueException` (naming column, expected and actual type) for a missing
+column, `NULL` in a non-nullable getter or a wrong type. Nothing is cast silently.
+
+```php
+use actra\yuf\db\DbRow;
+use actra\yuf\db\FrameworkDB;
+
+enum UserStatusEnum: string
+{
+    case Active = 'active';
+    case Blocked = 'blocked';
+}
+
+final readonly class User
+{
+    public function __construct(
+        public int $id,
+        public string $name,
+        public ?DateTimeImmutable $lastLogin,
+        public UserStatusEnum $status,
+    ) {
+    }
+
+    public static function fromRow(DbRow $row): User
+    {
+        return new User(
+            id: $row->getInt(column: 'id'),
+            name: $row->getString(column: 'name'),
+            lastLogin: $row->getNullableDateTimeImmutable(column: 'last_login'),
+            status: $row->getEnum(column: 'status', enumClass: UserStatusEnum::class),
+        );
+    }
+}
+
+final readonly class UserRepository
+{
+    public function __construct(private FrameworkDB $db)
+    {
+    }
+
+    public function findById(int $id): ?User
+    {
+        $row = $this->db->selectRow(sql: 'SELECT * FROM users WHERE id = ?', parameters: [$id]);
+
+        return $row === null ? null : User::fromRow(row: $row);
+    }
+
+    /** @return list<User> */
+    public function findAll(): array
+    {
+        return array_map(
+            callback: User::fromRow(...),
+            array: $this->db->selectRows(sql: 'SELECT * FROM users ORDER BY name')
+        );
+    }
+}
+```
+
+Getters: `getString`, `getInt`, `getFloat`, `getDecimal` (canonical decimal string like `'12.50'`, as
+`DecimalField::getValueAsDecimal()`), `getBool` (`0`/`1`), `getDateTimeImmutable` (DATE, DATETIME, TIMESTAMP), `getEnum`,
+each with a `getNullable...` variant (except `getBool`), and `has()`. `selectRow()` returns `null` for no row and throws
+`DbRowCountException` for more than one. The same methods exist on `DbSelectStmt` (`executeAndFetchRows()`,
+`executeAndFetchRow()`). Date and time columns are parsed in the PHP default time zone, so the time zone of the database
+session must match it.
+
 ## Documentation
 
 For more detailed examples, please refer to:
