@@ -8,6 +8,9 @@ declare(strict_types=1);
 
 namespace actra\yuf\db;
 
+use actra\yuf\clock\Clock;
+use actra\yuf\clock\SystemClock;
+
 class DbQueryLogItem
 {
     private float $start;
@@ -15,18 +18,24 @@ class DbQueryLogItem
 
     public function __construct(
         private(set) readonly string $sqlQuery,
-        private(set) readonly array $params
+        private(set) readonly array $params,
+        private readonly Clock $clock = new SystemClock()
     ) {
-        $this->start = microtime(as_float: true);
+        $this->start = $this->nowAsFloat();
     }
 
     public function confirmFinishedExecution(): void
     {
-        $this->end = microtime(as_float: true);
+        $this->end = $this->nowAsFloat();
     }
 
     public function getExecutionTime(): float
     {
         return $this->end - $this->start;
+    }
+
+    private function nowAsFloat(): float
+    {
+        return (float)$this->clock->now()->format(format: 'U.u');
     }
 }

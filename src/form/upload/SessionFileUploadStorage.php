@@ -10,6 +10,8 @@ namespace actra\yuf\form\upload;
 
 use DirectoryIterator;
 use InvalidArgumentException;
+use actra\yuf\clock\Clock;
+use actra\yuf\clock\SystemClock;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\form\model\UploadInput;
 
@@ -26,8 +28,9 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
 
     /**
      * @param string $rootDirectory The directory that contains one subdirectory per pointer (created when needed)
+     * @param Clock $clock Decides which directories are expired
      */
-    public function __construct(private string $rootDirectory)
+    public function __construct(private string $rootDirectory, private Clock $clock = new SystemClock())
     {
     }
 
@@ -35,7 +38,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
      * The storage below `<temp directory>/<SERVER_NAME>`, as in yuf v3. Characters of the server name that are not
      * allowed in a directory name are replaced (the name can be derived from the `Host` header).
      */
-    public static function forCurrentRequest(): SessionFileUploadStorage
+    public static function forCurrentRequest(Clock $clock = new SystemClock()): SessionFileUploadStorage
     {
         $serverName = $_SERVER['SERVER_NAME'] ?? '';
         $directoryName = is_string(value: $serverName)
@@ -46,7 +49,8 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
         }
 
         return new SessionFileUploadStorage(
-            rootDirectory: sys_get_temp_dir() . DIRECTORY_SEPARATOR . $directoryName
+            rootDirectory: sys_get_temp_dir() . DIRECTORY_SEPARATOR . $directoryName,
+            clock: $clock
         );
     }
 
@@ -132,7 +136,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
         if (!is_dir(filename: $this->rootDirectory)) {
             return;
         }
-        $oldestAllowedTime = time() - SessionFileUploadStorage::MAX_AGE_IN_SECONDS;
+        $oldestAllowedTime = $this->clock->now()->getTimestamp() - SessionFileUploadStorage::MAX_AGE_IN_SECONDS;
         /** @var DirectoryIterator $item */
         foreach (new DirectoryIterator(directory: $this->rootDirectory) as $item) {
             if (!$item->isDot() && $item->isDir() && $item->getMTime() < $oldestAllowedTime) {

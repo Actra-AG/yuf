@@ -27,6 +27,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\mailer;
 
+use actra\yuf\clock\Clock;
+use actra\yuf\clock\SystemClock;
 use actra\yuf\common\StringUtils;
 
 class MailMimeHeader
@@ -47,13 +49,14 @@ class MailMimeHeader
         string $contentType,
         string $charSet,
         string $encoding,
-        string $boundary1
+        string $boundary1,
+        Clock $clock = new SystemClock()
     ) {
         $maxLineLength = $abstractMailer->getMaxLineLength();
         $this->addHeaderItemIfNotEmpty(
             item: MailerHeader::createRaw(
             name: 'Date',
-            value: date(format: 'r')
+            value: $clock->now()->format(format: 'r')
         )
         );
         $this->addHeaderItemIfNotEmpty(

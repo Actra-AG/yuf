@@ -8,11 +8,16 @@ declare(strict_types=1);
 
 namespace actra\yuf\session;
 
+use actra\yuf\clock\Clock;
+use actra\yuf\clock\SystemClock;
+
 class FileSessionHandler extends AbstractSessionHandler
 {
-    public function __construct(private readonly SessionSettingsModel $sessionSettingsModel)
-    {
-        parent::__construct(sessionSettingsModel: $sessionSettingsModel);
+    public function __construct(
+        private readonly SessionSettingsModel $sessionSettingsModel,
+        Clock $clock = new SystemClock()
+    ) {
+        parent::__construct(sessionSettingsModel: $sessionSettingsModel, clock: $clock);
     }
 
     protected function executePreStartActions(): void

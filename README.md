@@ -248,6 +248,23 @@ gets its token from a `CsrfTokenSource` (default: session). Both can be replaced
 `storage` and `csrfTokenSource` of the field or `Form`. Code that upgrades from v3 finds the changes in
 [UPGRADE.md](UPGRADE.md).
 
+## Clock
+
+Time-dependent code takes a `actra\yuf\clock\Clock` (`now(): DateTimeImmutable`, the same signature as PSR-20's
+`ClockInterface`, without the `psr/clock` dependency) through its constructor. Production code uses `SystemClock` (the
+default everywhere); tests pass a `FixedClock`. There is no static accessor.
+
+```php
+use actra\yuf\clock\FixedClock;
+use actra\yuf\core\Logger;
+
+$logger = new Logger(
+    logEmailRecipient: '',
+    logDirectory: $logDirectory,
+    clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-01-02 03:04:05'))
+);
+```
+
 ## Documentation
 
 For more detailed examples, please refer to:

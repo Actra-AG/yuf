@@ -8,6 +8,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\auth;
 
+use actra\yuf\clock\Clock;
+use actra\yuf\clock\SystemClock;
 use actra\yuf\Core;
 use actra\yuf\exception\UnauthorizedException;
 use OpenSSLAsymmetricKey;
@@ -21,7 +23,8 @@ class MicrosoftIdToken extends AuthWebToken
         private readonly string $tenantID,
         private readonly string $clientID,
         private readonly string $ssoNonce,
-        string $jwtString
+        string $jwtString,
+        private readonly Clock $clock = new SystemClock()
     ) {
         parent::__construct(jwtString: $jwtString);
     }
@@ -63,18 +66,8 @@ class MicrosoftIdToken extends AuthWebToken
             ) !== 1) {
             throw new UnauthorizedException(message: 'Signature verification failed');
         }
-        $timestamp = time();
-        $leeway = 60;
         $payload = $this->payload;
-        if (!property_exists(object_or_class: $payload, property: 'nbf') || $payload->nbf > ($timestamp + $leeway)) {
-            throw new UnauthorizedException(message: 'Missing or outdated nbf');
-        }
-        if (!property_exists(object_or_class: $payload, property: 'iat') || $payload->iat > ($timestamp + $leeway)) {
-            throw new UnauthorizedException(message: 'Missing or outdated iat');
-        }
-        if (!property_exists(object_or_class: $payload, property: 'exp') || ($timestamp - $leeway) >= $payload->exp) {
-            throw new UnauthorizedException(message: 'Missing or expired exp');
-        }
+        new IdTokenTimeClaimsValidator(clock: $this->clock)->assertValid(payload: $payload);
         if (!property_exists(object_or_class: $payload, property: 'aud') || $payload->aud !== $this->clientID) {
             throw new UnauthorizedException(message: 'Missing or invalid aud');
         }

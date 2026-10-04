@@ -10,10 +10,12 @@ namespace actra\yuf\tests\Unit\form\upload;
 
 use DirectoryIterator;
 use InvalidArgumentException;
+use actra\yuf\clock\FixedClock;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\form\model\UploadInput;
 use actra\yuf\form\upload\SessionFileUploadStorage;
 use PHPUnit\Framework\Attributes\DataProvider;
+use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
@@ -283,6 +285,24 @@ final class SessionFileUploadStorageTest extends TestCase
         $this->assertFileDoesNotExist($old->path);
         $this->assertFileExists($recent->path);
         $this->assertFileExists($almostExpired->path);
+    }
+
+    public function testDirectoryIsExpiredOnlyWhenOlderThanTwoDaysAccordingToTheClock(): void
+    {
+        $now = 1_800_000_000;
+        $twoDays = 60 * 60 * 24 * 2;
+        $exactlyAtLimit = $this->createStoredFile(pointer: 'atlimit');
+        $beyondLimit = $this->createStoredFile(pointer: 'beyond');
+        touch(filename: dirname(path: $exactlyAtLimit->path), mtime: $now - $twoDays);
+        touch(filename: dirname(path: $beyondLimit->path), mtime: $now - $twoDays - 1);
+
+        new SessionFileUploadStorage(
+            rootDirectory: $this->rootDirectory,
+            clock: new FixedClock(now: new DateTimeImmutable(datetime: '@' . $now))
+        )->removeExpired();
+
+        $this->assertFileExists($exactlyAtLimit->path);
+        $this->assertFileDoesNotExist($beyondLimit->path);
     }
 
     public function testRemovingExpiredDirectoriesIgnoresFilesInTheRootDirectory(): void

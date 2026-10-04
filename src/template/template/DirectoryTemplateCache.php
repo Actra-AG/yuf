@@ -8,13 +8,20 @@ declare(strict_types=1);
 
 namespace actra\yuf\template\template;
 
+use actra\yuf\clock\Clock;
+use actra\yuf\clock\SystemClock;
+
 class DirectoryTemplateCache extends TemplateCacheStrategy
 {
     protected const string CACHE_SUFFIX = '.php';
     protected string $templateBaseDirectory;
     protected int $baseDirLength;
 
-    public function __construct(string $cachePath, string $templateBaseDirectory)
+    public function __construct(
+        string $cachePath,
+        string $templateBaseDirectory,
+        protected readonly Clock $clock = new SystemClock()
+    )
     {
         parent::__construct($cachePath);
         $this->templateBaseDirectory = $templateBaseDirectory;
@@ -48,7 +55,7 @@ class DirectoryTemplateCache extends TemplateCacheStrategy
         if (file_exists($cacheFilePath) === true) {
             file_put_contents($cacheFilePath, $compiledTemplateContent);
 
-            return new TemplateCacheEntry($cacheFileName, time(), -1);
+            return new TemplateCacheEntry($cacheFileName, $this->clock->now()->getTimestamp(), -1);
         }
         $fileLocation = pathinfo($cacheFilePath, PATHINFO_DIRNAME);
 
@@ -58,7 +65,7 @@ class DirectoryTemplateCache extends TemplateCacheStrategy
 
         file_put_contents($cacheFilePath, $compiledTemplateContent);
 
-        return new TemplateCacheEntry($cacheFileName, time(), -1);
+        return new TemplateCacheEntry($cacheFileName, $this->clock->now()->getTimestamp(), -1);
     }
 
     protected function getCacheFileName(string $tplFile): string

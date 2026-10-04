@@ -8,6 +8,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\common;
 
+use actra\yuf\clock\Clock;
+use actra\yuf\clock\SystemClock;
 use actra\yuf\Core;
 use Throwable;
 
@@ -18,10 +20,10 @@ class LogFile
     /** @var resource */
     private $stream;
 
-    public function __construct(string $group, string $logFileName)
+    public function __construct(string $group, string $logFileName, private readonly Clock $clock = new SystemClock())
     {
         $groupDirectoryPath = LogFile::createDirectoryIfMissing(path: Core::get()->logDirectory . $group);
-        $dateArr = explode(separator: '-', string: date(format: 'Y-m-d'));
+        $dateArr = explode(separator: '-', string: $this->clock->now()->format(format: 'Y-m-d'));
         $yearDirectoryPath = LogFile::createDirectoryIfMissing(
             path: $groupDirectoryPath . DIRECTORY_SEPARATOR . $dateArr[0]
         );
@@ -94,17 +96,9 @@ class LogFile
         if (!is_resource(value: $this->stream)) {
             return;
         }
-        $mtimeParts = explode(
-            separator: ' ',
-            string: microtime()
-        );
-        $timestamp = date(
-                format: 'Y-m-d H:i:s',
-                timestamp: (int)$mtimeParts[1]
-            ) . ',' . substr(
-                string: $mtimeParts[0],
-                offset: 2
-            );
+        $now = $this->clock->now();
+        // Eight fractional digits, as before: microseconds plus two zeros
+        $timestamp = $now->format(format: 'Y-m-d H:i:s') . ',' . $now->format(format: 'u') . '00';
         fwrite(
             stream: $this->stream,
             data: $timestamp . ' - ' . $line . PHP_EOL

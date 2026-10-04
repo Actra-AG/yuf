@@ -8,6 +8,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\session;
 
+use actra\yuf\clock\Clock;
+use actra\yuf\clock\SystemClock;
 use actra\yuf\Core;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\Language;
@@ -51,9 +53,11 @@ abstract class AbstractSessionHandler extends SessionHandler
     private string $clientRemoteAddress;
     private string $clientUserAgent;
 
-    protected function __construct(private readonly SessionSettingsModel $sessionSettingsModel)
-    {
-        $this->currentTime = time();
+    protected function __construct(
+        private readonly SessionSettingsModel $sessionSettingsModel,
+        private readonly Clock $clock = new SystemClock()
+    ) {
+        $this->currentTime = $this->clock->now()->getTimestamp();
         $this->clientRemoteAddress = HttpRequest::getRemoteAddress();
         $this->clientUserAgent = HttpRequest::getUserAgent();
 
@@ -202,7 +206,7 @@ abstract class AbstractSessionHandler extends SessionHandler
                     setcookie(
                         session_name(),
                         '',
-                        time() - 42000,
+                        $this->currentTime - 42000,
                         $params['path'],
                         $params['domain'],
                         $params['secure'],

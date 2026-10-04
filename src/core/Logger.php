@@ -8,6 +8,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
+use actra\yuf\clock\Clock;
+use actra\yuf\clock\SystemClock;
 use Exception;
 use LogicException;
 use Throwable;
@@ -21,7 +23,8 @@ class Logger
 
     public function __construct(
         protected readonly string $logEmailRecipient,
-        private readonly string $logDirectory
+        private readonly string $logDirectory,
+        private readonly Clock $clock = new SystemClock()
     ) {
         if (!is_dir(filename: $this->logDirectory)) {
             throw new Exception(message: 'Log directory does not exist: ' . $this->logDirectory);
@@ -87,7 +90,7 @@ class Logger
         }
         $modified = filemtime(filename: $ticketFullPath);
         // Older than 24h?
-        if (($modified + 86400) < time()) {
+        if (($modified + 86400) < $this->clock->now()->getTimestamp()) {
             return true;
         }
 
@@ -103,12 +106,9 @@ class Logger
         $message .= Logger::dnl . '$_COOKIE = ' . print_r(value: $_COOKIE, return: true);
 
         $this->checkMaxFileSize(filenameFullPath: $filenameFullPath);
-        // Because of date('u')-PHP-bug (always 00000)
-        $mtimeParts = explode(separator: ' ', string: (string)microtime());
-        $timestamp = date(format: 'Y-m-d H:i:s', timestamp: (int)$mtimeParts[1]) . ',' . substr(
-                string: $mtimeParts[0],
-                offset: 2
-            );
+        $now = $this->clock->now();
+        // Eight fractional digits, as before: microseconds plus two zeros
+        $timestamp = $now->format(format: 'Y-m-d H:i:s') . ',' . $now->format(format: 'u') . '00';
         error_log(
             message: $timestamp . PHP_EOL . $message . PHP_EOL . str_pad('', 70, '=') . PHP_EOL,
             message_type: 3,
@@ -165,7 +165,7 @@ class Logger
             destination: $this->logEmailRecipient,
             additional_headers: implode(separator: PHP_EOL, array: [
                 'From: error@' . $_SERVER['SERVER_NAME'],
-                'Date: ' . date(format: 'r'),
+                'Date: ' . $this->clock->now()->format(format: 'r'),
                 'Content-Type: text/plain; charset=UTF-8',
             ])
         );

@@ -4,6 +4,26 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.2.0] – Unreleased
+
+### ⚙️ Backend & API
+
+* **New `Clock` abstraction** (`actra\yuf\clock`): `Clock` (`now(): DateTimeImmutable`, signature identical to PSR-20
+  `Psr\Clock\ClockInterface`), `SystemClock` (real time) and `FixedClock` (always the given time, for tests). See the
+  README section "Clock".
+* The following constructors/methods got an optional last parameter `Clock $clock = new SystemClock()`; existing calls
+  keep working unchanged: `SessionFileUploadStorage` (and `forCurrentRequest()`), `Logger`, `LogFile`,
+  `FileSessionHandler`, `AbstractSessionHandler` (protected constructor), `MicrosoftIdToken`,
+  `DirectoryTemplateCache`, `DbQueryLogItem`, `MailMimeHeader`.
+* New `IdTokenTimeClaimsValidator` (the `nbf`/`iat`/`exp` checks of `MicrosoftIdToken`, unchanged behaviour).
+* Log timestamps of `Logger` and `LogFile` are unchanged (`Y-m-d H:i:s,` plus eight fractional digits).
+* No breaking changes.
+* **Migration hint:** if your project has its own `Clock`, `SystemClock` or `FixedClock` classes (method
+  `now(): DateTimeImmutable`), delete them and switch the imports to `actra\yuf\clock\Clock`, `SystemClock` and
+  `FixedClock`. The method signature is identical; a `FixedClock` takes the time as constructor argument `now:`.
+
+---
+
 ## [v4.1.0] – 2026-10-04
 
 ### 🎨 Frontend & UI
