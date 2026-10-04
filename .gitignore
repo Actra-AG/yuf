@@ -18,7 +18,7 @@
 !/README.md
 !/UPGRADE.md
 
-# Allow specific ddirectories
+# Allow specific directories
 !/src/
 !/src/**
 !/docs/
