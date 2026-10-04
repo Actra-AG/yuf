@@ -66,7 +66,6 @@ final class DateTimeFieldValueTest extends TestCase
     public static function invalidDateProvider(): iterable
     {
         yield 'impossible date' => ['2020-02-30'];
-        yield 'leading whitespace' => [' 2020-02-03'];
         yield 'text' => ['tomorrow'];
     }
 
@@ -81,9 +80,9 @@ final class DateTimeFieldValueTest extends TestCase
         $this->assertSame($input, $field->getRawValue());
     }
 
-    public function testDateValueIsNullAfterConstructionWithoutValue(): void
+    public function testDateValueIsEmptyStringAfterConstructionWithoutValue(): void
     {
-        $this->assertNull($this->createDateField()->getRawValue());
+        $this->assertSame('', $this->createDateField()->getRawValue());
     }
 
     public function testDateValueIsStringAfterConstructionWithString(): void
@@ -91,22 +90,22 @@ final class DateTimeFieldValueTest extends TestCase
         $this->assertSame('2020-01-02', $this->createDateField(value: '2020-01-02')->getRawValue());
     }
 
-    public function testDateValueIsNullAfterValidationWithMissingKey(): void
+    public function testDateValueIsEmptyStringAfterValidationWithMissingKey(): void
     {
         $field = $this->createDateField(value: '2020-01-02');
 
         $this->assertTrue($field->validate(inputData: []));
-        $this->assertNull($field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 
-    public function testDateArrayInputIsRejectedAndKeepsPreviousValue(): void
+    public function testDateArrayInputIsRejectedAndResetsValue(): void
     {
         $field = $this->createDateField(value: '2020-01-02');
 
         $isValid = $field->validate(inputData: ['date' => ['x']]);
 
         $this->assertFalse($isValid);
-        $this->assertSame('2020-01-02', $field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 
     public function testGetValueAsDateTimeImmutableReturnsNullForEmptyString(): void
@@ -165,30 +164,27 @@ final class DateTimeFieldValueTest extends TestCase
         $this->assertSame('25:00', $field->getRawValue());
     }
 
-    public function testTimeValueIsNullAfterConstructionWithoutValue(): void
+    public function testTimeValueIsEmptyStringAfterConstructionWithoutValue(): void
     {
-        $this->assertNull($this->createTimeField()->getRawValue());
+        $this->assertSame('', $this->createTimeField()->getRawValue());
     }
 
-    public function testTimeValueIsNullAfterValidationWithMissingKey(): void
+    public function testTimeValueIsEmptyStringAfterValidationWithMissingKey(): void
     {
         $field = $this->createTimeField(value: '08:00');
 
         $this->assertTrue($field->validate(inputData: []));
-        $this->assertNull($field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 
-    /**
-     * The rejected array leaves the previous value in place, and the rules still run on it (here: seconds are added).
-     */
-    public function testTimeArrayInputIsRejectedAndKeepsPreviousValueNormalizedByRule(): void
+    public function testTimeArrayInputIsRejectedAndResetsValue(): void
     {
         $field = $this->createTimeField(value: '08:00');
 
         $isValid = $field->validate(inputData: ['time' => ['x']]);
 
         $this->assertFalse($isValid);
-        $this->assertSame('08:00:00', $field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 
     public function testGetValueAsStringIsEmptyForNull(): void
@@ -207,5 +203,15 @@ final class DateTimeFieldValueTest extends TestCase
 
         $this->assertSame('2020-02-03', $dateField->getValueAsString());
         $this->assertSame('08:05:00', $timeField->getValueAsString());
+    }
+
+    public function testDateInputIsTrimmed(): void
+    {
+        $field = $this->createDateField();
+
+        $isValid = $field->validate(inputData: ['date' => ' 2020-02-03 ']);
+
+        $this->assertTrue($isValid);
+        $this->assertSame('2020-02-03', $field->getRawValue());
     }
 }

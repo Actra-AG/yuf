@@ -4,6 +4,98 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.0.0] – unreleased
+
+### ⚙️ Backend & API
+
+* **Form Fields (typed values, part 1: text fields):** `TextField`, `EmailField`, `PhoneNumberField`, `HiddenField`,
+  `PasswordField`, `TextAreaField` (and the fields built on them: `ZipCodeField`, `IbanNumberField`, `AmountField`,
+  `DateField`, `TimeField`) now store a `string`, not `mixed`. New class hierarchy: `FormField` > `TextualField` >
+  `InputField` > `StringInputField` (value, `getValueAsString()`, no public setter) > `SettableStringInputField`
+  (adds `setValue(string)`).
+    * ⚠️ **Setters, initial value and original value:** the public `setValue()` changes only the current value; the
+      initial value (constructor value) stays, so `valueHasChanged()` compares with it. `getOriginalValue()` and
+      `setOriginalValue()` are removed. To fill a field after `parent::__construct()` (e.g. with data from the database)
+      a subclass calls the new protected `setInitialValue(string)` (current and initial value). It throws a
+      `LogicException` as soon as `validate()` or `validateCurrentValue()` has run on the field. A project can also
+      pass the value to the constructor.
+      ```php
+      // Before
+      $field->setValue($row->name);
+      $field->setOriginalValue($row->name);
+
+      // After: constructor value (initial value) ...
+      $field = new TextField(name: 'name', label: $label, value: $row->name);
+      // ... or in a subclass, right after parent::__construct()
+      $this->setInitialValue($customer->name);
+      // change the value later (the initial value stays): setValue(string)
+      $field->setValue($row->name);
+      ```
+    * ⚠️ **Invalid input resets the value:** array or manipulated input (`name[]=x`) is no longer ignored while the
+      previous value stays. The value is reset to `''`, exactly one error "invalid input" is added and the rules do not
+      run (no second "required" error). `validate()` returns `false`.
+    * ⚠️ **Normalization:** `TextField` and the fields built on it (also `DateField`, `TimeField`, `ZipCodeField`,
+      `IbanNumberField`, `AmountField`) store the trimmed text without zero-width spaces (U+200B), also for constructor
+      values and setters. `EmailField` stores a valid address in its canonical form, `TextAreaField` and `HiddenField`
+      remove only zero-width spaces (not trimmed), `PasswordField` is not normalized at all (v3 removed U+200B).
+      An empty field has the value `''` (`getRawValue()` returned `null` for a missing key).
+    * ⚠️ **`HiddenField` is string-only:** the constructor accepts `?string`, not `int|float|bool`
+      (`new HiddenField(name: 'id', value: (string)$id, valueIsInt: true)`). `HiddenIntegerField` replaces the
+      `valueIsInt` flag in a later step of v4.
+    * ⚠️ **`TextAreaField` is string-only:** the array value (one entry per line) is removed. Use the string value and
+      `getValues()` (trimmed lines, no empty lines):
+      ```php
+      // Before
+      $field = new TextAreaField(name: 'ns', label: $label, value: $nameservers);   // list<string>
+      $nameservers = (array)$field->getRawValue();
+
+      // After
+      $field = new TextAreaField(name: 'ns', label: $label, value: implode(PHP_EOL, $nameservers));
+      $nameservers = $field->getValues();                      // list<string>
+      $field->setValue(implode(PHP_EOL, $nameserversFromDatabase));
+      ```
+      A subclass that overrode `validate()` to parse the lines must move its checks into rules (the per-line rule
+      `addEachRule()` follows in v4).
+    * ⚠️ **`PasswordField`:** the free `autoComplete` argument is replaced by the required argument
+      `PasswordPurposeEnum $purpose` (`CURRENT`: login or confirming the password, `NEW`: registration, password
+      change, reset). The field always renders the matching `autocomplete` attribute. A password field without
+      `autoComplete` needs a purpose now. The class is `final`, has no public setter and no initial value, is not
+      normalized and is never rendered back (`renderValue()` is `''`).
+      ```php
+      // Before
+      new PasswordField(name: 'pw', label: $label, requiredError: $required,
+          autoComplete: AutoCompleteValue::CURRENT_PASSWORD);
+
+      // After
+      new PasswordField(name: 'pw', label: $label, requiredError: $required, purpose: PasswordPurposeEnum::CURRENT);
+      ```
+    * ⚠️ **`final` classes:** `EmailField`, `PasswordField` and `PhoneNumberField` are `final`. Customize them with the
+      constructor, setters, rules, listeners and the renderer. `TextField`, `TextAreaField` and `HiddenField` stay
+      open.
+    * ⚠️ `InputFieldRenderer` takes an `InputField` only (it already read the `inputType` of the field, which an
+      `OptionsField` does not have).
+    * The v3.3.0 getters stay: `getValueAsString()` (now on `StringInputField` and `TextAreaField`), `getValues()` of
+      `TextAreaField`, `getValueAsInt()` of `HiddenField`.
+* **Form messages:** the German texts of the form code ("Die ungültige Eingabe wurde ignoriert.", "Der angegebene Wert
+  ist ungültig.", ...) are no longer hard-coded. New `FormMessages` with English defaults and `FormMessages::german()`
+  with the v3 texts; the form hands them to its fields.
+  ⚠️ **Attention:** without the argument the fields show the English texts.
+  ```php
+  // Before: German texts hard-coded
+  $form = new Form(name: 'contact');
+
+  // After: keep the German texts with one line
+  $form = new Form(name: 'contact', messages: FormMessages::german());
+  // own texts (named arguments, the rest stays English): new FormMessages(invalidInput: 'Ungültige Eingabe.')
+  ```
+* **Added:** `FormInput` (request data narrowed to text, list, missing or invalid, `FormInput::fromArray()`) and
+  `InputShapeEnum`; fields read their request value from it. `FormField::validateCurrentValue()` runs the listeners and
+  rules without reading input.
+* **Temporary (bridge):** until all fields have typed values, `getRawValue()`, `setValue(mixed)` and the array-based
+  `validate(array, bool)` still exist and are marked `@internal`. They are removed in a later step of v4.
+
+---
+
 ## [v3.3.1] – 2026-10-04
 
 ### 🎨 HTML & CSS (Frontend)

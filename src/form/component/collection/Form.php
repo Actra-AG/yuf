@@ -12,6 +12,7 @@ use Exception;
 use actra\yuf\form\component\field\CsrfTokenField;
 use actra\yuf\form\component\FormField;
 use actra\yuf\form\FormCollection;
+use actra\yuf\form\FormMessages;
 use actra\yuf\form\FormComponent;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\DefaultFormRenderer;
@@ -23,8 +24,10 @@ use LogicException;
 
 class Form extends FormCollection
 {
+    /** @var list<string> */
     private static array $formNameList = [];
     public readonly string $sentIndicator;
+    /** @var list<string> */
     private(set) array $cssClasses = [];
     private bool $renderRequiredAbbr = true;
 
@@ -34,7 +37,8 @@ class Form extends FormCollection
         public readonly ?HtmlText $globalErrorMessage = null,
         public readonly bool $methodPost = true,
         ?string $individualSentIndicator = null,
-        public readonly bool $disableClientValidation = false
+        public readonly bool $disableClientValidation = false,
+        public readonly FormMessages $messages = new FormMessages()
     ) {
         if (in_array(
             needle: $name,
@@ -54,6 +58,7 @@ class Form extends FormCollection
         if (!$this->renderRequiredAbbr) {
             $formField->renderRequiredAbbr = false;
         }
+        $formField->messages = $this->messages;
         $formField->topFormComponent = $this;
         $this->addChildComponent(formComponent: $formField);
     }
@@ -138,6 +143,9 @@ class Form extends FormCollection
         );
     }
 
+    /**
+     * @param array<array-key, mixed> $inputData
+     */
     private function validateCsrf(array $inputData): void
     {
         if (!$this->hasChildComponent(childComponentName: CsrfToken::getFieldName())) {

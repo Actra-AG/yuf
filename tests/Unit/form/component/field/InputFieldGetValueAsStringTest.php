@@ -11,23 +11,24 @@ namespace actra\yuf\tests\Unit\form\component\field;
 use actra\yuf\form\component\field\AmountField;
 use actra\yuf\form\component\field\EmailField;
 use actra\yuf\form\component\field\IbanNumberField;
-use actra\yuf\form\component\field\InputField;
 use actra\yuf\form\component\field\PasswordField;
 use actra\yuf\form\component\field\PhoneNumberField;
+use actra\yuf\form\component\field\StringInputField;
 use actra\yuf\form\component\field\TextField;
 use actra\yuf\form\component\field\ZipCodeField;
+use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * `getValueAsString()` of the InputField subclasses that are not covered by their own value test
+ * `getValueAsString()` of the StringInputField subclasses that are not covered by their own value test
  * (HiddenField, DateField and TimeField have tests in their value tests).
  */
 final class InputFieldGetValueAsStringTest extends TestCase
 {
     /**
-     * @return iterable<string, array{InputField, string}>
+     * @return iterable<string, array{StringInputField, string}>
      */
     public static function fieldProvider(): iterable
     {
@@ -42,7 +43,12 @@ final class InputFieldGetValueAsStringTest extends TestCase
         yield 'zip code' => [new ZipCodeField(name: 'field', label: $label), 'field'];
         yield 'iban' => [new IbanNumberField(name: 'field', label: $label, value: null, invalidError: $error), 'field'];
         yield 'password' => [
-            new PasswordField(name: 'field', label: $label, requiredError: $error),
+            new PasswordField(
+                name: 'field',
+                label: $label,
+                requiredError: $error,
+                purpose: PasswordPurposeEnum::CURRENT
+            ),
             'field',
         ];
         yield 'phone number' => [
@@ -52,21 +58,20 @@ final class InputFieldGetValueAsStringTest extends TestCase
     }
 
     #[DataProvider('fieldProvider')]
-    public function testValueIsEmptyStringAfterValidationWithMissingKey(InputField $field, string $name): void
+    public function testValueIsEmptyStringAfterValidationWithMissingKey(StringInputField $field, string $name): void
     {
         $field->validate(inputData: []);
 
-        $this->assertNull($field->getRawValue());
         $this->assertSame('', $field->getValueAsString());
     }
 
-    public function testPostedStringIsReturnedUntrimmedAndUnencoded(): void
+    public function testPostedStringIsReturnedTrimmedAndUnencoded(): void
     {
         $field = new TextField(name: 'field', label: HtmlText::encoded(textContent: 'Label'));
 
         $field->validate(inputData: ['field' => ' <a> ']);
 
-        $this->assertSame(' <a> ', $field->getValueAsString());
+        $this->assertSame('<a>', $field->getValueAsString());
     }
 
     public function testConstructorStringIsReturned(): void
@@ -76,13 +81,13 @@ final class InputFieldGetValueAsStringTest extends TestCase
         $this->assertSame('x', $field->getValueAsString());
     }
 
-    public function testRejectedArrayInputKeepsPreviousValue(): void
+    public function testRejectedArrayInputResetsValue(): void
     {
         $field = new TextField(name: 'field', label: HtmlText::encoded(textContent: 'Label'), value: 'x');
 
         $field->validate(inputData: ['field' => ['y']]);
 
-        $this->assertSame('x', $field->getValueAsString());
+        $this->assertSame('', $field->getValueAsString());
     }
 
     public function testPasswordFieldIsEmptyStringAfterConstruction(): void
@@ -90,7 +95,8 @@ final class InputFieldGetValueAsStringTest extends TestCase
         $field = new PasswordField(
             name: 'password',
             label: HtmlText::encoded(textContent: 'Password'),
-            requiredError: HtmlText::encoded(textContent: 'Required')
+            requiredError: HtmlText::encoded(textContent: 'Required'),
+            purpose: PasswordPurposeEnum::CURRENT
         );
 
         $this->assertSame('', $field->getValueAsString());

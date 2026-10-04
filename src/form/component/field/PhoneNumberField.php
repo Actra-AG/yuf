@@ -19,7 +19,7 @@ use actra\yuf\phone\PhoneNumber;
 use actra\yuf\phone\PhoneParseException;
 use actra\yuf\phone\PhoneRenderer;
 
-class PhoneNumberField extends InputField
+final class PhoneNumberField extends SettableStringInputField
 {
     private(set) string $countryCode;
 
@@ -51,6 +51,9 @@ class PhoneNumberField extends InputField
         $this->addRule(formRule: new PhoneNumberRule(defaultErrorMessage: $invalidErrorMessage));
     }
 
+    /**
+     * @param array<array-key, mixed> $inputData
+     */
     public function validate(array $inputData, bool $overwriteValue = true): bool
     {
         // Manipulated (non-string) country code input is ignored, the current country code stays.

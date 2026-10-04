@@ -9,30 +9,39 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\field;
 
 use actra\yuf\form\rule\RequiredRule;
-use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\form\settings\InputTypeValue;
+use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
 
-class PasswordField extends InputField
+/**
+ * A password is read exactly as typed (no normalization), has no setter and no initial value, and is never rendered
+ * back into the HTML.
+ */
+final class PasswordField extends StringInputField
 {
     public function __construct(
         string $name,
         HtmlText $label,
         HtmlText $requiredError,
+        PasswordPurposeEnum $purpose,
         ?string $placeholder = null,
-        ?AutoCompleteValue $autoComplete = null,
         ?int $maxLength = null
     ) {
         parent::__construct(
             inputType: InputTypeValue::PASSWORD,
             name: $name,
             label: $label,
-            value: '',
+            value: null,
             placeholder: $placeholder,
-            autoComplete: $autoComplete,
+            autoComplete: $purpose->autoComplete(),
             maxLength: $maxLength
         );
         $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
+    }
+
+    protected function normalize(string $input): string
+    {
+        return $input;
     }
 
     /**

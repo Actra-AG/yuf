@@ -67,7 +67,8 @@ twin `setInitialValue()` sets the initial value (rules below).
   `ZipCodeField`, `IbanNumberField` (via `TextField`): `string` (empty: `trim() === ''`); `getValueAsString(): string`;
   `setValue(string)`; protected `setInitialValue(string)`.
 - `PasswordField` (base `StringInputField`, 3.2): `string`; `getValueAsString(): string`; **no public setter**, no
-  initial value (a password cannot be pre-filled).
+  initial value (a password cannot be pre-filled). Required constructor argument `PasswordPurposeEnum $purpose`
+  instead of a free `autoComplete` argument (decision 18).
 - `CsrfTokenField`: the posted token as internal `string`; **no getter and no setter** (the expected token comes from
   the `CsrfTokenSource`, 3.11; the token cannot be overwritten).
 - `TextAreaField`: `string`, the posted text (empty: `trim() === ''`); `getValueAsString()`, `getValues():
@@ -275,6 +276,13 @@ same. Setters and constructor values pass through it too.
 - `PasswordField`: **no normalization at all**, not trimmed and U+200B kept (v3 removed U+200B). Never rendered back:
   `PasswordField::renderValue()` returns `''` (v3 echoed the posted password into the HTML after an error; fixed in
   v3.3.1, the v4 class keeps it by design).
+- `PasswordField` autofill: generic or random field names to block autofill are not used (no longer best practice:
+  browsers ignore `autocomplete="off"` on login fields, and password managers lead to stronger passwords, see NIST SP
+  800-63B and OWASP). Instead the field is labelled precisely: `enum PasswordPurposeEnum` (`actra\yuf\form\settings`,
+  next to the autocomplete enum) with `case CURRENT` (login, confirming the current password) and `case NEW`
+  (registration, password change, reset); method `autoComplete(): AutoCompleteEnum` via `match` (`CURRENT_PASSWORD` /
+  `NEW_PASSWORD`). The renderer always outputs this `autocomplete` value, so a login or registration form cannot be
+  built without it.
 - Option fields: none (keys are compared exactly).
 
 ### 3.7 Numeric field classes
@@ -528,7 +536,7 @@ FormComponent
    │  │  │  │  │  ├─ ZipCodeField    countryCode, ZipCodeValidator
    │  │  │  │  │  └─ IbanNumberField IbanValidator
    │  │  │  │  └─ EmailField, PhoneNumberField, HiddenField
-   │  │  │  └─ PasswordField         no setter, never rendered back
+   │  │  │  └─ PasswordField         no setter, never rendered back, PasswordPurposeEnum
    │  │  ├─ CsrfTokenField           posted token internal; no getter, no setter; CsrfTokenSource
    │  │  ├─ IntegerField           ?int   getValueAsInt(), setValue(?int)          (open) ← NumericField
    │  │  ├─ HiddenIntegerField     ?int   getValueAsInt(), setValue(?int)
@@ -826,5 +834,8 @@ family; `TimeOfDay` gets its own unit test in task 4a.
     setter, `SettableStringInputField` adds `setValue(string)` for `TextField`, `EmailField`, `PhoneNumberField`,
     `HiddenField`; `PasswordField` extends the former; `CsrfTokenField` extends `InputField` directly and has neither
     getter nor setter (3.2).
+18. **`PasswordField` purpose (added in review):** required `PasswordPurposeEnum $purpose` (`CURRENT` → autocomplete
+    `current-password`, `NEW` → `new-password`) replaces the free `autoComplete` argument; no generic/random field
+    names to block autofill (3.6).
 
 New open questions: none.

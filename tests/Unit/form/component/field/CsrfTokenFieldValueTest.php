@@ -17,9 +17,9 @@ use PHPUnit\Framework\TestCase;
  */
 final class CsrfTokenFieldValueTest extends TestCase
 {
-    public function testValueIsNullAfterConstruction(): void
+    public function testValueIsEmptyStringAfterConstruction(): void
     {
-        $this->assertNull(new CsrfTokenField()->getRawValue());
+        $this->assertSame('', new CsrfTokenField()->getRawValue());
     }
 
     public function testStringInputIsStored(): void
@@ -31,12 +31,12 @@ final class CsrfTokenFieldValueTest extends TestCase
         $this->assertSame('abc', $field->getRawValue());
     }
 
-    public function testValueIsNullAfterValidationWithMissingKey(): void
+    public function testValueIsEmptyStringAfterValidationWithMissingKey(): void
     {
         $field = new CsrfTokenField();
 
         $field->validate(inputData: []);
 
-        $this->assertNull($field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 }

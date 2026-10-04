@@ -8,22 +8,23 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
+use actra\yuf\form\AmountParser;
 use actra\yuf\form\renderer\HiddenFieldRenderer;
-use actra\yuf\form\rule\ValidAmountRule;
 use actra\yuf\form\settings\InputTypeValue;
 use actra\yuf\html\HtmlText;
 use UnexpectedValueException;
 
-class HiddenField extends InputField
+class HiddenField extends SettableStringInputField
 {
     /**
      * @param bool $valueIsInt Only accept integer values (e.g. IDs): manipulated input becomes a validation error, so
-     *                         getValueAsInt() never fails after a successful validation.
+     *                         getValueAsInt() never fails after a successful validation. Temporary flag, replaced by
+     *                         HiddenIntegerField.
      */
     public function __construct(
         string $name,
-        int|float|string|bool|null $value = null,
-        bool $valueIsInt = false
+        ?string $value = null,
+        private readonly bool $valueIsInt = false
     ) {
         parent::__construct(
             inputType: InputTypeValue::HIDDEN,
@@ -34,25 +35,32 @@ class HiddenField extends InputField
             autoComplete: null
         );
         $this->setRenderer(renderer: new HiddenFieldRenderer(hiddenField: $this));
-        if ($valueIsInt) {
-            $this->addRule(
-                formRule: new ValidAmountRule(
-                    valueIsFloat: false,
-                    errorMessage: HtmlText::encoded(textContent: 'Der angegebene Wert ist ungültig.')
-                )
-            );
-        }
     }
 
     /**
-     * Returns the value as `int`, or `null` if the field is empty (`null`, `''`, whitespace only).
+     * A hidden value is sent back exactly as rendered, so it is not trimmed.
+     */
+    protected function normalize(string $input): string
+    {
+        return $this->removeZeroWidthSpaces(input: $input);
+    }
+
+    public function validateCurrentValue(): bool
+    {
+        if ($this->valueIsInt && !$this->isValueEmpty() && AmountParser::toInt(value: $this->getText()) === null) {
+            $this->addError(errorMessage: $this->messages->invalidValue, isEncodedForRendering: false);
+        }
+
+        return parent::validateCurrentValue();
+    }
+
+    /**
+     * Returns the value as `int`, or `null` if the field is empty (`''`, whitespace only).
      *
-     * Works like AmountField::getValueAsInt(): a posted string may have a sign, leading zeros and surrounding
-     * whitespace (`'+5'`, `'007'`, `' 12 '`); an `int` constructor value is returned as is. Construct the field with
-     * `valueIsInt: true` to turn manipulated input into a validation error instead of an exception here.
+     * A value may have a sign, leading zeros and surrounding whitespace (`'+5'`, `'007'`, `' 12 '`). Construct the
+     * field with `valueIsInt: true` to turn manipulated input into a validation error instead of an exception here.
      *
-     * @throws UnexpectedValueException If the value is not an integer (a decimal or text string, a `float` or `bool`
-     *         constructor value) or does not fit into an `int` (outside PHP_INT_MIN..PHP_INT_MAX).
+     * @throws UnexpectedValueException If the value is not an integer or does not fit into an `int`.
      */
     public function getValueAsInt(): ?int
     {

@@ -13,7 +13,7 @@ use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\form\settings\InputTypeValue;
 use actra\yuf\html\HtmlText;
 
-class TextField extends InputField
+class TextField extends SettableStringInputField
 {
     public function __construct(
         string $name,

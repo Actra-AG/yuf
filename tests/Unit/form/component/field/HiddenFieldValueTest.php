@@ -9,161 +9,98 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\HiddenField;
+use actra\yuf\form\FormMessages;
 use PHPUnit\Framework\Attributes\DataProvider;
-use actra\yuf\html\HtmlEncoder;
 use PHPUnit\Framework\TestCase;
 use UnexpectedValueException;
 
 final class HiddenFieldValueTest extends TestCase
 {
-    /**
-     * The constructor value keeps its type (int, float, bool); only posted values are always strings.
-     *
-     * @return iterable<string, array{int|float|string|bool|null}>
-     */
-    public static function constructorValueProvider(): iterable
+    public function testValueIsEmptyStringAfterConstructionWithoutValue(): void
     {
-        yield 'null' => [null];
-        yield 'string' => ['text'];
-        yield 'empty string' => [''];
-        yield 'int' => [5];
-        yield 'zero int' => [0];
-        yield 'float' => [1.5];
-        yield 'true' => [true];
-        yield 'false' => [false];
+        $this->assertSame('', new HiddenField(name: 'hidden')->getValueAsString());
     }
 
-    #[DataProvider('constructorValueProvider')]
-    public function testConstructorValueKeepsItsType(int|float|string|bool|null $value): void
+    public function testConstructorValueIsKeptAsString(): void
     {
-        $field = new HiddenField(name: 'hidden', value: $value);
-
-        $this->assertSame($value, $field->getRawValue());
+        $this->assertSame('text', new HiddenField(name: 'hidden', value: 'text')->getValueAsString());
     }
 
-    public function testStringInputReplacesTypedConstructorValue(): void
-    {
-        $field = new HiddenField(name: 'hidden', value: 5);
-
-        $isValid = $field->validate(inputData: ['hidden' => '7']);
-
-        $this->assertTrue($isValid);
-        $this->assertSame('7', $field->getRawValue());
-    }
-
-    public function testStringInputIsStoredUntrimmed(): void
+    public function testStringInputIsNotTrimmed(): void
     {
         $field = new HiddenField(name: 'hidden');
 
         $field->validate(inputData: ['hidden' => ' a ']);
 
-        $this->assertSame(' a ', $field->getRawValue());
+        $this->assertSame(' a ', $field->getValueAsString());
     }
 
-    public function testValueIsNullAfterValidationWithMissingKey(): void
+    public function testConstructorValueIsNotTrimmed(): void
     {
-        $field = new HiddenField(name: 'hidden', value: 5);
+        $this->assertSame(' a ', new HiddenField(name: 'hidden', value: ' a ')->getValueAsString());
+    }
+
+    public function testZeroWidthSpacesAreRemoved(): void
+    {
+        $field = new HiddenField(name: 'hidden');
+
+        $field->validate(inputData: ['hidden' => "a\u{200B}b"]);
+
+        $this->assertSame('ab', $field->getValueAsString());
+    }
+
+    public function testValueIsEmptyStringAfterValidationWithMissingKey(): void
+    {
+        $field = new HiddenField(name: 'hidden', value: '5');
 
         $this->assertTrue($field->validate(inputData: []));
-        $this->assertNull($field->getRawValue());
-    }
-
-    public function testArrayInputIsRejectedAndKeepsTypedConstructorValue(): void
-    {
-        $field = new HiddenField(name: 'hidden', value: 5);
-
-        $isValid = $field->validate(inputData: ['hidden' => ['x']]);
-
-        $this->assertFalse($isValid);
-        $this->assertSame(5, $field->getRawValue());
-    }
-
-    public function testFalseIsTreatedAsEmpty(): void
-    {
-        $field = new HiddenField(name: 'hidden', value: false);
-
-        $this->assertTrue($field->isValueEmpty());
-        $this->assertNull($field->getRawValue(returnNullIfEmpty: true));
-    }
-
-    /**
-     * Same string as renderValue() renders before HTML encoding (`(string)` cast).
-     *
-     * @return iterable<string, array{int|float|string|bool|null, string}>
-     */
-    public static function valueAsStringProvider(): iterable
-    {
-        yield 'null' => [null, ''];
-        yield 'string' => [' a<b ', ' a<b '];
-        yield 'empty string' => ['', ''];
-        yield 'int' => [5, '5'];
-        yield 'zero int' => [0, '0'];
-        yield 'negative int' => [-5, '-5'];
-        yield 'float' => [1.5, '1.5'];
-        yield 'whole float' => [2.0, '2'];
-        yield 'true' => [true, '1'];
-        yield 'false' => [false, ''];
-    }
-
-    #[DataProvider('valueAsStringProvider')]
-    public function testGetValueAsStringConvertsConstructorValue(
-        int|float|string|bool|null $value,
-        string $expected
-    ): void {
-        $field = new HiddenField(name: 'hidden', value: $value);
-
-        $this->assertSame($expected, $field->getValueAsString());
-        $this->assertSame(HtmlEncoder::encode(value: $expected), $field->renderValue());
-    }
-
-    public function testGetValueAsStringReturnsPostedString(): void
-    {
-        $field = new HiddenField(name: 'hidden', value: 5);
-
-        $field->validate(inputData: ['hidden' => ' 7 ']);
-
-        $this->assertSame(' 7 ', $field->getValueAsString());
-    }
-
-    public function testGetValueAsStringIsEmptyAfterValidationWithMissingKey(): void
-    {
-        $field = new HiddenField(name: 'hidden', value: 5);
-
-        $field->validate(inputData: []);
 
         $this->assertSame('', $field->getValueAsString());
     }
 
-    public function testGetValueAsStringReturnsPreviousValueAfterRejectedArrayInput(): void
+    public function testArrayInputIsRejectedAndResetsValue(): void
     {
-        $field = new HiddenField(name: 'hidden', value: 5);
+        $field = new HiddenField(name: 'hidden', value: '5');
 
-        $field->validate(inputData: ['hidden' => ['x']]);
+        $isValid = $field->validate(inputData: ['hidden' => ['x']]);
 
-        $this->assertSame('5', $field->getValueAsString());
+        $this->assertFalse($isValid);
+        $this->assertSame('', $field->getValueAsString());
+        $this->assertSame(1, $field->errorCollection->count());
+    }
+
+    public function testSetValueChangesCurrentValueOnly(): void
+    {
+        $field = new HiddenField(name: 'hidden', value: 'a');
+
+        $field->setValue(value: 'b');
+
+        $this->assertSame('b', $field->getValueAsString());
+        $this->assertTrue($field->valueHasChanged());
+    }
+
+    public function testRenderValueEncodesValue(): void
+    {
+        $this->assertSame('a&lt;b', new HiddenField(name: 'hidden', value: 'a<b')->renderValue());
     }
 
     /**
-     * @return iterable<string, array{int|float|string|bool|null, ?int}>
+     * @return iterable<string, array{string, ?int}>
      */
     public static function valueAsIntProvider(): iterable
     {
-        yield 'null' => [null, null];
         yield 'empty string' => ['', null];
         yield 'whitespace only' => [' ', null];
-        yield 'int' => [5, 5];
-        yield 'zero int' => [0, 0];
-        yield 'negative int' => [-5, -5];
-        yield 'int max' => [PHP_INT_MAX, PHP_INT_MAX];
         yield 'integer string' => ['12', 12];
+        yield 'zero' => ['0', 0];
         yield 'plus sign' => ['+5', 5];
         yield 'leading zeros' => ['007', 7];
         yield 'negative string' => ['-5', -5];
-        yield 'surrounding whitespace' => [" 12\n", 12];
+        yield 'int max' => [(string)PHP_INT_MAX, PHP_INT_MAX];
     }
 
     #[DataProvider('valueAsIntProvider')]
-    public function testGetValueAsIntConvertsConstructorValue(int|float|string|bool|null $value, ?int $expected): void
+    public function testGetValueAsIntConvertsConstructorValue(string $value, ?int $expected): void
     {
         $field = new HiddenField(name: 'hidden', value: $value);
 
@@ -181,23 +118,15 @@ final class HiddenFieldValueTest extends TestCase
 
     public function testGetValueAsIntIsNullAfterValidationWithMissingKey(): void
     {
-        $field = new HiddenField(name: 'hidden', value: 5);
+        $field = new HiddenField(name: 'hidden', value: '5');
 
         $field->validate(inputData: []);
 
         $this->assertNull($field->getValueAsInt());
     }
 
-    public function testGetValueAsIntReturnsPreviousValueAfterRejectedArrayInput(): void
-    {
-        $field = new HiddenField(name: 'hidden', value: 5);
-
-        $this->assertFalse($field->validate(inputData: ['hidden' => ['1']]));
-        $this->assertSame(5, $field->getValueAsInt());
-    }
-
     /**
-     * @return iterable<string, array{int|float|string|bool|null}>
+     * @return iterable<string, array{string}>
      */
     public static function notAnIntegerProvider(): iterable
     {
@@ -206,14 +135,10 @@ final class HiddenFieldValueTest extends TestCase
         yield 'text' => ['abc'];
         yield 'overflow' => ['9223372036854775808'];
         yield 'negative overflow' => ['-9223372036854775809'];
-        yield 'float' => [1.5];
-        yield 'integral float' => [2.0];
-        yield 'true' => [true];
-        yield 'false' => [false];
     }
 
     #[DataProvider('notAnIntegerProvider')]
-    public function testGetValueAsIntThrows(int|float|string|bool|null $value): void
+    public function testGetValueAsIntThrows(string $value): void
     {
         $field = new HiddenField(name: 'hidden', value: $value);
 
@@ -239,22 +164,40 @@ final class HiddenFieldValueTest extends TestCase
         $field = new HiddenField(name: 'hidden', valueIsInt: true);
 
         $this->assertFalse($field->validate(inputData: ['hidden' => $input]));
+        $this->assertSame('The given value is invalid.', $field->errorCollection->getFirstError()->render());
+    }
+
+    public function testIntegerFieldErrorTextComesFromTheFormMessages(): void
+    {
+        $field = new HiddenField(name: 'hidden', valueIsInt: true);
+        $field->messages = FormMessages::german();
+
+        $field->validate(inputData: ['hidden' => 'abc']);
+
+        $this->assertSame('Der angegebene Wert ist ungültig.', $field->errorCollection->getFirstError()->render());
     }
 
     public function testIntegerFieldAcceptsIntegerInput(): void
     {
         $field = new HiddenField(name: 'hidden', valueIsInt: true);
 
-        $this->assertTrue($field->validate(inputData: ['hidden' => ' 42 ']));
+        $this->assertTrue($field->validate(inputData: ['hidden' => '42']));
         $this->assertSame(42, $field->getValueAsInt());
     }
 
     public function testIntegerFieldAcceptsMissingKey(): void
     {
-        $field = new HiddenField(name: 'hidden', value: 5, valueIsInt: true);
+        $field = new HiddenField(name: 'hidden', value: '5', valueIsInt: true);
 
         $this->assertTrue($field->validate(inputData: []));
         $this->assertNull($field->getValueAsInt());
+    }
+
+    public function testIntegerFieldWithIntegerConstructorValueHasNoError(): void
+    {
+        $field = new HiddenField(name: 'hidden', value: 'abc', valueIsInt: true);
+
+        $this->assertFalse($field->hasErrors(withChildElements: false));
     }
 
     public function testFieldWithoutIntegerOptionAcceptsAnyString(): void

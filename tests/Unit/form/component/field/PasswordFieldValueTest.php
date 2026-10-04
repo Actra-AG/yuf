@@ -9,53 +9,59 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\PasswordField;
+use actra\yuf\form\settings\AutoCompleteValue;
+use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
+use LogicException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class PasswordFieldValueTest extends TestCase
 {
-    private function createField(): PasswordField
+    private function createField(PasswordPurposeEnum $purpose = PasswordPurposeEnum::CURRENT): PasswordField
     {
         return new PasswordField(
             name: 'password',
             label: HtmlText::encoded(textContent: 'Password'),
-            requiredError: HtmlText::encoded(textContent: 'Required')
+            requiredError: HtmlText::encoded(textContent: 'Required'),
+            purpose: $purpose
         );
     }
 
     public function testValueIsEmptyStringAfterConstruction(): void
     {
-        $this->assertSame('', $this->createField()->getRawValue());
+        $this->assertSame('', $this->createField()->getValueAsString());
     }
 
-    public function testStringInputIsStoredUntrimmed(): void
+    public function testPasswordIsNotNormalized(): void
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(inputData: ['password' => ' secret ']);
+        $isValid = $field->validate(inputData: ['password' => " se\u{200B}cret "]);
 
         $this->assertTrue($isValid);
-        $this->assertSame(' secret ', $field->getRawValue());
+        $this->assertSame(" se\u{200B}cret ", $field->getValueAsString());
     }
 
-    public function testValueIsNullAfterValidationWithMissingKey(): void
+    public function testValueIsEmptyStringAfterValidationWithMissingKey(): void
     {
         $field = $this->createField();
 
         $isValid = $field->validate(inputData: []);
 
         $this->assertFalse($isValid);
-        $this->assertNull($field->getRawValue());
+        $this->assertSame('', $field->getValueAsString());
     }
 
-    public function testArrayInputIsRejectedAndKeepsEmptyString(): void
+    public function testArrayInputIsRejectedWithOneError(): void
     {
         $field = $this->createField();
 
         $isValid = $field->validate(inputData: ['password' => ['x']]);
 
         $this->assertFalse($isValid);
-        $this->assertSame('', $field->getRawValue());
+        $this->assertSame('', $field->getValueAsString());
+        $this->assertSame(1, $field->errorCollection->count());
     }
 
     public function testPostedPasswordIsNotRendered(): void
@@ -75,5 +81,35 @@ final class PasswordFieldValueTest extends TestCase
         $field->validate(inputData: ['password' => 'secret']);
 
         $this->assertStringNotContainsString('secret', (string)$field->getHtmlTag()?->render());
+    }
+
+    public function testBridgeSetterThrows(): void
+    {
+        $this->expectException(LogicException::class);
+
+        $this->createField()->setValue(value: 'x');
+    }
+
+    /**
+     * @return iterable<string, array{PasswordPurposeEnum, string}>
+     */
+    public static function purposeProvider(): iterable
+    {
+        yield 'current password' => [PasswordPurposeEnum::CURRENT, 'current-password'];
+        yield 'new password' => [PasswordPurposeEnum::NEW, 'new-password'];
+    }
+
+    #[DataProvider('purposeProvider')]
+    public function testRendersAutocompleteAttributeOfThePurpose(PasswordPurposeEnum $purpose, string $expected): void
+    {
+        $field = $this->createField(purpose: $purpose);
+
+        $this->assertSame($expected, $field->autoComplete?->value);
+        $this->assertStringContainsString('autocomplete="' . $expected . '"', (string)$field->getHtmlTag()?->render());
+    }
+
+    public function testAutocompleteEnumValuesAreTheOnesOfThePurposes(): void
+    {
+        $this->assertSame(AutoCompleteValue::CURRENT_PASSWORD, $this->createField()->autoComplete);
     }
 }

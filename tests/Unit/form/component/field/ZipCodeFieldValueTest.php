@@ -22,9 +22,9 @@ final class ZipCodeFieldValueTest extends TestCase
         );
     }
 
-    public function testValueIsNullAfterConstructionWithoutValue(): void
+    public function testValueIsEmptyStringAfterConstructionWithoutValue(): void
     {
-        $this->assertNull($this->createField()->getRawValue());
+        $this->assertSame('', $this->createField()->getRawValue());
     }
 
     public function testValueIsStringAfterConstructionWithString(): void
@@ -48,14 +48,14 @@ final class ZipCodeFieldValueTest extends TestCase
         $this->assertSame('8000', $field->getRawValue());
     }
 
-    public function testSurroundingWhitespaceIsAcceptedByRuleButNotRemovedFromValue(): void
+    public function testSurroundingWhitespaceIsTrimmed(): void
     {
         $field = $this->createField();
 
         $isValid = $field->validate(inputData: ['zip' => ' 8000 ']);
 
         $this->assertTrue($isValid);
-        $this->assertSame(' 8000 ', $field->getRawValue());
+        $this->assertSame('8000', $field->getRawValue());
     }
 
     public function testInvalidZipCodeKeepsInputAsString(): void
@@ -78,12 +78,12 @@ final class ZipCodeFieldValueTest extends TestCase
         $this->assertSame('DE', $field->countryCode);
     }
 
-    public function testValueIsNullAfterValidationWithMissingKey(): void
+    public function testValueIsEmptyStringAfterValidationWithMissingKey(): void
     {
         $field = $this->createField();
 
         $this->assertTrue($field->validate(inputData: []));
-        $this->assertNull($field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 
     public function testArrayInputIsRejectedAndKeepsPreviousValue(): void
@@ -93,7 +93,7 @@ final class ZipCodeFieldValueTest extends TestCase
         $isValid = $field->validate(inputData: ['zip' => ['x']]);
 
         $this->assertFalse($isValid);
-        $this->assertNull($field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 
     public function testArrayAsCountryCodeInputIsIgnoredAndKeepsCountryCode(): void

@@ -10,7 +10,6 @@ namespace actra\yuf\form\renderer;
 
 use actra\yuf\form\component\field\TextAreaField;
 use actra\yuf\form\FormRenderer;
-use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 use actra\yuf\html\HtmlText;
@@ -88,17 +87,7 @@ class TextAreaRenderer extends FormRenderer
             formField: $textAreaField,
             parentHtmlTag: $textareaTag
         );
-        $value = $textAreaField->getRawValue();
-        if (is_array(value: $value)) {
-            $rows = [];
-            foreach ($value as $row) {
-                $rows[] = HtmlEncoder::encode(value: $row);
-            }
-            $html = implode(separator: PHP_EOL, array: $rows);
-        } else {
-            $html = HtmlEncoder::encode(value: $value);
-        }
-        $textareaTag->addText(htmlText: HtmlText::encoded(textContent: $html));
+        $textareaTag->addText(htmlText: HtmlText::encoded(textContent: $textAreaField->renderValue()));
         $this->setHtmlTag(htmlTag: $textareaTag);
     }
 }

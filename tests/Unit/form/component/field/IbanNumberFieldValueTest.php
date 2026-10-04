@@ -25,9 +25,9 @@ final class IbanNumberFieldValueTest extends TestCase
         );
     }
 
-    public function testValueIsNullAfterConstructionWithoutValue(): void
+    public function testValueIsEmptyStringAfterConstructionWithoutValue(): void
     {
-        $this->assertNull($this->createField()->getRawValue());
+        $this->assertSame('', $this->createField()->getRawValue());
     }
 
     public function testValueIsStringAfterConstructionWithString(): void
@@ -36,26 +36,26 @@ final class IbanNumberFieldValueTest extends TestCase
     }
 
     /**
-     * The IBAN is not normalized: spaces, case and surrounding whitespace stay as posted.
+     * Spaces and case stay as posted, surrounding whitespace is trimmed.
      *
-     * @return iterable<string, array{string}>
+     * @return iterable<string, array{string, string}>
      */
     public static function validIbanProvider(): iterable
     {
-        yield 'with spaces' => ['CH93 0076 2011 6238 5295 7'];
-        yield 'lower case without spaces' => ['ch9300762011623852957'];
-        yield 'surrounding whitespace' => [' CH9300762011623852957 '];
+        yield 'with spaces' => ['CH93 0076 2011 6238 5295 7', 'CH93 0076 2011 6238 5295 7'];
+        yield 'lower case without spaces' => ['ch9300762011623852957', 'ch9300762011623852957'];
+        yield 'surrounding whitespace' => [' CH9300762011623852957 ', 'CH9300762011623852957'];
     }
 
     #[DataProvider('validIbanProvider')]
-    public function testValidIbanIsStoredUnchanged(string $input): void
+    public function testValidIbanIsStoredTrimmed(string $input, string $expected): void
     {
         $field = $this->createField();
 
         $isValid = $field->validate(inputData: ['iban' => $input]);
 
         $this->assertTrue($isValid);
-        $this->assertSame($input, $field->getRawValue());
+        $this->assertSame($expected, $field->getRawValue());
     }
 
     public function testInvalidIbanKeepsInputAsString(): void
@@ -68,12 +68,12 @@ final class IbanNumberFieldValueTest extends TestCase
         $this->assertSame('xx', $field->getRawValue());
     }
 
-    public function testValueIsNullAfterValidationWithMissingKey(): void
+    public function testValueIsEmptyStringAfterValidationWithMissingKey(): void
     {
         $field = $this->createField();
 
         $this->assertTrue($field->validate(inputData: []));
-        $this->assertNull($field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 
     public function testArrayInputIsRejectedAndKeepsPreviousValue(): void
@@ -83,6 +83,6 @@ final class IbanNumberFieldValueTest extends TestCase
         $isValid = $field->validate(inputData: ['iban' => ['x']]);
 
         $this->assertFalse($isValid);
-        $this->assertNull($field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 }

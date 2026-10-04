@@ -13,11 +13,13 @@ use DateTime;
 use actra\yuf\form\AmountParser;
 use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\FormComponent;
+use actra\yuf\form\FormMessages;
 use actra\yuf\form\FormRule;
 use actra\yuf\form\listener\FormFieldListener;
 use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
+use LogicException;
 use UnexpectedValueException;
 
 abstract class FormField extends FormComponent
@@ -31,6 +33,8 @@ abstract class FormField extends FormComponent
     private(set) HtmlText $label;
     private(set) bool $renderLabel = true;
     public bool $autoFocus = false;
+    /** The texts of the form; set by `Form::addField()`, a field without a form uses the English defaults. */
+    public FormMessages $messages;
     /** @var FormFieldListener[] */
     protected array $listeners = [];
 
@@ -40,6 +44,8 @@ abstract class FormField extends FormComponent
     /** @var FormRule[] */
     private array $rules = [];
     private bool $acceptArrayAsValue = false;
+    private bool $inputReceived = false;
+    private bool $inputRejected = false;
 
     /**
      * @param string $name The internal name for this formField which is also used by the renderer (name="")
@@ -57,7 +63,17 @@ abstract class FormField extends FormComponent
         $this->id = $name;
         $this->label = $label;
         parent::__construct(name: $name);
+        $this->messages = new FormMessages();
+        $this->initializeLegacyValue(value: $value);
+        $this->labelInfoText = $labelInfoText;
+    }
 
+    /**
+     * @internal Bridge until all fields have typed values (removed with `getRawValue()`): fields with a typed value
+     *           override this and keep their value themselves.
+     */
+    protected function initializeLegacyValue(mixed $value): void
+    {
         if (is_array(value: $value)) {
             // If the value to be pre-filled is already an array, we can also accept an array as user input
             $this->acceptArrayAsValue();
@@ -65,7 +81,6 @@ abstract class FormField extends FormComponent
 
         $this->setValue(value: $value);
         $this->setOriginalValue(value: $value);
-        $this->labelInfoText = $labelInfoText;
     }
 
     protected function acceptArrayAsValue(): void
@@ -73,15 +88,18 @@ abstract class FormField extends FormComponent
         $this->acceptArrayAsValue = true;
     }
 
-    public function setValue($value): void
+    /**
+     * @internal Bridge until all fields have typed values: fields with a typed value have a typed setter instead.
+     */
+    public function setValue(mixed $value): void
     {
         if (
             is_array(value: $value)
             && !$this->isArrayAsValueAllowed()
         ) {
             $this->addError(
-                errorMessage: 'Die ungültige Eingabe wurde ignoriert.',
-                isEncodedForRendering: true
+                errorMessage: $this->messages->invalidInput,
+                isEncodedForRendering: false
             );
 
             return;
@@ -104,10 +122,21 @@ abstract class FormField extends FormComponent
 
     public function renderValue(): string
     {
-        return HtmlEncoder::encode(value: $this->getRawValue());
+        $value = $this->getRawValue();
+        if ($value !== null && !is_scalar(value: $value)) {
+            throw new UnexpectedValueException(
+                message: 'The value of field ' . $this->name . ' cannot be rendered, it is of type '
+                . get_debug_type(value: $value) . '.'
+            );
+        }
+
+        return HtmlEncoder::encode(value: $value);
     }
 
-    public function getRawValue(bool $returnNullIfEmpty = false)
+    /**
+     * @internal Bridge until all fields have typed values: use the typed getter of the field.
+     */
+    public function getRawValue(bool $returnNullIfEmpty = false): mixed
     {
         if ($this->isValueEmpty() && $returnNullIfEmpty) {
             return null;
@@ -128,7 +157,7 @@ abstract class FormField extends FormComponent
      */
     protected function getValueAsStringOrFail(): string
     {
-        $value = $this->value;
+        $value = $this->getRawValue();
         if ($value === null) {
             return '';
         }
@@ -157,7 +186,7 @@ abstract class FormField extends FormComponent
      */
     protected function getValueAsIntOrFail(): ?int
     {
-        $value = $this->value;
+        $value = $this->getRawValue();
         if ($value === null || (is_string(value: $value) && $this->isValueEmpty())) {
             return null;
         }
@@ -193,7 +222,7 @@ abstract class FormField extends FormComponent
      */
     protected function getValueAsFloatOrFail(): ?float
     {
-        $value = $this->value;
+        $value = $this->getRawValue();
         if ($value === null || (is_string(value: $value) && $this->isValueEmpty())) {
             return null;
         }
@@ -236,7 +265,7 @@ abstract class FormField extends FormComponent
      */
     protected function getValuesAsStringListOrFail(): array
     {
-        $value = $this->value;
+        $value = $this->getRawValue();
         if ($value === null) {
             return [];
         }
@@ -310,16 +339,25 @@ abstract class FormField extends FormComponent
         }
     }
 
-    public function getOriginalValue()
+    /**
+     * @internal Bridge until all fields have typed values: the original value is the initial value of the field.
+     */
+    public function getOriginalValue(): mixed
     {
         return $this->originalValue;
     }
 
-    public function setOriginalValue($value): void
+    /**
+     * @internal Bridge until all fields have typed values: set the initial value in the constructor.
+     */
+    public function setOriginalValue(mixed $value): void
     {
         $this->originalValue = $value;
     }
 
+    /**
+     * @return list<mixed>
+     */
     public function getAddedValues(): array
     {
         if (!is_array(value: $this->value) || !is_array(value: $this->originalValue)) {
@@ -340,6 +378,9 @@ abstract class FormField extends FormComponent
         return $addedValues;
     }
 
+    /**
+     * @return list<mixed>
+     */
     public function getRemovedValues(): array
     {
         if (
@@ -391,22 +432,47 @@ abstract class FormField extends FormComponent
     /**
      * Use the rules to validate the input data.
      *
-     * @param array $inputData : All input data
+     * @param array<array-key, mixed> $inputData : All input data
      * @param bool $overwriteValue : Overwrite current value by value from inputData (true by default)
      *
      * @return bool : Validation result (false on error)
+     * @internal The signature is a bridge until `validate(FormInput)` replaces it.
      */
     public function validate(array $inputData, bool $overwriteValue = true): bool
     {
+        $this->inputReceived = true;
         if ($overwriteValue) {
-            $defaultValue = $this->isArrayAsValueAllowed() ? [] : null;
-            $this->setValue(
-                value: array_key_exists(
-                    key: $this->name,
-                    array: $inputData
-                ) ? $inputData[$this->name] : $defaultValue
-            );
+            $this->inputRejected = false;
+            $this->readInputData(inputData: $inputData);
         }
+
+        return $this->validateCurrentValue();
+    }
+
+    /**
+     * @param array<array-key, mixed> $inputData
+     * @internal Bridge until all fields have typed values: fields with a typed value read a `FormInput` instead.
+     */
+    protected function readInputData(array $inputData): void
+    {
+        $defaultValue = $this->isArrayAsValueAllowed() ? [] : null;
+        $this->setValue(
+            value: array_key_exists(
+                key: $this->name,
+                array: $inputData
+            ) ? $inputData[$this->name] : $defaultValue
+        );
+    }
+
+    /**
+     * Runs the listeners and rules on the current value, without reading input. Rules do not run for rejected input
+     * (the one error about the invalid input is enough).
+     *
+     * @return bool : Validation result (false on error)
+     */
+    public function validateCurrentValue(): bool
+    {
+        $this->inputReceived = true;
 
         foreach ($this->listeners as $formFieldListener) {
             if ($this->isValueEmpty()) {
@@ -422,7 +488,7 @@ abstract class FormField extends FormComponent
             }
         }
 
-        foreach ($this->rules as $formRule) {
+        foreach ($this->inputRejected ? [] : $this->rules as $formRule) {
             if (!$formRule->validate(formField: $this)) {
                 $this->addErrorAsHtmlTextObject(errorMessageObject: $formRule->getErrorMessage());
             }
@@ -456,6 +522,31 @@ abstract class FormField extends FormComponent
         }
 
         return !$this->hasErrors(withChildElements: true);
+    }
+
+    /**
+     * The input of the field is invalid (wrong shape, manipulated): one error, the typed rules do not run.
+     */
+    final protected function rejectInput(string $errorMessage): void
+    {
+        $this->inputRejected = true;
+        $this->addError(errorMessage: $errorMessage, isEncodedForRendering: false);
+    }
+
+    /**
+     * Guard of the protected `setInitialValue()` methods: the initial value can only be set while the field has not
+     * received input.
+     *
+     * @throws LogicException If `validate()` or `validateCurrentValue()` has already run on this field.
+     */
+    final protected function assertInitialValueCanBeSet(): void
+    {
+        if ($this->inputReceived) {
+            throw new LogicException(
+                message: 'The initial value of field ' . $this->name . ' cannot be set after the field has been '
+                . 'validated. Use the public setter to change the current value.'
+            );
+        }
     }
 
     /**

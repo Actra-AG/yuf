@@ -167,6 +167,97 @@ touched files; `ddev composer check` green.
 
 Handover notes:
 
+Done (2026-10-04), `ddev composer check` green, no baseline entries left in the touched files.
+
+**What was built**
+
+- New: `FormInput` (`fromArray(data, files, query)`, `getShape()`, `getText()`, `getList()`, `hasQueryKey()`,
+  `getQueryText()`; `mixed` only in `fromArray()`/`toStringList()`; data wins over files; no `getUploads()`/
+  `fromGlobals()` yet), `InputShapeEnum`, `FormMessages` (+ `german()`), `PasswordPurposeEnum` (decision 18),
+  `TextualField`, `StringInputField`, `SettableStringInputField`. Changed: `InputField` (no value, no
+  `getValueAsString()`), `TextField`, `EmailField` (final, `normalize()` canonicalizes), `HiddenField`, `PasswordField`
+  (final, `purpose`), `TextAreaField`, `PhoneNumberField` (final, rebased), `DateTimeFieldCore` (rebased),
+  `FormField`, `Form(messages:)`, `InputFieldRenderer`, `TextAreaRenderer`.
+- `TextualField` owns the pipeline `readInput(FormInput)` -> `normalize()` -> `accept()`, the text storage
+  (`getText()`, `changeText()` for public setters, `changeInitialText()` for `setInitialValue()`), `isValueEmpty()`,
+  `valueHasChanged()` (plain comparison), `renderValue()`. `FormField` got `validateCurrentValue()` (`validate()` now
+  calls it), the private flags `inputReceived` / `inputRejected`, `rejectInput(string)` (one error, rules skipped until
+  the next `validate()` with input), `assertInitialValueCanBeSet()` (`LogicException`), `public FormMessages $messages`
+  (set by `Form::addField()`, English default without a form). Legacy German message in `FormField::setValue()` now
+  comes from `messages->invalidInput`. `FormField` baseline entries fixed with explicit `mixed`/phpdoc types.
+
+**Deviations from the design (and why)**
+
+1. **Typed setter signature.** PHP does not allow `setValue(string)` in a child of `FormField::setValue(mixed)`, and
+   `FileField`/`ToggleField` still need the legacy method. So `SettableStringInputField::setValue()` and
+   `TextAreaField::setValue()` are declared `setValue(mixed $value)` and throw a `TypeError` for non-strings (documented
+   in the phpdoc). They become `setValue(string)` in task 6. Consequence: until then PHPStan does not report a wrong
+   type, and `PasswordField` (no setter in the design) still inherits a public `setValue()`; `TextualField::setValue()`
+   throws a `LogicException` ("has no setter") so nothing is silently ignored. Same for `setOriginalValue()` (always
+   throws `LogicException` on textual fields); `getOriginalValue()` stays as bridge (returns the initial text, needed by
+   `PhoneNumberField::valueHasChanged()` until 4b).
+2. **`DateTimeFieldCore` and `PhoneNumberField` were rebased** onto `SettableStringInputField` (one-line change each),
+   because they extended `InputField`, which no longer has a value. Their behaviour changed with the new input path
+   (trim, reset on array input). `PhoneNumberField` is `final` as designed; `DateField`/`TimeField`/`AmountField`/
+   `NumericField`/`ZipCodeField`/`IbanNumberField`/`CsrfTokenField` were not touched.
+3. **`HiddenField` is not final** because `CsrfTokenField extends HiddenField` until task 4b. It is string-only
+   (`?string` constructor value, no `int|float|bool`); `valueIsInt` + `getValueAsInt()` stay as temporary bridge until
+   4a (`HiddenIntegerField`). The int check is done in `validateCurrentValue()` with `messages->invalidValue` (lazy), not
+   with a `ValidAmountRule` fixed at construction; invalid values are kept (as in v3), the error is added.
+4. **`InputField` has no `getValueAsString()` any more** (moved to `StringInputField`, as designed). `DateField`/`TimeField`
+   still get it through the rebased `DateTimeFieldCore`; 4a removes it there.
+5. **`addRule(FormRule)`** stays on `FormField` (typed `StringRule` comes in task 6); `EmailField` still uses
+   `ValidEmailAddressRule` (untouched, its `setValue()` call is now a no-op with the canonical value), `normalize()` does
+   the canonicalization. `PhoneNumberRule`/`ValidDateRule`/`ValidTimeRule` still call `setValue()` (rules untouched).
+6. `getRawValue()` of textual fields returns `string` (`''` for empty, `null` only for `getRawValue(true)` on empty,
+   conditional phpdoc return type) - was `null` for no value. The array-based `validate(array, bool)` builds one
+   `FormInput` per field (`readInputData()` hook; removed with the bridge).
+7. `PasswordField`: `autoComplete` argument removed, `purpose` required (decision 18); `PasswordField` has no initial
+   value (`StringInputField::setInitialValue()` is protected and unused).
+8. `FormMessages` placeholders: `invalidOption` uses `[field]` (v3 text had the field name appended; `german()` keeps the
+   exact English v3 text with `[field]` placeholder, nothing uses it yet - task 3).
+
+**The bridge (temporary, remove in task 6)**
+
+`FormField`: `getRawValue()`, `setValue(mixed)`, `getOriginalValue()`, `setOriginalValue(mixed)`, `initializeLegacyValue()`,
+`readInputData()`, `validate(array, bool)` signature, private `value`/`originalValue`/`acceptArrayAsValue`, the
+`getValueAs*OrFail()` helpers (they now read `getRawValue()`). `TextualField`: `getRawValue()`, `setValue()` (throws),
+`getOriginalValue()`, `setOriginalValue()` (throws), `initializeLegacyValue()` (no-op), `readInputData()`.
+`SettableStringInputField`/`TextAreaField`: `setValue(mixed)` becomes `setValue(string)`. `HiddenField`: `valueIsInt`,
+`getValueAsInt()` (until 4a). `DateTimeFieldCore`/`PhoneNumberField`: rebased on `SettableStringInputField`, replaced in
+4a/4b. All marked `@internal` in phpdoc.
+
+**Tests changed on purpose**
+
+`TextFieldValueTest`, `TextAreaFieldValueTest`, `PasswordFieldValueTest`, `HiddenFieldValueTest` rewritten (typed string
+value, `getValueAsString()` instead of `getRawValue()`, trim/ZWSP, reset on invalid input, setters vs. initial value; the
+array value of `TextAreaField` and the `int|float|bool` constructor values of `HiddenField` are gone; `getValues()`
+provider cases kept). Edited: `EmailFieldValueTest`, `IbanNumberFieldValueTest`, `ZipCodeFieldValueTest`,
+`PhoneNumberFieldValueTest`, `DateTimeFieldValueTest`, `AmountFieldValueTest`, `CsrfTokenFieldValueTest`,
+`InputFieldGetValueAsStringTest` (no value is `''` not `null`; array input resets instead of keeping the value; input is
+trimmed; PasswordField needs `purpose`). New: `FormInputTest`, `FormMessagesTest`, `PasswordPurposeEnumTest`,
+`FormMessagesHandoverTest`, `InitialValueTest` (+ `tests/Double/form/InitialValue*Field`), `TextualFieldRenderersTest`.
+
+**Baseline:** 198 entries removed, none added; no entry left for `FormField`, `Form`, `TextAreaField`,
+`DateTimeFieldCore`, `PhoneNumberField`, `InputFieldRenderer`, `TextAreaRenderer` (also gone as side effect:
+`IbanNumberField`, `ZipCodeField`, `PhoneNumberRule`, `ZipCodeRule`, one each in `ToggleField`, `DefaultFormRenderer`).
+
+**For tasks 3 to 7**
+
+- The legacy `FormField::setValue(mixed)` still exists, so a new family cannot declare a narrower public setter either:
+  use the same `mixed` + `TypeError` pattern until task 6 (or avoid the clash otherwise).
+- Use `rejectInput()`/`inputRejected` for invalid option/list input; `assertInitialValueCanBeSet()` for every
+  `setInitialValue*()`; `messages` for texts (`invalidInput`, `invalidOption`, `selectEmptyOption` ...).
+- The old rules still run via `addRule(FormRule)`; typed rules (task 6) replace them, then `ValidEmailAddressRule` must
+  not call `setValue()` anymore (normalization is done by the field).
+- 4a: remove `getValueAsString()` from the rebased `DateTimeFieldCore`; `AmountField` still extends `TextField` and
+  validates with `ValidAmountRule` on the text. 4b: `CsrfTokenField` onto `InputField`, then `HiddenField` can be
+  `final`; `PhoneNumberField::valueHasChanged()` can go (plain comparison now); `ZipCodeField`/`IbanNumberField` were not
+  changed (still `validate(array, bool)` overrides).
+- Task 7 / `README.md`: lines about `HiddenField(value: $id, valueIsInt: true)` (needs a string value now) and
+  `getValueAsString()` on `InputField` need an update; `UPGRADE.md` v4 section: text fields part is written, more
+  sections follow per task.
+
 ### Task 3: Option and multi-value fields
 
 Implement design sections 3.3 and 3.10: `OptionsField`, `SingleOptionsField`, `MultiOptionsField`, `isSelected()`, the

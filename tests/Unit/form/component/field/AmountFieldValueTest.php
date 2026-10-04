@@ -138,12 +138,12 @@ final class AmountFieldValueTest extends TestCase
         $this->assertFalse($field->validate(inputData: ['amount' => '1.5']));
     }
 
-    public function testIntegerFieldRejectsArrayInputAndKeepsInitialValue(): void
+    public function testIntegerFieldRejectsArrayInputAndResetsValue(): void
     {
         $field = $this->createField(valueIsFloat: false, initialValue: 5);
 
         $this->assertFalse($field->validate(inputData: ['amount' => ['1']]));
-        $this->assertSame('5', $field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 
     public function testFloatFieldAcceptsEmptyValue(): void
@@ -153,22 +153,22 @@ final class AmountFieldValueTest extends TestCase
         $this->assertTrue($field->validate(inputData: ['amount' => '']));
     }
 
-    public function testValueIsNullAfterValidationWithMissingKey(): void
+    public function testValueIsEmptyStringAfterValidationWithMissingKey(): void
     {
         $field = $this->createField(valueIsFloat: true, initialValue: 5);
 
         $this->assertTrue($field->validate(inputData: []));
-        $this->assertNull($field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 
-    public function testArrayInputIsRejectedAndKeepsInitialStringValue(): void
+    public function testArrayInputIsRejectedAndResetsValue(): void
     {
         $field = $this->createField(valueIsFloat: true, initialValue: 5);
 
         $isValid = $field->validate(inputData: ['amount' => ['x']]);
 
         $this->assertFalse($isValid);
-        $this->assertSame('5', $field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 
     public function testNumericFieldRejectsDecimalsLikeIntegerAmountField(): void
@@ -187,18 +187,16 @@ final class AmountFieldValueTest extends TestCase
         $this->assertSame('1.5', $field->getRawValue());
     }
 
-    public function testNumericFieldValueIsNullAfterValidationWithMissingKey(): void
+    public function testNumericFieldValueIsEmptyStringAfterValidationWithMissingKey(): void
     {
         $field = new NumericField(
             name: 'number',
             label: HtmlText::encoded(textContent: 'Number')
         );
 
-        $this->assertSame('', $field->getRawValue());
-
         $field->validate(inputData: []);
 
-        $this->assertNull($field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 
     /**
@@ -381,13 +379,13 @@ final class AmountFieldValueTest extends TestCase
         $field->getValueAsInt();
     }
 
-    public function testGettersKeepPreviousValueAfterRejectedArrayInput(): void
+    public function testGettersAreNullAfterRejectedArrayInput(): void
     {
         $field = $this->createField(valueIsFloat: false, initialValue: 5);
 
         $this->assertFalse($field->validate(inputData: ['amount' => ['1']]));
-        $this->assertSame(5, $field->getValueAsInt());
-        $this->assertSame(5.0, $field->getValueAsFloat());
+        $this->assertNull($field->getValueAsInt());
+        $this->assertNull($field->getValueAsFloat());
     }
 
     public function testGettersWorkBeforeValidationWithConstructorValue(): void

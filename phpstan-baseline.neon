@@ -1735,54 +1735,6 @@ parameters:
 			path: src/form/FormRenderer.php
 
 		-
-			message: '#^Method actra\\yuf\\form\\component\\FormField\:\:getAddedValues\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/FormField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\FormField\:\:getOriginalValue\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: src/form/component/FormField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\FormField\:\:getRawValue\(\) has no return type specified\.$#'
-			identifier: missingType.return
-			count: 1
-			path: src/form/component/FormField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\FormField\:\:getRemovedValues\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/FormField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\FormField\:\:setOriginalValue\(\) has parameter \$value with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: src/form/component/FormField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\FormField\:\:setValue\(\) has parameter \$value with no type specified\.$#'
-			identifier: missingType.parameter
-			count: 1
-			path: src/form/component/FormField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\FormField\:\:validate\(\) has parameter \$inputData with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/FormField.php
-
-		-
-			message: '#^Parameter \$value of static method actra\\yuf\\html\\HtmlEncoder\:\:encode\(\) expects bool\|float\|int\|string\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/component/FormField.php
-
-		-
 			message: '#^Method actra\\yuf\\form\\component\\FormInfo\:\:__construct\(\) has parameter \$ddClasses with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -1807,40 +1759,10 @@ parameters:
 			path: src/form/component/collection/ErrorCollection.php
 
 		-
-			message: '#^Method actra\\yuf\\form\\component\\collection\\Form\:\:validateCsrf\(\) has parameter \$inputData with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/collection/Form.php
-
-		-
-			message: '#^Property actra\\yuf\\form\\component\\collection\\Form\:\:\$cssClasses type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/collection/Form.php
-
-		-
-			message: '#^Property actra\\yuf\\form\\component\\collection\\Form\:\:\$formNameList type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/collection/Form.php
-
-		-
 			message: '#^Method actra\\yuf\\form\\component\\field\\CheckboxOptionsField\:\:__construct\(\) has parameter \$initialValues with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/form/component/field/CheckboxOptionsField.php
-
-		-
-			message: '#^Parameter \$datetime of class DateTimeImmutable constructor expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/component/field/DateTimeFieldCore.php
-
-		-
-			message: '#^Parameter \$input of static method actra\\yuf\\datacheck\\Sanitizer\:\:trimmedString\(\) expects bool\|float\|int\|string\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 2
-			path: src/form/component/field/DateTimeFieldCore.php
 
 		-
 			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
@@ -1939,18 +1861,6 @@ parameters:
 			path: src/form/component/field/FileField.php
 
 		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\IbanNumberField\:\:validate\(\) has parameter \$inputData with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/IbanNumberField.php
-
-		-
-			message: '#^Parameter \$iban of method actra\\yuf\\form\\component\\field\\IbanNumberField\:\:checkIBAN\(\) expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/component/field/IbanNumberField.php
-
-		-
 			message: '#^Method actra\\yuf\\form\\component\\field\\OptionsField\:\:getListTagClasses\(\) return type has no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -1967,36 +1877,6 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/form/component/field/OptionsField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\PhoneNumberField\:\:renderValue\(\) should return string but returns mixed\.$#'
-			identifier: return.type
-			count: 1
-			path: src/form/component/field/PhoneNumberField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\PhoneNumberField\:\:validate\(\) has parameter \$inputData with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/PhoneNumberField.php
-
-		-
-			message: '#^Parameter \$input of static method actra\\yuf\\datacheck\\Sanitizer\:\:trimmedString\(\) expects bool\|float\|int\|string\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/component/field/PhoneNumberField.php
-
-		-
-			message: '#^Parameter \$input of static method actra\\yuf\\phone\\PhoneNumber\:\:createFromString\(\) expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 2
-			path: src/form/component/field/PhoneNumberField.php
-
-		-
-			message: '#^Parameter \$value of static method actra\\yuf\\html\\HtmlEncoder\:\:encode\(\) expects bool\|float\|int\|string\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/component/field/PhoneNumberField.php
 
 		-
 			message: '#^Method actra\\yuf\\form\\component\\field\\SelectOptionsField\:\:__construct\(\) has parameter \$cssClasses with no value type specified in iterable type array\.$#'
@@ -2033,24 +1913,6 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/form/component/field/SelectOptionsField.php
-
-		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\TextAreaField\:\:__construct\(\) has parameter \$value with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/TextAreaField.php
-
-		-
-			message: '#^Parameter \$value of static method actra\\yuf\\html\\HtmlEncoder\:\:encode\(\) expects bool\|float\|int\|string\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 2
-			path: src/form/component/field/TextAreaField.php
-
-		-
-			message: '#^Property actra\\yuf\\form\\component\\field\\TextAreaField\:\:\$cssClassesForRenderer type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/TextAreaField.php
 
 		-
 			message: '#^Argument of an invalid type mixed supplied for foreach, only iterables are supported\.$#'
@@ -2107,12 +1969,6 @@ parameters:
 			path: src/form/component/field/ToggleField.php
 
 		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\ToggleField\:\:validate\(\) has parameter \$inputData with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
 			message: '#^Negated boolean expression is always true\.$#'
 			identifier: booleanNot.alwaysTrue
 			count: 1
@@ -2155,12 +2011,6 @@ parameters:
 			path: src/form/component/field/ToggleField.php
 
 		-
-			message: '#^Method actra\\yuf\\form\\component\\field\\ZipCodeField\:\:validate\(\) has parameter \$inputData with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/ZipCodeField.php
-
-		-
 			message: '#^Cannot access offset 0 on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
@@ -2177,12 +2027,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/form/renderer/DefaultCollectionRenderer.php
-
-		-
-			message: '#^Parameter \$array of function implode expects array\<string\>, array given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/renderer/DefaultFormRenderer.php
 
 		-
 			message: '#^Parameter \$htmlTag of method actra\\yuf\\html\\HtmlTag\:\:addTag\(\) expects actra\\yuf\\html\\HtmlTag, actra\\yuf\\html\\HtmlTag\|null given\.$#'
@@ -2215,24 +2059,6 @@ parameters:
 			path: src/form/renderer/FormInfoRenderer.php
 
 		-
-			message: '#^Access to an undefined property actra\\yuf\\form\\component\\field\\InputField\|actra\\yuf\\form\\component\\field\\OptionsField\:\:\$inputType\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/form/renderer/InputFieldRenderer.php
-
-		-
-			message: '#^Access to an undefined property actra\\yuf\\form\\component\\field\\InputField\|actra\\yuf\\form\\component\\field\\OptionsField\:\:\$maxLength\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/form/renderer/InputFieldRenderer.php
-
-		-
-			message: '#^Access to an undefined property actra\\yuf\\form\\component\\field\\InputField\|actra\\yuf\\form\\component\\field\\OptionsField\:\:\$placeholder\.$#'
-			identifier: property.notFound
-			count: 1
-			path: src/form/renderer/InputFieldRenderer.php
-
-		-
 			message: '#^Parameter \$htmlTag of method actra\\yuf\\html\\HtmlTag\:\:addTag\(\) expects actra\\yuf\\html\\HtmlTag, actra\\yuf\\html\\HtmlTag\|null given\.$#'
 			identifier: argument.type
 			count: 1
@@ -2263,18 +2089,6 @@ parameters:
 			path: src/form/renderer/SelectOptionsRenderer.php
 
 		-
-			message: '#^Parameter \$array of function implode expects array\<string\>, array given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/renderer/TextAreaRenderer.php
-
-		-
-			message: '#^Parameter \$value of static method actra\\yuf\\html\\HtmlEncoder\:\:encode\(\) expects bool\|float\|int\|string\|null, mixed given\.$#'
-			identifier: argument.type
-			count: 2
-			path: src/form/renderer/TextAreaRenderer.php
-
-		-
 			message: '#^Method actra\\yuf\\form\\rule\\MaxLengthRule\:\:checkValueLengthAgainst\(\) has parameter \$valueLength with no type specified\.$#'
 			identifier: missingType.parameter
 			count: 1
@@ -2297,12 +2111,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/form/rule/MinLengthRule.php
-
-		-
-			message: '#^Parameter \$input of static method actra\\yuf\\phone\\PhoneNumber\:\:createFromString\(\) expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/rule/PhoneNumberRule.php
 
 		-
 			message: '#^Method actra\\yuf\\form\\rule\\RegexRule\:\:checkAgainstPattern\(\) has parameter \$value with no type specified\.$#'
@@ -2423,12 +2231,6 @@ parameters:
 			identifier: parameter.phpDocType
 			count: 1
 			path: src/form/rule/ValueBetweenRule.php
-
-		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 1
-			path: src/form/rule/ZipCodeRule.php
 
 		-
 			message: '#^Binary operation "\." between mixed and '' '' results in an error\.$#'

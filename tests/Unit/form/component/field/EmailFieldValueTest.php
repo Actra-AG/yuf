@@ -26,9 +26,9 @@ final class EmailFieldValueTest extends TestCase
         );
     }
 
-    public function testValueIsNullAfterConstructionWithoutValue(): void
+    public function testValueIsEmptyStringAfterConstructionWithoutValue(): void
     {
-        $this->assertNull($this->createField()->getRawValue());
+        $this->assertSame('', $this->createField()->getRawValue());
     }
 
     public function testValueIsStringAfterConstructionWithString(): void
@@ -67,21 +67,50 @@ final class EmailFieldValueTest extends TestCase
         $this->assertSame('not an address', $field->getRawValue());
     }
 
-    public function testValueIsNullAfterValidationWithMissingKey(): void
+    public function testValueIsEmptyStringAfterValidationWithMissingKey(): void
     {
         $field = $this->createField();
 
         $this->assertTrue($field->validate(inputData: []));
-        $this->assertNull($field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 
-    public function testArrayInputIsRejectedAndKeepsPreviousValue(): void
+    public function testArrayInputIsRejectedAndResetsValue(): void
     {
         $field = $this->createField(value: 'a@example.com');
 
         $isValid = $field->validate(inputData: ['email' => ['x']]);
 
         $this->assertFalse($isValid);
-        $this->assertSame('a@example.com', $field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
+    }
+
+    public function testConstructorValueIsNormalizedAsInput(): void
+    {
+        $this->assertSame('foo@example.com', $this->createField(value: ' Foo@Example.COM ')->getValueAsString());
+    }
+
+    public function testInvalidConstructorValueIsKeptTrimmed(): void
+    {
+        $this->assertSame('nope', $this->createField(value: ' nope ')->getValueAsString());
+    }
+
+    public function testSetValueNormalizesAndKeepsInitialValue(): void
+    {
+        $field = $this->createField(value: 'a@example.com');
+
+        $field->setValue(value: 'B@Example.com');
+
+        $this->assertSame('b@example.com', $field->getValueAsString());
+        $this->assertTrue($field->valueHasChanged());
+    }
+
+    public function testSameAddressInOtherCaseIsNoChange(): void
+    {
+        $field = $this->createField(value: 'a@example.com');
+
+        $field->validate(inputData: ['email' => ' A@Example.com ']);
+
+        $this->assertFalse($field->valueHasChanged());
     }
 }

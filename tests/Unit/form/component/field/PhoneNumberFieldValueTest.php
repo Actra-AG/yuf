@@ -24,9 +24,9 @@ final class PhoneNumberFieldValueTest extends TestCase
         );
     }
 
-    public function testValueIsNullAfterConstructionWithoutValue(): void
+    public function testValueIsEmptyStringAfterConstructionWithoutValue(): void
     {
-        $this->assertNull($this->createField()->getRawValue());
+        $this->assertSame('', $this->createField()->getRawValue());
     }
 
     public function testValueIsStringAfterConstructionWithStringAndIsNotFormatted(): void
@@ -54,15 +54,15 @@ final class PhoneNumberFieldValueTest extends TestCase
         $this->assertSame('abc', $field->getRawValue());
     }
 
-    public function testValueIsNullAfterValidationWithMissingKey(): void
+    public function testValueIsEmptyStringAfterValidationWithMissingKey(): void
     {
         $field = $this->createField(value: '044 668 18 00');
 
         $this->assertTrue($field->validate(inputData: []));
-        $this->assertNull($field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 
-    public function testArrayInputIsRejectedAndKeepsPreviousValueNormalizedByRule(): void
+    public function testArrayInputIsRejectedAndResetsValue(): void
     {
         $field = $this->createField(value: '044 668 18 00');
 
@@ -70,8 +70,7 @@ final class PhoneNumberFieldValueTest extends TestCase
 
         $this->assertFalse($isValid);
         $this->assertTrue($field->hasErrors(withChildElements: true));
-        // The rules still run on the kept value and normalize it.
-        $this->assertSame('+41.446681800', $field->getRawValue());
+        $this->assertSame('', $field->getRawValue());
     }
 
     public function testArrayAsCountryCodeInputIsIgnoredAndKeepsCountryCode(): void

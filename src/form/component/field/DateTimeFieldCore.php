@@ -17,7 +17,7 @@ use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
 use Throwable;
 
-abstract class DateTimeFieldCore extends InputField
+abstract class DateTimeFieldCore extends SettableStringInputField
 {
     public function __construct(
         InputTypeValue $inputType,
