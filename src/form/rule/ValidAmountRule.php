@@ -30,14 +30,22 @@ class ValidAmountRule extends FormRule
         }
 
         $value = $formField->getRawValue();
-        if (!is_numeric($value)) {
+        if (is_int(value: $value)) {
+            return true;
+        }
+        if (is_float(value: $value)) {
+            return $this->valueIsFloat;
+        }
+        if (!is_string(value: $value)) {
             return false;
         }
 
-        if (!$this->valueIsFloat && is_float($value)) {
-            return false;
-        }
+        // The stored value is not trimmed, so surrounding whitespace is accepted like is_numeric() does.
+        $pattern = $this->valueIsFloat ? '/^[+-]?(\d+(\.\d*)?|\.\d+)$/' : '/^[+-]?\d+$/';
 
-        return true;
+        return preg_match(
+            pattern: $pattern,
+            subject: trim(string: $value, characters: " \t\n\r\v\f")
+        ) === 1;
     }
 }

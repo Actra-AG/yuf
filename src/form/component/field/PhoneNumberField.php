@@ -53,16 +53,18 @@ class PhoneNumberField extends InputField
 
     public function validate(array $inputData, bool $overwriteValue = true): bool
     {
-        if (array_key_exists(
-            key: $this->countryCodeFieldName,
-            array: $inputData
-        )) {
+        // Manipulated (non-string) country code input is ignored, the current country code stays.
+        if (
+            array_key_exists(key: $this->countryCodeFieldName, array: $inputData)
+            && is_string(value: $inputData[$this->countryCodeFieldName])
+        ) {
             $this->countryCode = $inputData[$this->countryCodeFieldName];
         }
-        if (array_key_exists(
-            key: $this->name,
-            array: $inputData
-        )) {
+        // Only strings are trimmed, arrays are rejected by FormField::setValue().
+        if (
+            array_key_exists(key: $this->name, array: $inputData)
+            && is_string(value: $inputData[$this->name])
+        ) {
             $inputData[$this->name] = trim(string: $inputData[$this->name]);
         }
 

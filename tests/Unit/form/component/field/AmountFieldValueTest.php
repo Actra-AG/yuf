@@ -59,8 +59,15 @@ final class AmountFieldValueTest extends TestCase
         yield 'integer string' => ['12', true];
         yield 'decimal string' => ['1.5', true];
         yield 'negative decimal' => ['-1.5', true];
+        yield 'plus sign' => ['+1.5', true];
+        yield 'leading zeros' => ['007.50', true];
+        yield 'trailing dot' => ['1.', true];
+        yield 'leading dot' => ['.5', true];
         yield 'surrounding whitespace is accepted and kept' => [' 1.5 ', true];
-        yield 'exponent notation is accepted and kept' => ['1e3', true];
+        yield 'exponent notation is rejected' => ['1e3', false];
+        yield 'decimal exponent notation is rejected' => ['1.5E-3', false];
+        yield 'sign only' => ['-', false];
+        yield 'whitespace inside' => ['1 5', false];
         yield 'text is rejected' => ['abc', false];
         yield 'decimal comma is rejected' => ['1,5', false];
     }
@@ -77,25 +84,72 @@ final class AmountFieldValueTest extends TestCase
     }
 
     /**
-     * KNOWN BUG (fixed in Task 2): ValidAmountRule checks is_float() on the posted string, which is never true, so
-     * integer fields accept decimals, too.
+     * Integer fields only accept an optional sign and digits. Surrounding whitespace is accepted (the stored value is
+     * not trimmed), exponent notation and decimals are rejected.
+     *
+     * @return iterable<string, array{string, bool}>
      */
-    public function testIntegerFieldAcceptsDecimalStringBecauseOfKnownBug(): void
+    public static function integerInputProvider(): iterable
     {
-        $field = $this->createField(valueIsFloat: false);
-
-        $isValid = $field->validate(inputData: ['amount' => '1.5']);
-
-        $this->assertTrue($isValid);
-        $this->assertSame('1.5', $field->getRawValue());
+        yield 'integer string' => ['12', true];
+        yield 'zero' => ['0', true];
+        yield 'negative' => ['-5', true];
+        yield 'plus sign' => ['+5', true];
+        yield 'leading zeros' => ['007', true];
+        yield 'surrounding whitespace' => [' 12 ', true];
+        yield 'empty string' => ['', true];
+        yield 'only whitespace' => ['  ', true];
+        yield 'decimal string' => ['1.5', false];
+        yield 'decimal with zero' => ['1.0', false];
+        yield 'trailing dot' => ['1.', false];
+        yield 'leading dot' => ['.5', false];
+        yield 'exponent notation' => ['1e3', false];
+        yield 'sign only' => ['-', false];
+        yield 'double sign' => ['+-5', false];
+        yield 'whitespace between sign and digits' => ['- 5', false];
+        yield 'thousands separator' => ["1'000", false];
+        yield 'text' => ['abc', false];
+        yield 'hex' => ['0x1A', false];
     }
 
-    public function testIntegerFieldAcceptsIntegerString(): void
+    #[DataProvider('integerInputProvider')]
+    public function testIntegerFieldValidatesInputAndStoresItAsPosted(string $input, bool $expectedValid): void
     {
         $field = $this->createField(valueIsFloat: false);
 
-        $this->assertTrue($field->validate(inputData: ['amount' => '12']));
-        $this->assertSame('12', $field->getRawValue());
+        $isValid = $field->validate(inputData: ['amount' => $input]);
+
+        $this->assertSame($expectedValid, $isValid);
+        $this->assertSame($input, $field->getRawValue());
+    }
+
+    public function testIntegerFieldAcceptsIntegerConstructorValue(): void
+    {
+        $field = $this->createField(valueIsFloat: false, initialValue: -3);
+
+        $this->assertTrue($field->validate(inputData: ['amount' => '-3']));
+    }
+
+    public function testIntegerFieldRejectsFloatConstructorValueWithoutPosting(): void
+    {
+        $field = $this->createField(valueIsFloat: false, initialValue: 1.5);
+
+        $this->assertFalse($field->validate(inputData: ['amount' => '1.5']));
+    }
+
+    public function testIntegerFieldRejectsArrayInputAndKeepsInitialValue(): void
+    {
+        $field = $this->createField(valueIsFloat: false, initialValue: 5);
+
+        $this->assertFalse($field->validate(inputData: ['amount' => ['1']]));
+        $this->assertSame('5', $field->getRawValue());
+    }
+
+    public function testFloatFieldAcceptsEmptyValue(): void
+    {
+        $field = $this->createField(valueIsFloat: true);
+
+        $this->assertTrue($field->validate(inputData: ['amount' => '']));
     }
 
     public function testValueIsNullAfterValidationWithMissingKey(): void
@@ -116,7 +170,7 @@ final class AmountFieldValueTest extends TestCase
         $this->assertSame('5', $field->getRawValue());
     }
 
-    public function testNumericFieldBehavesLikeIntegerAmountField(): void
+    public function testNumericFieldRejectsDecimalsLikeIntegerAmountField(): void
     {
         $field = new NumericField(
             name: 'number',
@@ -128,8 +182,7 @@ final class AmountFieldValueTest extends TestCase
 
         $isValid = $field->validate(inputData: ['number' => '1.5']);
 
-        // KNOWN BUG (fixed in Task 2): decimals are accepted by the integer rule.
-        $this->assertTrue($isValid);
+        $this->assertFalse($isValid);
         $this->assertSame('1.5', $field->getRawValue());
     }
 

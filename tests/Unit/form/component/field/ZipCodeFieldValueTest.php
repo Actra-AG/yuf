@@ -11,7 +11,6 @@ namespace actra\yuf\tests\Unit\form\component\field;
 use actra\yuf\form\component\field\ZipCodeField;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\TestCase;
-use TypeError;
 
 final class ZipCodeFieldValueTest extends TestCase
 {
@@ -97,15 +96,13 @@ final class ZipCodeFieldValueTest extends TestCase
         $this->assertNull($field->getRawValue());
     }
 
-    /**
-     * Known oddity (not part of the fixes in v3.3.0): the country code input is not checked for its type.
-     */
-    public function testArrayAsCountryCodeInputThrowsTypeError(): void
+    public function testArrayAsCountryCodeInputIsIgnoredAndKeepsCountryCode(): void
     {
         $field = $this->createField();
 
-        $this->expectException(TypeError::class);
+        $isValid = $field->validate(inputData: ['zip' => '8000', 'countryCode' => ['x']]);
 
-        $field->validate(inputData: ['zip' => '8000', 'countryCode' => ['x']]);
+        $this->assertTrue($isValid);
+        $this->assertSame('CH', $field->countryCode);
     }
 }

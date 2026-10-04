@@ -1999,20 +1999,8 @@ parameters:
 			path: src/form/component/field/PhoneNumberField.php
 
 		-
-			message: '#^Parameter \$string of function trim expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/component/field/PhoneNumberField.php
-
-		-
 			message: '#^Parameter \$value of static method actra\\yuf\\html\\HtmlEncoder\:\:encode\(\) expects bool\|float\|int\|string\|null, mixed given\.$#'
 			identifier: argument.type
-			count: 1
-			path: src/form/component/field/PhoneNumberField.php
-
-		-
-			message: '#^Property actra\\yuf\\form\\component\\field\\PhoneNumberField\:\:\$countryCode \(string\) does not accept mixed\.$#'
-			identifier: assign.propertyType
 			count: 1
 			path: src/form/component/field/PhoneNumberField.php
 
@@ -2175,12 +2163,6 @@ parameters:
 		-
 			message: '#^Method actra\\yuf\\form\\component\\field\\ZipCodeField\:\:validate\(\) has parameter \$inputData with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
-			count: 1
-			path: src/form/component/field/ZipCodeField.php
-
-		-
-			message: '#^Property actra\\yuf\\form\\component\\field\\ZipCodeField\:\:\$countryCode \(string\) does not accept mixed\.$#'
-			identifier: assign.propertyType
 			count: 1
 			path: src/form/component/field/ZipCodeField.php
 

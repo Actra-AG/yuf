@@ -11,7 +11,6 @@ namespace actra\yuf\tests\Unit\form\component\field;
 use actra\yuf\form\component\field\PhoneNumberField;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\TestCase;
-use TypeError;
 
 final class PhoneNumberFieldValueTest extends TestCase
 {
@@ -63,28 +62,35 @@ final class PhoneNumberFieldValueTest extends TestCase
         $this->assertNull($field->getRawValue());
     }
 
-    /**
-     * KNOWN BUG (fixed in Task 2): validate() calls trim() on the input before the array check of setValue().
-     * Other fields reject arrays with a validation error instead.
-     */
-    public function testArrayInputThrowsTypeErrorBecauseOfKnownBug(): void
+    public function testArrayInputIsRejectedAndKeepsPreviousValueNormalizedByRule(): void
     {
-        $field = $this->createField();
+        $field = $this->createField(value: '044 668 18 00');
 
-        $this->expectException(TypeError::class);
+        $isValid = $field->validate(inputData: ['phone' => ['x']]);
 
-        $field->validate(inputData: ['phone' => ['x']]);
+        $this->assertFalse($isValid);
+        $this->assertTrue($field->hasErrors(withChildElements: true));
+        // The rules still run on the kept value and normalize it.
+        $this->assertSame('+41.446681800', $field->getRawValue());
     }
 
-    /**
-     * KNOWN BUG (fixed in Task 2): the country code input is assigned to a string property without a type check.
-     */
-    public function testArrayAsCountryCodeInputThrowsTypeErrorBecauseOfKnownBug(): void
+    public function testArrayAsCountryCodeInputIsIgnoredAndKeepsCountryCode(): void
     {
         $field = $this->createField();
 
-        $this->expectException(TypeError::class);
+        $isValid = $field->validate(inputData: ['phone' => '044 668 18 00', 'countryCode' => ['x']]);
 
-        $field->validate(inputData: ['phone' => '044 668 18 00', 'countryCode' => ['x']]);
+        $this->assertTrue($isValid);
+        $this->assertSame('CH', $field->countryCode);
+        $this->assertSame('+41.446681800', $field->getRawValue());
+    }
+
+    public function testStringCountryCodeInputIsUsed(): void
+    {
+        $field = $this->createField();
+
+        $field->validate(inputData: ['phone' => '030 123456', 'countryCode' => 'DE']);
+
+        $this->assertSame('DE', $field->countryCode);
     }
 }

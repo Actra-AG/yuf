@@ -122,6 +122,52 @@ Verify: tests for both fixes; `ddev composer check` green.
 
 Handover notes:
 
+Done (2026-10-04): tests first (`PhoneNumberFieldValueTest`, `ZipCodeFieldValueTest`, `AmountFieldValueTest` updated,
+data provider with 19 integer and 13 float cases), then `PhoneNumberField`, `ZipCodeField` and `ValidAmountRule` fixed.
+No signature changes. `ddev composer check` green (218 tests).
+
+Changes visible to projects (for UPGRADE.md in Task 6):
+
+- `PhoneNumberField`: array input for the phone value no longer throws a `TypeError`; it is rejected with the normal
+  array error (`validate()` returns `false`). Only strings are trimmed. The previous value stays and the rules still run
+  on it (it may be normalized by `PhoneNumberRule`, see `value-types.md` note 1).
+- `PhoneNumberField` and `ZipCodeField`: a non-string `countryCode` input (array) no longer throws a `TypeError`. It is
+  **ignored**, the current country code stays (default `'CH'` or the last valid string). Reason: the input cannot be
+  meaningful, the country code is not a user-visible field and an error message would have no field to show it on;
+  falling back to the configured country is the safest behaviour. Unknown country code strings are still not validated.
+- `ValidAmountRule` (`AmountField`, `NumericField`; `valueIsFloat: false` = integer field):
+  - Integer field: accepts an `int` or a string with optional sign and digits only (`'12'`, `'-5'`, `'+5'`, `'007'`).
+    **Now rejected** (were accepted): `'1.5'`, `'1.0'`, `'1.'`, `'.5'`, `'1e3'`. A `float` value is rejected.
+  - Float field: accepts `int`, `float` and a string `[+-]digits[.digits]`, `'1.'` and `'.5'` (like before).
+    **Now rejected** (was accepted): exponent notation (`'1e3'`, `'1.5E-3'`). A `float` typed value is accepted.
+  - Both: surrounding whitespace is still accepted (`' 12 '`), whitespace inside and between sign and digits is rejected
+    (`'- 5'`; `is_numeric()` rejected it as well). Hex, octal and thousands separators stay rejected. Empty/whitespace-only
+    values stay valid (`isValueEmpty()`; required handling is a separate rule).
+  - Other value types (e.g. `bool`, array) are rejected.
+
+Decisions:
+
+- Exponent notation is rejected for both field kinds: users do not type it, it is not a plain amount and `'1e3'` would
+  make the integer check ambiguous (it is numerically an integer but not "digits only", as the plan requires).
+- Whitespace is accepted but the stored value is **not trimmed**. Reason: no amount rule changes the value today (only
+  email/date/time/phone rules normalize), and trimming would be an additional visible change (`getRawValue()` result,
+  re-rendered input). Accepted whitespace is the existing behaviour (`is_numeric()` allows surrounding whitespace), so the
+  fix only removes what was never meant to be valid. Consequence for Task 4: `getValueAsInt()`/`getValueAsFloat()` must
+  `trim()` the stored string before converting (`' 12 '` is a valid stored value). The trim characters are
+  `" \t\n\r\v\f"` (same as `is_numeric()`, not the NUL byte of `trim()`'s default).
+- Pattern check instead of `is_numeric()`: the numeric string stays a plain decimal, so Task 4 can share the same
+  regexes/idea; `(int)`-conversion of a digits-only string can still overflow for huge values (`PHP_INT_MAX`), Task 4
+  must handle that (throw instead of silently saturating).
+
+Baseline: 3 entries removed (`trim` mixed in `PhoneNumberField`, `$countryCode` mixed in `PhoneNumberField` and
+`ZipCodeField`), none added (`git diff phpstan-baseline.neon` only has deletions). Remaining entries in touched files,
+all needing a signature change or the `mixed` value storage (v4): `PhoneNumberField::validate()` `$inputData` array
+type, `Sanitizer::trimmedString()`, `PhoneNumber::createFromString()` and `HtmlEncoder::encode()` with `mixed` from
+`getRawValue()`; `ZipCodeField::validate()` `$inputData` array type. `ValidAmountRule` has no entries left.
+
+Relevant for the next tasks: the characterization tests for amounts now pin that the stored value is the posted
+string (also with whitespace). `PhoneNumberField::renderValue()` still returns `mixed` from `getRawValue()` (baseline).
+
 ### Task 3: `getValueAsString()` for single-value fields
 
 Add `getValueAsString(): string` to `InputField` (covers all its subclasses, including `HiddenField`, `AmountField`,
