@@ -393,6 +393,25 @@ each with a `getNullable...` variant (except `getBool`), and `has()`. `selectRow
 `executeAndFetchRow()`). Date and time columns are parsed in the PHP default time zone, so the time zone of the database
 session must match it.
 
+### Typed values in table columns
+
+Columns of a `DbResultTable` or `SmartTable` get each row as `TableItemModel`. `getRow()` returns the row as `DbRow` with
+the same typed getters and exceptions. `renderValue()` returns the HTML-encoded value, `getRawValue()` the untyped one.
+
+```php
+use actra\yuf\html\HtmlEncoder;
+use actra\yuf\table\column\CallbackColumn;
+use actra\yuf\table\TableItemModel;
+
+$dbResultTable->addColumn(abstractTableColumn: new CallbackColumn(
+    identifier: 'path',
+    label: 'Pfad',
+    callbackFunction: fn(TableItemModel $tableItemModel): string => HtmlEncoder::encode(
+        value: Category::getPath(id: $tableItemModel->getRow()->getInt(column: 'ID'))
+    )
+));
+```
+
 ## Documentation
 
 For more detailed examples, please refer to:

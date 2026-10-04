@@ -4,6 +4,30 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.7.0] – 2026-10-05
+
+### ⚙️ Backend & API
+
+* **Typed values in table columns.** `TableItemModel::getRow(): DbRow` returns the row of a table column (e.g. in a
+  `CallbackColumn`) as `DbRow`, with the same typed getters (`getInt()`, `getNullableString()`,
+  `getDateTimeImmutable()`, `getEnum()`, …) and the same `DbRowValueException` for a missing column, an unexpected
+  `NULL` or a wrong type. See the README section "Typed values in table columns".
+* `getRawValue()`, `renderValue()`, `$data` and all built-in columns are unchanged. `renderValue()` of an array or
+  object value now throws an `UnexpectedValueException` naming the column instead of a `TypeError`.
+* No breaking changes.
+* **Migration hint:** in callback columns, replace `getRawValue()` and casts of `renderValue()` with the typed getters:
+  ```php
+  // Before
+  Category::getPath(id: $tableItemModel->getRawValue(name: 'ID'));
+  Category::getPath(id: (int)$tableItemModel->renderValue(name: 'ID'));
+
+  // After
+  Category::getPath(id: $tableItemModel->getRow()->getInt(column: 'ID'));
+  ```
+  Unlike the cast, `getInt()` throws for `NULL` or a non-integer value; use `getNullableInt()` if `NULL` is allowed.
+
+---
+
 ## [v4.6.0] – 2026-10-05
 
 ### ⚙️ Backend & API
