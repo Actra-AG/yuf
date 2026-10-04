@@ -123,6 +123,9 @@ Every task and every commit must end with a green `composer check`.
     - every breaking change is listed in `UPGRADE.md` (topmost unreleased section, marked with ⚠️) with a short
       before/after example,
     - breaking changes are released as a new major version.
+- A breaking change forces projects to adapt their code or styling. A bug fix that corrects clearly unintended
+  behaviour (wrong results, exceptions, invalid SQL/HTML, security issues) is not breaking, even if results change; it
+  is listed in `UPGRADE.md` without ⚠️ when users may notice it.
 
 ## 6. Tests
 

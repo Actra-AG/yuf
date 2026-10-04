@@ -31,8 +31,13 @@ Persistent instructions for developers and AI assistants working in this reposit
 - Refactor one area (e.g. `src/form/`, `src/template/`) at a time. Plans and handover notes live in
   `docs/<topic>/plan.md`; follow the plan and append handover notes there.
 - Before changing behaviour, write down (or test) what the existing code does, so no feature gets lost.
-- Every breaking change (renamed/removed class, method, argument, enum case, changed behaviour, changed HTML output)
-  goes into the topmost unreleased section of `UPGRADE.md`, marked with ⚠️, including a short before/after example.
+- A breaking change is a change that forces projects to adapt their code or styling: renamed/removed class, method,
+  argument or enum case, changed signature or return type, a documented behaviour that no longer works as before,
+  changed HTML output. It goes into the topmost unreleased section of `UPGRADE.md`, marked with ⚠️, including a short
+  before/after example.
+- A bug fix is not a breaking change, even if results change, when the old behaviour was clearly unintended (wrong
+  results, exceptions, invalid SQL/HTML, security issues) and projects need no code change. List noticeable fixes in
+  `UPGRADE.md` without ⚠️ and release them as patch (or minor together with new features).
 
 ## Response style
 
