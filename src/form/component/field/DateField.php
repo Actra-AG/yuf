@@ -40,8 +40,8 @@ class DateField extends DateTimeFieldCore
 
     public function getValueAsDateTimeImmutable(): ?DateTimeImmutable
     {
-        $rawValue = $this->getRawValue();
+        $value = $this->getValueAsString();
 
-        return $rawValue === '' ? null : new DateTimeImmutable(datetime: $rawValue);
+        return $value === '' ? null : new DateTimeImmutable(datetime: $value);
     }
 }

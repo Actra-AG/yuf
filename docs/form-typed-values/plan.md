@@ -186,6 +186,69 @@ Verify: unit tests for every field class (value types from task 1); `ddev compos
 
 Handover notes:
 
+Done (2026-10-04): tests first, then the getters. No signature changes, no `final`, nothing renamed. `ddev composer check`
+green (282 tests).
+
+New public API (final API, survives into v4): `getValueAsString(): string` on `InputField` (all subclasses),
+`TextAreaField`, `RadioOptionsField`, `SelectOptionsField` and `ToggleField`. Shared implementation:
+`protected FormField::getValueAsStringOrFail(): string` (reads the private value, fully typed, no `mixed` in the
+signature). The public methods are one-line delegations; `TextAreaField` handles arrays first and delegates the rest.
+
+Exact semantics per stored value type:
+
+- `null` -> `''`; `string` -> unchanged (no trimming, no encoding; zero-width spaces were already removed by `setValue()`).
+- `int`/`float`/`bool` (only `HiddenField`/`InputField` by construction): `(string)` cast, the same as `renderValue()`
+  does before encoding via `HtmlEncoder::encode()`: `5` -> `'5'`, `1.5` -> `'1.5'`, `2.0` -> `'2'`, `true` -> `'1'`,
+  `false` -> `''`. Pinned in `HiddenFieldValueTest` (also compared with `renderValue()`).
+- `TextAreaField`, array: entries joined with `PHP_EOL` (like `renderValue()`, but unencoded); `[]` -> `''`. An entry that
+  is not a string (nested array, also after manipulated input into an array field) -> `UnexpectedValueException`
+  (`'The value of field <name> cannot be read as string, it contains an entry of type <type>.'`).
+- Array in any other field (multiple `SelectOptionsField`/`ToggleField`, single ones constructed with an array, multiple
+  fields after any validation) and any other type (object): `UnexpectedValueException`
+  (`'The value of field <name> cannot be read as string, it is of type <type>.'`, type via `get_debug_type()`).
+- After `validate()`: key present -> the posted string; key missing -> `''` (stored `null`; a multiple field holds `[]` and
+  throws); rejected array input -> the **previous** value, converted by the same rules (e.g. constructor value `'a'`
+  gives `'a'`, `HiddenField` `5` gives `'5'`).
+- `PhoneNumberField`, `DateField`, `TimeField`, `EmailField`: the stored value, **not** the rendered format (the phone
+  field stores the normalized `+41.446681800` once valid; an invalid number is stored trimmed).
+- `AmountField`/`NumericField`: the stored string, untrimmed (`' 1.5 '` stays; Task 4 must trim for numbers).
+- `DateField::getValueAsDateTimeImmutable()` now uses `getValueAsString()`: `null` and `''` -> `null`. The known-bug test
+  was changed to the fixed behaviour (`null` after construction and after validation with a missing key).
+
+Decisions:
+
+- Not on `FormField` itself: `CheckboxOptionsField`/`BooleanField` (always arrays) and `FileField` (array of
+  `FileDataModel`) would get a method that can never succeed. Only the classes in the plan have it, so the API says where
+  a single string exists. `CsrfTokenField` and `PasswordField` inherit it from `HiddenField`/`InputField`.
+- Helper name `getValueAsStringOrFail()` is protected on `FormField` so Task 4/5 and projects can reuse it; it reads
+  `$this->value` directly (not `getRawValue()`), so a subclass overriding `getRawValue()` is not consulted. `TextAreaField`
+  uses `getRawValue()` for the array case, like its `renderValue()`.
+- No `TextAreaField` array trimming/filtering: the getter reports what is stored; line parsing is Task 5 (`getValues()`).
+- `ToggleField::getValueAsString()` throws for `multiple: true` always (the value is always an array).
+- Review addition: `SelectOptionsField::getValueAsString()` also throws always for `acceptMultipleSelections: true`,
+  even if the multiple field holds a single string (constructor or posted string). The result depends on the field
+  configuration, not on the current value; multiple fields use `getValues()` (Task 5), which must wrap such a string.
+
+For UPGRADE.md / README.md (Task 6):
+
+- New getters per class as above; recommended migration: `ScalarCast::toString($field->getRawValue())` ->
+  `$field->getValueAsString()`. Note: `null` and missing keys give `''`; `getRawValue()` keeps returning `null`.
+- Potential conflict (unavoidable, acceptable): project subclasses that already declare a method `getValueAsString()` with a
+  different signature (e.g. `: ?string` or other parameters) become fatal-error incompatible with the new parent method.
+  Rename them or adjust the signature to `getValueAsString(): string`.
+- `DateField::getValueAsDateTimeImmutable()` no longer throws a `TypeError` for an empty field that holds `null`.
+
+For Tasks 4/5: reuse `FormField::getValueAsStringOrFail()` in `HiddenField::getValueAsInt()` and `AmountField` (parse the
+string, `trim()` it first) and take the same exception style (field name + `get_debug_type()`). Extending to `getValues()`:
+the stored-value rules for rejected array input (previous value) apply the same way.
+
+Baseline: only shrank (1 entry removed: `DateTimeImmutable` constructor with `mixed` in `DateField`, `git diff` shows only
+6 deleted lines). New code has no entries. Remaining entries in touched files need signature changes or the `mixed`
+value storage (v4): `FormField` (`getRawValue`, `getOriginalValue`, `setValue`, `setOriginalValue`, `validate()` `$inputData`,
+`getAddedValues`/`getRemovedValues` array types, `renderValue` `mixed`), `TextAreaField` (array PHPDoc types of the constructor
+and `cssClassesForRenderer`, `renderValue` `mixed`), `SelectOptionsField` (array types), `ToggleField` (untyped
+`$initialValue`/`setValue`, `mixed` handling in rendering). `InputField`, `RadioOptionsField` and `DateField` have none left.
+
 ### Task 4: Numeric getters
 
 - `AmountField` (and so `NumericField`): `getValueAsInt(): ?int` and `getValueAsFloat(): ?float`. `null` when the value

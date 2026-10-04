@@ -14,6 +14,7 @@ use actra\yuf\form\renderer\SelectOptionsRenderer;
 use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\html\HtmlText;
+use UnexpectedValueException;
 
 class SelectOptionsField extends OptionsField
 {
@@ -74,6 +75,26 @@ class SelectOptionsField extends OptionsField
     public function getDataAttributes(): array
     {
         return $this->dataAttributes;
+    }
+
+    /**
+     * Returns the stored value as string, without trimming or HTML encoding: `null` is `''`, a string is returned
+     * as is. A multiple selection field is not supported, see FormField::getValueAsStringOrFail() for other types.
+     *
+     * @throws UnexpectedValueException If the field accepts multiple selections, or if the stored value is an array or
+     *         of any other unsupported type.
+     */
+    public function getValueAsString(): string
+    {
+        // A multiple selection field may also hold a single string, but its value is a list (rendered as such)
+        if ($this->acceptMultipleSelections) {
+            throw new UnexpectedValueException(
+                message: 'The value of field ' . $this->name
+                . ' cannot be read as string, it is a multiple selection field.'
+            );
+        }
+
+        return $this->getValueAsStringOrFail();
     }
 
     public function getDefaultRenderer(): FormRenderer

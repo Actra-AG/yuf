@@ -13,7 +13,6 @@ use actra\yuf\form\component\field\TimeField;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use TypeError;
 
 /**
  * Characterization of DateField and TimeField (both extend DateTimeFieldCore). Values are strings, never objects.
@@ -122,16 +121,18 @@ final class DateTimeFieldValueTest extends TestCase
         $this->assertSame('2020-01-02', $dateTime?->format(format: 'Y-m-d'));
     }
 
-    /**
-     * KNOWN BUG (fixed in Task 3): a null value is not handled, only an empty string.
-     */
-    public function testGetValueAsDateTimeImmutableThrowsTypeErrorForNullBecauseOfKnownBug(): void
+    public function testGetValueAsDateTimeImmutableReturnsNullForNull(): void
     {
-        $field = $this->createDateField();
+        $this->assertNull($this->createDateField()->getValueAsDateTimeImmutable());
+    }
 
-        $this->expectException(TypeError::class);
+    public function testGetValueAsDateTimeImmutableReturnsNullAfterValidationWithMissingKey(): void
+    {
+        $field = $this->createDateField(value: '2020-02-03');
 
-        $field->getValueAsDateTimeImmutable();
+        $field->validate(inputData: []);
+
+        $this->assertNull($field->getValueAsDateTimeImmutable());
     }
 
     /**
@@ -188,5 +189,23 @@ final class DateTimeFieldValueTest extends TestCase
 
         $this->assertFalse($isValid);
         $this->assertSame('08:00:00', $field->getRawValue());
+    }
+
+    public function testGetValueAsStringIsEmptyForNull(): void
+    {
+        $this->assertSame('', $this->createDateField()->getValueAsString());
+        $this->assertSame('', $this->createTimeField()->getValueAsString());
+    }
+
+    public function testGetValueAsStringReturnsNormalizedValueAfterValidation(): void
+    {
+        $dateField = $this->createDateField();
+        $timeField = $this->createTimeField();
+
+        $dateField->validate(inputData: ['date' => '3.2.2020']);
+        $timeField->validate(inputData: ['time' => '08:05']);
+
+        $this->assertSame('2020-02-03', $dateField->getValueAsString());
+        $this->assertSame('08:05:00', $timeField->getValueAsString());
     }
 }

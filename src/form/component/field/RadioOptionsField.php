@@ -16,6 +16,7 @@ use actra\yuf\form\renderer\LegendAndListRenderer;
 use actra\yuf\form\renderer\RadioOptionsRenderer;
 use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\html\HtmlText;
+use UnexpectedValueException;
 
 class RadioOptionsField extends OptionsField
 {
@@ -50,6 +51,17 @@ class RadioOptionsField extends OptionsField
             case RadioOptionsLayout::NONE:
                 break;
         }
+    }
+
+    /**
+     * Returns the stored value as string, without trimming or HTML encoding: `null` is `''`, a string is returned
+     * as is. See FormField::getValueAsStringOrFail() for other types.
+     *
+     * @throws UnexpectedValueException If the stored value is an array or of any other unsupported type.
+     */
+    public function getValueAsString(): string
+    {
+        return $this->getValueAsStringOrFail();
     }
 
     public function getDefaultRenderer(): FormRenderer

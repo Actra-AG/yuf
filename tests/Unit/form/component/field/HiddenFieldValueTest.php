@@ -10,6 +10,7 @@ namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\HiddenField;
 use PHPUnit\Framework\Attributes\DataProvider;
+use actra\yuf\html\HtmlEncoder;
 use PHPUnit\Framework\TestCase;
 
 final class HiddenFieldValueTest extends TestCase
@@ -82,5 +83,62 @@ final class HiddenFieldValueTest extends TestCase
 
         $this->assertTrue($field->isValueEmpty());
         $this->assertNull($field->getRawValue(returnNullIfEmpty: true));
+    }
+
+    /**
+     * Same string as renderValue() renders before HTML encoding (`(string)` cast).
+     *
+     * @return iterable<string, array{int|float|string|bool|null, string}>
+     */
+    public static function valueAsStringProvider(): iterable
+    {
+        yield 'null' => [null, ''];
+        yield 'string' => [' a<b ', ' a<b '];
+        yield 'empty string' => ['', ''];
+        yield 'int' => [5, '5'];
+        yield 'zero int' => [0, '0'];
+        yield 'negative int' => [-5, '-5'];
+        yield 'float' => [1.5, '1.5'];
+        yield 'whole float' => [2.0, '2'];
+        yield 'true' => [true, '1'];
+        yield 'false' => [false, ''];
+    }
+
+    #[DataProvider('valueAsStringProvider')]
+    public function testGetValueAsStringConvertsConstructorValue(
+        int|float|string|bool|null $value,
+        string $expected
+    ): void {
+        $field = new HiddenField(name: 'hidden', value: $value);
+
+        $this->assertSame($expected, $field->getValueAsString());
+        $this->assertSame(HtmlEncoder::encode(value: $expected), $field->renderValue());
+    }
+
+    public function testGetValueAsStringReturnsPostedString(): void
+    {
+        $field = new HiddenField(name: 'hidden', value: 5);
+
+        $field->validate(inputData: ['hidden' => ' 7 ']);
+
+        $this->assertSame(' 7 ', $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringIsEmptyAfterValidationWithMissingKey(): void
+    {
+        $field = new HiddenField(name: 'hidden', value: 5);
+
+        $field->validate(inputData: []);
+
+        $this->assertSame('', $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringReturnsPreviousValueAfterRejectedArrayInput(): void
+    {
+        $field = new HiddenField(name: 'hidden', value: 5);
+
+        $field->validate(inputData: ['hidden' => ['x']]);
+
+        $this->assertSame('5', $field->getValueAsString());
     }
 }

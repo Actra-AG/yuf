@@ -12,6 +12,7 @@ use actra\yuf\form\component\field\ToggleField;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\TestCase;
+use UnexpectedValueException;
 
 final class ToggleFieldValueTest extends TestCase
 {
@@ -150,5 +151,74 @@ final class ToggleFieldValueTest extends TestCase
 
         $this->assertFalse($isValid);
         $this->assertSame(['x'], $field->getRawValue());
+    }
+
+    public function testGetValueAsStringIsEmptyForNull(): void
+    {
+        $this->assertSame('', $this->createField()->getValueAsString());
+    }
+
+    public function testGetValueAsStringReturnsConstructorString(): void
+    {
+        $this->assertSame('a', $this->createField(initialValue: 'a')->getValueAsString());
+    }
+
+    public function testGetValueAsStringReturnsPostedString(): void
+    {
+        $field = $this->createField();
+
+        $field->validate(inputData: ['toggle' => 'b']);
+
+        $this->assertSame('b', $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringIsEmptyAfterValidationWithMissingKey(): void
+    {
+        $field = $this->createField(initialValue: 'a');
+
+        $field->validate(inputData: []);
+
+        $this->assertSame('', $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringReturnsPreviousValueAfterRejectedArrayInput(): void
+    {
+        $field = $this->createField(initialValue: 'a');
+
+        $field->validate(inputData: ['toggle' => ['b']]);
+
+        $this->assertSame('a', $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringThrowsForArrayConstructorValue(): void
+    {
+        $field = $this->createField(initialValue: ['a']);
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('field toggle');
+        $this->expectExceptionMessage('array');
+
+        $field->getValueAsString();
+    }
+
+    public function testGetValueAsStringThrowsForMultipleFieldWithPostedArray(): void
+    {
+        $field = $this->createField(multiple: true);
+        $field->validate(inputData: ['toggle' => ['a', 'b']]);
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('field toggle');
+
+        $field->getValueAsString();
+    }
+
+    public function testGetValueAsStringThrowsForMultipleFieldWithMissingKey(): void
+    {
+        $field = $this->createField(multiple: true);
+        $field->validate(inputData: []);
+
+        $this->expectException(UnexpectedValueException::class);
+
+        $field->getValueAsString();
     }
 }

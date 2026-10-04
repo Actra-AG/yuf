@@ -11,6 +11,7 @@ namespace actra\yuf\tests\Unit\form\component\field;
 use actra\yuf\form\component\field\TextAreaField;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\TestCase;
+use UnexpectedValueException;
 
 /**
  * An array value is an intended feature of TextAreaField: a list of entries, rendered one per line.
@@ -142,5 +143,82 @@ final class TextAreaFieldValueTest extends TestCase
     public function testArrayWithOnlyEmptyAndZeroEntriesIsEmpty(): void
     {
         $this->assertTrue($this->createField(value: ['', '0'])->isValueEmpty());
+    }
+
+    public function testGetValueAsStringIsEmptyForNull(): void
+    {
+        $this->assertSame('', $this->createField()->getValueAsString());
+    }
+
+    public function testGetValueAsStringReturnsStringUnchanged(): void
+    {
+        $this->assertSame(" a\nb ", $this->createField(value: " a\nb ")->getValueAsString());
+    }
+
+    public function testGetValueAsStringJoinsArrayEntriesWithEndOfLine(): void
+    {
+        $field = $this->createField(value: ['a<', 'b']);
+
+        $this->assertSame('a<' . PHP_EOL . 'b', $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringIsEmptyForEmptyArray(): void
+    {
+        $this->assertSame('', $this->createField(value: [])->getValueAsString());
+    }
+
+    public function testGetValueAsStringMatchesRenderValueWithoutEncoding(): void
+    {
+        $field = $this->createField(value: ['a', 'b']);
+
+        $this->assertSame($field->renderValue(), $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringIsEmptyAfterValidationWithMissingKey(): void
+    {
+        $field = $this->createField(value: 'a');
+
+        $field->validate(inputData: []);
+
+        $this->assertSame('', $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringReturnsPostedString(): void
+    {
+        $field = $this->createField();
+
+        $field->validate(inputData: ['text' => " a\nb "]);
+
+        $this->assertSame(" a\nb ", $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringReturnsPreviousValueAfterRejectedArrayInput(): void
+    {
+        $field = $this->createField(value: 'a');
+
+        $field->validate(inputData: ['text' => ['x']]);
+
+        $this->assertSame('a', $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringIsEmptyAfterValidationWithMissingKeyOnArrayField(): void
+    {
+        $field = $this->createField(value: ['a']);
+
+        $field->validate(inputData: []);
+
+        $this->assertSame('', $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringThrowsForNestedArrayEntry(): void
+    {
+        $field = $this->createField(value: ['a']);
+        $field->validate(inputData: ['text' => ['a', ['b']]]);
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('field text');
+        $this->expectExceptionMessage('array');
+
+        $field->getValueAsString();
     }
 }

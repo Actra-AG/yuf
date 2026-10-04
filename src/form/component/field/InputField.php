@@ -14,6 +14,7 @@ use actra\yuf\form\renderer\InputFieldRenderer;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\form\settings\InputTypeValue;
 use actra\yuf\html\HtmlText;
+use UnexpectedValueException;
 
 abstract class InputField extends FormField
 {
@@ -31,6 +32,17 @@ abstract class InputField extends FormField
             label: $label,
             value: $value
         );
+    }
+
+    /**
+     * Returns the stored value as string, without trimming or HTML encoding: `null` is `''`, a string is returned
+     * as is. See FormField::getValueAsStringOrFail() for other types.
+     *
+     * @throws UnexpectedValueException If the stored value is an array or of any other unsupported type.
+     */
+    public function getValueAsString(): string
+    {
+        return $this->getValueAsStringOrFail();
     }
 
     public function getDefaultRenderer(): FormRenderer

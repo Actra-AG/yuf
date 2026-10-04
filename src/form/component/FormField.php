@@ -115,6 +115,35 @@ abstract class FormField extends FormComponent
         return $this->value;
     }
 
+    /**
+     * Shared implementation of the `getValueAsString()` getters of single-value fields.
+     *
+     * - `null` becomes `''`, a string is returned unchanged (no trimming, no encoding).
+     * - `int`, `float` and `bool` are converted like `renderValue()` does before HTML encoding (`true` is `'1'`,
+     *   `false` is `''`, `1.0` is `'1'`).
+     *
+     * @throws UnexpectedValueException If the value is an array or any other type, which is a programming error
+     *         (e.g. a multiple field or a field constructed with an array used as single-value field).
+     */
+    protected function getValueAsStringOrFail(): string
+    {
+        $value = $this->value;
+        if ($value === null) {
+            return '';
+        }
+        if (is_string(value: $value)) {
+            return $value;
+        }
+        if (is_scalar(value: $value)) {
+            return (string)$value;
+        }
+
+        throw new UnexpectedValueException(
+            message: 'The value of field ' . $this->name . ' cannot be read as string, it is of type '
+            . get_debug_type(value: $value) . '.'
+        );
+    }
+
     public function isValueEmpty(): bool
     {
         if ($this->value === null) {

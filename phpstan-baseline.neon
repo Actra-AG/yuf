@@ -1834,12 +1834,6 @@ parameters:
 			message: '#^Parameter \$datetime of class DateTimeImmutable constructor expects string, mixed given\.$#'
 			identifier: argument.type
 			count: 1
-			path: src/form/component/field/DateField.php
-
-		-
-			message: '#^Parameter \$datetime of class DateTimeImmutable constructor expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
 			path: src/form/component/field/DateTimeFieldCore.php
 
 		-

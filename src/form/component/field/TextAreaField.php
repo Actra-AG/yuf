@@ -14,6 +14,7 @@ use actra\yuf\form\renderer\TextAreaRenderer;
 use actra\yuf\form\rule\RequiredRule;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
+use UnexpectedValueException;
 
 class TextAreaField extends FormField
 {
@@ -58,6 +59,30 @@ class TextAreaField extends FormField
     public function getDefaultRenderer(): FormRenderer
     {
         return new TextAreaRenderer($this);
+    }
+
+    /**
+     * Returns the stored value as string, without trimming or HTML encoding: `null` is `''`, a string is returned
+     * as is and an array value (list of lines) is joined with PHP_EOL, like renderValue() does.
+     *
+     * @throws UnexpectedValueException If an array entry is not a string or the value is of any other type.
+     */
+    public function getValueAsString(): string
+    {
+        $value = $this->getRawValue();
+        if (!is_array(value: $value)) {
+            return $this->getValueAsStringOrFail();
+        }
+        foreach ($value as $entry) {
+            if (!is_string(value: $entry)) {
+                throw new UnexpectedValueException(
+                    message: 'The value of field ' . $this->name
+                    . ' cannot be read as string, it contains an entry of type ' . get_debug_type(value: $entry) . '.'
+                );
+            }
+        }
+
+        return implode(separator: PHP_EOL, array: $value);
     }
 
     public function renderValue(): string

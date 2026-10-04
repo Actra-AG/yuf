@@ -12,6 +12,7 @@ use actra\yuf\form\component\field\SelectOptionsField;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\TestCase;
+use UnexpectedValueException;
 
 final class SelectOptionsFieldValueTest extends TestCase
 {
@@ -160,5 +161,95 @@ final class SelectOptionsFieldValueTest extends TestCase
 
         $this->assertFalse($isValid);
         $this->assertSame([['a']], $field->getRawValue());
+    }
+
+    public function testGetValueAsStringIsEmptyForNull(): void
+    {
+        $this->assertSame('', $this->createField()->getValueAsString());
+    }
+
+    public function testGetValueAsStringReturnsConstructorString(): void
+    {
+        $this->assertSame('a', $this->createField(initialValue: 'a')->getValueAsString());
+    }
+
+    public function testGetValueAsStringReturnsPostedString(): void
+    {
+        $field = $this->createField();
+
+        $field->validate(inputData: ['select' => 'b']);
+
+        $this->assertSame('b', $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringIsEmptyAfterValidationWithMissingKey(): void
+    {
+        $field = $this->createField(initialValue: 'a');
+
+        $field->validate(inputData: []);
+
+        $this->assertSame('', $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringReturnsPreviousValueAfterRejectedArrayInput(): void
+    {
+        $field = $this->createField(initialValue: 'a');
+
+        $field->validate(inputData: ['select' => ['b']]);
+
+        $this->assertSame('a', $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringThrowsForArrayConstructorValue(): void
+    {
+        $field = $this->createField(initialValue: ['a']);
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('field select');
+        $this->expectExceptionMessage('array');
+
+        $field->getValueAsString();
+    }
+
+    public function testGetValueAsStringThrowsForMultipleFieldWithPostedArray(): void
+    {
+        $field = $this->createField(multiple: true);
+        $field->validate(inputData: ['select' => ['a', 'b']]);
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('field select');
+
+        $field->getValueAsString();
+    }
+
+    public function testGetValueAsStringThrowsForMultipleFieldWithStringInitialValue(): void
+    {
+        $field = $this->createField(initialValue: 'a', multiple: true);
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('multiple selection field');
+
+        $field->getValueAsString();
+    }
+
+    public function testGetValueAsStringThrowsForMultipleFieldWithPostedString(): void
+    {
+        $field = $this->createField(multiple: true);
+        $field->validate(inputData: ['select' => 'a']);
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('multiple selection field');
+
+        $field->getValueAsString();
+    }
+
+    public function testGetValueAsStringThrowsForMultipleFieldWithMissingKey(): void
+    {
+        $field = $this->createField(multiple: true);
+        $field->validate(inputData: []);
+
+        $this->expectException(UnexpectedValueException::class);
+
+        $field->getValueAsString();
     }
 }

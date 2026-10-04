@@ -78,4 +78,50 @@ final class RadioOptionsFieldValueTest extends TestCase
         $this->assertFalse($isValid);
         $this->assertSame('b', $field->getRawValue());
     }
+
+    public function testGetValueAsStringIsEmptyForNull(): void
+    {
+        $this->assertSame('', $this->createField()->getValueAsString());
+    }
+
+    public function testGetValueAsStringReturnsConstructorString(): void
+    {
+        $this->assertSame('b', $this->createField(initialValue: 'b')->getValueAsString());
+    }
+
+    public function testGetValueAsStringReturnsPostedString(): void
+    {
+        $field = $this->createField();
+
+        $field->validate(inputData: ['radio' => 'a']);
+
+        $this->assertSame('a', $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringReturnsUnknownOptionString(): void
+    {
+        $field = $this->createField();
+
+        $field->validate(inputData: ['radio' => 'x']);
+
+        $this->assertSame('x', $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringIsEmptyAfterValidationWithMissingKey(): void
+    {
+        $field = $this->createField(initialValue: 'a');
+
+        $field->validate(inputData: []);
+
+        $this->assertSame('', $field->getValueAsString());
+    }
+
+    public function testGetValueAsStringReturnsPreviousValueAfterRejectedArrayInput(): void
+    {
+        $field = $this->createField(initialValue: 'a');
+
+        $field->validate(inputData: ['radio' => ['x']]);
+
+        $this->assertSame('a', $field->getValueAsString());
+    }
 }

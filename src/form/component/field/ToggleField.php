@@ -20,6 +20,7 @@ use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 use actra\yuf\html\HtmlText;
 use LogicException;
+use UnexpectedValueException;
 
 class ToggleField extends OptionsField
 {
@@ -63,6 +64,17 @@ class ToggleField extends OptionsField
         }
 
         return $value;
+    }
+
+    /**
+     * Returns the stored value as string, without trimming or HTML encoding: `null` is `''`, a string is returned
+     * as is. An array (multiple field) is not supported, see FormField::getValueAsStringOrFail() for other types.
+     *
+     * @throws UnexpectedValueException If the stored value is an array or of any other unsupported type.
+     */
+    public function getValueAsString(): string
+    {
+        return $this->getValueAsStringOrFail();
     }
 
     public function addChildField(string $mainOption, FormField $childField): void
