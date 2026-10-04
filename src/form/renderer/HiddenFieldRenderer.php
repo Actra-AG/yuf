@@ -8,14 +8,14 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\renderer;
 
-use actra\yuf\form\component\field\HiddenField;
+use actra\yuf\form\component\field\InputField;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 
 class HiddenFieldRenderer extends FormRenderer
 {
-    public function __construct(private readonly HiddenField $hiddenField)
+    public function __construct(private readonly InputField $hiddenField)
     {
     }
 

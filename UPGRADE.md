@@ -9,8 +9,8 @@ This document tracks relevant changes and upgrade instructions for developers.
 ### ⚙️ Backend & API
 
 * **Form Fields (typed values, part 1: text fields):** `TextField`, `EmailField`, `PhoneNumberField`, `HiddenField`,
-  `PasswordField`, `TextAreaField` (and the fields built on them: `ZipCodeField`, `IbanNumberField`, `AmountField`,
-  `DateField`, `TimeField`) now store a `string`, not `mixed`. New class hierarchy: `FormField` > `TextualField` >
+  `PasswordField`, `TextAreaField` (and the fields built on them: `ZipCodeField`, `IbanNumberField`) now store a
+  `string`, not `mixed`. New class hierarchy: `FormField` > `TextualField` >
   `InputField` > `StringInputField` (value, `getValueAsString()`, no public setter) > `SettableStringInputField`
   (adds `setValue(string)`).
     * ⚠️ **Setters, initial value and original value:** the public `setValue()` changes only the current value; the
@@ -34,14 +34,14 @@ This document tracks relevant changes and upgrade instructions for developers.
     * ⚠️ **Invalid input resets the value:** array or manipulated input (`name[]=x`) is no longer ignored while the
       previous value stays. The value is reset to `''`, exactly one error "invalid input" is added and the rules do not
       run (no second "required" error). `validate()` returns `false`.
-    * ⚠️ **Normalization:** `TextField` and the fields built on it (also `DateField`, `TimeField`, `ZipCodeField`,
-      `IbanNumberField`, `AmountField`) store the trimmed text without zero-width spaces (U+200B), also for constructor
+    * ⚠️ **Normalization:** `TextField` and the fields built on it (also `ZipCodeField`, `IbanNumberField`; the number
+      and date fields are in part 3) store the trimmed text without zero-width spaces (U+200B), also for constructor
       values and setters. `EmailField` stores a valid address in its canonical form, `TextAreaField` and `HiddenField`
       remove only zero-width spaces (not trimmed), `PasswordField` is not normalized at all (v3 removed U+200B).
       An empty field has the value `''` (`getRawValue()` returned `null` for a missing key).
     * ⚠️ **`HiddenField` is string-only:** the constructor accepts `?string`, not `int|float|bool`
       (`new HiddenField(name: 'id', value: (string)$id, valueIsInt: true)`). `HiddenIntegerField` replaces the
-      `valueIsInt` flag in a later step of v4.
+      `valueIsInt` flag (part 3).
     * ⚠️ **`TextAreaField` is string-only:** the array value (one entry per line) is removed. Use the string value and
       `getValues()` (trimmed lines, no empty lines):
       ```php
@@ -75,7 +75,7 @@ This document tracks relevant changes and upgrade instructions for developers.
     * ⚠️ `InputFieldRenderer` takes an `InputField` only (it already read the `inputType` of the field, which an
       `OptionsField` does not have).
     * The v3.3.0 getters stay: `getValueAsString()` (now on `StringInputField` and `TextAreaField`), `getValues()` of
-      `TextAreaField`, `getValueAsInt()` of `HiddenField`.
+      `TextAreaField`.
 * **Form Fields (typed values, part 2: option fields):** `OptionsField` is split by value type. `SingleOptionsField`
   (value `string`, the option key, `''` = nothing selected) is the base of `RadioOptionsField`, `SelectOptionsField` and
   `ToggleField`; `MultiOptionsField` (value `list<string>`, empty is `[]`) is the base of `CheckboxOptionsField` and the
@@ -172,6 +172,110 @@ This document tracks relevant changes and upgrade instructions for developers.
       custom renderer reads `isSelected($optionKey)` instead of `getRawValue()`. `SelectOptionsField::$cssClasses`,
       `$renderEmptyValueOption` and `$placeholder` are still readable but no longer `readonly` (`private(set)`);
       `SelectOptionsField::getDataAttributes()` has the type `array<string, string>`.
+* **Form Fields (typed values, part 3: numbers, date and time):** `AmountField`, `DateTimeFieldCore`,
+  `ValidAmountRule`, `ValidDateRule` and `ValidTimeRule` are removed. The fields parse their text themselves (an
+  `AmountParser`/date/time parser in `accept()`) and hold a typed value. New classes: `IntegerField` (`?int`),
+  `FloatField` (`?float`), `DecimalField` (`?string`, bcmath, for money), `HiddenIntegerField` (`?int`),
+  `actra\yuf\common\TimeOfDay`; `NumericField` (now `final`, extends `IntegerField`), `DateField` (`?DateTimeImmutable`)
+  and `TimeField` (`?TimeOfDay`) changed their value type. Input that cannot be parsed is kept for re-rendering, the
+  typed value does not exist then and the field's error is added (`individualInvalidError`/`invalidError`, else
+  `FormMessages::invalidValue`). Empty input gives `null`.
+    * ⚠️ **`AmountField` is split into three classes:**
+      ```php
+      // Before
+      $qty = new AmountField(name: 'qty', label: $label, valueIsFloat: false, initialValue: 5, requiredError: $required);
+      $length = new AmountField(name: 'length', label: $label, valueIsFloat: true, initialValue: 1.5);
+      $price = new AmountField(name: 'price', label: $label, valueIsFloat: true, initialValue: 12.5);   // money
+
+      // After
+      $qty = new IntegerField(name: 'qty', label: $label, initialValue: 5, requiredError: $required);
+      $length = new FloatField(name: 'length', label: $label, initialValue: 1.5);          // measurements
+      $price = new DecimalField(name: 'price', label: $label, scale: 2, initialValue: '12.50');   // money
+      ```
+      The constructor arguments are those of `AmountField` without `valueIsFloat` (`initialValue` has the type of the
+      value). `DecimalField` needs the argument `scale` (decimals, `2` for CHF) and returns a string like `'12.50'`
+      (`getValueAsDecimal(): ?string`, no float rounding errors, calculate with `bcadd()` etc.). Accepted input is that
+      of v3 (`AmountParser`: sign, digits, dot, surrounding whitespace; no exponent, no comma, no thousands separator,
+      nothing outside of the `int`/finite `float` range). **A `DecimalField` rejects more decimals than `scale`**
+      (`'12.555'` with scale 2 is an error, it is never rounded; trailing zeros are accepted, `'12.500'` is `'12.50'`),
+      fewer decimals are filled up (`'12'` becomes `'12.00'`, `'-0'` becomes `'0.00'`).
+    * ⚠️ **No `getValueAsString()` on numbers, dates and times** (it existed on `AmountField` since v3.3.0 and on
+      `DateField`/`TimeField`). Use the typed getter and format it yourself:
+      ```php
+      // Before
+      $text = $qtyField->getValueAsString();       // '' or '5'
+      $text = $dateField->getValueAsString();      // 'Y-m-d' or ''
+      $text = $timeField->getValueAsString();      // 'H:i:s' or ''
+
+      // After
+      $text = (string)$qtyField->getValueAsInt();                              // '' becomes null: use ?? ''
+      $text = $dateField->getValueAsDateTimeImmutable()?->format('Y-m-d') ?? '';
+      $text = $timeField->getValueAsTimeOfDay()?->toString() ?? '';
+      ```
+      The getters are `getValueAsInt(): ?int` (`IntegerField`, `NumericField`, `HiddenIntegerField`),
+      `getValueAsFloat(): ?float` (`FloatField` only: `IntegerField` and `DecimalField` have no `getValueAsFloat()`
+      any more), `getValueAsDecimal(): ?string`, `getValueAsDateTimeImmutable(): ?DateTimeImmutable` and
+      `getValueAsTimeOfDay(): ?TimeOfDay`. They return `null` for an empty field and throw an
+      `UnexpectedValueException` naming the field if the field holds input that could not be parsed (before
+      validation or after a failed validation). A getter that does not fit the type does not exist (a PHPStan error instead of a
+      runtime exception).
+    * ⚠️ **`HiddenField(valueIsInt: true)` becomes `HiddenIntegerField`:** the `valueIsInt` argument and
+      `HiddenField::getValueAsInt()` are removed (`HiddenField` is string-only). Manipulated input is a validation
+      error, so `getValueAsInt()` never fails after a successful validation.
+      ```php
+      // Before
+      $idField = new HiddenField(name: 'id', value: (string)$id, valueIsInt: true);
+      // After
+      $idField = new HiddenIntegerField(name: 'id', value: $id);   // ?int
+      ```
+    * ⚠️ **`NumericField` has an integer value and is `final`:** `getValueAsString()` is gone, `getValueAsInt()`
+      stays, the constructor takes `?int $initialValue` (was `null|int|float`). It is an `IntegerField`, so leading
+      zeros are not kept (`'007'` becomes `7`, rendered as `7`). For codes with leading zeros use a `TextField` with a
+      `RegexRule('/^\d{4,6}$/')`. HTML (`inputmode="numeric"`, `pattern`, `maxlength`) is unchanged.
+    * ⚠️ **`DateField` and `TimeField`: constructor value and type:**
+      ```php
+      // Before
+      $date = new DateField(name: 'd', label: $label, value: '2020-01-02', invalidError: $invalid);
+      $time = new TimeField(name: 't', label: $label, value: '08:30', invalidError: $invalid);
+      $isoDate = $date->getValueAsString();
+      $timeText = $time->getValueAsString();
+
+      // After
+      $date = new DateField(name: 'd', label: $label, value: new DateTimeImmutable('2020-01-02'), invalidError: $invalid);
+      $time = new TimeField(name: 't', label: $label, value: new TimeOfDay(hour: 8, minute: 30), invalidError: $invalid);
+      $time = new TimeField(name: 't', label: $label, value: TimeOfDay::fromString('08:30'), invalidError: $invalid);
+      $isoDate = $date->getValueAsDateTimeImmutable()?->format('Y-m-d');
+      $timeValue = $time->getValueAsTimeOfDay();     // ?TimeOfDay
+      ```
+      The input formats are those of v3 (`Y-m-d`, `Y-n-j` and `d.m.Y` for dates, `H:i` and `H:i:s` for times);
+      impossible dates (`2020-02-30`) and times (`25:00`) are invalid. The date value is at 00:00:00 (only the date
+      part of a given `DateTimeImmutable` is used), the field renders `Y-m-d`; the time field renders `H:i` (seconds of
+      the value are not shown, as in v3). `DateField` and `TimeField` are `final`.
+    * **New `actra\yuf\common\TimeOfDay`** (`final readonly`: `hour`, `minute`, `second`): the constructor throws a
+      `ValueError` for values out of range, `TimeOfDay::fromString('08:30')` (`H:i` or `H:i:s`) returns `null` for
+      anything else, `toString()` (`H:i:s`), `toShortString()` (`H:i`), `equals()`.
+    * ⚠️ **Typed setters and initial value** (as for the text fields): the constructor value has the type of the
+      value (`?int`, `?float`, `?string` for `DecimalField`, `?DateTimeImmutable`, `?TimeOfDay`; a wrong type is a
+      `TypeError`, a `DecimalField` string that is no decimal or has too many decimals an `InvalidArgumentException`,
+      also a `FloatField` value of `INF` or `NAN`). The public `setValue()` changes only the current value (the
+      initial value stays, `valueHasChanged()` compares with it), clears kept invalid input and adds no error.
+      `IntegerField` has the protected `setInitialValue(?int)` for subclasses (current and initial value, a
+      `LogicException` after `validate()`); the other number and date fields are `final`, pass the value to the
+      constructor.
+    * ⚠️ **Rendering:** the fields render the canonical text of their value, which differs from the posted text for
+      equivalent input: an integer without sign and leading zeros (`'+007'` renders `7`), a `FloatField` the shortest
+      text that parses to the same value without exponent (`'7.50'` renders `7.5`), a `DecimalField` the value with
+      its scale (`12.5` renders `12.50`). Invalid input is rendered as posted (trimmed). The HTML structure and
+      attributes of all fields are unchanged.
+    * ⚠️ **Removed rules:** `ValidAmountRule`, `ValidDateRule`, `ValidTimeRule` (the field checks its input; a rule
+      that read them is not needed). `FloatValueRule` and `NumericValueRule` stay until the rules are retyped in a later
+      step of v4. A custom rule that used `ValidAmountRule` on a text field validates the text itself with
+      `AmountParser::isInteger()`, `isDecimal()`, `toInt()`, `toFloat()` or the new `toDecimal(value, scale)`.
+    * ⚠️ **`MinValueRule`/`MaxValueRule`/`ValueBetweenRule`:** they threw for every posted (string) value, so they
+      cannot have worked on a form field in v3.x. The typed `IntegerMinRule`/`IntegerMaxRule`, `FloatMinRule`/
+      `FloatMaxRule` and `DecimalMinRule`/`DecimalMaxRule` that replace them (`addValueRule()`) come with the rules in a
+      later step of v4; the migration example is added there.
+    * ⚠️ `HiddenFieldRenderer` takes an `InputField` (was `HiddenField`) so that it renders `HiddenIntegerField` too.
 * **Form messages:** the German texts of the form code ("Die ungültige Eingabe wurde ignoriert.", "Der angegebene Wert
   ist ungültig.", ...) are no longer hard-coded. New `FormMessages` with English defaults and `FormMessages::german()`
   with the v3 texts; the form hands them to its fields.

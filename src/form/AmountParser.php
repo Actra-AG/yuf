@@ -9,8 +9,8 @@ declare(strict_types=1);
 namespace actra\yuf\form;
 
 /**
- * Pure parser for plain decimal numbers typed into amount fields. Single source of truth for the formats accepted by
- * ValidAmountRule and the numeric getters of the form fields.
+ * Pure parser for plain decimal numbers typed into number fields. Single source of truth for the formats accepted by
+ * the number fields (`IntegerField`, `FloatField`, `DecimalField`, `HiddenIntegerField`).
  *
  * Accepted: optional sign and digits (integer), additionally `1.5`, `1.` and `.5` (decimal). Surrounding whitespace
  * (`" \t\n\r\v\f"`, like is_numeric()) is ignored. Not accepted: exponent notation, hex, thousands separators,
@@ -67,6 +67,33 @@ final class AmountParser
         $result = (float)AmountParser::trim(value: $value);
 
         return is_finite(num: $result) ? $result : null;
+    }
+
+    /**
+     * Returns the canonical decimal string with exactly `$scale` decimals (`'12'` becomes `'12.50'` for scale 2, no
+     * sign for zero, no leading zeros), calculated with bcmath so there is no float rounding and no size limit.
+     * Returns `null` if the value is not a decimal (see isDecimal()) or has more significant decimals than `$scale`: it
+     * is never rounded. Trailing zeros do not change the amount and are accepted (`'12.500'` gives `'12.50'`).
+     *
+     * @param int $scale Number of decimals, 0 or more.
+     */
+    public static function toDecimal(string $value, int $scale): ?string
+    {
+        if (!AmountParser::isDecimal(value: $value)) {
+            return null;
+        }
+
+        $trimmed = AmountParser::trim(value: $value);
+        $decimalPoint = strpos(haystack: $trimmed, needle: '.');
+        $decimals = $decimalPoint === false
+            ? 0
+            : strlen(string: rtrim(string: substr(string: $trimmed, offset: $decimalPoint + 1), characters: '0'));
+        if ($decimals > $scale) {
+            return null;
+        }
+
+        // @phpstan-ignore argument.type (isDecimal() guarantees a numeric string, PHPStan cannot see it)
+        return bcadd(num1: $trimmed, num2: '0', scale: $scale);
     }
 
     private static function trim(string $value): string

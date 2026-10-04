@@ -1891,12 +1891,6 @@ parameters:
 			path: src/form/renderer/LegendAndListRenderer.php
 
 		-
-			message: '#^Cannot call method addHtmlTagAttribute\(\) on actra\\yuf\\html\\HtmlTag\|null\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: src/form/renderer/NumericFieldRenderer.php
-
-		-
 			message: '#^Method actra\\yuf\\form\\rule\\MaxLengthRule\:\:checkValueLengthAgainst\(\) has parameter \$valueLength with no type specified\.$#'
 			identifier: missingType.parameter
 			count: 1
@@ -1945,34 +1939,10 @@ parameters:
 			path: src/form/rule/ValidCsrfTokenValue.php
 
 		-
-			message: '#^Parameter \$datetime of class DateTimeImmutable constructor expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/rule/ValidDateRule.php
-
-		-
-			message: '#^Parameter \$subject of function preg_match expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 2
-			path: src/form/rule/ValidDateRule.php
-
-		-
 			message: '#^Cannot cast mixed to string\.$#'
 			identifier: cast.string
 			count: 1
 			path: src/form/rule/ValidEmailAddressRule.php
-
-		-
-			message: '#^Parameter \$datetime of class DateTimeImmutable constructor expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/rule/ValidTimeRule.php
-
-		-
-			message: '#^Parameter \$subject of function preg_match expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/form/rule/ValidTimeRule.php
 
 		-
 			message: '#^Method actra\\yuf\\form\\rule\\ValidValueRule\:\:__construct\(\) has parameter \$validValues with no value type specified in iterable type array\.$#'

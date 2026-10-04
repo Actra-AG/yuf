@@ -304,7 +304,8 @@ parse with the existing `AmountParser` (integer/decimal formats, no exponent, wh
   input is a validation error, so `getValueAsInt()` never fails after a successful validation (same promise as v3.3.0).
 - `FloatField` (`?float`): replaces `AmountField(valueIsFloat: true)`. For measurements, not money.
 - `DecimalField` (`?string`, bcmath): for money. Required constructor argument `int $scale` (`2` for CHF). Input with
-  more decimals than `$scale` is **rejected** (validation error, never silently rounded); valid input is stored
+  more significant decimals than `$scale` is **rejected** (validation error, never silently rounded; trailing zeros
+  are accepted, `'12.500'` gives `'12.50'`, refined in review); valid input is stored
   canonical (`'12'` becomes `'12.50'`). Dot as separator only (as `AmountParser`, comma input stays invalid). Value is a
   `string` so no float error can occur; arithmetic is up to the project (`bcadd()` etc.), the field only guarantees the
   format.
@@ -811,7 +812,8 @@ family; `TimeOfDay` gets its own unit test in task 4a.
    is removed (section 5).
 3. **Invalid input:** the value is reset to empty, exactly one error is added and the other rules are skipped.
 4. **`NumericField`** becomes a final subclass of `IntegerField` (`'007'` becomes `7`).
-5. **`DecimalField`:** more decimals than `scale` are rejected (no rounding), `scale` is required, dot only.
+5. **`DecimalField`:** more significant decimals than `scale` are rejected (no rounding; trailing zeros accepted,
+   refined in review), `scale` is required, dot only.
 6. **`TimeField`** gets the value object `TimeOfDay` (`actra\yuf\common`, 3.13), getter `getValueAsTimeOfDay()`;
    `DateField` uses `?DateTimeImmutable`.
 7. **`PasswordField`:** no normalization at all, never rendered back.

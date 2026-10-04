@@ -137,4 +137,42 @@ final class AmountParserTest extends TestCase
     {
         $this->assertNull(AmountParser::toFloat(value: str_repeat(string: '9', times: 400)));
     }
+
+    /**
+     * @return iterable<string, array{string, int, ?string}>
+     */
+    public static function canonicalDecimalProvider(): iterable
+    {
+        yield 'integer gets the scale' => ['12', 2, '12.00'];
+        yield 'exact scale' => ['12.50', 2, '12.50'];
+        yield 'fewer decimals' => ['12.5', 2, '12.50'];
+        yield 'negative' => ['-12.5', 2, '-12.50'];
+        yield 'negative zero has no sign' => ['-0.00', 2, '0.00'];
+        yield 'plus sign' => ['+5', 2, '5.00'];
+        yield 'leading zeros' => ['007.5', 2, '7.50'];
+        yield 'leading dot' => ['.5', 2, '0.50'];
+        yield 'trailing dot' => ['1.', 2, '1.00'];
+        yield 'surrounding whitespace' => [" \t12.5\n", 2, '12.50'];
+        yield 'scale 0' => ['12', 0, '12'];
+        yield 'scale 0 with trailing dot' => ['12.', 0, '12'];
+        yield 'scale 4' => ['1.5', 4, '1.5000'];
+        yield 'very large' => [str_repeat(string: '9', times: 100), 2, str_repeat(string: '9', times: 100) . '.00'];
+        yield 'more decimals than the scale' => ['12.555', 2, null];
+        yield 'trailing zeros beyond the scale are accepted' => ['12.500', 2, '12.50'];
+        yield 'only zeros beyond the scale' => ['12.0000', 2, '12.00'];
+        yield 'scale 0 with a zero decimal' => ['12.0', 0, '12'];
+        yield 'scale 0 with a decimal' => ['12.5', 0, null];
+        yield 'significant decimal after zeros' => ['12.5001', 2, null];
+        yield 'decimal comma' => ['12,5', 2, null];
+        yield 'exponent' => ['1e3', 2, null];
+        yield 'text' => ['abc', 2, null];
+        yield 'empty' => ['', 2, null];
+        yield 'whitespace inside' => ['1 2', 2, null];
+    }
+
+    #[DataProvider('canonicalDecimalProvider')]
+    public function testToDecimal(string $value, int $scale, ?string $expected): void
+    {
+        $this->assertSame($expected, AmountParser::toDecimal(value: $value, scale: $scale));
+    }
 }

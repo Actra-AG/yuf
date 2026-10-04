@@ -10,7 +10,6 @@ namespace actra\yuf\form\component;
 
 use ArrayObject;
 use DateTime;
-use actra\yuf\form\AmountParser;
 use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\FormComponent;
 use actra\yuf\form\FormMessages;
@@ -50,8 +49,10 @@ abstract class FormField extends FormComponent
     /**
      * @param string $name The internal name for this formField which is also used by the renderer (name="")
      * @param HtmlText $label The field label to be used by the renderer
-     * @param mixed $value The original value for this formField. Depending on the specific field, it can be a string, float, integer, and even an array. By default, it is null.
-     * @param ?HtmlText $labelInfoText Additional text padded to the displayed label-name (see FileField max-Info, for example)
+     * @param mixed $value The original value for this formField. Depending on the specific field, it can be a string,
+     *                     float, integer, and even an array. By default, it is null.
+     * @param ?HtmlText $labelInfoText Additional text padded to the displayed label-name (see FileField max-Info, for
+     *                                 example)
      */
     public function __construct(
         string    $name,
@@ -143,94 +144,6 @@ abstract class FormField extends FormComponent
         }
 
         return $this->value;
-    }
-
-    /**
-     * Shared implementation of the `getValueAsInt()` getters of single-value fields.
-     *
-     * - `null`, an empty string and a whitespace-only string give `null`.
-     * - A string is parsed with AmountParser: optional sign and digits, surrounding whitespace allowed.
-     * - An `int` is returned unchanged.
-     *
-     * @throws UnexpectedValueException If the value is not an integer: a decimal or exponent string, text, a `float`,
-     *         a `bool`, an array, any other type, or an integer string outside of PHP_INT_MIN..PHP_INT_MAX.
-     */
-    protected function getValueAsIntOrFail(): ?int
-    {
-        $value = $this->getRawValue();
-        if ($value === null || (is_string(value: $value) && $this->isValueEmpty())) {
-            return null;
-        }
-        if (is_int(value: $value)) {
-            return $value;
-        }
-        if (!is_string(value: $value)) {
-            throw $this->createNumericTypeException(target: 'integer', value: $value);
-        }
-
-        $result = AmountParser::toInt(value: $value);
-        if ($result !== null) {
-            return $result;
-        }
-
-        throw new UnexpectedValueException(
-            message: 'The value of field ' . $this->name . ' cannot be read as integer, '
-            . (AmountParser::isInteger(value: $value) ? 'it is out of the integer range' : 'it is not an integer')
-            . ': ' . $this->describeValueForException(value: $value)
-        );
-    }
-
-    /**
-     * Shared implementation of the `getValueAsFloat()` getters of single-value fields.
-     *
-     * - `null`, an empty string and a whitespace-only string give `null`.
-     * - A string is parsed with AmountParser: integer or decimal (`1.5`, `1.`, `.5`), no exponent notation,
-     *   surrounding whitespace allowed.
-     * - An `int` is converted, a finite `float` is returned unchanged.
-     *
-     * @throws UnexpectedValueException If the value is not a decimal number: text, exponent notation, a number too
-     *         large for a `float`, a non-finite `float`, a `bool`, an array or any other type.
-     */
-    protected function getValueAsFloatOrFail(): ?float
-    {
-        $value = $this->getRawValue();
-        if ($value === null || (is_string(value: $value) && $this->isValueEmpty())) {
-            return null;
-        }
-        if (is_int(value: $value)) {
-            return (float)$value;
-        }
-        if (is_float(value: $value) && is_finite(num: $value)) {
-            return $value;
-        }
-        if (!is_string(value: $value)) {
-            throw $this->createNumericTypeException(target: 'float', value: $value);
-        }
-
-        $result = AmountParser::toFloat(value: $value);
-        if ($result !== null) {
-            return $result;
-        }
-
-        throw new UnexpectedValueException(
-            message: 'The value of field ' . $this->name . ' cannot be read as float, it is not a decimal number: '
-            . $this->describeValueForException(value: $value)
-        );
-    }
-
-    private function createNumericTypeException(string $target, mixed $value): UnexpectedValueException
-    {
-        return new UnexpectedValueException(
-            message: 'The value of field ' . $this->name . ' cannot be read as ' . $target . ', it is of type '
-            . get_debug_type(value: $value) . '.'
-        );
-    }
-
-    private function describeValueForException(string $value): string
-    {
-        $shortened = strlen(string: $value) > 40 ? substr(string: $value, offset: 0, length: 40) . '...' : $value;
-
-        return '"' . $shortened . '"';
     }
 
     public function isValueEmpty(): bool

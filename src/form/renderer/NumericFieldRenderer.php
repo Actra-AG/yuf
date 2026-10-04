@@ -10,6 +10,7 @@ namespace actra\yuf\form\renderer;
 
 use actra\yuf\form\component\field\NumericField;
 use actra\yuf\html\HtmlTagAttribute;
+use LogicException;
 
 class NumericFieldRenderer extends InputFieldRenderer
 {
@@ -22,6 +23,9 @@ class NumericFieldRenderer extends InputFieldRenderer
     {
         parent::prepare();
         $inputTag = $this->getHtmlTag();
+        if ($inputTag === null) {
+            throw new LogicException(message: 'The input tag is missing after InputFieldRenderer::prepare().');
+        }
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'inputmode',

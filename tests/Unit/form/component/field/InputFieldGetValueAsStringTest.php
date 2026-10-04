@@ -8,7 +8,6 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\form\component\field;
 
-use actra\yuf\form\component\field\AmountField;
 use actra\yuf\form\component\field\EmailField;
 use actra\yuf\form\component\field\IbanNumberField;
 use actra\yuf\form\component\field\PasswordField;
@@ -23,7 +22,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * `getValueAsString()` of the StringInputField subclasses that are not covered by their own value test
- * (HiddenField, DateField and TimeField have tests in their value tests).
+ * (HiddenField has its own value test).
  */
 final class InputFieldGetValueAsStringTest extends TestCase
 {
@@ -114,42 +113,5 @@ final class InputFieldGetValueAsStringTest extends TestCase
         $field->validate(inputData: ['phone' => ' 044 668 18 00 ']);
 
         $this->assertSame('+41.446681800', $field->getValueAsString());
-    }
-
-    /**
-     * @return iterable<string, array{null|int|float, string}>
-     */
-    public static function amountInitialValueProvider(): iterable
-    {
-        yield 'null' => [null, ''];
-        yield 'int' => [12, '12'];
-        yield 'float' => [1.5, '1.5'];
-        yield 'negative' => [-3, '-3'];
-    }
-
-    #[DataProvider('amountInitialValueProvider')]
-    public function testAmountFieldReturnsInitialValueAsString(null|int|float $initialValue, string $expected): void
-    {
-        $field = new AmountField(
-            name: 'amount',
-            label: HtmlText::encoded(textContent: 'Amount'),
-            valueIsFloat: true,
-            initialValue: $initialValue
-        );
-
-        $this->assertSame($expected, $field->getValueAsString());
-    }
-
-    public function testAmountFieldReturnsPostedStringTrimmed(): void
-    {
-        $field = new AmountField(
-            name: 'amount',
-            label: HtmlText::encoded(textContent: 'Amount'),
-            valueIsFloat: true
-        );
-
-        $field->validate(inputData: ['amount' => ' 1.5 ']);
-
-        $this->assertSame('1.5', $field->getValueAsString());
     }
 }

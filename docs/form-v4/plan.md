@@ -399,6 +399,100 @@ Verify: as task 2, plus unit tests for `TimeOfDay`.
 
 Handover notes:
 
+Done (2026-10-04), `ddev composer check` green (832 tests), 5 baseline blocks (30 lines) removed, none added; no entry
+left in the touched files.
+
+**What was built**
+
+- New: `IntegerField` (non-final, `?int`, `getValueAsInt()`, `setValue(?int)`, protected `setInitialValue(?int)`),
+  `FloatField` (final, `?float`), `DecimalField` (final, `?string`, required `scale`, `getValueAsDecimal()`),
+  `HiddenIntegerField` (final, `?int`), `ParsedInputField` (abstract base, see deviation 1), `actra\yuf\common\TimeOfDay`,
+  `AmountParser::toDecimal(value, scale)` (bcmath, rejects more decimals). Changed: `NumericField` (final, extends
+  `IntegerField`), `DateField` (final, `?DateTimeImmutable`), `TimeField` (final, `?TimeOfDay`, `getValueAsTimeOfDay()`),
+  `HiddenField` (no `valueIsInt`, no `getValueAsInt()`), `FormField` (the `getValueAsIntOrFail()`/`getValueAsFloatOrFail()`
+  helpers and their private helpers removed), `HiddenFieldRenderer` (takes an `InputField`), `NumericFieldRenderer`
+  (no `getRawValue()` was read there; its baseline entry fixed with an explicit `LogicException`).
+- Removed: `AmountField`, `DateTimeFieldCore`, `ValidAmountRule`, `ValidDateRule`, `ValidTimeRule` (nothing else used
+  them). `FloatValueRule`/`NumericValueRule` stay: they were not part of the task text, nothing uses them, task 6
+  removes them (design 3.7/3.8).
+- The typed fields parse in `accept()` (override of the `TextualField` hook, parent called with the canonical text, so
+  `getText()`, `isValueEmpty()`, `valueHasChanged()` (plain text comparison) and `renderValue()` need no change) and keep
+  the native value in a private property. Invalid text: typed value `null`, the text is kept (re-rendering), the error
+  is added in `validateCurrentValue()` before the listeners (`ParsedInputField`). Setters/constructor go through
+  `changeText()`/`changeInitialText()`, so they use the same path.
+
+**Deviations from the design (and why)**
+
+1. **`ParsedInputField` (new abstract class between `InputField` and the typed fields).** The design lets the typed
+   fields extend `InputField` directly. The invalid-text handling (required rule, `holdsUnparsableText()`, the error in
+   `validateCurrentValue()`, the getter exception, the bridge `TypeError`) would have been copied six times, so it
+   lives in one small base. It owns no value and no parser (each field has its own native property and `accept()`), so
+   it is not the "second parsed-input hierarchy" the design wanted to avoid. Not an extension point for projects.
+2. **No protected `setInitialValue()` on the final fields** (`FloatField`, `DecimalField`, `HiddenIntegerField`,
+   `DateField`, `TimeField`). The twin only exists for subclasses; on a final class it is dead code and cannot be
+   called. They take the initial value in the constructor. `IntegerField` (non-final; `NumericField` inherits it) has it.
+3. **Typed setter signature:** `setValue(mixed)` with a `TypeError` for the wrong type on all new fields (same bridge as
+   tasks 2 and 3; becomes `setValue(?int)` etc. in task 6). `FloatField::setValue()` accepts an `int` (like a `float`
+   parameter would), `DecimalField` throws an `InvalidArgumentException` for a string that is no decimal or has too many
+   decimals (also for `''`: use `null` for empty).
+4. **Trailing zeros count as decimals in `DecimalField`:** `'12.500'` with scale 2 is rejected (literal reading of "more
+   decimals than scale"; the value would not be rounded, but the rule stays simple and the test pins it).
+5. **Canonical rendering (design 3.7: "the rendered text is the canonical text of the value"):** the stored text of a
+   valid value is canonical, so `'+007'` renders `7`, `'7.50'` in a `FloatField` renders `7.5`, `DecimalField` `12.50`.
+   `FloatField` uses the shortest round-trip text without exponent (`json_encode()`, `number_format()` for exponent
+   forms) because `(string)$float` uses the `precision` ini setting and loses digits (and gives `1.0E+25`, which the
+   parser does not accept). HTML for the v3.3.1 equivalents is identical (see tests); only such non-canonical input
+   differs, and only after a re-render.
+6. **`DateField`/`TimeField` constructor argument names are unchanged** (`value`, `invalidError`, required positional
+   `value`); `invalidError` is the field's `individualInvalidError`. Date parsing: `checkdate()` instead of the
+   `DateTimeImmutable` warning check (year 0000 is invalid now; v3 accepted it).
+7. Unparsable text does **not** skip the other rules (like v3, e.g. a `MaxLengthRule` still runs on the text); only
+   shape errors (array/manipulated) use `rejectInput()` (value reset, one error, no rules).
+8. `HiddenIntegerField` removes only U+200B (not trimmed, exact round trip; the parser ignores whitespace) and has no
+   label/required/individual error (message `FormMessages::invalidValue`), as `HiddenField(valueIsInt: true)` had.
+9. The `MinValueRule`/`MaxValueRule` migration example of design section 5 is not repeated in `UPGRADE.md`: the typed
+   rules do not exist before task 6, so `UPGRADE.md` only notes them (task 6 writes the example).
+
+**The bridge (changed in this task)**
+
+`HiddenField::valueIsInt`/`getValueAsInt()` (task 2 bridge) are gone, `FormField::getValueAsIntOrFail()`/
+`getValueAsFloatOrFail()` too. Still bridge: the `setValue(mixed)` of the typed fields, `getRawValue()` (returns the
+canonical or kept text of the typed fields, old rules like `MaxLengthRule` read it), `getOriginalValue()`,
+`validate(array, bool)`.
+
+**Tests changed on purpose**
+
+Removed `AmountFieldValueTest` and `DateTimeFieldValueTest` (replaced by the new tests below; cases carried over:
+accepted/rejected formats, overflow, whitespace, array input resets, missing key, getter exceptions; the
+`getRawValue()`/`getValueAsString()` assertions are gone). `HiddenFieldValueTest`: `valueIsInt` cases moved to
+`HiddenIntegerFieldValueTest`. `InputFieldGetValueAsStringTest`: the `AmountField` cases removed. `AmountParserTest`
+extended (`toDecimal()`). New: `IntegerFieldValueTest`, `NumericFieldValueTest`, `HiddenIntegerFieldValueTest`,
+`FloatFieldValueTest`, `DecimalFieldValueTest` (scale, more decimals rejected, negative, leading zeros, 60/80 digit
+numbers), `DateFieldValueTest`, `TimeFieldValueTest`, `tests/Unit/common/TimeOfDayTest`,
+`renderer/NumberAndDateFieldRenderersTest` (HTML rendered by v3.3.1, 19 cases), `tests/Double/form/InitialValueIntegerField`.
+
+**Baseline:** removed `NumericFieldRenderer` (2 errors), `ValidDateRule` (3), `ValidTimeRule` (2) (together with the
+deleted files), none added (one `@phpstan-ignore argument.type` with reason in `AmountParser::toDecimal()`: PHPStan
+cannot see that `isDecimal()` makes the string numeric for `bcadd()`). No entry left in the touched files.
+
+**For tasks 4b to 7**
+
+- 4b: `HiddenField` still is not final (`CsrfTokenField extends HiddenField`); `PhoneNumberField`/`ZipCodeField`/
+  `IbanNumberField` untouched. `ParsedInputField` is not needed there.
+- Task 6: `setValue(mixed)` of `IntegerField`, `HiddenIntegerField`, `FloatField`, `DecimalField`, `DateField`,
+  `TimeField` becomes the typed parameter; `addValueRule(IntegerRule|FloatRule|DecimalRule)` goes on `IntegerField`
+  (so `NumericField`), `FloatField`, `DecimalField` (they hold the native value; call the rules only for a non-empty,
+  parsed value, `hasParsedValue()`); delete `FloatValueRule` and `NumericValueRule`; write the `MinValueRule`
+  migration example in `UPGRADE.md`; the invalid-value error in `ParsedInputField::validateCurrentValue()` moves to
+  the read step of the `validate(FormInput)` template (before the listeners, as now).
+- Task 7: `README.md` "Form Field Values" still names `AmountField`, `HiddenField(valueIsInt: true)` and
+  `getValueAsInt()` on `HiddenField` (outdated now); `InputTypeValue`/`AutoCompleteValue` are still used by the new
+  fields (rename with the enums).
+
+Review change (user decision): `DecimalField` accepts trailing zeros beyond `scale` (`'12.500'` with scale 2 gives
+`'12.50'`, `'12.0'` with scale 0 gives `'12'`); only significant extra decimals (`'12.505'`) are rejected
+(`AmountParser::toDecimal()`, tests, UPGRADE.md and design 3.7 / decision 5 updated).
+
 ### Task 4b: Phone, zip code, IBAN, hidden and CSRF fields
 
 `PhoneNumberField` (own `valueHasChanged()` removed), `ZipCodeField` (+ `ZipCodeValidator`), `IbanNumberField` (+

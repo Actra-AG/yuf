@@ -12,12 +12,16 @@ use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\NumericFieldRenderer;
 use actra\yuf\html\HtmlText;
 
-class NumericField extends AmountField
+/**
+ * An integer field for digit codes (e.g. a house number): renders `inputmode="numeric"` and a `pattern` from
+ * `minLength` and `maxLength`. It is an integer field, so leading zeros are not kept (`'007'` becomes `7`).
+ */
+final class NumericField extends IntegerField
 {
     public function __construct(
         string $name,
         HtmlText $label,
-        null|int|float $initialValue = null,
+        ?int $initialValue = null,
         ?HtmlText $individualInvalidError = null,
         ?HtmlText $requiredError = null,
         ?string $placeholder = null,
@@ -27,7 +31,6 @@ class NumericField extends AmountField
         parent::__construct(
             name: $name,
             label: $label,
-            valueIsFloat: false,
             initialValue: $initialValue,
             individualInvalidError: $individualInvalidError,
             requiredError: $requiredError,
