@@ -98,6 +98,26 @@ The query passed to `createFromSqlQuery()` must consist of `SELECT`, `FROM`, opt
 only. `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT` and `UNION` are rejected, because sorting and paging are added by
 `DbQuery` itself (`addOrderPart()` and the offset/row count of `selectFromDb()`).
 
+## Boolean search
+
+`SearchHelper::createBooleanQuery()` turns a search text into a `WHERE` condition with bound parameters. Pass its
+`DbQueryData` to `addWherePart()`:
+
+```php
+$data = SearchHelper::createBooleanQuery(
+    spaceSeparatedFieldNames: 'person.firstName person.lastName',
+    queryText: $searchTerm // e.g. 'haas +kap -"old address"'
+);
+$query->addWherePart(wherePart: $data->query, parameters: $data->params);
+```
+
+Every word must be contained in at least one of the fields (`LIKE '%word%'`). Words are combined with `OR`; `and`,
+`or`, `not` or the shorthands `+word` and `-word` before a word change that. `"quoted phrases"` are searched as one
+word, the search is case-insensitive and HTML tags are removed. `%`, `_`, `?` and `\` in the search text are searched
+literally. An empty search text gives `1=1`. The field names are no user input; they are validated (column names,
+optionally qualified like `table.column` or quoted with backticks) and an invalid one throws an
+`InvalidArgumentException`.
+
 ## Path variables
 
 A file name like `subscription-42.html` is split at `-` into path variables (`0` → `subscription`, `1` → `42`); the

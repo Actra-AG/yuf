@@ -4,6 +4,72 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.6.0] – 2026-10-05
+
+### ⚙️ Backend & API
+
+* **Parameterized boolean search.** New `SearchHelper::createBooleanQuery(string $spaceSeparatedFieldNames,
+  string $queryText): DbQueryData` (static). It has the search semantics of `getBooleanQuery()` (quoted phrases,
+  `and`/`or`/`not`, `+word`/`-word`, case-insensitive, `OR` by default, HTML tags stripped), but binds every word as
+  `field LIKE ? ESCAPE '!'` parameter. See the README section "Boolean search".
+* Fixes the production bug of `getBooleanQuery()`: a `?` in the search text (e.g. `?haas kap`) made
+  `DbQuery::addWherePart()` throw "The amount of parameters (0) does not match the amount of "?" placeholders".
+  `%`, `_` and `\` are now searched literally instead of acting as wildcards or being removed.
+* Field names are validated (column names, optionally `table.column`, `db.table.column` or quoted with backticks);
+  an invalid one throws an `InvalidArgumentException`. There is no `$splitFields` argument: SQL expressions as search
+  field are not supported any more.
+* Differences only for malformed search texts, where `getBooleanQuery()` produced invalid SQL or crashed: an
+  operator without a following word is ignored, an empty word (e.g. from `""`) is skipped, an empty search text gives
+  `1=1` instead of `()`. Within a quoted phrase, ` +` and ` -` are no longer turned into `and`/`not`, and a quoted
+  `"and"` is searched as a word.
+* `getBooleanQuery()` is deprecated and unchanged (it still interpolates the words and fails on `?`).
+* `addWildcardToString()` is deprecated (it does not escape `%` and `_`) and no longer used by yuf.
+* No breaking changes.
+* **Migration hint:** replace `getBooleanQuery()` with `createBooleanQuery()` and pass its parameters:
+  ```php
+  // Before
+  $dbQuery->addWherePart(
+      wherePart: $searchForm->searchHelper->getBooleanQuery(
+          spaceSeparatedFieldNames: 'person.firstName person.lastName',
+          query_text: $searchQuery
+      ),
+      parameters: []
+  );
+
+  // After
+  $data = SearchHelper::createBooleanQuery(
+      spaceSeparatedFieldNames: 'person.firstName person.lastName',
+      queryText: $searchQuery
+  );
+  $dbQuery->addWherePart(wherePart: $data->query, parameters: $data->params);
+  ```
+  Code which concatenates the result into its own SQL (`$cond .= ' AND ' . getBooleanQuery(...)`) must also append
+  `$data->params` to its parameter list.
+
+### 🐛 Fixes in table filters and `createSQLSearch()`
+
+* **`SearchHelper::createSQLFilters()`** (used by `TextFilterField`): LIKE patterns are escaped and bound as
+  `LIKE ? ESCAPE '!'`. `*` remains the wildcard; `%` and `_` typed by the user are now searched literally (before, they
+  were wildcards, so `50%` also found `500`). Quoted phrases in a multi-word search work again:
+  ```text
+  Search text       Before                                  After
+  foo "bar baz"     LIKE %foo% OR %"bar% OR %baz"%          = 'bar baz' AND LIKE %foo%
+  foo 'bar baz'     LIKE %foo % OR %bar baz%                LIKE %foo% OR %bar baz%
+  -"foo bar"        NOT LIKE %"foo% AND LIKE %bar"%         NOT LIKE %foo bar%
+  %foo%             LIKE %foo% (wildcards)                  LIKE %!%foo!%% (literal)
+  - x               NOT LIKE % (only NULL) AND LIKE %x%     LIKE %x%
+  ```
+  Quotes only start a phrase at a word boundary, so `O'Neil O'Brien` are two words. `.`, `_`, `"exact"` and
+  `*phrase*` are unchanged. The column reference may still be an SQL expression (e.g. `CONCAT_WS(' ', a, b)`), but an
+  empty one or one containing `?` now throws an `InvalidArgumentException`.
+* **`SearchHelper::createSQLSearch()`**: `%` and `_` are searched literally (`LIKE ? ESCAPE '!'`). Columns are
+  validated (`InvalidArgumentException` for invalid names or an empty list) and every part is quoted separately:
+  `t.city` becomes `` `t`.`city` `` instead of the invalid `` `t.city` ``; already quoted names are kept.
+* **Migration hint:** nothing to change in code. If users relied on typing `%` or `_` as wildcards in a table filter,
+  tell them to use `*`.
+
+---
+
 ## [v4.5.0] – 2026-10-04
 
 ### ⚙️ Backend & API

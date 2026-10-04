@@ -499,18 +499,6 @@ parameters:
 			path: src/common/LogFile.php
 
 		-
-			message: '#^Argument of an invalid type list\<string\>\|false supplied for foreach, only iterables are supported\.$#'
-			identifier: foreach.nonIterable
-			count: 2
-			path: src/common/SearchHelper.php
-
-		-
-			message: '#^Binary operation "\." between ''`'' and mixed results in an error\.$#'
-			identifier: binaryOp.invalid
-			count: 1
-			path: src/common/SearchHelper.php
-
-		-
 			message: '#^Cannot access an offset on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 2
@@ -520,12 +508,6 @@ parameters:
 			message: '#^Cannot access offset string on mixed\.$#'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 35
-			path: src/common/SearchHelper.php
-
-		-
-			message: '#^Cannot cast mixed to string\.$#'
-			identifier: cast.string
-			count: 1
 			path: src/common/SearchHelper.php
 
 		-
@@ -585,24 +567,6 @@ parameters:
 		-
 			message: '#^Method actra\\yuf\\common\\SearchHelper\:\:checkString\(\) should return string but returns mixed\.$#'
 			identifier: return.type
-			count: 1
-			path: src/common/SearchHelper.php
-
-		-
-			message: '#^Method actra\\yuf\\common\\SearchHelper\:\:createSQLFilters\(\) has parameter \$filterArr with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/common/SearchHelper.php
-
-		-
-			message: '#^Method actra\\yuf\\common\\SearchHelper\:\:createSQLSearch\(\) has parameter \$columns with no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/common/SearchHelper.php
-
-		-
-			message: '#^Method actra\\yuf\\common\\SearchHelper\:\:createSQLSearch\(\) return type has no value type specified in iterable type array\.$#'
-			identifier: missingType.iterableValue
 			count: 1
 			path: src/common/SearchHelper.php
 

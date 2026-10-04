@@ -11,12 +11,22 @@ namespace actra\yuf\common;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQueryData;
 use DateTime;
+use InvalidArgumentException;
+use NoDiscard;
 use Throwable;
 
 class SearchHelper
 {
     public const string PARAM_RESET = 'reset';
     public const string PARAM_FIND = 'find';
+    /**
+     * Not "\": with the MySQL mode NO_BACKSLASH_ESCAPES, a backslash is neither the default escape character of LIKE
+     * nor can it be written as the same string literal in both modes.
+     */
+    private const string LIKE_PLACEHOLDER = ' LIKE ? ESCAPE \'!\'';
+    private const array LIKE_ESCAPE_MAP = ['!' => '!!', '%' => '!%', '_' => '!_'];
+    /** An unquoted column name must not consist of digits only; a "?" would be counted as a placeholder. */
+    private const string FIELD_NAME_PATTERN = '/^(`[^`?\s.]+`|[0-9a-z_$]*[a-z_$][0-9a-z_$]*)(\.(`[^`?\s.]+`|[0-9a-z_$]*[a-z_$][0-9a-z_$]*)){0,2}$/i';
     /** @var SearchHelper[] */
     private static array $instances = [];
     private string $sessionRootName = 'searchHelper';
@@ -37,92 +47,34 @@ class SearchHelper
     }
 
     /**
-     * @param array $filterArr : indexed array [ 'colName' => 'colValue', ... ]
+     * Builds the "WHERE" condition of table filters. Per column, the search text means:
+     * "." not empty, "_" empty or NULL, "\"text\"" equal to text, "*text*" contains text (spaces included).
+     * Otherwise, the words (separated by spaces or commas) are searched with LIKE: "-word" or "!word" must not be
+     * contained, "+word" must be contained, and at least one of the other words must be contained. A word or phrase
+     * in quotes (\"…\" or '…') is searched as a whole, \"…\" without an operator for equality. "*" is a wildcard,
+     * every other character (including "%" and "_") is searched literally.
      *
-     * @return DbQueryData
+     * @param array<string, string|int|float|null> $filterArr Column reference => search text. The column reference
+     *                                                         is a column name or an SQL expression (e.g.
+     *                                                         "CONCAT_WS(' ', a.firstName, a.lastName)") and must
+     *                                                         never contain user input.
+     *
+     * @throws InvalidArgumentException If a column reference is empty or contains a "?".
      */
     public static function createSQLFilters(array $filterArr): DbQueryData
     {
         $whereConditions = [];
         $sqlParams = [];
-
         foreach ($filterArr as $dataTableReference => $value) {
-            $dataTableReference = trim(string: $dataTableReference);
-            $value = trim(string: (string)$value);
-            if ($value === '') {
-                continue;
-            }
-            if ($value === '.') {
-                $whereConditions[] = '(' . $dataTableReference . '!=\'\' AND ' . $dataTableReference . ' IS NOT NULL)';
-                continue;
-            }
-            if ($value === '_') {
-                $whereConditions[] = '((' . $dataTableReference . '=\'\') OR (' . $dataTableReference . ' IS NULL))';
-                continue;
-            }
-            if (
-                mb_strlen(string: $value) > 2
-                && substr_count(haystack: $value, needle: '"') === 2
-                && str_starts_with(haystack: $value, needle: '"')
-                && str_ends_with(haystack: $value, needle: '"')
-            ) {
-                $whereConditions[] = $dataTableReference . '=?';
-                $sqlParams[] = substr(string: $value, offset: 1, length: -1);
-                continue;
-            }
-            $strToCheck = str_replace(search: '*', replace: '%', subject: $value);
-            if (
-                mb_strlen(string: $strToCheck) > 2
-                && substr_count(haystack: $strToCheck, needle: '%') === 2
-                && str_starts_with(haystack: $strToCheck, needle: '%')
-                && str_ends_with(haystack: $strToCheck, needle: '%')
-            ) {
-                $whereConditions[] = $dataTableReference . ' LIKE ?';
-                $sqlParams[] = $strToCheck;
-                continue;
-            }
-            $searchWords = preg_split(
-                pattern: "/[\s,]*([^\"]+)" . "[\s,]*'([^']+)'[\s,]*|" . "[\s,]+/",
-                subject: $value,
-                limit: -1,
-                flags: PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY
+            $columnFilter = SearchHelper::createColumnFilter(
+                column: SearchHelper::checkColumnExpression(column: trim(string: $dataTableReference)),
+                value: trim(string: (string)$value)
             );
-            $remainingLazySearchWords = [];
-            foreach ($searchWords as $word) {
-                if (
-                    str_starts_with(haystack: $word, needle: '!')
-                    || str_starts_with(haystack: $word, needle: '-')
-                ) {
-                    $word = substr(string: $word, offset: 1);
-                    $whereConditions[] = "((" . $dataTableReference . " NOT LIKE ?) OR " . $dataTableReference . " IS NULL)";
-                    $sqlParams[] = SearchHelper::addWildcardToString(string: $word);
-                    continue;
-                }
-                if (str_starts_with(haystack: $word, needle: '+')) {
-                    $word = substr(string: $word, offset: 1);
-                    $whereConditions[] = $dataTableReference . ' LIKE ?';
-                    $sqlParams[] = SearchHelper::addWildcardToString(string: $word);
-                    continue;
-                }
-                if (
-                    str_starts_with(haystack: $word, needle: '"')
-                    && str_ends_with(haystack: $word, needle: '"')
-                    && mb_strlen(string: $word) > 2
-                ) {
-                    $whereConditions[] = $dataTableReference . '=?';
-                    $sqlParams[] = substr(string: $word, offset: 1, length: -1);
-                    continue;
-                }
-                $remainingLazySearchWords[] = $word;
+            if ($columnFilter === null) {
+                continue;
             }
-            if (count(value: $remainingLazySearchWords) > 0) {
-                $tmpArr = [];
-                foreach ($remainingLazySearchWords as $word) {
-                    $tmpArr[] = $dataTableReference . ' LIKE ?';
-                    $sqlParams[] = SearchHelper::addWildcardToString(string: $word);
-                }
-                $whereConditions[] = '(' . implode(separator: ' OR ', array: $tmpArr) . ')';
-            }
+            $whereConditions[] = $columnFilter->query;
+            $sqlParams = [...$sqlParams, ...$columnFilter->params];
         }
         if (count(value: $whereConditions) === 0) {
             $whereConditions[] = '1=1';
@@ -131,6 +83,131 @@ class SearchHelper
         return new DbQueryData(query: implode(separator: ' AND ', array: $whereConditions), params: $sqlParams);
     }
 
+    private static function checkColumnExpression(string $column): string
+    {
+        if ($column === '' || str_contains(haystack: $column, needle: '?')) {
+            throw new InvalidArgumentException(
+                message: 'Invalid column reference "' . $column . '" for the filter. It must not be empty and must not'
+                . ' contain a "?", because it is not bound as a parameter.'
+            );
+        }
+
+        return $column;
+    }
+
+    private static function createColumnFilter(string $column, string $value): ?DbQueryData
+    {
+        if ($value === '') {
+            return null;
+        }
+        if ($value === '.') {
+            return new DbQueryData(query: '(' . $column . '!=\'\' AND ' . $column . ' IS NOT NULL)', params: []);
+        }
+        if ($value === '_') {
+            return new DbQueryData(query: '((' . $column . '=\'\') OR (' . $column . ' IS NULL))', params: []);
+        }
+        if (SearchHelper::isEnclosedIn(value: $value, character: '"')) {
+            return new DbQueryData(query: $column . '=?', params: [substr(string: $value, offset: 1, length: -1)]);
+        }
+        if (SearchHelper::isEnclosedIn(value: $value, character: '*')) {
+            return new DbQueryData(
+                query: $column . SearchHelper::LIKE_PLACEHOLDER,
+                params: [SearchHelper::createLikePattern(searchText: $value)]
+            );
+        }
+
+        return SearchHelper::createWordsFilter(column: $column, value: $value);
+    }
+
+    private static function isEnclosedIn(string $value, string $character): bool
+    {
+        return mb_strlen(string: $value) > 2
+            && substr_count(haystack: $value, needle: $character) === 2
+            && str_starts_with(haystack: $value, needle: $character)
+            && str_ends_with(haystack: $value, needle: $character);
+    }
+
+    private static function createWordsFilter(string $column, string $value): ?DbQueryData
+    {
+        $conditions = [];
+        $params = [];
+        $optionalConditions = [];
+        $optionalParams = [];
+        foreach (SearchHelper::splitFilterWords(value: $value) as $word) {
+            if (SearchHelper::isEnclosedIn(value: $word, character: '"')) {
+                $conditions[] = $column . '=?';
+                $params[] = substr(string: $word, offset: 1, length: -1);
+                continue;
+            }
+            $operator = $word[0];
+            $isMandatory = in_array(needle: $operator, haystack: ['!', '-', '+'], strict: true);
+            $word = SearchHelper::unquote(word: $isMandatory ? substr(string: $word, offset: 1) : $word);
+            if ($word === '') {
+                continue;
+            }
+            if (!$isMandatory) {
+                $optionalConditions[] = $column . SearchHelper::LIKE_PLACEHOLDER;
+                $optionalParams[] = SearchHelper::createLikePattern(searchText: $word);
+                continue;
+            }
+            $conditions[] = $operator === '+'
+                ? $column . SearchHelper::LIKE_PLACEHOLDER
+                : '((' . $column . ' NOT' . SearchHelper::LIKE_PLACEHOLDER . ') OR ' . $column . ' IS NULL)';
+            $params[] = SearchHelper::createLikePattern(searchText: $word);
+        }
+        if ($optionalConditions !== []) {
+            $conditions[] = '(' . implode(separator: ' OR ', array: $optionalConditions) . ')';
+        }
+
+        return $conditions === []
+            ? null
+            : new DbQueryData(
+                query: implode(separator: ' AND ', array: $conditions),
+                params: [...$params, ...$optionalParams]
+            );
+    }
+
+    /**
+     * Splits at spaces and commas. A phrase in double or single quotes (optionally after "!", "-" or "+") stays
+     * together if the quotes are at word boundaries, so an apostrophe like in "O'Neil" does not start a phrase.
+     *
+     * @return list<string>
+     */
+    private static function splitFilterWords(string $value): array
+    {
+        $words = preg_split(
+            pattern: '/(?<=^|[\s,])([-!+]?(?:"[^"]*"|\'[^\']*\'))(?=[\s,]|$)|[\s,]+/',
+            subject: $value,
+            flags: PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY
+        );
+
+        return $words === false ? [] : $words;
+    }
+
+    private static function unquote(string $word): string
+    {
+        $quote = $word[0] ?? '';
+        if (strlen(string: $word) < 2 || ($quote !== '"' && $quote !== '\'') || !str_ends_with(haystack: $word, needle: $quote)) {
+            return $word;
+        }
+
+        return substr(string: $word, offset: 1, length: -1);
+    }
+
+    /**
+     * "*" is a wildcard, everything else is escaped. The pattern matches anywhere unless the search text starts or
+     * ends with "*".
+     */
+    private static function createLikePattern(string $searchText): string
+    {
+        return (str_starts_with(haystack: $searchText, needle: '*') ? '' : '%')
+            . strtr(string: $searchText, from: [...SearchHelper::LIKE_ESCAPE_MAP, '*' => '%'])
+            . (str_ends_with(haystack: $searchText, needle: '*') ? '' : '%');
+    }
+
+    /**
+     * @deprecated "%" and "_" in the string are not escaped and act as wildcards. createSQLFilters() no longer uses it.
+     */
     public static function addWildcardToString(string $string): string
     {
         $string = str_replace(search: ['*'], replace: ['%'], subject: $string);
@@ -139,6 +216,160 @@ class SearchHelper
         return !str_ends_with(haystack: $string, needle: '%') ? $string . '%' : $string;
     }
 
+    /**
+     * Builds a parameterized "WHERE" condition for a boolean search over one or more fields: every word or
+     * "quoted phrase" must be contained in at least one of the fields. Words are combined with OR by default;
+     * "and", "or" and "not" (or the shorthands "+word" and "-word") before a word change that. The search is
+     * case-insensitive (the words are lowercased). Every character, including "?", "%", "_" and "\", is searched literally.
+     *
+     * Usage: $dbQuery->addWherePart(wherePart: $data->query, parameters: $data->params);
+     *
+     * @param string $spaceSeparatedFieldNames Column names, optionally qualified ("table.column") or quoted with
+     *                                          backticks. Never pass user input.
+     *
+     * @throws InvalidArgumentException If no field name is given or a field name is not a valid column name.
+     */
+    #[NoDiscard]
+    public static function createBooleanQuery(string $spaceSeparatedFieldNames, string $queryText): DbQueryData
+    {
+        $fieldNames = SearchHelper::parseFieldNames(spaceSeparatedFieldNames: $spaceSeparatedFieldNames);
+        $terms = strip_tags(string: trim(string: $queryText))
+            |> (static fn(string $text): string => mb_strtolower(string: $text, encoding: 'UTF-8'))
+            |> SearchHelper::tokenizeSearchText(...)
+            |> SearchHelper::parseSearchTerms(...);
+        if ($terms === []) {
+            return new DbQueryData(query: '1=1', params: []);
+        }
+        $conditions = '';
+        $parameters = [];
+        foreach ($terms as $index => $term) {
+            $conditions .= ($index === 0 ? '' : $term['operator']->sqlConnector());
+            $conditions .= SearchHelper::createWordCondition(
+                fieldNames: $fieldNames,
+                negated: $term['operator']->isNegated()
+            );
+            $likePattern = '%' . strtr(string: $term['word'], from: SearchHelper::LIKE_ESCAPE_MAP) . '%';
+            $parameters = [
+                ...$parameters,
+                ...array_fill(start_index: 0, count: count(value: $fieldNames), value: $likePattern),
+            ];
+        }
+
+        return new DbQueryData(query: '(' . $conditions . ')', params: $parameters);
+    }
+
+    /**
+     * @return non-empty-list<string>
+     */
+    private static function parseFieldNames(string $spaceSeparatedFieldNames): array
+    {
+        $fieldNames = preg_split(
+            pattern: '/\s+/',
+            subject: trim(string: $spaceSeparatedFieldNames),
+            flags: PREG_SPLIT_NO_EMPTY
+        );
+        if ($fieldNames === false || $fieldNames === []) {
+            throw new InvalidArgumentException(message: 'At least one field name is required for the boolean search.');
+        }
+        foreach ($fieldNames as $fieldName) {
+            if (preg_match(pattern: SearchHelper::FIELD_NAME_PATTERN, subject: $fieldName) !== 1) {
+                throw new InvalidArgumentException(
+                    message: 'Invalid field name "' . $fieldName . '" for the boolean search. Use column names like'
+                    . ' "name", "table.name" or "`table`.`name`".'
+                );
+            }
+        }
+
+        return $fieldNames;
+    }
+
+    /**
+     * Splits the text at spaces outside of double quotes. The quotes themselves are removed. "quoted" tells whether
+     * the token starts within quotes, so a quoted "and" or "-word" is searched literally.
+     *
+     * @return list<array{text: string, quoted: bool}>
+     */
+    private static function tokenizeSearchText(string $text): array
+    {
+        $tokens = [];
+        $buffer = '';
+        $startsQuoted = false;
+        $insideQuotes = false;
+        $length = strlen(string: $text);
+        for ($position = 0; $position < $length; $position++) {
+            $character = $text[$position];
+            if ($character === '"') {
+                $insideQuotes = !$insideQuotes;
+                continue;
+            }
+            if ($character === ' ' && !$insideQuotes) {
+                $tokens[] = ['text' => $buffer, 'quoted' => $startsQuoted];
+                $buffer = '';
+                continue;
+            }
+            if ($buffer === '') {
+                $startsQuoted = $insideQuotes;
+            }
+            $buffer .= $character;
+        }
+        $tokens[] = ['text' => $buffer, 'quoted' => $startsQuoted];
+
+        return $tokens;
+    }
+
+    /**
+     * An operator before the first word is searched as a word, an operator without a following word is ignored.
+     *
+     * @param list<array{text: string, quoted: bool}> $tokens
+     *
+     * @return list<array{word: string, operator: BooleanSearchOperatorEnum}>
+     */
+    private static function parseSearchTerms(array $tokens): array
+    {
+        $terms = [];
+        $pendingOperator = null;
+        foreach ($tokens as $token) {
+            $word = $token['text'];
+            if (trim(string: $word) === '') {
+                continue;
+            }
+            if ($terms !== [] && $pendingOperator === null && !$token['quoted']) {
+                $pendingOperator = BooleanSearchOperatorEnum::tryFrom(value: trim(string: $word));
+                if ($pendingOperator !== null) {
+                    continue;
+                }
+                $pendingOperator = BooleanSearchOperatorEnum::tryFromShorthand(character: $word[0]);
+                $word = $pendingOperator === null ? $word : substr(string: $word, offset: 1);
+                if (trim(string: $word) === '') {
+                    continue;
+                }
+            }
+            $terms[] = ['word' => $word, 'operator' => $pendingOperator ?? BooleanSearchOperatorEnum::OR];
+            $pendingOperator = null;
+        }
+
+        return $terms;
+    }
+
+    /**
+     * @param non-empty-list<string> $fieldNames
+     */
+    private static function createWordCondition(array $fieldNames, bool $negated): string
+    {
+        $likeConditions = array_map(
+            callback: static fn(string $fieldName): string => $fieldName . SearchHelper::LIKE_PLACEHOLDER,
+            array: $fieldNames
+        );
+        $condition = '(' . implode(separator: ' OR ', array: $likeConditions) . ')';
+
+        return $negated ? '(NOT ' . $condition . ')' : $condition;
+    }
+
+    /**
+     * @deprecated Use SearchHelper::createBooleanQuery() and pass its params to the query. This method interpolates
+     *             the search words into the SQL: a "?" in the search text breaks DbQuery::addWherePart() (placeholder
+     *             count mismatch), "%" and "_" act as wildcards, and backslashes are removed from the search text.
+     */
     public function getBooleanQuery(string $spaceSeparatedFieldNames, string $query_text, $splitFields = true): string
     {
         $clean_query_text = $this->cleanQuery(string: $query_text);
@@ -501,39 +732,65 @@ class SearchHelper
         }
     }
 
+    /**
+     * Every word or quoted phrase must be contained in at least one of the columns. "%" and "_" are searched
+     * literally.
+     *
+     * @param list<string> $columns Column names, optionally qualified ("table.column"). They are validated and
+     *                              quoted with backticks. Never pass user input.
+     *
+     * @return array{sql: string, params: list<string>, searchWords: list<string>}
+     *
+     * @throws InvalidArgumentException If no column is given or a column name is invalid.
+     */
     public function createSQLSearch(string $string, array $columns): array
     {
+        if ($columns === []) {
+            throw new InvalidArgumentException(message: 'At least one column is required for the search.');
+        }
+        $likeConditions = array_map(
+            callback: static fn(string $column): string => SearchHelper::quoteColumnName(column: $column)
+                . SearchHelper::LIKE_PLACEHOLDER,
+            array: $columns
+        );
         $searchWords = preg_split(
             pattern: "/[\s,]*\"([^\"]+)\"[\s,]*|" . "[\s,]*'([^']+)'[\s,]*|" . "[\s,]+/",
             subject: $string,
-            limit: -1,
             flags: PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY
         );
-        $searchWordsQuery = [];
-
-        foreach ($searchWords as $sw) {
-            $searchWordsQuery[] = trim(string: $sw);
+        $searchWords = $searchWords === false ? [] : $searchWords;
+        $conditions = [];
+        $params = [];
+        foreach ($searchWords as $searchWord) {
+            $conditions[] = '(' . implode(separator: ' OR ', array: $likeConditions) . ')';
+            $likePattern = '%' . strtr(string: trim(string: $searchWord), from: SearchHelper::LIKE_ESCAPE_MAP) . '%';
+            $params = [...$params, ...array_fill(start_index: 0, count: count(value: $columns), value: $likePattern)];
         }
-
-        $conds = $params = [];
-        foreach ($searchWordsQuery as $sw) {
-            $condsCol = [];
-
-            foreach ($columns as $cs) {
-                $condsCol[] = "`" . $cs . "` LIKE ?";
-                $params[] = '%' . $sw . '%';
-            }
-
-            $conds[] = '(' . implode(separator: ' OR ', array: $condsCol) . ')';
-        }
-        $sql = (count(value: $conds) == 0) ? '' : '(' . implode(separator: ' AND ', array: $conds) . ')';
 
         return [
-            'sql' => $sql
-            ,
-            'params' => $params
-            ,
+            'sql' => $conditions === [] ? '' : '(' . implode(separator: ' AND ', array: $conditions) . ')',
+            'params' => $params,
             'searchWords' => $searchWords,
         ];
+    }
+
+    private static function quoteColumnName(string $column): string
+    {
+        if (preg_match(pattern: SearchHelper::FIELD_NAME_PATTERN, subject: $column) !== 1) {
+            throw new InvalidArgumentException(
+                message: 'Invalid column name "' . $column . '" for the search. Use column names like "name",'
+                . ' "table.name" or "`table`.`name`".'
+            );
+        }
+
+        return implode(
+            separator: '.',
+            array: array_map(
+                callback: static fn(string $part): string => str_starts_with(haystack: $part, needle: '`')
+                    ? $part
+                    : '`' . $part . '`',
+                array: explode(separator: '.', string: $column)
+            )
+        );
     }
 }
