@@ -4,6 +4,17 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v3.3.1] – 2026-10-04
+
+### 🎨 HTML & CSS (Frontend)
+
+* **Form Rendering:**
+    * 🩹 **Fixed (security):** `PasswordField` no longer renders the posted password back into the `value` attribute
+      when a form is shown again (e.g. with validation errors), so it cannot end up in the page source or caches.
+      The posted value is still available via `getValueAsString()`; the user has to type the password again.
+
+---
+
 ## [v3.3.0] – 2026-10-04
 
 ### ⚙️ Backend & API

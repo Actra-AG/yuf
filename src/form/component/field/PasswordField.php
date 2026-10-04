@@ -34,4 +34,13 @@ class PasswordField extends InputField
         );
         $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
     }
+
+    /**
+     * A password is never rendered back into the HTML (e.g. when the form is shown again with validation errors),
+     * so it cannot end up in the page source, browser caches or logs.
+     */
+    public function renderValue(): string
+    {
+        return '';
+    }
 }

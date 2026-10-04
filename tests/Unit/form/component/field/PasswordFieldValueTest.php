@@ -57,4 +57,23 @@ final class PasswordFieldValueTest extends TestCase
         $this->assertFalse($isValid);
         $this->assertSame('', $field->getRawValue());
     }
+
+    public function testPostedPasswordIsNotRendered(): void
+    {
+        $field = $this->createField();
+
+        $field->validate(inputData: ['password' => 'secret']);
+
+        $this->assertSame('', $field->renderValue());
+        $this->assertSame('secret', $field->getValueAsString());
+    }
+
+    public function testPostedPasswordIsNotInRenderedHtml(): void
+    {
+        $field = $this->createField();
+
+        $field->validate(inputData: ['password' => 'secret']);
+
+        $this->assertStringNotContainsString('secret', (string)$field->getHtmlTag()?->render());
+    }
 }
