@@ -10,6 +10,7 @@ namespace actra\yuf\tests\Unit\form;
 
 use actra\yuf\form\FormInput;
 use actra\yuf\form\InputShapeEnum;
+use actra\yuf\form\model\UploadInput;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
@@ -161,5 +162,182 @@ final class FormInputTest extends TestCase
         $input = FormInput::fromArray(data: [], query: ['field' => 'a']);
 
         $this->assertSame(InputShapeEnum::MISSING, $input->getShape(name: 'field'));
+    }
+
+    /**
+     * @return array<string, string|int>
+     */
+    private static function singleFile(): array
+    {
+        return ['name' => 'a.txt', 'type' => 'text/plain', 'tmp_name' => '/tmp/php1', 'error' => 0, 'size' => 5];
+    }
+
+    public function testSingleUploadIsNarrowedToOneUploadInput(): void
+    {
+        $input = FormInput::fromArray(data: [], files: ['file' => FormInputTest::singleFile()]);
+
+        $this->assertEquals(
+            [new UploadInput(name: 'a.txt', tmpName: '/tmp/php1', type: 'text/plain', error: 0, size: 5)],
+            $input->getUploads(name: 'file')
+        );
+        $this->assertFalse($input->hasMalformedUpload(name: 'file'));
+    }
+
+    public function testMultipleUploadsAreNarrowedInTheOrderOfTheNames(): void
+    {
+        $input = FormInput::fromArray(
+            data: [],
+            files: [
+                'file' => [
+                    'name' => ['a.txt', 'b.txt'],
+                    'type' => ['text/plain', 'image/png'],
+                    'tmp_name' => ['/tmp/php1', '/tmp/php2'],
+                    'error' => [0, UPLOAD_ERR_PARTIAL],
+                    'size' => [5, 6],
+                ],
+            ]
+        );
+
+        $this->assertEquals(
+            [
+                new UploadInput(name: 'a.txt', tmpName: '/tmp/php1', type: 'text/plain', error: 0, size: 5),
+                new UploadInput(name: 'b.txt', tmpName: '/tmp/php2', type: 'image/png', error: 3, size: 6),
+            ],
+            $input->getUploads(name: 'file')
+        );
+    }
+
+    public function testUploadsWithStringKeysAreNarrowed(): void
+    {
+        $input = FormInput::fromArray(
+            data: [],
+            files: [
+                'file' => [
+                    'name' => ['x' => 'a.txt'],
+                    'type' => ['x' => 'text/plain'],
+                    'tmp_name' => ['x' => '/tmp/php1'],
+                    'error' => ['x' => 0],
+                    'size' => ['x' => 5],
+                ],
+            ]
+        );
+
+        $this->assertCount(1, $input->getUploads(name: 'file'));
+    }
+
+    public function testUploadWithoutEntriesIsValidAndEmpty(): void
+    {
+        $input = FormInput::fromArray(
+            data: [],
+            files: ['file' => ['name' => [], 'type' => [], 'tmp_name' => [], 'error' => [], 'size' => []]]
+        );
+
+        $this->assertSame([], $input->getUploads(name: 'file'));
+        $this->assertFalse($input->hasMalformedUpload(name: 'file'));
+    }
+
+    public function testNameAndTypeOfAnUploadAreTrimmed(): void
+    {
+        $input = FormInput::fromArray(
+            data: [],
+            files: ['file' => ['name' => " a.txt\n", 'type' => ' text/plain '] + FormInputTest::singleFile()]
+        );
+
+        $upload = $input->getUploads(name: 'file')[0];
+        $this->assertSame('a.txt', $upload->name);
+        $this->assertSame('text/plain', $upload->type);
+    }
+
+    public function testNameThatIsNotAnUploadHasNone(): void
+    {
+        $input = FormInput::fromArray(data: [], files: ['file' => FormInputTest::singleFile()]);
+
+        $this->assertSame([], $input->getUploads(name: 'other'));
+        $this->assertFalse($input->hasMalformedUpload(name: 'other'));
+    }
+
+    public function testNumericInputNamesAreReadByTheirStringName(): void
+    {
+        $input = FormInput::fromArray(data: [], files: [7 => FormInputTest::singleFile()]);
+
+        $this->assertCount(1, $input->getUploads(name: '7'));
+    }
+
+    public function testDataWithTheSameNameIsNoUpload(): void
+    {
+        $input = FormInput::fromArray(data: ['file' => 'posted'], files: ['file' => FormInputTest::singleFile()]);
+
+        $this->assertSame([], $input->getUploads(name: 'file'));
+        $this->assertFalse($input->hasMalformedUpload(name: 'file'));
+    }
+
+    /**
+     * @return iterable<string, array{mixed}>
+     */
+    public static function noUploadProvider(): iterable
+    {
+        yield 'text' => ['x'];
+        yield 'int' => [3];
+        yield 'null' => [null];
+        yield 'list of texts' => [['x', 'y']];
+        yield 'array without upload keys' => [['x' => 'y']];
+        yield 'nested array' => [[['x']]];
+    }
+
+    #[DataProvider('noUploadProvider')]
+    public function testValueThatIsNotBuiltLikeAnUploadIsIgnored(mixed $value): void
+    {
+        $input = FormInput::fromArray(data: [], files: ['file' => $value]);
+
+        $this->assertSame([], $input->getUploads(name: 'file'));
+        $this->assertFalse($input->hasMalformedUpload(name: 'file'));
+    }
+
+    /**
+     * @return iterable<string, array{array<array-key, mixed>}>
+     */
+    public static function malformedUploadProvider(): iterable
+    {
+        $multiple = [
+            'name' => ['a.txt'],
+            'type' => ['text/plain'],
+            'tmp_name' => ['/tmp/php1'],
+            'error' => [0],
+            'size' => [5],
+        ];
+        yield 'only one key' => [['name' => 'a.txt']];
+        yield 'single without size' => [array_diff_key(FormInputTest::singleFile(), ['size' => 1])];
+        yield 'single with string error' => [['error' => '0'] + FormInputTest::singleFile()];
+        yield 'single with string size' => [['size' => '5'] + FormInputTest::singleFile()];
+        yield 'single with list type' => [['type' => ['text/plain']] + FormInputTest::singleFile()];
+        yield 'single with null name' => [['name' => null] + FormInputTest::singleFile()];
+        yield 'nested names' => [['name' => [['a.txt']]] + $multiple];
+        yield 'name list, scalar column' => [['size' => 5] + $multiple];
+        yield 'column is missing' => [array_diff_key($multiple, ['tmp_name' => 1])];
+        yield 'column has more entries' => [['size' => [5, 6]] + $multiple];
+        yield 'column has other keys' => [['size' => [3 => 5]] + $multiple];
+        yield 'string error' => [['error' => ['0']] + $multiple];
+        yield 'null size' => [['size' => [null]] + $multiple];
+        yield 'int name' => [['name' => [5]] + $multiple];
+        yield 'object' => [['name' => new stdClass()] + FormInputTest::singleFile()];
+    }
+
+    /**
+     * @param array<array-key, mixed> $value
+     */
+    #[DataProvider('malformedUploadProvider')]
+    public function testMalformedUploadIsReportedAndHasNoUploads(array $value): void
+    {
+        $input = FormInput::fromArray(data: [], files: ['file' => $value]);
+
+        $this->assertTrue($input->hasMalformedUpload(name: 'file'));
+        $this->assertSame([], $input->getUploads(name: 'file'));
+    }
+
+    public function testUploadsAreStillReadAsInputShapes(): void
+    {
+        $input = FormInput::fromArray(data: [], files: ['file' => FormInputTest::singleFile()]);
+
+        $this->assertSame(InputShapeEnum::INVALID, $input->getShape(name: 'file'));
     }
 }

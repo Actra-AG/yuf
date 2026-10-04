@@ -8,90 +8,81 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
-use DirectoryIterator;
-use actra\yuf\datacheck\Sanitizer;
 use actra\yuf\form\component\FormField;
+use actra\yuf\form\FormInput;
 use actra\yuf\form\FormRenderer;
-use actra\yuf\form\model\FileDataModel;
+use actra\yuf\form\model\UploadedFile;
+use actra\yuf\form\model\UploadInput;
 use actra\yuf\form\renderer\FileFieldRenderer;
 use actra\yuf\form\rule\RequiredRule;
+use actra\yuf\form\upload\FileUploadStorage;
+use actra\yuf\form\upload\SessionFileUploadStorage;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
+use LogicException;
 
-class FileField extends FormField
+/**
+ * Uploads one or several files. The value is the list of the files uploaded so far (`getFiles()`, key = hash of the
+ * stored path), kept in a `FileUploadStorage` between the requests of the form, so a failed validation does not make
+ * the user upload the files again. The field has no setter: files only come in with the request.
+ */
+final class FileField extends FormField
 {
-    public const string VALUE_NAME = 'name';
-    public const string VALUE_TMP_NAME = 'tmp_name';
-    public const string VALUE_TYPE = 'type';
-    public const string VALUE_ERROR = 'error';
-    public const string VALUE_SIZE = 'size';
-
-    // Hint: We need searchable Strings outside this class, therefore please do NOT insert dynamic Strings into them:
-    public const string ERRMSG_FILE_EMPTY = 'Die Datei war leer: ';
-    public const string ERRMSG_FILE_INCOMPLETE = 'Die Datei wurde unvollständig hochgeladen: ';
-    public const string ERRMSG_FILE_TOO_BIG = 'Die Datei war zu gross: ';
-    public const string ERRMSG_FILE_TECHERROR = 'Es ist ein technischer Fehler beim Hochladen der Datei aufgetreten: ';
-
     private(set) string $uniqueSessFileStorePointer;
-    private HtmlText $tooManyFilesErrMsg;
-    private HtmlText $alreadyExistsErrorMessage;
+    private readonly FileUploadStorage $storage;
+    /** @var array<string, UploadedFile> */
+    private array $files = [];
     private ?string $deleteFileHash = null;
 
     /**
-     * @param string $name
-     * @param HtmlText $label
-     * @param HtmlText|null $requiredError NULL, if file upload is not required, otherwise the error message if no file was uploaded
+     * @param HtmlText|null $requiredError NULL, if file upload is not required, otherwise the error message if no
+     *                                     file was uploaded
      * @param int $maxFileUploadCount Maximal amount of allowed files (1 by default) with that field
-     * @param ?HtmlText $tooManyFilesErrMsg Individual error message if more than allowed amount of files are uploaded. Placeholder [max] will be replaced
-     *                                          by the max amount.
-     * @param HtmlText|null $alreadyExistsErrorMessage
+     * @param ?HtmlText $tooManyFilesErrMsg Individual error message if more than allowed amount of files are uploaded.
+     *                                      Placeholder [max] will be replaced by the max amount. Default:
+     *                                      `FormMessages::tooManyFiles`
+     * @param HtmlText|null $alreadyExistsErrorMessage Individual error message if a file with that name has been
+     *                                                 uploaded already. Placeholder [fileName]. Default:
+     *                                                 `FormMessages::duplicateFile`
+     * @param ?FileUploadStorage $storage Where the files are kept between the requests (default: session and temp
+     *                                    directory)
      */
     public function __construct(
         string $name,
         HtmlText $label,
         ?HtmlText $requiredError = null,
         private(set) int $maxFileUploadCount = 1,
-        ?HtmlText $tooManyFilesErrMsg = null,
-        ?HtmlText $alreadyExistsErrorMessage = null
+        private readonly ?HtmlText $tooManyFilesErrMsg = null,
+        private readonly ?HtmlText $alreadyExistsErrorMessage = null,
+        ?FileUploadStorage $storage = null
     ) {
         if ($this->maxFileUploadCount < 1) {
             $this->maxFileUploadCount = 1; // Silent correction
         }
-        $this->uniqueSessFileStorePointer = $this->sanitizeUniqueID(
-            uid: uniqid(
+        $this->storage = $storage ?? SessionFileUploadStorage::forCurrentRequest();
+        $this->uniqueSessFileStorePointer = $this->sanitizePointer(
+            pointer: uniqid(
                 prefix: $name . '__',
                 more_entropy: true
             )
         );
-        $this->tooManyFilesErrMsg = is_null(value: $tooManyFilesErrMsg) ? HtmlText::encoded(
-            textContent: 'Nur [max] Datei(en) möglich.'
-        ) : $tooManyFilesErrMsg;
-        $this->alreadyExistsErrorMessage = is_null(value: $alreadyExistsErrorMessage) ? HtmlText::encoded(
-            textContent: 'Es wurde bereits eine Datei mit dem Dateinamen "[fileName]" hochgeladen.'
-        ) : $alreadyExistsErrorMessage;
-        // To always handle value internally as an array, we force an empty array on initialization
         parent::__construct(
             name: $name,
             label: $label,
-            value: [],
             labelInfoText: $this->maxFileUploadCount === 1 ? null : HtmlText::encoded(
                 textContent: '(max. ' . $this->maxFileUploadCount . ')'
             )
         );
-        if (!is_null(value: $requiredError)) {
+        if ($requiredError !== null) {
             $this->addRule(formRule: new RequiredRule(defaultErrorMessage: $requiredError));
         }
     }
 
-    private function sanitizeUniqueID(string $uid): string
+    private function sanitizePointer(string $pointer): string
     {
         // We do not allow dangerous characters in the pointer, as it will become part of a filesystem path;
         // And we want to easily detect these later in the external input:
-        return preg_replace(
-            pattern: '/[^a-zA-Z\d_]/',
-            replacement: '',
-            subject: $uid
-        );
+        return preg_replace(pattern: '/[^a-zA-Z\d_]/', replacement: '', subject: $pointer) ?? '';
     }
 
     public function getDefaultRenderer(): FormRenderer
@@ -100,324 +91,293 @@ class FileField extends FormField
     }
 
     /**
-     * @param array $inputData : Raw inputData
-     * @param bool $overwriteValue : Overwrite current value by value from inputData (true by default)
+     * The files uploaded so far, by hash (`UploadedFile::getHash()`).
      *
-     * @return bool
+     * @return array<string, UploadedFile>
      */
-    public function validate(array $inputData, bool $overwriteValue = true): bool
+    public function getFiles(): array
     {
-        if ($overwriteValue) {
-            // Remove all temporary files older than 2 days
-            $this->removeOldFiles();
-            // The following two checks must be done before parent::validate() to have the required data available
-            if (array_key_exists(key: $this->name . '_UID', array: $inputData) && is_scalar(
-                    value: $inputData[$this->name . '_UID']
-                )) {
-                $receivedUid = Sanitizer::trimmedString(input: $inputData[$this->name . '_UID']);
-                // If that value is tampered by a "black-hat hacker", he should just grab securely into an "empty bowl".
-                // Therefore, we look for only allowed characters given in sanitizeUniqueID():
-                $cleanedUid = $this->sanitizeUniqueID(uid: $receivedUid);
-                if ($receivedUid === $cleanedUid) {
-                    // ONLY THEN take it:
-                    $this->uniqueSessFileStorePointer = $cleanedUid;
-                }
-            }
-            if (array_key_exists(key: $this->name . '_removeAttachment', array: $inputData) && is_scalar(
-                    value: $inputData[$this->name . '_removeAttachment']
-                )) {
-                // Referenced usage at FileFieldRenderer::prepare()
-                $this->deleteFileHash = Sanitizer::trimmedString(
-                    input: $inputData[$this->name . '_removeAttachment']
-                );
-            }
-        }
-
-        return parent::validate(inputData: $inputData, overwriteValue: $overwriteValue);
+        return $this->files;
     }
 
     /**
-     * Remove all temporary data older than 2 days
+     * Reads the request: removes the old files of all forms, takes over the pointer of the form, removes the file the
+     * user asked to remove and adds the new uploads. Manipulated upload data adds one error and the rules do not run;
+     * the files uploaded before stay. Texts, lists and invalid values posted under the name of the field are ignored.
      */
-    public function removeOldFiles(): void
+    private function readInput(FormInput $input): void
     {
-        /** @var DirectoryIterator $item */
-        foreach (new DirectoryIterator(directory: $this->getTempRootDirectory()) as $item) {
-            if ($item->isDot()) {
-                continue;
-            }
-            if ($item->isDir() && $item->getMTime() < time() - (60 * 60 * 24 * 2 /* 2 days */)) {
-                $this->removeDirectory(path: $item->getPathname());
-            }
+        $this->storage->removeExpired();
+        $this->readPointer(input: $input);
+        $this->readRemoveRequest(input: $input);
+        $files = $this->removeRequestedFile(
+            files: $this->storage->load(pointer: $this->uniqueSessFileStorePointer)
+        );
+        if ($input->hasMalformedUpload(name: $this->name)) {
+            $this->rejectInput(errorMessage: $this->messages->invalidInput);
+        } else {
+            $files = $this->addUploads(files: $files, uploads: $input->getUploads(name: $this->name));
+        }
+        $this->files = $files;
+        $this->storage->save(pointer: $this->uniqueSessFileStorePointer, files: $files);
+    }
+
+    /**
+     * Takes the pointer of the files from the form. If that value is tampered by a "black-hat hacker", he should just
+     * grab securely into an "empty bowl", therefore only a pointer with allowed characters is taken.
+     */
+    private function readPointer(FormInput $input): void
+    {
+        $receivedPointer = trim(string: $input->getText(name: $this->name . '_UID') ?? '');
+        if ($receivedPointer !== '' && $this->sanitizePointer(pointer: $receivedPointer) === $receivedPointer) {
+            $this->uniqueSessFileStorePointer = $receivedPointer;
         }
     }
 
     /**
-     * Returns the path to the root directory to store the temporary files
-     * If directory does not exist, it will be created
-     *
-     * @return string
+     * Referenced usage at `FileFieldRenderer::prepare()`
      */
-    private function getTempRootDirectory(): string
+    private function readRemoveRequest(FormInput $input): void
     {
-        $rootDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $_SERVER['SERVER_NAME'];
-        if (!is_dir(filename: $rootDirectory)) {
-            mkdir(directory: $rootDirectory);
+        $hash = $input->getText(name: $this->name . '_removeAttachment');
+        if ($hash !== null) {
+            $this->deleteFileHash = trim(string: $hash);
         }
-
-        return $rootDirectory;
     }
 
     /**
-     * Remove a directory and all files in it
-     *
-     * @param string $path
+     * @param array<string, UploadedFile> $files
+     * @return array<string, UploadedFile>
      */
-    private function removeDirectory(string $path): void
+    private function removeRequestedFile(array $files): array
     {
-        /** @var DirectoryIterator $item */
-        foreach (new DirectoryIterator(directory: $path) as $item) {
-            if ($item->isFile()) {
-                unlink(filename: $item->getPathname());
-            }
+        if ($this->deleteFileHash === null || !array_key_exists(key: $this->deleteFileHash, array: $files)) {
+            return $files;
         }
-        rmdir(directory: $path);
+        $this->storage->delete(file: $files[$this->deleteFileHash]);
+        unset($files[$this->deleteFileHash]);
+
+        return $files;
     }
 
     /**
-     * @param null|array $value Array with additional (uploaded) files to be added
+     * @param array<string, UploadedFile> $files
+     * @param list<UploadInput> $uploads
+     * @return array<string, UploadedFile> The files including the new ones, or the same files if there are too many
      */
-    public function setValue($value = []): void
+    private function addUploads(array $files, array $uploads): array
     {
-        // Always respect already uploaded files when (re)setting the value
-        $fileArray = $this->getAlreadyUploadedFiles();
-        // Remove an already uploaded file, if requested
-        if (!is_null(value: $this->deleteFileHash) && array_key_exists(key: $this->deleteFileHash, array: $fileArray)) {
-            if (file_exists(filename: $fileArray[$this->deleteFileHash]->tmp_name)) {
-                unlink(filename: $fileArray[$this->deleteFileHash]->tmp_name);
-            }
-            unset($fileArray[$this->deleteFileHash]);
-        }
-        // Add new (uploaded) files to fileArray
-        if (is_array(value: $value)) {
-            $fileArray = $this->addFilesFromDataArray(originalFileArray: $fileArray, addFileArray: $value);
-        }
-        // Store new fileArray to session and current field value
-        parent::setValue(value: $_SESSION[$this->uniqueSessFileStorePointer] = $fileArray);
-    }
-
-    /**
-     * Get an array with all already uploaded files. Automatically removes files not existing (anymore) in file system.
-     *
-     * @return FileDataModel[]
-     */
-    private function getAlreadyUploadedFiles(): array
-    {
-        $usfsp = $this->uniqueSessFileStorePointer;
-        if (!array_key_exists(key: $usfsp, array: $_SESSION)) {
-            return $_SESSION[$usfsp] = [];
-        }
-
-        /** @var FileDataModel $fileDataModel */
-        foreach ($_SESSION[$usfsp] as $hash => $fileDataModel) {
-            if (!file_exists(filename: $fileDataModel->tmp_name)) {
-                unset($_SESSION[$usfsp][$hash]);
-            }
-        }
-
-        return $_SESSION[$usfsp];
-    }
-
-    /**
-     * @param FileDataModel[] $originalFileArray
-     * @param array $addFileArray
-     *
-     * @return array
-     */
-    private function addFilesFromDataArray(array $originalFileArray, array $addFileArray): array
-    {
-        // Check if the data is available in the expected form
-        if (
-            !array_key_exists(key: FileField::VALUE_NAME, array: $addFileArray)
-            || !array_key_exists(key: FileField::VALUE_TMP_NAME, array: $addFileArray)
-            || !array_key_exists(key: FileField::VALUE_TYPE, array: $addFileArray)
-            || !array_key_exists(key: FileField::VALUE_ERROR, array: $addFileArray)
-            || !array_key_exists(key: FileField::VALUE_SIZE, array: $addFileArray)
-        ) {
-            return $originalFileArray;
-        }
-        // Convert input data into an array of fileData objects
-        $convertedMultiFileArray = $this->convertMultiFileArray(filesArr: $addFileArray);
-        // If new amount of files exceeds the limit, we add error and return the originalFileArray
-        if ((count(value: $originalFileArray) + count(value: $convertedMultiFileArray)) > $this->maxFileUploadCount) {
-            $this->addError(
-                errorMessage: str_replace(
-                    search: '[max]',
-                    replace: (string)$this->maxFileUploadCount,
-                    subject: $this->tooManyFilesErrMsg->render()
-                ),
-                isEncodedForRendering: true
+        // An entry without a file represents "no file selected"
+        $newUploads = array_filter(
+            array: $uploads,
+            callback: static fn(UploadInput $upload): bool => $upload->error !== UPLOAD_ERR_NO_FILE
+        );
+        if (count(value: $files) + count(value: $newUploads) > $this->maxFileUploadCount) {
+            $this->addErrorAsHtmlTextObject(
+                errorMessageObject: $this->buildMessage(
+                    individualMessage: $this->tooManyFilesErrMsg,
+                    defaultMessage: $this->messages->tooManyFiles,
+                    placeholder: '[max]',
+                    replacement: (string)$this->maxFileUploadCount
+                )
             );
 
-            return $originalFileArray;
+            return $files;
         }
-        $existingFileNames = [];
-        foreach ($originalFileArray as $fileDataModel) {
-            $existingFileNames[] = $fileDataModel->name;
-        }
-        $newFileArray = $originalFileArray;
-        foreach ($convertedMultiFileArray as $fileDataModel) {
-            $encodedFileName = HtmlEncoder::encode(value: $fileDataModel->name);
-            // If upload was okay:
-            if ($fileDataModel->error === UPLOAD_ERR_OK) {
-                if (in_array(needle: $fileDataModel->name, haystack: $existingFileNames)) {
-                    $this->addError(
-                        errorMessage: str_replace(
-                            search: '[fileName]',
-                            replace: $encodedFileName,
-                            subject: $this->alreadyExistsErrorMessage->render()
-                        ),
-                        isEncodedForRendering: true
-                    );
-                    continue;
-                }
-
-                // Special case from LIVE/PROD:
-                if ($fileDataModel->size === 0) {
-                    $this->addError(
-                        errorMessage: FileField::ERRMSG_FILE_EMPTY . $encodedFileName,
-                        isEncodedForRendering: true
-                    );
-                    continue;
-                }
-                $fileDataModel = $this->saveNewFile(fileDataModel: $fileDataModel);
-                // Usage of sha1 is safe here
-                $hash = sha1(string: $fileDataModel->tmp_name);
-                $newFileArray[$hash] = $fileDataModel;
-                $existingFileNames[] = $fileDataModel->name;
-                continue;
+        foreach ($newUploads as $upload) {
+            $file = $this->acceptUpload(upload: $upload, files: $files);
+            if ($file !== null) {
+                $files[$file->getHash()] = $file;
             }
-            // Anything other are errors
-            switch ($fileDataModel->error) {
-                case UPLOAD_ERR_INI_SIZE:
-                case UPLOAD_ERR_FORM_SIZE:
-                    $this->addError(
-                        errorMessage: FileField::ERRMSG_FILE_TOO_BIG . $encodedFileName,
-                        isEncodedForRendering: true
-                    );
-                    break;
-                case UPLOAD_ERR_PARTIAL:
-                    $this->addError(
-                        errorMessage: FileField::ERRMSG_FILE_INCOMPLETE . $encodedFileName,
-                        isEncodedForRendering: true
-                    );
-                    break;
-                case UPLOAD_ERR_NO_FILE:
-                    // Silently ignore
-                    break;
-                default:
-                    $this->addError(
-                        errorMessage: FileField::ERRMSG_FILE_TECHERROR . $encodedFileName,
-                        isEncodedForRendering: true
-                    );
-                    break;
-            }
-        }
-
-        return $newFileArray;
-    }
-
-    /**
-     * Restructures an input array of multiple files
-     *
-     * @param array $filesArr
-     *
-     * @return FileDataModel[]
-     */
-    protected function convertMultiFileArray(array $filesArr): array
-    {
-        $files = [];
-        $filesCount = count(value: $filesArr[FileField::VALUE_NAME]);
-        for ($i = 0; $i < $filesCount; ++$i) {
-            if ($filesArr[FileField::VALUE_ERROR][$i] === UPLOAD_ERR_NO_FILE) {
-                // This represents "no files uploaded"
-                continue;
-            }
-            $fileDataModel = new FileDataModel(
-                Sanitizer::trimmedString(input: $filesArr[FileField::VALUE_NAME][$i]),
-                Sanitizer::trimmedString(input: $filesArr[FileField::VALUE_TMP_NAME][$i]),
-                Sanitizer::trimmedString(input: $filesArr[FileField::VALUE_TYPE][$i]),
-                (int)$filesArr[FileField::VALUE_ERROR][$i],
-                (int)$filesArr[FileField::VALUE_SIZE][$i]
-            );
-
-            $files[] = $fileDataModel;
         }
 
         return $files;
     }
 
-    private function saveNewFile(FileDataModel $fileDataModel): FileDataModel
+    /**
+     * @param array<string, UploadedFile> $files The files of the field so far
+     * @return ?UploadedFile `null` (with an error added) if the file was not accepted
+     */
+    private function acceptUpload(UploadInput $upload, array $files): ?UploadedFile
     {
-        // If tmp file already exists we just add a counter and increment it until we get a "free" file name
-        $counter = 0;
-        $dstFilePath = $baseFilePath = $this->getUniqueFilesDirectory() . DIRECTORY_SEPARATOR . basename(
-                path: $fileDataModel->tmp_name
+        if ($upload->error !== UPLOAD_ERR_OK) {
+            $this->addFileError(message: $this->getUploadErrorMessage(error: $upload->error), fileName: $upload->name);
+
+            return null;
+        }
+        if (array_any(array: $files, callback: static fn(UploadedFile $file): bool => $file->name === $upload->name)) {
+            $this->addErrorAsHtmlTextObject(
+                errorMessageObject: $this->buildMessage(
+                    individualMessage: $this->alreadyExistsErrorMessage,
+                    defaultMessage: $this->messages->duplicateFile,
+                    placeholder: '[fileName]',
+                    replacement: HtmlEncoder::encode(value: $upload->name)
+                )
             );
-        while (file_exists(filename: $dstFilePath)) {
-            $counter++;
-            $dstFilePath = $baseFilePath . $counter;
+
+            return null;
         }
-        // "move" (copy-del) it to fileStore (creating a new file pointer, therefore it does not get deleted from fileStore after script execution)
-        move_uploaded_file(from: $fileDataModel->tmp_name, to: $dstFilePath);
-        $fileDataModel->tmp_name = $dstFilePath;
+        // Special case from LIVE/PROD:
+        if ($upload->size === 0) {
+            $this->addFileError(message: $this->messages->fileEmpty, fileName: $upload->name);
 
-        return $fileDataModel;
-    }
-
-    /**
-     * Returns the path to the unique directory to store the temporary files based on a unique request key
-     * If directory does not exist, it will be created
-     *
-     * @return string
-     */
-    private function getUniqueFilesDirectory(): string
-    {
-        $uniqueFilesDirectory = $this->getTempRootDirectory() . DIRECTORY_SEPARATOR . $this->uniqueSessFileStorePointer;
-        if (!is_dir(filename: $uniqueFilesDirectory)) {
-            mkdir(directory: $uniqueFilesDirectory);
+            return null;
+        }
+        $file = $this->storage->store(pointer: $this->uniqueSessFileStorePointer, upload: $upload);
+        if ($file === null) {
+            $this->addFileError(message: $this->messages->fileTechnicalError, fileName: $upload->name);
         }
 
-        return $uniqueFilesDirectory;
+        return $file;
     }
 
-    /**
-     * Returns a "clean" list about stored files, mainly for internal processing (because: hash)
-     *
-     * @return FileDataModel[] Array with already uploaded files
-     */
-    public function getFiles(): array
+    private function getUploadErrorMessage(int $error): string
     {
-        return $this->getRawValue();
+        return match ($error) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => $this->messages->fileTooBig,
+            UPLOAD_ERR_PARTIAL => $this->messages->fileIncomplete,
+            default => $this->messages->fileTechnicalError,
+        };
     }
 
-    /**
-     * Return an array with the removed file hash if we removed (or tried to) a file with the current request
-     * This information can be used by the form to prevent from further actions like the final processing
-     *
-     * @return array
-     */
-    public function getRemovedValues(): array
+    private function addFileError(string $message, string $fileName): void
     {
-        return !is_null(value: $this->deleteFileHash) ? [$this->deleteFileHash] : [];
+        $this->addErrorAsHtmlTextObject(
+            errorMessageObject: HtmlText::encoded(
+                textContent: HtmlEncoder::encodeKeepQuotes(value: $message) . ' ' . HtmlEncoder::encode(
+                    value: $fileName
+                )
+            )
+        );
     }
 
     /**
-     * Completely remove tmp directory with its files
-     * To be used after successful form processing
+     * An individual message is HTML, the default message of `FormMessages` is plain text (its quotes stay as they
+     * are, like in v3). The replacement must be encoded already.
+     */
+    private function buildMessage(
+        ?HtmlText $individualMessage,
+        string $defaultMessage,
+        string $placeholder,
+        string $replacement
+    ): HtmlText {
+        $template = $individualMessage?->render() ?? HtmlEncoder::encodeKeepQuotes(value: $defaultMessage);
+
+        return HtmlText::encoded(
+            textContent: str_replace(search: $placeholder, replace: $replacement, subject: $template)
+        );
+    }
+
+    /**
+     * Removes all files older than 2 days (of all forms of this server)
+     */
+    public function removeOldFiles(): void
+    {
+        $this->storage->removeExpired();
+    }
+
+    /**
+     * Completely removes the stored files of this field. To be used after successful form processing.
      */
     public function clearData(): void
     {
-        $this->removeDirectory(path: $this->getUniqueFilesDirectory());
+        $this->storage->clear(pointer: $this->uniqueSessFileStorePointer);
+        $this->files = [];
+    }
+
+    /**
+     * The files uploaded so far, see `getFiles()`.
+     *
+     * @return list<UploadedFile>
+     */
+    public function getAddedValues(): array
+    {
+        return array_values(array: $this->files);
+    }
+
+    /**
+     * Returns an array with the removed file hash if we removed (or tried to) a file with the current request.
+     * This information can be used by the form to prevent from further actions like the final processing.
+     *
+     * @return list<string>
+     */
+    public function getRemovedValues(): array
+    {
+        return $this->deleteFileHash !== null ? [$this->deleteFileHash] : [];
+    }
+
+    public function isValueEmpty(): bool
+    {
+        return $this->files === [];
+    }
+
+    public function valueHasChanged(): bool
+    {
+        return $this->files !== [];
+    }
+
+    /**
+     * A file field has no text value to render.
+     */
+    public function renderValue(): string
+    {
+        return '';
+    }
+
+    /**
+     * @param array<array-key, mixed> $inputData
+     * @internal Bridge until `validate(FormInput)` replaces `validate(array)`. The array is `$_POST + $_FILES`, so it
+     *           is the source of the uploads.
+     */
+    protected function readInputData(array $inputData): void
+    {
+        $this->readInput(input: FormInput::fromArray(data: [], files: $inputData));
+    }
+
+    /**
+     * @internal Bridge until all fields have typed values.
+     */
+    protected function initializeLegacyValue(mixed $value): void
+    {
+    }
+
+    /**
+     * @return array<string, UploadedFile>
+     * @internal Bridge until all fields have typed values: use `getFiles()`.
+     */
+    public function getRawValue(bool $returnNullIfEmpty = false): array
+    {
+        return $this->files;
+    }
+
+    /**
+     * @return array<string, UploadedFile>
+     * @internal Bridge until all fields have typed values: the files do not have an initial value.
+     */
+    public function getOriginalValue(): array
+    {
+        return [];
+    }
+
+    /**
+     * @internal Bridge until all fields have typed values.
+     * @throws LogicException Always: the files come in with the request.
+     */
+    public function setValue(mixed $value): void
+    {
+        throw new LogicException(
+            message: 'The field ' . $this->name . ' has no setter, its files come in with the request.'
+        );
+    }
+
+    /**
+     * @internal Bridge until all fields have typed values.
+     * @throws LogicException Always: removed.
+     */
+    public function setOriginalValue(mixed $value): void
+    {
+        throw new LogicException(
+            message: 'setOriginalValue() was removed. The field ' . $this->name . ' has no initial value.'
+        );
     }
 }

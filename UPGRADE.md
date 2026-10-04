@@ -332,6 +332,68 @@ This document tracks relevant changes and upgrade instructions for developers.
     * **Added (bridge, `@internal`):** `TextualField::validateInput(FormInput)` validates a text field with request
       data that carries the query part, and the hook `readAdditionalInput(FormInput)` reads input besides the field's
       own value (country code, fallback token). They are replaced by `validate(FormInput)` in a later step of v4.
+* **Form Fields (typed values, part 5: file field):** `FileField` no longer touches `$_SESSION`, `$_SERVER`, `$_FILES`
+  or the file system itself. It reads the uploads from `FormInput::getUploads()` and keeps the files between the
+  requests in a `FileUploadStorage`. The default `SessionFileUploadStorage` does what v3 did (session list of the files,
+  directory below the temp directory); tests and projects with other needs pass their own storage. `FileField` is now
+  `final`, the value is `array<string, UploadedFile>` (`getFiles()`, no setter).
+    * ⚠️ **`FileDataModel` is replaced by `UploadedFile`** (`actra\yuf\form\model`, `final readonly`): `tmp_name` is
+      `path`, `error` is gone (a stored file is always an accepted upload), the hash used as array key and as
+      `_removeAttachment` value is `getHash()`.
+      ```php
+      // Before
+      foreach ($field->getFiles() as $hash => $file) {   // FileDataModel
+          rename($file->tmp_name, $targetDirectory . '/' . basename($file->name));
+          // $file->name, $file->type, $file->size, $file->error
+      }
+
+      // After
+      foreach ($field->getFiles() as $hash => $file) {   // UploadedFile
+          rename($file->path, $targetDirectory . '/' . basename($file->name));
+          // $file->name, $file->type, $file->size
+      }
+      ```
+      `name` and `type` are what the browser sent, as in v3: use `basename()` before you use the name in a path and do
+      not trust the type (v3 did not check it either). `FileField` still has no maximum file size, mime type or extension
+      check of its own (only PHP's `upload_max_filesize` / `post_max_size`).
+    * ⚠️ **Removed constants:** `FileField::VALUE_NAME`, `VALUE_TMP_NAME`, `VALUE_TYPE`, `VALUE_ERROR`, `VALUE_SIZE` and
+      `ERRMSG_FILE_EMPTY`, `ERRMSG_FILE_INCOMPLETE`, `ERRMSG_FILE_TOO_BIG`, `ERRMSG_FILE_TECHERROR`. The upload data
+      is read by `FormInput::getUploads()` (`UploadInput`: `name`, `tmpName`, `type`, `error`, `size`), the texts are
+      `FormMessages::fileEmpty`, `fileIncomplete`, `fileTooBig`, `fileTechnicalError` (without the trailing space and
+      without the file name; the field appends the encoded file name). Code that searched the error texts of the
+      field compares with the `FormMessages` property instead:
+      ```php
+      // Before
+      str_starts_with($error, FileField::ERRMSG_FILE_TOO_BIG)
+
+      // After
+      str_starts_with($error, $form->messages->fileTooBig)
+      ```
+    * ⚠️ **Texts come from `FormMessages`:** "Nur [max] Datei(en) möglich.", the duplicate file name text
+      (`tooManyFiles`, `duplicateFile`; the individual constructor arguments `tooManyFilesErrMsg` and
+      `alreadyExistsErrorMessage` win as before) and the "löschen" button of the file list (`removeFile`) are the v3
+      texts with `FormMessages::german()` and English otherwise (see "Form messages" below). With `german()` the HTML is
+      unchanged.
+    * ⚠️ **Removed:** `FileField::setValue()` (it throws a `LogicException`; the files come in with the request, a
+      project cannot add files to a field), the protected `convertMultiFileArray()` (use `FormInput::getUploads()`),
+      the public `getRawValue()` is a bridge for `getFiles()`. `removeOldFiles()`, `clearData()`, `getFiles()`,
+      `getRemovedValues()`, `getAddedValues()` (the files, as in v3), `uniqueSessFileStorePointer` and
+      `maxFileUploadCount` stay.
+    * **Optional storage argument:** `new FileField(..., storage: $storage)`, any `FileUploadStorage` (`load()`,
+      `save()`, `store()`, `delete()`, `clear()`, `removeExpired()`). `store()` returns `null` if the upload cannot be
+      stored; the field then adds the technical error of the file (v3 added a file that did not exist).
+      ```php
+      $field = new FileField(name: 'cv', label: $label, storage: new MyFileUploadStorage());
+      ```
+    * ⚠️ **Behaviour:** the session now holds plain arrays (`name`, `type`, `size`, `path`) per pointer instead of
+      `FileDataModel` objects, so an upload that was started before the update is not found afterwards (the user
+      uploads the file again). A manipulated `$_FILES` structure (missing keys, nested or non-scalar values) adds the
+      error `FormMessages::invalidInput` and the uploaded files are kept (v3 ignored a structure without keys and failed
+      with a `TypeError` or warnings on the others). A single `<input type="file" name="file">` is read as well (v3
+      expected `file[]`). A posted `file_UID` that is empty is ignored (v3 accepted it and then stored the files in the
+      root directory). The directory below the temp directory is named after `SERVER_NAME` with every character other
+      than letters, digits, `.`, `_` and `-` replaced (the name can come from the `Host` header); `clearData()` also
+      empties `getFiles()`.
 * **Form messages:** the German texts of the form code ("Die ungültige Eingabe wurde ignoriert.", "Der angegebene Wert
   ist ungültig.", ...) are no longer hard-coded. New `FormMessages` with English defaults and `FormMessages::german()`
   with the v3 texts; the form hands them to its fields.
@@ -346,7 +408,9 @@ This document tracks relevant changes and upgrade instructions for developers.
   ```
 * **Added:** `FormInput` (request data narrowed to text, list, missing or invalid, `FormInput::fromArray()`) and
   `InputShapeEnum`; fields read their request value from it. A posted array of strings keeps its keys: `getMap(name)`
-  returns `qty[123]=2` as `[123 => '2']`, `getList(name)` the values without the keys.
+  returns `qty[123]=2` as `[123 => '2']`, `getList(name)` the values without the keys. `getUploads(name)` returns the
+  uploads of an input of `$_FILES` as `list<UploadInput>` (single and `name[]` structure) and `hasMalformedUpload(name)`
+  tells that the structure was manipulated.
   `FormField::validateCurrentValue()` runs the listeners and rules without reading input.
 * **Temporary (bridge):** until all fields have typed values, `getRawValue()`, `setValue(mixed)` and the array-based
   `validate(array, bool)` still exist and are marked `@internal`. They are removed in a later step of v4.

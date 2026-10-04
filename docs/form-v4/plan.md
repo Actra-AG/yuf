@@ -600,6 +600,120 @@ Verify: as task 2, plus unit tests with an in-memory storage double.
 
 Handover notes:
 
+Done (2026-10-04), `ddev composer check` green (1165 tests), 16 baseline entries removed (all of `FileField`), none
+added; no entry left in the touched files. A real upload was tried against the PHP built-in server (two files, one
+empty, add by pointer, duplicate, single `name="file"` input, remove, manipulated `$_FILES`, other session with the
+same pointer): see "Not unit tested".
+
+**What was built**
+
+- New: `UploadedFile` (`final readonly`: `name`, `type`, `size`, `path`, `getHash()` = sha1 of the path) and
+  `UploadInput` (`name`, `tmpName`, `type`, `error`, `size`) in `actra\yuf\form\model`; `FileUploadStorage` (interface:
+  `load`, `save`, `store`, `delete`, `clear`, `removeExpired`) and `SessionFileUploadStorage` (`final readonly`,
+  `__construct(rootDirectory)`, `forCurrentRequest()`) in `actra\yuf\form\upload`; `FormInput::getUploads(name)` and
+  `hasMalformedUpload(name)`; test double `tests/Double/form/InMemoryFileUploadStorage`.
+- Changed: `FileField` (final, `?FileUploadStorage $storage` last argument, no `$_SESSION`/`$_SERVER`/`$_FILES`/file
+  system access, `readInput(FormInput)` private, messages lazy from `FormMessages`), `FileFieldRenderer` (remove text
+  from `FormMessages::removeFile`, loop body rewritten to lines <= 120), `FormInput` (uploads).
+- Removed: `FileDataModel`, the constants `VALUE_*` and `ERRMSG_*`, `FileField::setValue()` (throws), the protected
+  `convertMultiFileArray()`, `addFilesFromDataArray()` and the private directory helpers (now in the storage).
+- `FileField` keeps `getFiles()`, `getRemovedValues()` (`[hash]` if removal was requested, also for an unknown hash),
+  `getAddedValues()` (the files, `list<UploadedFile>`), `removeOldFiles()`, `clearData()`, `uniqueSessFileStorePointer`,
+  `maxFileUploadCount` (corrected to 1), the `(max. N)` label info, the optional `requiredError`.
+- v3 features that exist and are kept: max file count, keeping files across failed validations (pointer `_UID`),
+  removing a file (`_removeAttachment` = hash), duplicate file name, empty file, error codes (too big for
+  `INI_SIZE`/`FORM_SIZE`, incomplete for `PARTIAL`, `NO_FILE` ignored, everything else technical), the "uploaded files"
+  list. **v3 had no maximum file size, mime type or extension check** (only the PHP ini limits): nothing was lost and
+  nothing was added.
+
+**Deviations from the design (and why)**
+
+1. `FileUploadStorage::store()` returns `?UploadedFile` (design: `UploadedFile`). v3 ignored the result of
+   `move_uploaded_file()` and added a file that did not exist; `null` makes the field add the technical error instead.
+2. **Upload structure from `$_FILES` that is built like an upload but is broken is invalid input** (one
+   `FormMessages::invalidInput` error, rules skipped via `rejectInput()`, the files uploaded before stay): the design
+   said `TEXT`/`LIST`/`INVALID` are ignored (still true for everything that is not built like an upload: text, list of
+   texts, arrays without any of the keys `name`, `type`, `tmp_name`, `error`, `size`). Needed for the requested
+   "manipulated structures are invalid input"; a v3 structure with missing keys was silently ignored. Hence the extra
+   `FormInput::hasMalformedUpload()`; `getUploads()` returns `[]` for those.
+3. Single (`name="file"`) and multiple (`name="file[]"`, also with string keys) structures are both supported (v3
+   assumed `[]`); all five values must have the right type (`error` and `size` `int`, the others `string`), all five
+   columns of a multi structure must have exactly the keys of `name`. `name` and `type` of an upload are trimmed (v3
+   did the same in `convertMultiFileArray()`).
+4. `FormInput::fromArray()`: an entry of `$files` named like a `$data` entry is no upload (the v3 precedence
+   `$_POST + $_FILES`). The file-name `tmp_name` is not checked by `FormInput`, only by the storage.
+5. **Namespace `actra\yuf\form\upload`** for the storage pair (the design did not name one); the value objects stay in
+   `form\model`, where `FileDataModel` was.
+6. `UploadedFile::getHash()` (design: only "key = sha1 of the stored path"); `UploadedFile` has no `error` (always
+   accepted). `UploadInput.error` stays an `int` (`UPLOAD_ERR_*`, mapped with `match` in the field), no enum.
+7. `SessionFileUploadStorage` keeps plain arrays in the session (`name`, `type`, `size`, `path`) and narrows them when
+   loading, instead of serialized `FileDataModel` objects: removing the class would otherwise leave
+   `__PHP_Incomplete_Class` objects. Old sessions are therefore not read (the user uploads again).
+8. No injected clock: `removeExpired()` calls `time()` in the session storage (design: the session storage is the only
+   class touching the clock); the test sets the modification time of the directories instead.
+9. Messages: the default texts are built like v3 (the text with its quotes as it is, only the file name encoded, so the
+   duplicate text still renders `"name"`, not `&quot;name&quot;`); an individual `HtmlText` is used as before
+   (placeholders replaced). The texts of `FormMessages` have no trailing space (v3 constants had); the field adds one
+   space and the encoded file name.
+10. `FileField` is `final` (design 3.12) and `valueHasChanged()` is "has files" (v3: the value differed from `[]`).
+
+**Security notes (v3 -> v4)**
+
+- Unchanged level: PHP's `move_uploaded_file()` is the guard against a fake `tmp_name` (now `store()` also checks
+  `is_uploaded_file()` and returns `null` instead of recording a non-existing file); the stored file is named after
+  PHP's temp file (`basename(tmp_name)` plus counter), never after the client name; the pointer is sanitized (only
+  `[a-zA-Z0-9_]`) before it becomes part of a path, and now also checked in the storage (`InvalidArgumentException`);
+  client `type` and `name` are never trusted for decisions (v3 did not check the type either: no improvement possible
+  without a feature the project must configure, so none was added; consumers should use `basename($file->name)`).
+- Improvements: an empty posted `_UID` is ignored (v3 accepted `''`, which stored the files in the root directory and
+  made `clearData()` remove it); `SERVER_NAME` (can come from the `Host` header) is sanitized before it becomes a
+  directory name; paths read from the session are only used if they are below the root directory and have no `..`
+  segment (a manipulated session cannot make `delete()` unlink other files); the file list of the session is narrowed
+  (no objects from the session); manipulated `$_FILES` structures give an error instead of a `TypeError` / warnings;
+  `store()` failures give an error instead of a phantom file; `mkdir` creates the root directory recursively (v3
+  created it separately).
+- Known and unchanged: the directory permissions follow the umask (v3 too); two users who send the same pointer share
+  one directory, but each session only lists its own files; the client file name is stored as display name only.
+
+**The bridge (changed in this task, remove in task 6)**
+
+`FileField` overrides, all `@internal`: `readInputData(array)` (builds `FormInput::fromArray(data: [], files:
+$inputData)`; the array is `$_POST + $_FILES` of `Form::validate()`, so the precedence of POST is kept by the merge),
+`initializeLegacyValue()` (no-op), `getRawValue()` (returns the files), `getOriginalValue()` (`[]`), `setValue()` and
+`setOriginalValue()` (throw `LogicException`). `FileField::validate(array, bool)` is the inherited base method. Task 6:
+`readInputData()` becomes `readInput(FormInput)` of the new `validate(FormInput)` template, `Form::validate(?FormInput)`
+builds `FormInput::fromArray(data: $methodPost ? $_POST : $_GET, files: $_FILES, query: $_GET)` (the `getUploads()`
+precedence rule is already implemented), and the `getRawValue()`/`getOriginalValue()` overrides are deleted.
+
+**Not unit tested** (and why)
+
+`SessionFileUploadStorage::store()` on a real upload: `is_uploaded_file()` and `move_uploaded_file()` only accept files
+PHP received in the HTTP request. The tests check that every other file is refused and left alone; everything else of
+the storage (load/save/delete/clear/expiry, narrowing of the session, path checks, `SERVER_NAME`) uses a temp
+directory. The successful path was run by hand with `curl -F` against `php -S` (this found a bug the unit tests cannot
+see: the root directory was not created; fixed with a recursive `mkdir`).
+
+**Tests changed on purpose**
+
+`FileFieldValueTest` rewritten (the v3.3.0 tests checked the session pointer entry, `getRawValue()` and `setValue()`
+with arrays; the field has no setter and no session access now; `validate(overwriteValue: false)` keeps no files).
+`FormInputTest` extended (uploads). New: `FileFieldMarkupTest` (HTML of v3.3.2 for 16 validation states and the file
+list, rendered with the v3.3.2 code in a scratch copy; the remove text differs on purpose, tests for English and encoded
+text), `UploadedFileTest`, `SessionFileUploadStorageTest`, `tests/Double/form/InMemoryFileUploadStorage`.
+
+**Baseline:** 16 entries removed (`FileField`), none added; no entry left in the touched files (`FormInput`,
+`FileFieldRenderer`, `FileField` had none left).
+
+**For tasks 6 and 7**
+
+- Task 6: see "The bridge" above. `FileField::readInput()` is already the shape of the template (read pointer and
+  removal request, load, apply, save); the `extra input` (`_UID`, `_removeAttachment`) is read there, not in a
+  `readAdditionalInput()` hook (that sits on `TextualField`), move it when the hook moves to `FormField`.
+  `FormMessagesTest` and `FileFieldMarkupTest` depend on `FormMessages::german()` texts.
+- Task 7: `README.md` does not mention `FileField` (nothing to update); `UPGRADE.md` has the part 5 entry. The
+  `FileFieldRenderer` is not final (extension point) and has no baseline entry; its markup still builds the file list as
+  one encoded string. `FileHandler` (`src/common`) is unrelated (name clash only).
+
 ### Task 6: Rules, validation boundary and bridge removal
 
 Design sections 3.3, 3.8 and 3.11:

@@ -1,0 +1,34 @@
+<?php
+/**
+ * @copyright Actra AG - https://www.actra.ch
+ * @license   MIT
+ */
+
+declare(strict_types=1);
+
+namespace actra\yuf\form\model;
+
+/**
+ * A file that was uploaded with a form and is kept in a `FileUploadStorage` until the form is processed.
+ * Replaces `FileDataModel` (`tmp_name` is `path` now). `name` and `type` are what the browser sent: never use
+ * them as a file system path and do not trust the type. `path` is the location of the stored copy.
+ */
+final readonly class UploadedFile
+{
+    public function __construct(
+        public string $name,
+        public string $type,
+        public int $size,
+        public string $path
+    ) {
+    }
+
+    /**
+     * The key of the file in `FileField::getFiles()` and the value posted to remove it (sha1 of the path).
+     */
+    public function getHash(): string
+    {
+        // Usage of sha1 is safe here: it is an identifier, not a security feature
+        return sha1(string: $this->path);
+    }
+}
