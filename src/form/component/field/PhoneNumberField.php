@@ -79,9 +79,10 @@ class PhoneNumberField extends InputField
         if ($this->isValueEmpty()) {
             return '';
         }
-        $currentValue = $this->getRawValue();
+        $currentValue = $this->getValueAsString();
         if ($this->hasErrors(withChildElements: true)) {
-            return $currentValue;
+            // Invalid input is shown as posted, but it must be encoded like every other rendered value
+            return HtmlEncoder::encode(value: $currentValue);
         }
         try {
             $phoneNumber = PhoneNumber::createFromString(
