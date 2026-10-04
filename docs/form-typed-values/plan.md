@@ -262,6 +262,75 @@ Verify: unit tests incl. empty, integer, float, negative, whitespace, non-numeri
 
 Handover notes:
 
+Done (2026-10-04): tests first, then code. No signature changes, no `final` on existing classes, nothing renamed.
+`ddev composer check` green (416 tests).
+
+New public API (final API, survives into v4):
+
+- `AmountField` (so `NumericField`): `getValueAsInt(): ?int`, `getValueAsFloat(): ?float`.
+- `HiddenField`: `getValueAsInt(): ?int`. (`CsrfTokenField` inherits it, which is meaningless but harmless.)
+- New `final class actra\yuf\form\AmountParser` (pure, static): `isInteger(string)`, `isDecimal(string)`,
+  `toInt(string): ?int`, `toFloat(string): ?float`. It is the single place that defines the accepted number formats;
+  `ValidAmountRule` uses it too (behaviour unchanged, its tests are unchanged and green). Unit tests:
+  `tests/Unit/form/AmountParserTest.php`.
+- Shared implementation: `protected FormField::getValueAsIntOrFail(): ?int` and `getValueAsFloatOrFail(): ?float`
+  (read the private value directly, like `getValueAsStringOrFail()`).
+
+Exact semantics:
+
+- Accepted formats = `ValidAmountRule`: integer = optional sign + digits; decimal additionally `1.5`, `1.`, `.5`; surrounding
+  whitespace `" \t\n\r\v\f"` ignored; no exponent, hex, thousands separators, inner whitespace.
+- Empty -> `null`: stored `null`, or a string for which `isValueEmpty()` is true (`''`, whitespace-only).
+- `getValueAsInt()`: string -> `AmountParser::toInt()` (`'+5'` -> 5, `'007'` -> 7, `' 12 '` -> 12, `'-0'` -> 0); stored `int` -> as is.
+  Throws `UnexpectedValueException` for decimal/exponent/text strings, for integer strings outside
+  `PHP_INT_MIN..PHP_INT_MAX` (message says "out of the integer range", no saturation, no float), for a stored `float`
+  (even `2.0`), `bool`, array and other types.
+- `getValueAsFloat()`: string -> `AmountParser::toFloat()` (`'5'` -> 5.0, `'.5'` -> 0.5); stored `int` -> `(float)`; finite
+  `float` as is. Throws for text, exponent, strings too large for a finite float (`INF`), non-finite floats, `bool`,
+  arrays, other types. Integers above `PHP_INT_MAX` as string are fine for `getValueAsFloat()`.
+- Messages: `The value of field <name> cannot be read as integer|float, ...` with the problem and (for strings) the value,
+  shortened to 40 characters; for non-string types `it is of type <get_debug_type>`.
+- After `validate()`: key present -> parsed posted string; key missing -> `null`; rejected array input -> the **previous**
+  value is parsed (e.g. constructor `5` -> `5`); before validation -> the constructor value (`AmountField`: `''` -> `null`,
+  `5` -> `5`, `1.5` stored as `'1.5'`). After a failed validation (e.g. `'abc'`, `'1e3'`) the getters throw because the
+  invalid string is stored.
+
+Decisions:
+
+- `HiddenField::getValueAsInt()` uses the same shared parsing (sign, leading zeros, whitespace accepted): one rule for
+  all numeric getters, and posted hidden values may come from forms of the project that format numbers like that.
+- A `bool` value (`HiddenField` constructed with `true`/`false`) always throws, also `false` although `isValueEmpty()` is
+  true for it: a bool is not a number and silently becoming `null` would hide a programming error.
+- Review change: `ValidAmountRule` now rejects values out of range (`AmountParser::toInt()`/`toFloat()` return `null`):
+  integer strings outside `PHP_INT_MIN..PHP_INT_MAX`, float strings too large for a finite `float` and non-finite
+  `float` values. Otherwise a user could post `99999999999999999999`, pass validation and trigger an exception in
+  `getValueAsInt()` (HTTP 500). Like the Task 2 fixes, this is a bug fix with a visible change (for UPGRADE.md): such
+  input is now a validation error. The numeric getters never throw after a successful validation.
+- Review addition: `HiddenField` got an optional constructor parameter `valueIsInt` (default `false`). With `true`, a
+  `ValidAmountRule` (integer) is added, so manipulated hidden input (e.g. `id=abc`) becomes a validation error instead
+  of an exception in `getValueAsInt()`. Recommended for hidden IDs (README.md/UPGRADE.md, Task 6).- Helpers are protected on `FormField` (not on `InputField`/`AmountField`) next to `getValueAsStringOrFail()` so Task 5 and
+  project subclasses can reuse them; helper and parser are not tied to a field type.
+- Parser lives in `actra\yuf\form` (not `datacheck`), next to the rule/field classes that use it; `datacheck` is for
+  generic validators/sanitizers.
+- `toInt()` detects overflow by comparing `(string)(int)$value` with the normalized digits (PHP saturates the cast).
+
+For UPGRADE.md / README.md (Task 6):
+
+- New getters `AmountField::getValueAsInt()/getValueAsFloat()`, `HiddenField::getValueAsInt()`; migration
+  `(int)$field->getRawValue()` / `ScalarCast::toInt(...)` -> `$field->getValueAsInt()` (null for empty).
+- Potential conflict: project subclasses of `AmountField`/`NumericField`/`HiddenField` that already declare
+  `getValueAsInt()` or `getValueAsFloat()` with a different signature (e.g. `: int` instead of `: ?int`) become fatal-error
+  incompatible; rename them or use `: ?int` / `: ?float`. Same for subclasses declaring `getValueAsIntOrFail()`,
+  `getValueAsFloatOrFail()` (new protected methods on `FormField`, private helpers `createNumericTypeException()` and
+  `describeValueForException()` are private and cannot conflict).
+- Overflow/non-integer values throw instead of being cast silently; call the getters after successful validation.
+
+Baseline: unchanged (`git diff phpstan-baseline.neon` empty; PHPStan reported no fixed entries, `AmountField`,
+`HiddenField` and `ValidAmountRule` had none). New code has no entries.
+
+For Task 5: nothing numeric. The exception style (field name + `get_debug_type()`) and the "previous value after rejected
+array input" rule apply the same way.
+
 ### Task 5: `getValues()` for multi-value fields
 
 Add `getValues(): array` with PHPDoc `list<string>` to `CheckboxOptionsField`, `SelectOptionsField`, `ToggleField`

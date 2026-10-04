@@ -11,6 +11,7 @@ namespace actra\yuf\form\component\field;
 use actra\yuf\form\rule\ValidAmountRule;
 use actra\yuf\form\settings\AutoCompleteValue;
 use actra\yuf\html\HtmlText;
+use UnexpectedValueException;
 
 class AmountField extends TextField
 {
@@ -42,5 +43,34 @@ class AmountField extends TextField
                 ) : $individualInvalidError
             )
         );
+    }
+
+    /**
+     * Returns the value as `int`, or `null` if the field is empty (`null`, `''`, whitespace only).
+     *
+     * Accepts exactly what ValidAmountRule accepts for integers: optional sign and digits, surrounding whitespace
+     * (`'+5'`, `'007'`, `' 12 '`), no decimals or exponent notation. Call it after a successful validation.
+     *
+     * @throws UnexpectedValueException If the value is not an integer (e.g. `'1.5'`, `'abc'`, before validation or
+     *         after a failed validation) or does not fit into an `int` (outside PHP_INT_MIN..PHP_INT_MAX).
+     */
+    public function getValueAsInt(): ?int
+    {
+        return $this->getValueAsIntOrFail();
+    }
+
+    /**
+     * Returns the value as `float`, or `null` if the field is empty (`null`, `''`, whitespace only).
+     *
+     * Accepts exactly what ValidAmountRule accepts for decimals: optional sign, digits with an optional decimal point
+     * (`'5'`, `'1.5'`, `'1.'`, `'.5'`), surrounding whitespace, no exponent notation. Call it after a successful
+     * validation. Integer fields work too (`'5'` gives `5.0`).
+     *
+     * @throws UnexpectedValueException If the value is not a decimal number (e.g. `'abc'`, `'1e3'`, before validation
+     *         or after a failed validation).
+     */
+    public function getValueAsFloat(): ?float
+    {
+        return $this->getValueAsFloatOrFail();
     }
 }

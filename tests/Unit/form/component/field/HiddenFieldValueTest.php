@@ -12,6 +12,7 @@ use actra\yuf\form\component\field\HiddenField;
 use PHPUnit\Framework\Attributes\DataProvider;
 use actra\yuf\html\HtmlEncoder;
 use PHPUnit\Framework\TestCase;
+use UnexpectedValueException;
 
 final class HiddenFieldValueTest extends TestCase
 {
@@ -140,5 +141,126 @@ final class HiddenFieldValueTest extends TestCase
         $field->validate(inputData: ['hidden' => ['x']]);
 
         $this->assertSame('5', $field->getValueAsString());
+    }
+
+    /**
+     * @return iterable<string, array{int|float|string|bool|null, ?int}>
+     */
+    public static function valueAsIntProvider(): iterable
+    {
+        yield 'null' => [null, null];
+        yield 'empty string' => ['', null];
+        yield 'whitespace only' => [' ', null];
+        yield 'int' => [5, 5];
+        yield 'zero int' => [0, 0];
+        yield 'negative int' => [-5, -5];
+        yield 'int max' => [PHP_INT_MAX, PHP_INT_MAX];
+        yield 'integer string' => ['12', 12];
+        yield 'plus sign' => ['+5', 5];
+        yield 'leading zeros' => ['007', 7];
+        yield 'negative string' => ['-5', -5];
+        yield 'surrounding whitespace' => [" 12\n", 12];
+    }
+
+    #[DataProvider('valueAsIntProvider')]
+    public function testGetValueAsIntConvertsConstructorValue(int|float|string|bool|null $value, ?int $expected): void
+    {
+        $field = new HiddenField(name: 'hidden', value: $value);
+
+        $this->assertSame($expected, $field->getValueAsInt());
+    }
+
+    public function testGetValueAsIntConvertsPostedString(): void
+    {
+        $field = new HiddenField(name: 'hidden');
+
+        $field->validate(inputData: ['hidden' => ' +7 ']);
+
+        $this->assertSame(7, $field->getValueAsInt());
+    }
+
+    public function testGetValueAsIntIsNullAfterValidationWithMissingKey(): void
+    {
+        $field = new HiddenField(name: 'hidden', value: 5);
+
+        $field->validate(inputData: []);
+
+        $this->assertNull($field->getValueAsInt());
+    }
+
+    public function testGetValueAsIntReturnsPreviousValueAfterRejectedArrayInput(): void
+    {
+        $field = new HiddenField(name: 'hidden', value: 5);
+
+        $this->assertFalse($field->validate(inputData: ['hidden' => ['1']]));
+        $this->assertSame(5, $field->getValueAsInt());
+    }
+
+    /**
+     * @return iterable<string, array{int|float|string|bool|null}>
+     */
+    public static function notAnIntegerProvider(): iterable
+    {
+        yield 'decimal string' => ['1.5'];
+        yield 'exponent' => ['1e3'];
+        yield 'text' => ['abc'];
+        yield 'overflow' => ['9223372036854775808'];
+        yield 'negative overflow' => ['-9223372036854775809'];
+        yield 'float' => [1.5];
+        yield 'integral float' => [2.0];
+        yield 'true' => [true];
+        yield 'false' => [false];
+    }
+
+    #[DataProvider('notAnIntegerProvider')]
+    public function testGetValueAsIntThrows(int|float|string|bool|null $value): void
+    {
+        $field = new HiddenField(name: 'hidden', value: $value);
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('field hidden');
+
+        $field->getValueAsInt();
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function manipulatedIntegerInputProvider(): iterable
+    {
+        yield 'text' => ['abc'];
+        yield 'decimal' => ['1.5'];
+        yield 'out of int range' => ['9223372036854775808'];
+    }
+
+    #[DataProvider('manipulatedIntegerInputProvider')]
+    public function testIntegerFieldRejectsManipulatedInputWithValidationError(string $input): void
+    {
+        $field = new HiddenField(name: 'hidden', valueIsInt: true);
+
+        $this->assertFalse($field->validate(inputData: ['hidden' => $input]));
+    }
+
+    public function testIntegerFieldAcceptsIntegerInput(): void
+    {
+        $field = new HiddenField(name: 'hidden', valueIsInt: true);
+
+        $this->assertTrue($field->validate(inputData: ['hidden' => ' 42 ']));
+        $this->assertSame(42, $field->getValueAsInt());
+    }
+
+    public function testIntegerFieldAcceptsMissingKey(): void
+    {
+        $field = new HiddenField(name: 'hidden', value: 5, valueIsInt: true);
+
+        $this->assertTrue($field->validate(inputData: []));
+        $this->assertNull($field->getValueAsInt());
+    }
+
+    public function testFieldWithoutIntegerOptionAcceptsAnyString(): void
+    {
+        $field = new HiddenField(name: 'hidden');
+
+        $this->assertTrue($field->validate(inputData: ['hidden' => 'abc']));
     }
 }

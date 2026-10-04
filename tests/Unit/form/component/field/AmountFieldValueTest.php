@@ -13,6 +13,7 @@ use actra\yuf\form\component\field\NumericField;
 use actra\yuf\html\HtmlText;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use UnexpectedValueException;
 
 /**
  * Characterization of AmountField and NumericField. The value is always stored as string (or null).
@@ -198,5 +199,225 @@ final class AmountFieldValueTest extends TestCase
         $field->validate(inputData: []);
 
         $this->assertNull($field->getRawValue());
+    }
+
+    /**
+     * @return iterable<string, array{string, ?int}>
+     */
+    public static function integerGetterProvider(): iterable
+    {
+        yield 'empty' => ['', null];
+        yield 'whitespace only' => [" \t\n", null];
+        yield 'integer' => ['12', 12];
+        yield 'zero' => ['0', 0];
+        yield 'negative' => ['-5', -5];
+        yield 'plus sign' => ['+5', 5];
+        yield 'leading zeros' => ['007', 7];
+        yield 'surrounding whitespace' => [" \t12\n", 12];
+        yield 'int max' => [(string)PHP_INT_MAX, PHP_INT_MAX];
+        yield 'int min' => [(string)PHP_INT_MIN, PHP_INT_MIN];
+    }
+
+    #[DataProvider('integerGetterProvider')]
+    public function testGetValueAsIntAfterValidation(string $input, ?int $expected): void
+    {
+        $field = $this->createField(valueIsFloat: false);
+
+        $this->assertTrue($field->validate(inputData: ['amount' => $input]));
+        $this->assertSame($expected, $field->getValueAsInt());
+    }
+
+    #[DataProvider('integerGetterProvider')]
+    public function testGetValueAsFloatAcceptsIntegerFormats(string $input, ?int $expected): void
+    {
+        $field = $this->createField(valueIsFloat: true);
+
+        $this->assertTrue($field->validate(inputData: ['amount' => $input]));
+        $this->assertSame($expected === null ? null : (float)$expected, $field->getValueAsFloat());
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function nonIntegerProvider(): iterable
+    {
+        yield 'decimal' => ['1.5'];
+        yield 'decimal with zero' => ['1.0'];
+        yield 'exponent' => ['1e3'];
+        yield 'text' => ['abc'];
+        yield 'overflow' => ['9223372036854775808'];
+        yield 'negative overflow' => ['-9223372036854775809'];
+    }
+
+    #[DataProvider('nonIntegerProvider')]
+    public function testGetValueAsIntThrowsForNonIntegerValue(string $input): void
+    {
+        $field = $this->createField(valueIsFloat: true);
+        $field->validate(inputData: ['amount' => $input]);
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('field amount');
+
+        $field->getValueAsInt();
+    }
+
+    /**
+     * @return iterable<string, array{bool, string}>
+     */
+    public static function outOfRangeProvider(): iterable
+    {
+        yield 'integer field above int range' => [false, '9223372036854775808'];
+        yield 'integer field below int range' => [false, '-9223372036854775809'];
+        yield 'float field too large for float' => [true, str_repeat(string: '9', times: 400)];
+    }
+
+    #[DataProvider('outOfRangeProvider')]
+    public function testValueOutOfRangeIsInvalid(bool $valueIsFloat, string $input): void
+    {
+        $field = $this->createField(valueIsFloat: $valueIsFloat);
+
+        $this->assertFalse($field->validate(inputData: ['amount' => $input]));
+    }
+
+    public function testIntegerFieldAcceptsIntRangeLimits(): void
+    {
+        $field = $this->createField(valueIsFloat: false);
+
+        $this->assertTrue($field->validate(inputData: ['amount' => '9223372036854775807']));
+        $this->assertSame(PHP_INT_MAX, $field->getValueAsInt());
+        $this->assertTrue($field->validate(inputData: ['amount' => '-9223372036854775808']));
+        $this->assertSame(PHP_INT_MIN, $field->getValueAsInt());
+    }
+
+    public function testGetValueAsIntMessageNamesOverflow(): void
+    {
+        $field = $this->createField(valueIsFloat: true);
+        $field->validate(inputData: ['amount' => '9223372036854775808']);
+
+        $this->expectExceptionMessage('out of the integer range');
+
+        $field->getValueAsInt();
+    }
+
+    public function testGetValueAsIntIsNullForNumericFieldWithoutValue(): void
+    {
+        $field = new NumericField(name: 'number', label: HtmlText::encoded(textContent: 'Number'));
+
+        $this->assertNull($field->getValueAsInt());
+        $this->assertNull($field->getValueAsFloat());
+    }
+
+    public function testGetValueAsIntOfNumericField(): void
+    {
+        $field = new NumericField(name: 'number', label: HtmlText::encoded(textContent: 'Number'));
+
+        $this->assertTrue($field->validate(inputData: ['number' => ' -42 ']));
+        $this->assertSame(-42, $field->getValueAsInt());
+        $this->assertSame(-42.0, $field->getValueAsFloat());
+    }
+
+    public function testGettersAreNullAfterValidationWithMissingKey(): void
+    {
+        $field = $this->createField(valueIsFloat: true, initialValue: 5);
+
+        $field->validate(inputData: []);
+
+        $this->assertNull($field->getValueAsInt());
+        $this->assertNull($field->getValueAsFloat());
+    }
+
+    /**
+     * @return iterable<string, array{string, float}>
+     */
+    public static function floatGetterProvider(): iterable
+    {
+        yield 'decimal' => ['1.5', 1.5];
+        yield 'negative decimal' => ['-1.5', -1.5];
+        yield 'plus sign' => ['+1.5', 1.5];
+        yield 'leading zeros' => ['007.50', 7.5];
+        yield 'trailing dot' => ['1.', 1.0];
+        yield 'leading dot' => ['.5', 0.5];
+        yield 'surrounding whitespace' => [' 1.5 ', 1.5];
+        yield 'integer above int range' => ['9223372036854775808', 9223372036854775808.0];
+    }
+
+    #[DataProvider('floatGetterProvider')]
+    public function testGetValueAsFloatAfterValidation(string $input, float $expected): void
+    {
+        $field = $this->createField(valueIsFloat: true);
+
+        $this->assertTrue($field->validate(inputData: ['amount' => $input]));
+        $this->assertSame($expected, $field->getValueAsFloat());
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function nonNumericProvider(): iterable
+    {
+        yield 'text' => ['abc'];
+        yield 'exponent' => ['1e3'];
+        yield 'decimal comma' => ['1,5'];
+        yield 'sign only' => ['-'];
+        yield 'too large for float' => [str_repeat(string: '9', times: 400)];
+    }
+
+    #[DataProvider('nonNumericProvider')]
+    public function testGettersThrowForNonNumericValueAfterFailedValidation(string $input): void
+    {
+        $field = $this->createField(valueIsFloat: true);
+
+        $field->validate(inputData: ['amount' => $input]);
+
+        try {
+            $field->getValueAsFloat();
+            $this->fail('getValueAsFloat() must throw.');
+        } catch (UnexpectedValueException $exception) {
+            $this->assertStringContainsString('field amount', $exception->getMessage());
+        }
+
+        $this->expectException(UnexpectedValueException::class);
+
+        $field->getValueAsInt();
+    }
+
+    public function testGettersKeepPreviousValueAfterRejectedArrayInput(): void
+    {
+        $field = $this->createField(valueIsFloat: false, initialValue: 5);
+
+        $this->assertFalse($field->validate(inputData: ['amount' => ['1']]));
+        $this->assertSame(5, $field->getValueAsInt());
+        $this->assertSame(5.0, $field->getValueAsFloat());
+    }
+
+    public function testGettersWorkBeforeValidationWithConstructorValue(): void
+    {
+        $field = $this->createField(valueIsFloat: true, initialValue: 1.5);
+
+        $this->assertSame(1.5, $field->getValueAsFloat());
+    }
+
+    public function testGetValueAsIntThrowsForFloatConstructorValue(): void
+    {
+        $field = $this->createField(valueIsFloat: true, initialValue: 1.5);
+
+        $this->expectException(UnexpectedValueException::class);
+
+        $field->getValueAsInt();
+    }
+
+    public function testGetValueAsIntReturnsIntConstructorValue(): void
+    {
+        $field = $this->createField(valueIsFloat: false, initialValue: -3);
+
+        $this->assertSame(-3, $field->getValueAsInt());
+    }
+
+    public function testGettersAreNullBeforeValidationWithoutConstructorValue(): void
+    {
+        $field = $this->createField(valueIsFloat: true);
+
+        $this->assertNull($field->getValueAsInt());
+        $this->assertNull($field->getValueAsFloat());
     }
 }

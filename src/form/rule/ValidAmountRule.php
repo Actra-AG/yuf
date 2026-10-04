@@ -8,6 +8,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\rule;
 
+use actra\yuf\form\AmountParser;
 use actra\yuf\form\component\FormField;
 use actra\yuf\form\FormRule;
 use actra\yuf\html\HtmlText;
@@ -34,18 +35,16 @@ class ValidAmountRule extends FormRule
             return true;
         }
         if (is_float(value: $value)) {
-            return $this->valueIsFloat;
+            return $this->valueIsFloat && is_finite(num: $value);
         }
         if (!is_string(value: $value)) {
             return false;
         }
 
-        // The stored value is not trimmed, so surrounding whitespace is accepted like is_numeric() does.
-        $pattern = $this->valueIsFloat ? '/^[+-]?(\d+(\.\d*)?|\.\d+)$/' : '/^[+-]?\d+$/';
-
-        return preg_match(
-            pattern: $pattern,
-            subject: trim(string: $value, characters: " \t\n\r\v\f")
-        ) === 1;
+        // The stored value is not trimmed, so surrounding whitespace is accepted like is_numeric() does. Values out
+        // of the int/float range are invalid, so the numeric getters never fail after a successful validation.
+        return $this->valueIsFloat
+            ? AmountParser::toFloat(value: $value) !== null
+            : AmountParser::toInt(value: $value) !== null;
     }
 }

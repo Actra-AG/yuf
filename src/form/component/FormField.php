@@ -10,6 +10,7 @@ namespace actra\yuf\form\component;
 
 use ArrayObject;
 use DateTime;
+use actra\yuf\form\AmountParser;
 use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\FormComponent;
 use actra\yuf\form\FormRule;
@@ -142,6 +143,94 @@ abstract class FormField extends FormComponent
             message: 'The value of field ' . $this->name . ' cannot be read as string, it is of type '
             . get_debug_type(value: $value) . '.'
         );
+    }
+
+    /**
+     * Shared implementation of the `getValueAsInt()` getters of single-value fields.
+     *
+     * - `null`, an empty string and a whitespace-only string give `null`.
+     * - A string is parsed with AmountParser: optional sign and digits, surrounding whitespace allowed.
+     * - An `int` is returned unchanged.
+     *
+     * @throws UnexpectedValueException If the value is not an integer: a decimal or exponent string, text, a `float`,
+     *         a `bool`, an array, any other type, or an integer string outside of PHP_INT_MIN..PHP_INT_MAX.
+     */
+    protected function getValueAsIntOrFail(): ?int
+    {
+        $value = $this->value;
+        if ($value === null || (is_string(value: $value) && $this->isValueEmpty())) {
+            return null;
+        }
+        if (is_int(value: $value)) {
+            return $value;
+        }
+        if (!is_string(value: $value)) {
+            throw $this->createNumericTypeException(target: 'integer', value: $value);
+        }
+
+        $result = AmountParser::toInt(value: $value);
+        if ($result !== null) {
+            return $result;
+        }
+
+        throw new UnexpectedValueException(
+            message: 'The value of field ' . $this->name . ' cannot be read as integer, '
+            . (AmountParser::isInteger(value: $value) ? 'it is out of the integer range' : 'it is not an integer')
+            . ': ' . $this->describeValueForException(value: $value)
+        );
+    }
+
+    /**
+     * Shared implementation of the `getValueAsFloat()` getters of single-value fields.
+     *
+     * - `null`, an empty string and a whitespace-only string give `null`.
+     * - A string is parsed with AmountParser: integer or decimal (`1.5`, `1.`, `.5`), no exponent notation,
+     *   surrounding whitespace allowed.
+     * - An `int` is converted, a finite `float` is returned unchanged.
+     *
+     * @throws UnexpectedValueException If the value is not a decimal number: text, exponent notation, a number too
+     *         large for a `float`, a non-finite `float`, a `bool`, an array or any other type.
+     */
+    protected function getValueAsFloatOrFail(): ?float
+    {
+        $value = $this->value;
+        if ($value === null || (is_string(value: $value) && $this->isValueEmpty())) {
+            return null;
+        }
+        if (is_int(value: $value)) {
+            return (float)$value;
+        }
+        if (is_float(value: $value) && is_finite(num: $value)) {
+            return $value;
+        }
+        if (!is_string(value: $value)) {
+            throw $this->createNumericTypeException(target: 'float', value: $value);
+        }
+
+        $result = AmountParser::toFloat(value: $value);
+        if ($result !== null) {
+            return $result;
+        }
+
+        throw new UnexpectedValueException(
+            message: 'The value of field ' . $this->name . ' cannot be read as float, it is not a decimal number: '
+            . $this->describeValueForException(value: $value)
+        );
+    }
+
+    private function createNumericTypeException(string $target, mixed $value): UnexpectedValueException
+    {
+        return new UnexpectedValueException(
+            message: 'The value of field ' . $this->name . ' cannot be read as ' . $target . ', it is of type '
+            . get_debug_type(value: $value) . '.'
+        );
+    }
+
+    private function describeValueForException(string $value): string
+    {
+        $shortened = strlen(string: $value) > 40 ? substr(string: $value, offset: 0, length: 40) . '...' : $value;
+
+        return '"' . $shortened . '"';
     }
 
     public function isValueEmpty(): bool
