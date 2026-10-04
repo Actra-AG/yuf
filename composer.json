@@ -23,8 +23,27 @@
     "ext-dom": "*",
     "ext-iconv": "*",
     "ext-curl": "*",
-    "actra/autoloader": "*",
+    "actra/autoloader": "^1.1",
     "ext-libxml": "*",
     "ext-ctype": "*"
+  },
+  "require-dev": {
+    "phpstan/phpstan": "^2.2",
+    "phpunit/phpunit": "^13.4"
+  },
+  "scripts": {
+    "phpstan": "phpstan analyse --memory-limit=-1",
+    "phpstan:baseline": "phpstan analyse --memory-limit=-1 --generate-baseline",
+    "test": "phpunit",
+    "check": [
+      "@phpstan",
+      "@test"
+    ]
+  },
+  "scripts-descriptions": {
+    "phpstan": "Run the static analysis (PHPStan level 10)",
+    "phpstan:baseline": "Regenerate phpstan-baseline.neon",
+    "test": "Run all tests",
+    "check": "Run the static analysis and all tests"
   }
 }

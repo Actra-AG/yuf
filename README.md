@@ -150,6 +150,18 @@ For more detailed examples, please refer to:
 - `index.example.php`: Full usage example with manual autoloader initialization.
 - [UPGRADE.md](UPGRADE.md): Guide for developers updating to or working with new versions.
 
+## Contributing
+
+Follow [docs/code-quality.md](docs/code-quality.md) and [AGENTS.md](AGENTS.md). Every change must pass the static
+analysis (PHPStan level 10) and all tests:
+
+```bash
+composer install
+composer check
+```
+
+With DDEV: `ddev start`, then prefix the commands with `ddev` (e.g. `ddev composer check`).
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

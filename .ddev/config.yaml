@@ -1,0 +1,7 @@
+# Development environment for contributors (not part of the Composer package)
+name: yuf
+type: php
+docroot: ""
+php_version: "8.5"
+webserver_type: apache-fpm
+omit_containers: [ db ]

@@ -2,15 +2,26 @@
 *
 
 # Allow specific core files
+!/.ddev/
+!/.ddev/config.yaml
 !/.env.example.php
+!/.gitattributes
 !/.gitignore
 !/AGENTS.md
+!/CLAUDE.md
 !/composer.json
 !/index.example.php
 !/LICENSE
+!/phpstan.neon
+!/phpstan-baseline.neon
+!/phpunit.xml
 !/README.md
 !/UPGRADE.md
 
 # Allow specific ddirectories
 !/src/
 !/src/**
+!/docs/
+!/docs/**
+!/tests/
+!/tests/**
