@@ -85,6 +85,36 @@ class TextAreaField extends FormField
         return implode(separator: PHP_EOL, array: $value);
     }
 
+    /**
+     * Returns the text as list of lines: split at line breaks (CRLF, LF or CR), every line trimmed, empty lines
+     * removed. `null` and a blank text give `[]`. An array value (list of lines) is normalized the same way (entries
+     * containing line breaks are split too), so a string and an array with the same lines give the same result.
+     *
+     * @return list<string>
+     * @throws UnexpectedValueException If an array entry is not a string or the value is of any other type.
+     */
+    public function getValues(): array
+    {
+        // Same type checks and joining as getValueAsString(), so there is one place for the line parsing below.
+        // Explicit line breaks and no /u: never splits a byte inside a multibyte character, works with invalid UTF-8.
+        $lines = preg_split(pattern: '/\r\n|\n|\r/', subject: $this->getValueAsString());
+        if ($lines === false) {
+            throw new UnexpectedValueException(
+                message: 'The value of field ' . $this->name . ' cannot be split into lines.'
+            );
+        }
+
+        $values = [];
+        foreach ($lines as $line) {
+            $line = trim(string: $line);
+            if ($line !== '') {
+                $values[] = $line;
+            }
+        }
+
+        return $values;
+    }
+
     public function renderValue(): string
     {
         $currentValue = $this->getRawValue();

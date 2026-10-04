@@ -11,6 +11,7 @@ namespace actra\yuf\tests\Unit\form\component\field;
 use actra\yuf\form\component\field\SelectOptionsField;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use UnexpectedValueException;
 
@@ -251,5 +252,167 @@ final class SelectOptionsFieldValueTest extends TestCase
         $this->expectException(UnexpectedValueException::class);
 
         $field->getValueAsString();
+    }
+
+    public function testGetValuesIsEmptyForNull(): void
+    {
+        $this->assertSame([], $this->createField()->getValues());
+    }
+
+    public function testGetValuesIsEmptyForEmptyString(): void
+    {
+        $this->assertSame([], $this->createField(initialValue: '')->getValues());
+    }
+
+    public function testGetValuesReturnsListWithStringInitialValue(): void
+    {
+        $this->assertSame(['a'], $this->createField(initialValue: 'a')->getValues());
+    }
+
+    public function testGetValuesWrapsStringInitialValueOfMultipleField(): void
+    {
+        $this->assertSame(['a'], $this->createField(initialValue: 'a', multiple: true)->getValues());
+    }
+
+    public function testGetValuesReturnsArrayInitialValue(): void
+    {
+        $this->assertSame(['a', 'b'], $this->createField(initialValue: ['a', 'b'], multiple: true)->getValues());
+    }
+
+    public function testGetValuesReindexesArrayAndKeepsOrder(): void
+    {
+        $field = $this->createField(multiple: true);
+        $field->validate(inputData: ['select' => [5 => 'b', 3 => 'a']]);
+
+        $this->assertSame(['b', 'a'], $field->getValues());
+    }
+
+    public function testGetValuesConvertsIntEntriesToString(): void
+    {
+        $field = $this->createField(multiple: true);
+        $field->setValue(value: [1, 'a']);
+
+        $this->assertSame(['1', 'a'], $field->getValues());
+    }
+
+    public function testGetValuesDropsEmptyEntries(): void
+    {
+        $field = $this->createField(multiple: true);
+        $field->setValue(value: ['', null, 'a', false, [], 0.0, '0']);
+
+        $this->assertSame(['a', '0'], $field->getValues());
+    }
+
+    public function testGetValuesReturnsPostedString(): void
+    {
+        $field = $this->createField();
+        $field->validate(inputData: ['select' => 'b']);
+
+        $this->assertSame(['b'], $field->getValues());
+    }
+
+    public function testGetValuesIsEmptyForPostedEmptyString(): void
+    {
+        $field = $this->createField(initialValue: 'a');
+
+        $this->assertTrue($field->validate(inputData: ['select' => '']));
+        $this->assertSame([], $field->getValues());
+    }
+
+    public function testGetValuesIsEmptyAfterValidationWithMissingKey(): void
+    {
+        $single = $this->createField(initialValue: 'a');
+        $single->validate(inputData: []);
+        $multiple = $this->createField(initialValue: ['a'], multiple: true);
+        $multiple->validate(inputData: []);
+
+        $this->assertSame([], $single->getValues());
+        $this->assertSame([], $multiple->getValues());
+    }
+
+    public function testGetValuesReturnsPostedArrayOfMultipleField(): void
+    {
+        $field = $this->createField(multiple: true);
+        $field->validate(inputData: ['select' => ['b', 'a']]);
+
+        $this->assertSame(['b', 'a'], $field->getValues());
+    }
+
+    public function testGetValuesReturnsPostedStringOfMultipleField(): void
+    {
+        $field = $this->createField(multiple: true);
+        $field->validate(inputData: ['select' => 'a']);
+
+        $this->assertSame(['a'], $field->getValues());
+    }
+
+    public function testGetValuesReturnsUnknownOptionsBecauseValidationIsResponsible(): void
+    {
+        $field = $this->createField(multiple: true);
+
+        $this->assertFalse($field->validate(inputData: ['select' => ['a', 'x']]));
+        $this->assertSame(['a', 'x'], $field->getValues());
+    }
+
+    public function testGetValuesReturnsPreviousValueAfterRejectedArrayInputOfSingleField(): void
+    {
+        $field = $this->createField(initialValue: 'a');
+
+        $this->assertFalse($field->validate(inputData: ['select' => ['b']]));
+        $this->assertSame(['a'], $field->getValues());
+    }
+
+    public function testGetValuesOfSingleFieldConstructedWithArrayAcceptsArrayInput(): void
+    {
+        $field = $this->createField(initialValue: ['a']);
+        $field->validate(inputData: ['select' => ['a', 'b']]);
+
+        $this->assertSame(['a', 'b'], $field->getValues());
+    }
+
+    public function testGetValuesThrowsForNestedArrayAfterFailedValidation(): void
+    {
+        $field = $this->createField(multiple: true);
+
+        $this->assertFalse($field->validate(inputData: ['select' => ['a', ['b']]]));
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('field select');
+        $this->expectExceptionMessage('array');
+
+        $field->getValues();
+    }
+
+    /**
+     * @return array<string, array{bool, null|string|array<mixed>}>
+     */
+    public static function validInputProvider(): array
+    {
+        return [
+            'single option' => [false, 'a'],
+            'empty string' => [false, ''],
+            'missing key' => [false, null],
+            'multiple: string' => [true, 'a'],
+            'multiple: array' => [true, ['a', 'b']],
+            'multiple: array with empty string' => [true, ['']],
+            'multiple: empty array' => [true, []],
+            'multiple: zero string is empty for validation' => [true, ['0']],
+            'multiple: empty nested array is empty for validation' => [true, [[]]],
+            'multiple: missing key' => [true, null],
+        ];
+    }
+
+    /**
+     * @param null|string|array<mixed> $input
+     */
+    #[DataProvider('validInputProvider')]
+    public function testGetValuesNeverThrowsAfterSuccessfulValidation(bool $multiple, null|string|array $input): void
+    {
+        $field = $this->createField(multiple: $multiple);
+        $inputData = $input === null ? [] : ['select' => $input];
+
+        $this->assertTrue($field->validate(inputData: $inputData));
+        // Must not throw: a validated field is always readable
+        $field->getValues();
     }
 }

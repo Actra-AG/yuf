@@ -10,6 +10,7 @@ namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\component\field\TextAreaField;
 use actra\yuf\html\HtmlText;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use UnexpectedValueException;
 
@@ -220,5 +221,136 @@ final class TextAreaFieldValueTest extends TestCase
         $this->expectExceptionMessage('array');
 
         $field->getValueAsString();
+    }
+
+    public function testGetValuesIsEmptyForNull(): void
+    {
+        $this->assertSame([], $this->createField()->getValues());
+    }
+
+    /**
+     * @return array<string, array{string, list<string>}>
+     */
+    public static function textProvider(): array
+    {
+        return [
+            'lf' => ["a\nb", ['a', 'b']],
+            'crlf' => ["a\r\nb", ['a', 'b']],
+            'cr' => ["a\rb", ['a', 'b']],
+            'mixed line breaks' => ["a\r\nb\nc\rd", ['a', 'b', 'c', 'd']],
+            'blank lines' => ["a\n\n\r\n  \nb\n", ['a', 'b']],
+            'surrounding whitespace' => ["  a \n\tb\t", ['a', 'b']],
+            'inner whitespace is kept' => ['a  b', ['a  b']],
+            'single line' => ['a', ['a']],
+            'empty string' => ['', []],
+            'blank text' => [" \n \r\n", []],
+            'zero line is kept' => ["0\n1", ['0', '1']],
+            'multibyte characters are not split' => ["\u{C5}\n\u{2026}\u{85}", ['Å', "\u{2026}\u{85}"]],
+        ];
+    }
+
+    /**
+     * @param list<string> $expected
+     */
+    #[DataProvider('textProvider')]
+    public function testGetValuesSplitsStringIntoTrimmedNonEmptyLines(string $text, array $expected): void
+    {
+        $this->assertSame($expected, $this->createField(value: $text)->getValues());
+    }
+
+    /**
+     * @param list<string> $expected
+     */
+    #[DataProvider('textProvider')]
+    public function testGetValuesSplitsPostedStringIntoLines(string $text, array $expected): void
+    {
+        $field = $this->createField();
+        $field->validate(inputData: ['text' => $text]);
+
+        $this->assertSame($expected, $field->getValues());
+    }
+
+    public function testGetValuesIsEmptyAfterValidationWithMissingKey(): void
+    {
+        $field = $this->createField(value: "a\nb");
+        $field->validate(inputData: []);
+
+        $this->assertSame([], $field->getValues());
+    }
+
+    public function testGetValuesReturnsArrayValueAsList(): void
+    {
+        $this->assertSame(['a', 'b'], $this->createField(value: ['a', 'b'])->getValues());
+    }
+
+    public function testGetValuesNormalizesArrayValueLikeString(): void
+    {
+        $field = $this->createField(value: [' a ', '', "  ", "b\r\nc", '0']);
+
+        $this->assertSame(['a', 'b', 'c', '0'], $field->getValues());
+    }
+
+    public function testGetValuesReindexesPostedArray(): void
+    {
+        $field = $this->createField(value: ['x']);
+        $field->validate(inputData: ['text' => [3 => 'b', 1 => 'a']]);
+
+        $this->assertSame(['b', 'a'], $field->getValues());
+    }
+
+    public function testGetValuesReturnsPreviousValueAfterRejectedArrayInput(): void
+    {
+        $field = $this->createField(value: "a\nb");
+
+        $this->assertFalse($field->validate(inputData: ['text' => ['c']]));
+        $this->assertSame(['a', 'b'], $field->getValues());
+    }
+
+    public function testGetValuesStringReplacesArrayValue(): void
+    {
+        $field = $this->createField(value: ['a']);
+        $field->validate(inputData: ['text' => "b\nc"]);
+
+        $this->assertSame(['b', 'c'], $field->getValues());
+    }
+
+    public function testGetValuesThrowsForNestedArrayEntry(): void
+    {
+        $field = $this->createField(value: ['a']);
+        $field->validate(inputData: ['text' => ['a', ['b']]]);
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('field text');
+        $this->expectExceptionMessage('array');
+
+        $field->getValues();
+    }
+
+    /**
+     * @return array<string, array{null|string|array<mixed>}>
+     */
+    public static function validInputProvider(): array
+    {
+        return [
+            'string' => ["a\nb"],
+            'empty string' => [''],
+            'missing key' => [null],
+            'array (array field)' => [['a', 'b']],
+            'empty array (array field)' => [[]],
+        ];
+    }
+
+    /**
+     * @param null|string|array<mixed> $input
+     */
+    #[DataProvider('validInputProvider')]
+    public function testGetValuesNeverThrowsAfterSuccessfulValidation(null|string|array $input): void
+    {
+        $field = $this->createField(value: is_array($input) ? ['x'] : null);
+        $inputData = $input === null ? [] : ['text' => $input];
+
+        $this->assertTrue($field->validate(inputData: $inputData));
+        // Must not throw: a validated field is always readable
+        $field->getValues();
     }
 }

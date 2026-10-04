@@ -348,6 +348,79 @@ Verify: unit tests incl. empty input, single and multiple values, manipulated in
 
 Handover notes:
 
+Done (2026-10-04): tests first, then code. No signature changes, no `final`, nothing renamed. `ddev composer check`
+green (533 tests).
+
+New public API (final API, survives into v4): `getValues(): array` (PHPDoc `list<string>`) on `CheckboxOptionsField`
+(so `BooleanField`), `SelectOptionsField`, `ToggleField` and `TextAreaField`. Shared implementation:
+`protected FormField::getValuesAsStringListOrFail(): array` (reads the private value, like the other `*OrFail()` helpers);
+the three option fields delegate in one line. `TextAreaField::getValues()` has its own line parsing on top of
+`getValueAsString()`. `BooleanField::isChecked()` is unchanged.
+
+Exact semantics, option fields (`CheckboxOptionsField`, `BooleanField`, `SelectOptionsField`, `ToggleField`; single and
+multiple variants behave the same, the result depends only on the stored value):
+
+- `null` and `''` -> `[]`. Any other string -> one-entry list (`'a'` -> `['a']`), also for multiple fields that hold a
+  string (Task 1 oddity). Whitespace-only strings and `'0'` are kept (they can be option keys).
+- Array -> entries in stored order, re-indexed (`list`), duplicates kept. Entry `string` kept unless `''`; `int` ->
+  `(string)`; `null`, `false`, `0.0`, `[]` dropped; anything else (nested non-empty array, `true`, non-zero `float`,
+  object) -> `UnexpectedValueException`
+  (`The value of field <name> cannot be read as list of strings, it contains an entry of type <type>.`). Any other stored
+  type (object) -> same exception with `it is of type <type>`.
+- Values are NOT filtered against the options: the getter reports what is stored; unknown options after a failed
+  validation are returned (`['a', 'x']`). Validation is responsible.
+- `ToggleField` multiple: stored `[null]` (null constructor value) -> `[]`; stored `['']` (posted `''`) -> `[]`.
+- After rejected array input of a single field: the previous value (e.g. constructor `'a'` -> `['a']`). Key missing -> `[]`.
+
+`TextAreaField::getValues()`:
+
+- Uses `getValueAsString()` (so `null` -> `''`, array entries joined with `PHP_EOL`, non-string array entry or other type ->
+  `UnexpectedValueException`), then splits at CRLF, LF or CR, trims every line (`trim()` default characters), drops
+  empty lines. `'0'` lines are kept. Array values go through the same code, so entries are trimmed/empty-filtered and an
+  entry containing line breaks is split: `['a ', '', "b\nc"]` and `"a\n\nb\nc"` give the same `['a', 'b', 'c']`.
+- Split pattern `/\r\n|\n|\r/` without `/u` (review: replaced `/(*BSR_ANYCRLF)\R/`, same behaviour, IDE-friendly).
+  Plain `\R` without `/u` would also split at the byte `0x85` inside multibyte characters (e.g. `Å`), `/u` would fail
+  on invalid UTF-8. Unicode line separators (U+2028 etc.) are not split; browsers post CRLF.
+
+Decisions and reasons:
+
+- Dropped entries: `''`/`null` mean "nothing selected" (the empty select option, `[null]` of `ToggleField`, `isValueEmpty()`),
+  so callers get an empty list instead of `['']`. `false`, `0.0`, `[]` are dropped too only because
+  `ValidateAgainstOptions` treats an array that consists only of falsy entries as empty and therefore **valid**
+  (`isValueEmpty()` uses `array_filter()`): `[false]`, `[[]]` pass validation, so `getValues()` must not throw for them.
+  `'0'` is NOT dropped even though `['0']` is "empty" for validation (valid whatever the options are): `'0'` is a
+  legitimate option key and the getter reports the stored value. So `['0']` -> `['0']`.
+- `int` entries are converted, not rejected: renderers compare keys loosely (`in_array($key, $rawValue)` in
+  `DefaultOptionsRenderer`, `ToggleField`, `SelectOptionsRenderer`; `(string)` casts in the single variants) and PHP array
+  keys of `FormOptions` can be ints (`'1'` becomes `1`), so `1` and `'1'` are the same selection. Ints only come from project
+  code; `ValidateAgainstOptions` itself would raise a `TypeError` for them (`exists(string)` under `strict_types`, see Task 1),
+  unchanged and not part of this task.
+- After a successful validation `getValues()` never throws (data provider test per class): validation accepts only scalar
+  entries (strings from posted data) or an array of falsy entries, all of which are handled. After a failed validation it
+  throws for nested arrays (pinned). Not covered: an empty `ArrayObject` stored by project code (`isValueEmpty()` accepts it,
+  `getValues()` throws), considered not worth a special case.
+- Helper in `FormField`, not `OptionsField`: it must read the private `$value` without `getRawValue()` (which calls
+  `isValueEmpty()` first and throws for objects), like the Task 3/4 helpers. Public `getValues()` is not on `OptionsField`
+  because `RadioOptionsField` is a single-value field with `getValueAsString()` and is not part of the plan.
+- Single fields hold one value but get the same list API on purpose (plan), so code can treat select/toggle fields uniformly.
+
+For UPGRADE.md / README.md (Task 6):
+
+- New getters per class as above; recommended migration for multi-value fields: `(array)$field->getRawValue()` /
+  project helper casts -> `$field->getValues()`; for text areas: custom line splitting in `validate()` overrides ->
+  `$field->getValues()` (CRLF-safe, trimmed, no empty lines). `getRawValue()` keeps its behaviour.
+- Potential conflict (unavoidable, acceptable): project subclasses of `CheckboxOptionsField`, `BooleanField`,
+  `SelectOptionsField`, `ToggleField` or `TextAreaField` that already declare `getValues()` with another signature (other
+  parameters or return type) become fatal-error incompatible with the new method; rename them or use `getValues(): array`
+  (a return type `array` is compatible, `list<string>` is only PHPDoc). Same for subclasses declaring the new protected
+  method `getValuesAsStringListOrFail()` on `FormField`.
+- Document in the README: values are not checked against the options (call after successful validation; the getter
+  throws for manipulated nested arrays after a failed validation), `''`/`null` entries are dropped, ints become strings.
+
+Baseline: unchanged (`ddev composer phpstan:baseline` regenerated an identical file, `git diff phpstan-baseline.neon` is
+empty; no fixed entries, no new ones). Remaining entries of the touched files need signature changes or the `mixed` value
+storage (v4), see Task 3.
+
 ### Task 6: Documentation and release preparation
 
 - `README.md`: short section "Form field values" listing the typed getters per field type with an example.

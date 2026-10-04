@@ -218,6 +218,64 @@ abstract class FormField extends FormComponent
         );
     }
 
+    /**
+     * Shared implementation of the `getValues()` getters of option fields (checkbox, select, toggle).
+     *
+     * Reports what is stored, it does not check against the options (validation does that).
+     *
+     * - `null` and `''` give `[]` ("nothing selected", like the empty option in a select). Any other string gives a
+     *   list with this string, also for multiple fields that hold a single string.
+     * - An array gives its entries in the stored order, re-indexed. Entries `''`, `null`, `false`, `0.0` and `[]` are
+     *   dropped (nothing selected), an `int` is converted to string (renderers compare option keys loosely, so `1`
+     *   and `'1'` are the same selection). `'0'` is kept: it is a valid option key.
+     *
+     * @return list<string>
+     * @throws UnexpectedValueException If the value or one of its entries is of another type (e.g. a nested array
+     *         from manipulated input). This never happens after a successful validation: ValidateAgainstOptions
+     *         accepts only scalar entries, or an array that consists only of the dropped entries.
+     */
+    protected function getValuesAsStringListOrFail(): array
+    {
+        $value = $this->value;
+        if ($value === null) {
+            return [];
+        }
+        if (is_string(value: $value)) {
+            return $value === '' ? [] : [$value];
+        }
+        if (!is_array(value: $value)) {
+            throw new UnexpectedValueException(
+                message: 'The value of field ' . $this->name . ' cannot be read as list of strings, it is of type '
+                . get_debug_type(value: $value) . '.'
+            );
+        }
+
+        $values = [];
+        foreach ($value as $entry) {
+            if (is_int(value: $entry)) {
+                $values[] = (string)$entry;
+                continue;
+            }
+            if (is_string(value: $entry)) {
+                if ($entry !== '') {
+                    $values[] = $entry;
+                }
+                continue;
+            }
+            if ($entry === null || $entry === false || $entry === 0.0 || $entry === []) {
+                continue;
+            }
+
+            throw new UnexpectedValueException(
+                message: 'The value of field ' . $this->name
+                . ' cannot be read as list of strings, it contains an entry of type ' . get_debug_type(value: $entry)
+                . '.'
+            );
+        }
+
+        return $values;
+    }
+
     private function createNumericTypeException(string $target, mixed $value): UnexpectedValueException
     {
         return new UnexpectedValueException(

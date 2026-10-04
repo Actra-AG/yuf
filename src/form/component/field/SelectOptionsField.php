@@ -97,6 +97,20 @@ class SelectOptionsField extends OptionsField
         return $this->getValueAsStringOrFail();
     }
 
+    /**
+     * Returns the selected values as list, see FormField::getValuesAsStringListOrFail() for the exact rules. Also
+     * works for a field that holds a single string (empty value gives `[]`, otherwise a list with this value).
+     * The values are not checked against the options.
+     *
+     * @return list<string>
+     * @throws UnexpectedValueException If the stored value contains an entry that is not a string (e.g. a nested
+     *         array from manipulated input). Never thrown after a successful validation.
+     */
+    public function getValues(): array
+    {
+        return $this->getValuesAsStringListOrFail();
+    }
+
     public function getDefaultRenderer(): FormRenderer
     {
         return new SelectOptionsRenderer(selectOptionsField: $this);
