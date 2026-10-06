@@ -4,6 +4,21 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.7.1] – 2026-10-06
+
+### 🐛 Bug Fixes
+
+* **German form texts.** `FormMessages::german()` returned two English texts. They are German now:
+
+  | Property            | Before                                    | After                                |
+  |:--------------------|:------------------------------------------|:-------------------------------------|
+  | `selectEmptyOption` | `-- Please select --`                     | `-- Bitte auswählen --`              |
+  | `invalidOption`     | `Selected invalid value in field [field]` | `Ungültige Auswahl im Feld [field].` |
+
+  All other German texts are unchanged. No API change; only projects (or tests) that compare these texts must adapt.
+
+---
+
 ## [v4.7.0] – 2026-10-05
 
 ### ⚙️ Backend & API

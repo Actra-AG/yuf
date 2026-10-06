@@ -37,7 +37,7 @@ final class FormMessagesTest extends TestCase
         $this->assertSame('A file named "[fileName]" has already been uploaded.', $messages->duplicateFile);
     }
 
-    public function testGermanHasTheTextsOfVersion3(): void
+    public function testGermanTexts(): void
     {
         $messages = FormMessages::german();
 
@@ -45,8 +45,8 @@ final class FormMessagesTest extends TestCase
         $this->assertSame('Der angegebene Wert ist ungültig.', $messages->invalidValue);
         $this->assertSame('Die eingegebene PLZ ist ungültig.', $messages->invalidZipCode);
         $this->assertSame('Bitte wählen Sie eine der Optionen aus.', $messages->selectOneOption);
-        $this->assertSame('-- Please select --', $messages->selectEmptyOption);
-        $this->assertSame('Selected invalid value in field [field]', $messages->invalidOption);
+        $this->assertSame('-- Bitte auswählen --', $messages->selectEmptyOption);
+        $this->assertSame('Ungültige Auswahl im Feld [field].', $messages->invalidOption);
         $this->assertSame(
             'Das Formular konnte wegen eines technischen Problems (ungültiges CSRF) nicht übermittelt werden.'
             . ' Bitte versuchen Sie es erneut.',
@@ -68,6 +68,31 @@ final class FormMessagesTest extends TestCase
         );
     }
 
+    public function testGermanHasNoEnglishDefaultText(): void
+    {
+        $englishTexts = $this->textsOf(messages: new FormMessages());
+        $germanTexts = $this->textsOf(messages: FormMessages::german());
+
+        $this->assertSame(array_keys($englishTexts), array_keys($germanTexts));
+        foreach ($germanTexts as $name => $germanText) {
+            $this->assertNotSame($englishTexts[$name], $germanText, 'English text in ' . $name);
+        }
+    }
+
+    public function testGermanHasTheSamePlaceholdersAsTheEnglishDefaults(): void
+    {
+        $englishTexts = $this->textsOf(messages: new FormMessages());
+        $germanTexts = $this->textsOf(messages: FormMessages::german());
+
+        foreach ($englishTexts as $name => $englishText) {
+            $this->assertSame(
+                $this->placeholdersOf(text: $englishText),
+                $this->placeholdersOf(text: $germanTexts[$name]),
+                'Placeholders in ' . $name
+            );
+        }
+    }
+
     public function testIndividualTextsOverrideTheDefaultsAndTheRestStaysEnglish(): void
     {
         $messages = new FormMessages(invalidInput: 'Ungültig.', cancel: 'Zurück');
@@ -75,5 +100,31 @@ final class FormMessagesTest extends TestCase
         $this->assertSame('Ungültig.', $messages->invalidInput);
         $this->assertSame('Zurück', $messages->cancel);
         $this->assertSame('The given value is invalid.', $messages->invalidValue);
+    }
+
+    /**
+     * @return array<string>
+     */
+    private function textsOf(FormMessages $messages): array
+    {
+        $texts = [];
+        foreach (get_object_vars($messages) as $name => $text) {
+            $this->assertIsString($text);
+            $texts[$name] = $text;
+        }
+
+        return $texts;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function placeholdersOf(string $text): array
+    {
+        preg_match_all('/\[\w+]/', $text, $matches);
+        $placeholders = $matches[0];
+        sort($placeholders);
+
+        return $placeholders;
     }
 }

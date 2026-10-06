@@ -10,7 +10,7 @@ namespace actra\yuf\form;
 
 /**
  * The texts the form code creates itself. Plain text, encoded when it is rendered. The defaults are English,
- * `FormMessages::german()` has the texts of yuf v3. Pass it to `Form(messages: ...)`.
+ * `FormMessages::german()` has the German texts (Sie-form, Swiss spelling). Pass it to `Form(messages: ...)`.
  *
  * Placeholders: `[field]` in `invalidOption`, `[max]` in `tooManyFiles`, `[fileName]` in `duplicateFile`.
  */
@@ -43,8 +43,8 @@ final readonly class FormMessages
             invalidValue: 'Der angegebene Wert ist ungültig.',
             invalidZipCode: 'Die eingegebene PLZ ist ungültig.',
             selectOneOption: 'Bitte wählen Sie eine der Optionen aus.',
-            selectEmptyOption: '-- Please select --',
-            invalidOption: 'Selected invalid value in field [field]',
+            selectEmptyOption: '-- Bitte auswählen --',
+            invalidOption: 'Ungültige Auswahl im Feld [field].',
             invalidCsrfToken: 'Das Formular konnte wegen eines technischen Problems (ungültiges CSRF) nicht'
             . ' übermittelt werden. Bitte versuchen Sie es erneut.',
             cancel: 'Abbrechen',

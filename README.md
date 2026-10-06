@@ -190,7 +190,7 @@ The value of `against` is resolved relative to `Core::get()->snippetsDirectory`.
 
 A `Form` holds fields. Every field stores and returns its value with a precise type, so no casting is needed (PHPStan
 level 10 friendly). The form texts it creates itself (e.g. "The invalid input was ignored.") are English;
-`FormMessages::german()` has the German texts of yuf v3, your own texts are named arguments of `FormMessages`.
+`FormMessages::german()` has the German texts, your own texts are named arguments of `FormMessages`.
 
 ```php
 $form = new Form(name: 'order', messages: FormMessages::german());
