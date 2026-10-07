@@ -4,6 +4,16 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.13.0] – 2026-10-08
+
+### The duplicate route path check is part of `RouteCollection`
+
+The check for a duplicate route path moves from the `Route` constructor to `RouteCollection::addRoute()` (and thus the
+`RouteCollection` constructor), which still throws a `LogicException`. Routes with the same path in different
+collections no longer throw. `Route` keeps no static state anymore. No code change needed.
+
+---
+
 ## [v4.12.0] – 2026-10-08
 
 Development dependency `actra/coding-standard` is now `^1.2.0`.

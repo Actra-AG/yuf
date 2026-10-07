@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
+use LogicException;
+
 class RouteCollection
 {
     /**
@@ -25,6 +27,12 @@ class RouteCollection
 
     public function addRoute(Route $route): void
     {
+        if (array_any(
+            array: $this->routes,
+            callback: fn(Route $existingRoute): bool => $existingRoute->path === $route->path,
+        )) {
+            throw new LogicException(message: 'There is already a route with this path: ' . $route->path);
+        }
         $this->routes[] = $route;
     }
 

@@ -497,3 +497,10 @@ Smaller releases, each for one area:
   (`@internal`); named arguments and `Core::$cspPolicySettings` renamed, no aliases. Pure renames, no behaviour change.
 - `TableItemModelTest` → `TableItemTest`; README and `docs/form-v4/plan.md` updated; baseline unchanged (767 entries,
   6 messages/paths renamed). `example/` needed no change.
+
+### Step 2 (v4.13.0) – done
+
+- `Route::$routesByPath` removed; `RouteCollection::addRoute()` (also via its constructor) throws the `LogicException`
+  for a duplicate path within the collection.
+- `RouteCollectionTest` added (characterization first, then the new behaviour); `UPGRADE.md` entry without ⚠️.
+- Baseline and `example/` unchanged.

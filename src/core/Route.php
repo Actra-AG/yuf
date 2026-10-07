@@ -11,12 +11,9 @@ namespace actra\yuf\core;
 
 use actra\yuf\Core;
 use Closure;
-use LogicException;
 
 class Route
 {
-    /** @var Route[] */
-    private static array $routesByPath = [];
     public readonly ?string $viewDirectory;
 
     public function __construct(
@@ -33,10 +30,6 @@ class Route
         public readonly ?string $forceFileGroup = null,
         public readonly ?string $forceFileName = null,
     ) {
-        if (array_key_exists(key: $path, array: Route::$routesByPath)) {
-            throw new LogicException(message: 'There is already a route with this path: ' . $path);
-        }
-        Route::$routesByPath[$path] = $this;
         if ($viewDirectory === '{default}') {
             $this->viewDirectory = Core::get()->viewDirectory . $viewGroup . '/';
         } else {
