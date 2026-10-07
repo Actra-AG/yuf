@@ -21,21 +21,14 @@ Each step below is released on its own, with `composer check` green.
   coding standard v1.2.0 (deprecated alias for one release) and from "prefer deprecating first"
   (`versioning.md`, section 4).
 - Static accessors are removed in the release that replaces them; there are no deprecated wrappers either.
-- Assumed until the user decides (open questions 1 and 2): `TableItemModel` becomes `TableItem`, and the view factory is
-  registered per `Route`.
-
-## Open questions
-
-1. **Name of `TableItemModel`:** `TableItem` (matches `TableItemCollection` and `SmartTable::addDataItem()`, assumed),
-   `TableRow` (may be mistaken for `<tr>`) or `TableRowData`?
-2. **Registration of the view factory:** per `Route` (`new Route(…, viewFactory: …)`, assumed), global
-   (`Core::prepareHttpResponse(viewFactory: …)`) or both? Per route fits `actra/backend`: it creates its routes itself,
-   and each `BackendRoute` has its own `BackendMessages` and path, so each route gets a factory with its own
-   dependencies, and the other routes of a project stay unaffected.
-3. **Required constructor argument name of convention views (step 4):** views created by the default factory get
-   `new $phpClassName(context: $viewContext)`, so every such view must accept an argument named `$context`. Alternative:
-   keep `new $phpClassName()` for the default factory and pass the context only to views of a `ViewMap`
-   (two kinds of views, not recommended).
+- The decision is recorded in this plan only, not as a deviation in `AGENTS.md` (decided by the user).
+- `TableItemModel` becomes `TableItem`: matches `TableItemCollection` and `SmartTable::addDataItem()`; `TableRow`
+  could be mistaken for `<tr>`.
+- The view factory is registered per `Route` (`new Route(…, viewFactory: …)`), not globally in `Core`:
+  `actra/backend` creates its routes itself, and each `BackendRoute` has its own `BackendMessages` and path, so each
+  route gets a factory with its own dependencies, and the other routes of a project stay unaffected.
+- From step 4, the default `ClassNameViewFactory` creates views with `new $className(context: $viewContext)`, so every
+  view accepts `ViewContext $context`. There is only one kind of view, and `BaseView` needs no static fallback.
 
 ## 1. Inventory
 
@@ -139,7 +132,7 @@ Changes:
   `AbstractSessionHandler::__construct(sessionSettings:)`.
 - `CspPolicySettingsModel` → `CspPolicySettings`; `Core::prepareHttpResponse(cspPolicySettings:)`,
   `Core::$cspPolicySettings`, `HttpResponse::createHtmlResponse(cspPolicySettings:)`.
-- `TableItemModel` → `TableItem` (open question 1); arguments `tableItem:`; `TableItemModelTest` → `TableItemTest`.
+- `TableItemModel` → `TableItem`; arguments `tableItem:`; `TableItemModelTest` → `TableItemTest`.
 - Trait `SelectOptionsSettings` → `HasSelectOptionsPresentation`, marked `@internal`; the private
   `initializeSelectOptionsSettings()` → `initializeSelectOptionsPresentation()`.
 - No behaviour change, so no new tests; PHPStan proves the renames, the existing tests are adapted.
@@ -250,7 +243,7 @@ final class ViewMap implements ViewFactory
 }
 ```
 
-- `Route::__construct()` gets the new last argument `?ViewFactory $viewFactory = null` (open question 2);
+- `Route::__construct()` gets the new last argument `?ViewFactory $viewFactory = null`;
   `ContentHandler` uses `$route->viewFactory ?? new ClassNameViewFactory()`.
 - `Route::getPhpClassName()` is removed (⚠️); `ClassNameViewFactory::createClassName()` replaces it.
 - The view class no longer has to equal the file name: the content file (`html/login.html`), the language files and
@@ -345,7 +338,7 @@ Changes:
 - `BaseView::__construct()` gets the first argument `ViewContext $context` (⚠️ every view) and no longer calls
   `RequestHandler::get()`, `ContentHandler::get()`, `JsonRequestBody::get()`. New protected
   `BaseView::getHtmlDocument()`.
-- `ClassNameViewFactory` creates views with `new $className(context: $context)` (open question 3).
+- `ClassNameViewFactory` creates views with `new $className(context: $context)`.
 - `HtmlDocument::get()`, `JsonRequestBody::get()` and `RequestBody::getData()` are removed (⚠️); `HtmlDocument` and
   `JsonRequestBody` get public constructors / `JsonRequestBody::fromString()`. `ContentHandler::get()` and
   `RequestHandler::get()` stay for the rest of yuf (step 10).
