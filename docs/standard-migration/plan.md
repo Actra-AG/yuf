@@ -1,0 +1,499 @@
+# Plan: move yuf to the remaining rules of the coding standard
+
+yuf follows `actra/coding-standard` (v1.2.0). Code style and PHPStan are covered by
+[docs/coding-standard/plan.md](../coding-standard/plan.md). This plan covers the remaining rules that change the public
+API:
+
+- names (`naming.md`): acronyms written like words, no `Model` suffix for settings bundles, `Enum` suffix, constants in
+  UPPER_SNAKE_CASE;
+- dependencies through the constructor instead of static accessors (`php.md`, section 1);
+- views that can receive constructor arguments and have PascalCase class names.
+
+Consumers such as `actra/backend` extend yuf classes (`BaseView`, `AuthUser`, `Authenticator`, `FrameworkDB`,
+`DbResultTable`, forms and fields), so they can only follow after the yuf release that changes a name or a dependency.
+Each step below is released on its own, with `composer check` green.
+
+## Decisions
+
+- **No backwards compatibility for renames** (decided by the user, 2026-10-07): renamed classes, traits, methods,
+  properties, arguments and constants are not kept as deprecated aliases. Every rename is a breaking change with an
+  ⚠️ entry and a before/after example in `UPGRADE.md`. This deliberately differs from the recommendation of
+  coding standard v1.2.0 (deprecated alias for one release) and from "prefer deprecating first"
+  (`versioning.md`, section 4).
+- Static accessors are removed in the release that replaces them; there are no deprecated wrappers either.
+- Assumed until the user decides (open questions 1 and 2): `TableItemModel` becomes `TableItem`, and the view factory is
+  registered per `Route`.
+
+## Open questions
+
+1. **Name of `TableItemModel`:** `TableItem` (matches `TableItemCollection` and `SmartTable::addDataItem()`, assumed),
+   `TableRow` (may be mistaken for `<tr>`) or `TableRowData`?
+2. **Registration of the view factory:** per `Route` (`new Route(…, viewFactory: …)`, assumed), global
+   (`Core::prepareHttpResponse(viewFactory: …)`) or both? Per route fits `actra/backend`: it creates its routes itself,
+   and each `BackendRoute` has its own `BackendMessages` and path, so each route gets a factory with its own
+   dependencies, and the other routes of a project stay unaffected.
+3. **Required constructor argument name of convention views (step 4):** views created by the default factory get
+   `new $phpClassName(context: $viewContext)`, so every such view must accept an argument named `$context`. Alternative:
+   keep `new $phpClassName()` for the default factory and pass the context only to views of a `ViewMap`
+   (two kinds of views, not recommended).
+
+## 1. Inventory
+
+"Deprecation possible" says whether the old API could be kept for one release. Because of the decision above, all
+entries are released as breaking changes anyway; the column shows the effort that is saved.
+
+### 1.1 Static state and static accessors
+
+| Static state / accessor                                                                          | Used in yuf (files)                                                                                                                                               | Used by `actra/backend`                                                   | Plan                                                                          |
+|:-------------------------------------------------------------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------|:------------------------------------------------------------------------------|
+| `Route::$routesByPath` (duplicate path check)                                                    | `Route`                                                                                                                                                           | –                                                                         | step 2: check in `RouteCollection`                                            |
+| `Route::getPhpClassName()` (reads `RequestHandler::get()`)                                       | `ContentHandler`                                                                                                                                                  | –                                                                         | step 3: moves into `ClassNameViewFactory`                                     |
+| `ContentHandler::getViewClass()` (`new $phpClassName()`)                                         | `ContentHandler`                                                                                                                                                  | all 28 views rely on it                                                   | step 3: `ViewFactory`                                                         |
+| `RequestHandler::get()`                                                                          | `BaseView`, `Route`, `LocaleHandler`, `ContentHandler`, `HtmlDocument`, `ExceptionHandler`                                                                       | `BackendView` (2×: `->route`, `->pathVars`)                               | step 4 (views), step 10 (rest)                                                |
+| `ContentHandler::get()` / `isRegistered()`                                                       | `BaseView`, `ExceptionHandler`                                                                                                                                    | `BackendView` (1×)                                                        | step 4                                                                        |
+| `HtmlDocument::get()`                                                                            | `ContentHandler`; `example/` view                                                                                                                                 | `BackendView::execute()` (1×)                                             | step 4                                                                        |
+| `JsonRequestBody::get()`, `RequestBody::getData()`                                               | `BaseView`                                                                                                                                                        | –                                                                         | step 4                                                                        |
+| `CspNonce::get()` (per request)                                                                  | `Core`, `HtmlDocument`, `HtmlSnippet`, `ExceptionHandler`                                                                                                        | –                                                                         | step 8                                                                        |
+| `Logger::register()` / `get()`                                                                   | `Core`, `ExceptionHandler`                                                                                                                                        | –                                                                         | step 9                                                                       |
+| `LocaleHandler::register()` / `get()` / `isRegistered()`                                         | `Core`, `Route`, `ExceptionHandler`, `LangTag` (compiled templates)                                                                                               | –                                                                         | step 10; `get()` stays for templates                                          |
+| `Core::get()`                                                                                    | `Route`, `RequestHandler`, `LocaleHandler`, `MicrosoftAuthenticator`, `MicrosoftIdToken`, `HtmlDocument`, `HtmlSnippet`, `LogFile`, `SessionSettingsModel`, `ExceptionHandler`, `AbstractSessionHandler`, `IfTag`, `SnippetTag`; `tests/Double/CoreTestInstance` | –                                                                         | step 10 (core, html, session); stays for templates                            |
+| `Core::config()`                                                                                 | – (env values of projects)                                                                                                                                        | –                                                                         | stays                                                                         |
+| `ErrorHandler::register()`, `ExceptionHandler::register()`                                       | `Core`                                                                                                                                                            | –                                                                         | stays                                                                         |
+| `HttpRequest::*` (static reads of the superglobals, cached in static properties)                | 14 files                                                                                                                                                          | `getRemoteAddress`, `getProtocol`, `getHost`, `getURI`, `getUserAgent`, `getBearer` | stays (only renames in step 6)                                                |
+| `AbstractSessionHandler::register()` / `enabled()` / `getSessionHandler()` / `clearUserData()`   | `HttpResponse`, `RequestHandler`, `CsrfToken`, `AuthSession`, `MicrosoftAuthenticator`, `Authenticator`, `AbstractSessionHandler`                               | `getSessionHandler()->getID()` (3×)                                       | stays                                                                         |
+| `AuthSession::*`, `CsrfToken::*`, `FormNameRegistry::*`                                          | auth, forms, tables                                                                                                                                               | `AuthSession::logOut/isLoggedIn/getAuthSessionID/logIn`                   | stays                                                                         |
+| `AuthUser::$instance`, `Authenticator::$instance` (one instance per request)                     | `AuthUser`, `Authenticator`                                                                                                                                       | `MyAuthUser::get()`, `MyAuthenticator::get()` (own accessors)            | stays                                                                         |
+| `FrameworkDB::$instances` / `getInstance()`, `DbSettingsModel::$instances`                       | `FrameworkDB`, `DbSettingsModel`                                                                                                                                  | `DB::get()` (own accessor, extends `FrameworkDB`)                         | stays                                                                         |
+| `SmartTable`, `TableFilter`, `AbstractTableFilterField`, `SearchHelper`: `$instances`            | table, search                                                                                                                                                     | `SearchHelper::getInstance()` (1×)                                        | stays                                                                         |
+| Caches: `PhoneMetaData`, `PhoneParser`, `AbstractCurlRequest`, `DbQueryLogList`, `LogFile`      | phone, api, db, common                                                                                                                                            | –                                                                         | stays                                                                         |
+
+What stays static for now, and why:
+
+- `ErrorHandler`, `ExceptionHandler::register()`: `set_error_handler()` and `set_exception_handler()` are global by
+  nature; the static guard only prevents a second registration.
+- `HttpRequest`: it is the boundary to the superglobals and is used in 14 files of yuf and by consumers. Replacing it by
+  an instance (`HttpRequest::fromGlobals()`) passed to every caller is a separate plan once the views get their
+  `ViewContext` (step 4 makes that possible).
+- Session (`AbstractSessionHandler`, `AuthSession`, `CsrfToken`, `FormNameRegistry`): built on `$_SESSION`, which is
+  global. Replacing it needs a session object passed through forms and tables (`CsrfTokenSource` already exists as an
+  extension point); separate plan.
+- `LocaleHandler::get()` and `Core::get()` in `LangTag`, `IfTag` and `SnippetTag`: compiled templates call static
+  methods. The template refactoring is postponed.
+- `FrameworkDB::getInstance()`: the connection pool per identifier. `actra/backend` makes its repositories instances
+  with a `DB` dependency (its task 6); the pool stays the place that creates connections.
+- `AuthUser` / `Authenticator` single-instance guards and the `$instances` registries of the tables: they only enforce
+  unique identifiers; no consumer reads them. They go with the refactoring of their area.
+- Caches of immutable data (phone metadata, curl handle, log files): no request state.
+
+### 1.2 Acronyms written in capitals (public API)
+
+| Name                                                                                                       | Kind                                     | Used by `actra/backend`                                         | Deprecation possible          | Step |
+|:-----------------------------------------------------------------------------------------------------------|:-----------------------------------------|:----------------------------------------------------------------|:------------------------------|:-----|
+| `AuthUser::$ID`                                                                                             | constructor argument + public property   | `ID:` in `MyAuthUser`, `->ID` read 5×                           | property yes (hook), argument no | 5    |
+| `Authenticator::logAuthResult(?int $userID, string $sessionID, …)`                                         | abstract method arguments                | overridden in `MyAuthenticator`                                 | no (yuf calls it with named arguments, the override must rename at the same time) | 5    |
+| `AuthSession::getAuthSessionID()`, `logIn(authSessionID:)`                                                 | static method, argument                  | 3× / 2×                                                         | method yes, argument no       | 5    |
+| `AbstractSessionHandler::getID()`, `regenerateID()`                                                        | methods                                  | `getID()` 3×                                                    | yes                           | 5    |
+| `MicrosoftAuthenticator::redirectToMicrosoftLogin(tenantID:, clientID:)`, `microsoftIdTokenLogin(tenantID:, clientID:)`, `new MicrosoftIdToken(tenantID:, clientID:)` | arguments                                | –                                                               | no                            | 5    |
+| `HttpRequest::getURI()`, `getURL()`, `isSSL()`                                                             | static methods                           | `getURI()` 2×                                                   | yes                           | 6    |
+| `ErrorHandler::handlePHPError()`                                                                            | public method (callback)                 | –                                                               | yes                           | 6    |
+| `CSVFile`, `SMTPMailer`, `FrameworkDB`, `SimpleXMLExtended`                                                | classes                                  | `CSVFile`, `SMTPMailer`; `DB extends FrameworkDB`               | yes (`class_alias`)           | 7    |
+| `SimpleXMLExtended::addXML()`, `addCData()`                                                                 | methods                                  | –                                                               | yes                           | 7    |
+| `AbstractMail::addCC()`, `addBCC()`                                                                         | methods                                  | check                                                           | yes                           | 7    |
+| `MailerFunctions::stripTrailingWSP()`, `mb_pathinfo()`                                                     | static methods                           | –                                                               | yes                           | 7    |
+| `StringUtils::utf8_to_punycode_email()`, `punycode_to_utf8_email()`                                        | static methods (snake_case)              | –                                                               | yes                           | 7    |
+| `SearchHelper::createSQLFilters()`, `createSQLSearch()`                                                     | methods                                  | –                                                               | yes                           | 7    |
+| `CDataSectionNode`, `ForTag` (`$forUID`, `$forDOM`, `str_replace_node()`)                                  | template class, internals                | –                                                               | –                             | template plan |
+
+Not API, renamed in the step of their area: private methods and variables (`readSessionID()`, `$requestedSessionID`,
+`setCSSActive()`, `getMailMIME()`, `encodeQP()`, `base64EncodeWrapMB()`, `sendCommandEHLO()`, `sendCommandSTARTTLS()`,
+`$errorsHTML`, `$linkHTML`, `$tagNParts`) and the private constant `AuthSession::authSessionIdIndicator`. The session
+key `'authSessionID'` is stored data: keep its value (renaming it logs out every user).
+
+### 1.3 Other names that break `naming.md`
+
+| Name                                                                                           | Rule                                       | Used by `actra/backend`                                    | Deprecation possible           | Step |
+|:-----------------------------------------------------------------------------------------------|:-------------------------------------------|:-----------------------------------------------------------|:-------------------------------|:-----|
+| `DbSettingsModel` (+ arguments `dbSettingsModel:` of `FrameworkDB`)                           | settings bundle without `Model`            | `ActraBackend::init()`, `DB`, `DBTest`, README             | class yes, argument no         | 1    |
+| `SessionSettingsModel` (+ `sessionSettingsModel:` of `FileSessionHandler`, `AbstractSessionHandler`) | settings bundle                      | –                                                          | class yes, argument no         | 1    |
+| `CspPolicySettingsModel` (+ `cspPolicySettingsModel:` of `Core::prepareHttpResponse()`, `HttpResponse::createHtmlResponse()`, property `Core::$cspPolicySettingsModel`) | settings bundle | –                                       | class/property yes, argument no | 1    |
+| `TableItemModel` (+ `tableItemModel:` of `SmartTable::addDataItem()`, `AbstractTableColumn::renderCell()`, `renderCellValue()`, `TableItemCollection::add()`) | value object without type suffix | closure type in 4 tables, `->data` in `AbstractTable` | class yes, argument no | 1    |
+| trait `SelectOptionsSettings`                                                                  | not a settings bundle; trait names the ability | –                                                     | yes                            | 1    |
+| enums `AuthMethod`, `AuthResult`                                                               | `Enum` suffix                              | `AuthResult::*` cases, `AuthMethod::OTP`                   | yes (`class_alias`)            | 5    |
+| enum `HttpStatusCode`                                                                          | `Enum` suffix                              | check                                                      | yes                            | 6    |
+| `SmartTable::totalAmount`, `table`, `tableHeader`, `tableBody`, `cells`, `totalAmountMessagePlaceholder`, `amount`; `DbResultTable::sessionDataType`, `filter`, `pagination` (protected) | UPPER_SNAKE_CASE constants | check (subclasses of `DbResultTable`)                      | yes                            | 7    |
+| View classes named like their file (`app\view\frontend\php\index`)                             | class names PascalCase                     | 28 views (`login`, `userMod`, …)                           | –                              | 3    |
+
+## 2. Steps
+
+Version numbers assume that nothing else is released in between. Every step: characterization tests first (when
+behaviour changes), hand-written doubles in `tests/Double/`, `composer check` green, `example/` checked in the browser
+when routing, views or HTML output change, `UPGRADE.md` section in the releasing commit.
+
+### Step 1 – v4.11.0: settings and value object names (coding standard v1.2.0)
+
+Changes:
+
+- `composer.json`: `actra/coding-standard` `^1.2.0` (already done in the working tree).
+- `DbSettingsModel` → `DbSettings`; `FrameworkDB::__construct(dbSettings:)`, `FrameworkDB::getInstance(dbSettings:)`.
+- `SessionSettingsModel` → `SessionSettings`; `FileSessionHandler::__construct(sessionSettings:)`,
+  `AbstractSessionHandler::__construct(sessionSettings:)`.
+- `CspPolicySettingsModel` → `CspPolicySettings`; `Core::prepareHttpResponse(cspPolicySettings:)`,
+  `Core::$cspPolicySettings`, `HttpResponse::createHtmlResponse(cspPolicySettings:)`.
+- `TableItemModel` → `TableItem` (open question 1); arguments `tableItem:`; `TableItemModelTest` → `TableItemTest`.
+- Trait `SelectOptionsSettings` → `HasSelectOptionsPresentation`, marked `@internal`; the private
+  `initializeSelectOptionsSettings()` → `initializeSelectOptionsPresentation()`.
+- No behaviour change, so no new tests; PHPStan proves the renames, the existing tests are adapted.
+- `example/`: no code change (uses none of these names); check it in the browser.
+
+`UPGRADE.md` (draft):
+
+````markdown
+### ⚠️ Settings bundles and value objects without `Model` suffix
+
+Coding standard v1.2.0: settings bundles end with `Settings`, value objects have no type suffix. The old names are
+removed.
+
+| Before                                       | After                                   |
+|:---------------------------------------------|:----------------------------------------|
+| `actra\yuf\db\DbSettingsModel`               | `actra\yuf\db\DbSettings`               |
+| `actra\yuf\session\SessionSettingsModel`     | `actra\yuf\session\SessionSettings`     |
+| `actra\yuf\security\CspPolicySettingsModel`  | `actra\yuf\security\CspPolicySettings`  |
+| `actra\yuf\table\TableItemModel`             | `actra\yuf\table\TableItem`             |
+
+The named arguments and the property are renamed as well:
+
+```php
+// Before
+new FileSessionHandler(sessionSettingsModel: new SessionSettingsModel());
+$core->prepareHttpResponse(cspPolicySettingsModel: new CspPolicySettingsModel());
+$core->cspPolicySettingsModel;
+FrameworkDB::getInstance(dbSettingsModel: $dbSettingsModel);
+new CallbackColumn(…, callback: fn(TableItemModel $tableItemModel): string => …);
+protected function renderCellValue(TableItemModel $tableItemModel): string
+
+// After
+new FileSessionHandler(sessionSettings: new SessionSettings());
+$core->prepareHttpResponse(cspPolicySettings: new CspPolicySettings());
+$core->cspPolicySettings;
+FrameworkDB::getInstance(dbSettings: $dbSettings);
+new CallbackColumn(…, callback: fn(TableItem $tableItem): string => …);
+protected function renderCellValue(TableItem $tableItem): string
+```
+
+### ⚠️ `SelectOptionsSettings` is internal
+
+The trait is renamed to `HasSelectOptionsPresentation` and marked `@internal`. Use `SelectOptionsField` or
+`MultiSelectOptionsField`.
+````
+
+`actra/backend` afterwards: `DbSettingsModel` → `DbSettings` in `ActraBackend::init()` (argument and its own public
+property `$dbSettingsModel`, a breaking change of backend), `DB::useConnection()`, `DB::get()`, `DBTest`, README;
+`TableItemModel` → `TableItem` in the callbacks of `VisitTable`, `UserTable`, `TokenTable`, `NotificationTable` and in
+`AbstractTable`.
+
+### Step 2 – v4.12.0: route registry without static state
+
+Changes:
+
+- `Route::$routesByPath` is removed. `RouteCollection::addRoute()` throws the `LogicException` for a duplicate path
+  (also via its constructor).
+- Characterization test first: `RouteCollectionTest` – a duplicate path throws; two routes with different paths are
+  kept in order. Today a second `new Route(path: '/')` in the same test process throws, which the test documents
+  before the change and which no longer happens after it.
+- Not breaking (no code change needed); `UPGRADE.md` entry without ⚠️: "The duplicate path check moves from the `Route`
+  constructor to `RouteCollection::addRoute()`. Routes with the same path in different collections no longer throw."
+- `example/`: no change.
+
+`actra/backend` afterwards: nothing.
+
+### Step 3 – v4.13.0: view factory and PascalCase view classes
+
+Design (no container, no new static state):
+
+```php
+namespace actra\yuf\core;
+
+/** Creates the view for a request of a route. Projects implement it to pass dependencies to their views. */
+interface ViewFactory
+{
+    /** `null` if the route has no view for this file: the content file is rendered without view, as before. */
+    public function createView(ViewContext $context): ?BaseView;
+}
+
+/** What a view factory needs to choose and create the view of the current request. */
+final readonly class ViewContext
+{
+    public function __construct(
+        public Route $route,
+        public ?string $fileGroup,
+        public string $fileTitle,
+    ) {}
+}
+
+/** Default: the class name is built from the route and the file name, the view has no constructor arguments. */
+final readonly class ClassNameViewFactory implements ViewFactory
+{
+    public function createClassName(ViewContext $context): string { /* former Route::getPhpClassName() */ }
+    public function createView(ViewContext $context): ?BaseView { /* class_exists, is_subclass_of, new $className() */ }
+}
+
+/** Explicit mapping from file title to a closure that creates the view. */
+final class ViewMap implements ViewFactory
+{
+    /** @var array<string, Closure(ViewContext): BaseView> */
+    private array $creators = [];
+
+    /** @param Closure(ViewContext): BaseView $create */
+    public function add(string $fileTitle, Closure $create, ?string $fileGroup = null): ViewMap { … }
+
+    public function createView(ViewContext $context): ?BaseView { … }
+}
+```
+
+- `Route::__construct()` gets the new last argument `?ViewFactory $viewFactory = null` (open question 2);
+  `ContentHandler` uses `$route->viewFactory ?? new ClassNameViewFactory()`.
+- `Route::getPhpClassName()` is removed (⚠️); `ClassNameViewFactory::createClassName()` replaces it.
+- The view class no longer has to equal the file name: the content file (`html/login.html`), the language files and
+  `RequestHandler::$fileTitle` still use the file name, only the PHP class is free (`LoginView`, any namespace).
+- Closures are lazy: only the view of the current request is created.
+- `Route::$viewCallback` is not the starting point: it returns the content string instead of a view, is one closure for
+  all files of a route, and skips the language files and the check of `maxAllowedPathVars`. It stays unchanged.
+- Tests: characterization of the class name first (`ClassNameViewFactoryTest`: prefix, `view`, view group, `php`,
+  optional file group, file title – the cases of today's `getPhpClassName()`), `ViewMapTest` (known file title, file
+  group, unknown file title → `null`, the closure gets the context). Doubles in `tests/Double/core/`: a view that does
+  not call the `BaseView` constructor (it still reads `RequestHandler::get()` until step 4), with `@phpstan-ignore` and
+  reason, like the test session handler.
+- `example/`: the view becomes `app\view\frontend\IndexView`, registered with a `ViewMap` on the route; the comment
+  explains that without `viewFactory` the class `app\view\frontend\php\index` is used. Check it in the browser.
+
+How `actra/backend` registers its views (in `ActraBackend::createRoute()`):
+
+```php
+$messages = $backendRoute->messages;
+$paths = new BackendPaths(basePath: $backendRoute->path);
+$userRepository = new DbAuthUserRepository(db: $db);
+
+$views = new ViewMap()
+    ->add(fileTitle: 'login', create: fn(ViewContext $context): BaseView => new LoginView(
+        messages: $messages,
+        paths: $paths,
+    ))
+    ->add(fileTitle: 'userMod', create: fn(ViewContext $context): BaseView => new UserModView(
+        messages: $messages,
+        paths: $paths,
+        userRepository: $userRepository,
+    ));
+// … the other 26 views
+
+new Route(
+    path: $backendRoute->path,
+    viewDirectory: __DIR__ . '/view/',
+    viewGroup: ActraBackend::viewGroup,
+    defaultFileName: 'login.html',
+    // … as today
+    viewFactory: $views,
+);
+```
+
+`UPGRADE.md` (draft):
+
+````markdown
+### Views with constructor arguments
+
+A `Route` can get a `ViewFactory`. `ViewMap` maps the file name to a closure that creates the view, so views can
+receive their dependencies through the constructor and have any class name. Without a factory, views are created as
+before (`ClassNameViewFactory`).
+
+```php
+new Route(
+    path: '/',
+    viewGroup: 'frontend',
+    viewFactory: new ViewMap()->add(
+        fileTitle: 'index',
+        create: fn(ViewContext $context): BaseView => new IndexView(greeting: 'Hello World'),
+    ),
+);
+```
+
+### ⚠️ `Route::getPhpClassName()` is removed
+
+Before:
+
+```php
+$className = $route->getPhpClassName();
+```
+
+After:
+
+```php
+$className = new ClassNameViewFactory()->createClassName(context: $viewContext);
+```
+````
+
+`actra/backend` afterwards (its task 7, part 1): rename the 28 views to PascalCase (`login` → `LoginView`, …), register
+them with a `ViewMap` per `BackendRoute`, inject `BackendMessages`, the route path (e.g. a `BackendPaths` object that
+replaces the static `getPath()` of the views) and the repositories, and remove `ActraBackend::get()`, `messages()` and
+`path()` where the views used them. Release as a breaking minor of backend.
+
+### Step 4 – v4.14.0: views get request data through the `ViewContext`
+
+Changes:
+
+- `ViewContext` gets the request scope: `RequestHandler $request`, `ContentHandler $content`, and the lazily created
+  `getHtmlDocument(): HtmlDocument` and `getJsonRequestBody(): JsonRequestBody` (created by `ContentHandler`, one
+  instance per request). `ViewContext` is then a `final class`, no longer `readonly`.
+- `BaseView::__construct()` gets the first argument `ViewContext $context` (⚠️ every view) and no longer calls
+  `RequestHandler::get()`, `ContentHandler::get()`, `JsonRequestBody::get()`. New protected
+  `BaseView::getHtmlDocument()`.
+- `ClassNameViewFactory` creates views with `new $className(context: $context)` (open question 3).
+- `HtmlDocument::get()`, `JsonRequestBody::get()` and `RequestBody::getData()` are removed (⚠️); `HtmlDocument` and
+  `JsonRequestBody` get public constructors / `JsonRequestBody::fromString()`. `ContentHandler::get()` and
+  `RequestHandler::get()` stay for the rest of yuf (step 10).
+- `HttpRequest` stays static (see 1.1).
+- Tests first: characterization of `BaseView` (view group check, IP whitelist, required access rights, required input
+  parameter → `NotFoundException` for HTML, error response for JSON, `maxAllowedPathVars`), then the same tests with a
+  `ViewContext` built from doubles. `JsonRequestBodyTest` with `fromString()`. Doubles: `tests/Double/core/` view and a
+  `ViewContext` factory for tests; `RequestHandler` needs a test constructor or a small `RequestData` value object –
+  decide in the task, without reflection hacks if possible.
+- `example/`: `IndexView` gets `ViewContext $context`, uses `$this->getHtmlDocument()` instead of `HtmlDocument::get()`.
+
+`UPGRADE.md` (draft):
+
+````markdown
+### ⚠️ Views get a `ViewContext`
+
+Before:
+
+```php
+final class index extends BaseView
+{
+    public function __construct()
+    {
+        parent::__construct(requiredViewGroupName: 'frontend', …);
+    }
+
+    public function execute(): void
+    {
+        HtmlDocument::get()->replacements->addEncodedText(identifier: 'title', content: 'Hello');
+    }
+}
+```
+
+After:
+
+```php
+final class index extends BaseView
+{
+    public function __construct(ViewContext $context)
+    {
+        parent::__construct(context: $context, requiredViewGroupName: 'frontend', …);
+    }
+
+    public function execute(): void
+    {
+        $this->getHtmlDocument()->replacements->addEncodedText(identifier: 'title', content: 'Hello');
+    }
+}
+```
+
+Views of a `ViewMap` get the context as closure argument:
+`create: fn(ViewContext $context): BaseView => new IndexView(context: $context, …)`.
+
+`HtmlDocument::get()` and `JsonRequestBody::get()` are removed: use `BaseView::getHtmlDocument()` and
+`BaseView::getJsonRequestBody()`.
+````
+
+`actra/backend` afterwards (task 7, part 2): `BackendView` and the 28 views accept and pass `ViewContext`; replace
+`RequestHandler::get()` (2×), `ContentHandler::get()` and `HtmlDocument::get()` in `BackendView`.
+
+### Step 5 – v4.15.0: auth and session names
+
+Changes (all ⚠️):
+
+- `AuthUser::$ID` → `$id` (constructor argument and property).
+- `Authenticator::logAuthResult(?int $userId, string $sessionId, string $ip, …)`.
+- `AuthSession::getAuthSessionId()`, `AuthSession::logIn(authSessionId:)`; the session key `'authSessionID'` keeps its
+  value.
+- `AbstractSessionHandler::getId()`, `regenerateId()`.
+- `MicrosoftAuthenticator` and `MicrosoftIdToken`: `tenantId:`, `clientId:`.
+- Enums `AuthMethod` → `AuthMethodEnum`, `AuthResult` → `AuthResultEnum` (cases unchanged).
+- Private names of the area (`readSessionId()`, `$requestedSessionId`, `authSessionIdIndicator` →
+  `AUTH_SESSION_ID_INDICATOR`).
+- Tests: existing `AuthSessionTest`, `AbstractSessionHandlerTest`, `AuthWebToken`/`MicrosoftIdToken` tests adapted; a
+  test that the session key is still `'authSessionID'` (characterization first).
+- `UPGRADE.md`: a table of the renames plus a before/after example for the `logAuthResult()` override and the
+  `AuthUser` constructor (an override with the old argument names fails, because yuf calls it with named arguments).
+- `example/`: no change.
+
+`actra/backend` afterwards (task 5, inherited names): `MyAuthUser` (`id:`, `->id`), `MyAuthenticator::logAuthResult()`,
+`getAuthSessionId()`, `logIn(authSessionId:)`, `getId()` of the session handler, `AuthResultEnum`, `AuthMethodEnum`;
+then its own `$userID`, `$sessionID`, `$groupID`, … (its task 5).
+
+### Step 6 – v4.16.0: request, response and error names
+
+Changes (all ⚠️): `HttpRequest::getUri()`, `getUrl()`, `isSsl()`; `ErrorHandler::handlePhpError()`; enum
+`HttpStatusCode` → `HttpStatusCodeEnum` (used in many signatures: `BaseView::setErrorResponseContent(httpStatusCode:)`,
+`HttpResponse`, `ContentHandler::$httpStatusCode`). Tests adapted; `example/` checked. `actra/backend` afterwards:
+`getURI()` (2×) and `HttpStatusCode`, if used.
+
+### Step 7 – v4.17.0: remaining class, method and constant names
+
+Changes (all ⚠️): `CSVFile` → `CsvFile`, `SMTPMailer` → `SmtpMailer`, `FrameworkDB` → `FrameworkDb`,
+`SimpleXMLExtended` → `SimpleXmlExtended` (`addXml()`, `addCdata()`); `AbstractMail::addCc()`, `addBcc()`;
+`MailerFunctions::stripTrailingWsp()`, `mbPathinfo()`; `StringUtils::utf8ToPunycodeEmail()`,
+`punycodeToUtf8Email()`; `SearchHelper::createSqlFilters()`, `createSqlSearch()`; constants of `SmartTable` and
+`DbResultTable` in UPPER_SNAKE_CASE (`SmartTable::TOTAL_AMOUNT`, …; the placeholder values stay). Private names of
+these classes. Split into two releases (mailer / table and common) if the diff gets too large. `actra/backend`
+afterwards: `CsvFile`, `SmtpMailer`, `DB extends FrameworkDb`, table constants if used.
+
+### Step 8 – v4.18.0: CSP nonce per request as object
+
+- `CspNonce` becomes a `final readonly class` with `CspNonce::create()` (random) and `$value`; `Core` creates one per
+  request and passes it to `HtmlDocument`, `HtmlSnippet`, `ExceptionHandler` and `HttpResponse::createHtmlResponse()`.
+  `CspNonce::get()` is removed (⚠️). Projects that render the nonce themselves get it from `ViewContext`.
+- Tests: `CspNonceTest` (length, randomness, base64) adapted; `HtmlSnippet` test with a fixed nonce.
+- Keep the security feature covered: a test that the HTML response header and the rendered nonce are equal.
+
+### Step 9 – v4.19.0: logger through the constructor
+
+- `ExceptionHandler` gets the `Logger` (and `CspPolicySettings`, debug flag) through `Core`, instead of
+  `Logger::get()` and `Core::get()`. `Logger::register()` / `get()` are removed (⚠️); custom exception handlers that
+  extend `ExceptionHandler` adapt their constructor.
+- Tests: `ExceptionHandler` with a hand-written `Logger` double (`tests/Double/core/`).
+
+### Step 10 – v4.20.0 and later: locale and `Core::get()` inside yuf
+
+Smaller releases, each for one area:
+
+- `LocaleHandler` gets the language and the available languages through its constructor (no
+  `RequestHandler::get()` / `Core::get()`); `Route::loadLocalizedText()` gets the `LocaleHandler`; `ViewContext` gets
+  `$locale`. `LocaleHandler::get()` stays for the compiled templates (`LangTag`) until the template refactoring.
+- `Route` resolves `'{default}'` of `viewDirectory` without `Core::get()` (the `RouteCollection` or `Core` sets the
+  default directory). `SessionSettings` resolves its default `savePath` in `FileSessionHandler` (gets the cache
+  directory). `LogFile`, `HtmlSnippet`, `HtmlDocument`, `MicrosoftAuthenticator`, `MicrosoftIdToken`: directories and
+  settings through the constructor.
+- `RequestHandler::get()` and `ContentHandler::get()` are removed once no yuf class needs them.
+- `Core::get()` stays for `IfTag` / `SnippetTag` until the template refactoring; `tests/Double/CoreTestInstance` stays
+  as long as `Core::get()` exists.
+
+### Later (separate plans)
+
+- `HttpRequest` as an instance (`HttpRequest::fromGlobals()`) passed through `ViewContext`.
+- Session object instead of `AbstractSessionHandler::getSessionHandler()`, `AuthSession`, `CsrfToken`,
+  `FormNameRegistry`.
+- Templates (`src/template/`): `LangTag`, `IfTag`, `SnippetTag`, `CDataSectionNode`, `ForTag` names.
+
+## 3. Follow-up tasks for `actra/backend`
+
+| yuf release        | `actra/backend` task                                                                                                  |
+|:-------------------|:----------------------------------------------------------------------------------------------------------------------|
+| v4.11.0 (step 1)   | `DbSettings`, `TableItem`; require `actra/yuf ^4.11`                                                                  |
+| v4.12.0 (step 2)   | none                                                                                                                  |
+| v4.13.0 (step 3)   | task 7 part 1: PascalCase views, `ViewMap` per `BackendRoute`, inject `BackendMessages`, paths, repositories; remove `ActraBackend::get()`, `messages()`, `path()` from views |
+| v4.14.0 (step 4)   | task 7 part 2: `ViewContext` in `BackendView` and the views; no `RequestHandler::get()`, `ContentHandler::get()`, `HtmlDocument::get()` |
+| v4.15.0 (step 5)   | task 5 inherited names: `id`, `userId`, `sessionId`, `authSessionId`, `getId()`, `AuthResultEnum`, `AuthMethodEnum`  |
+| v4.16.0 (step 6)   | `HttpRequest::getUri()`, `HttpStatusCodeEnum`                                                                         |
+| v4.17.0 (step 7)   | `CsvFile`, `SmtpMailer`, `FrameworkDb`                                                                                |
+| v4.18.0+ (8–10)    | only if backend uses the removed accessors (today: none)                                                              |
+
+## Handover notes
