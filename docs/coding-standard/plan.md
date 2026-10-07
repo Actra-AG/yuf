@@ -38,7 +38,10 @@ but the existing code does not meet them yet, so `composer check` is red until t
     - `pow_to_exponentiation` produced invalid code with named arguments (`1024 ** num: …`) in
       `StringUtils::formatBytes()`: written as `1024 ** $pow`.
     - `strict_param` added a positional `true` after named arguments (fatal error "Cannot use positional argument after
-      named argument" in 19 files): changed to `strict: true`. Check with `php -l` after running `cs:fix` on new code.
+      named argument" in 19 files): changed to `strict: true`.
+    - Since `actra/coding-standard` v1.1.1, these risky fixers (`strict_param`, `strict_comparison`,
+      `modernize_types_casting`, `pow_to_exponentiation`, `random_api_migration`) are disabled; PHPStan reports the
+      cases and they are fixed by hand.
 - Behaviour kept where the risky fixers changed it:
     - `strict_comparison` turned `$value == 0` into `$value === 0` in `FloatSanitizer` (float vs. int, always false):
       now `=== 0.0`. Regression test: `FloatSanitizerTest`.
