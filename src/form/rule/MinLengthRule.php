@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\form\rule;
 
 use actra\yuf\html\HtmlText;
+use Override;
 
 class MinLengthRule extends StringRule
 {
@@ -18,6 +19,7 @@ class MinLengthRule extends StringRule
         parent::__construct(defaultErrorMessage: $errorMessage);
     }
 
+    #[Override]
     public function validate(string $value): bool
     {
         return mb_strlen(string: $value) >= $this->minLength;

@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\form\rule;
 
 use actra\yuf\html\HtmlText;
+use Override;
 
 class ValidValueRule extends StringRule
 {
@@ -21,6 +22,7 @@ class ValidValueRule extends StringRule
         parent::__construct(defaultErrorMessage: $errorMessage);
     }
 
+    #[Override]
     public function validate(string $value): bool
     {
         return in_array(needle: $value, haystack: $this->validValues, strict: true);

@@ -14,11 +14,13 @@ use actra\yuf\form\component\field\CheckboxOptionsField;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
+use Override;
 
 class CheckboxItemRenderer extends FormRenderer
 {
     public function __construct(private readonly CheckboxOptionsField|BooleanField $checkboxOptionsField) {}
 
+    #[Override]
     public function prepare(): void
     {
         $checkboxOptionsField = $this->checkboxOptionsField;

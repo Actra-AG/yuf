@@ -14,6 +14,7 @@ use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 use LogicException;
+use Override;
 
 abstract class DefaultOptionsRenderer extends FormRenderer
 {
@@ -23,6 +24,7 @@ abstract class DefaultOptionsRenderer extends FormRenderer
         private readonly bool         $acceptMultipleValues,
     ) {}
 
+    #[Override]
     public function prepare(): void
     {
         $optionsField = $this->optionsField;

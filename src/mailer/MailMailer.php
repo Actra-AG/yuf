@@ -9,18 +9,23 @@ declare(strict_types=1);
 
 namespace actra\yuf\mailer;
 
+use Override;
+
 class MailMailer extends AbstractMailer
 {
+    #[Override]
     public function headerHasTo(): bool
     {
         return false;
     }
 
+    #[Override]
     public function headerHasSubject(): bool
     {
         return false;
     }
 
+    #[Override]
     public function sendMail(
         AbstractMail $abstractMail,
         MailMimeHeader $mailMimeHeader,
@@ -43,6 +48,7 @@ class MailMailer extends AbstractMailer
         }
     }
 
+    #[Override]
     public function getMaxLineLength(): int
     {
         return MailerConstants::MAIL_MAX_LINE_LENGTH;

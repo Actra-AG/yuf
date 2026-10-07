@@ -10,12 +10,14 @@ declare(strict_types=1);
 namespace actra\yuf\table\column;
 
 use actra\yuf\table\TableItemModel;
+use Override;
 
 class BooleanColumn extends AbstractTableColumn
 {
     public string $trueLabel = 'Ja';
     public string $falseLabel = 'Nein';
 
+    #[Override]
     protected function renderCellValue(TableItemModel $tableItemModel): string
     {
         $value = $tableItemModel->getRawValue(name: $this->identifier);

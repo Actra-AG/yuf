@@ -19,6 +19,7 @@ use actra\yuf\form\renderer\CheckboxItemRenderer;
 use actra\yuf\form\renderer\DefinitionListRenderer;
 use actra\yuf\html\HtmlText;
 use LogicException;
+use Override;
 
 /**
  * A single checkbox. The value is a `bool`, empty is `false` (so a required rule means "must be checked").
@@ -86,11 +87,13 @@ class BooleanField extends FormField
         $this->initiallyChecked = $checked;
     }
 
+    #[Override]
     public function isValueEmpty(): bool
     {
         return !$this->checked;
     }
 
+    #[Override]
     public function valueHasChanged(): bool
     {
         return $this->checked !== $this->initiallyChecked;
@@ -99,11 +102,13 @@ class BooleanField extends FormField
     /**
      * The value of the checkbox as it is posted: `'checked'`, or `''` if it is not checked.
      */
+    #[Override]
     public function renderValue(): string
     {
         return $this->checked ? BooleanField::CHECKED_KEY : '';
     }
 
+    #[Override]
     public function getDefaultRenderer(): FormRenderer
     {
         // The markup of v3: a list with one checkbox (used by the layouts NONE and DEFINITION_LIST)
@@ -114,6 +119,7 @@ class BooleanField extends FormField
      * Reads the value from the request: `checked` (as text or as the only entry of a list) is checked, a missing
      * value is not checked, anything else is rejected (not checked, one error, no rules).
      */
+    #[Override]
     final protected function readInput(FormInput $input): void
     {
         $isChecked = match ($input->getShape(name: $this->name)) {

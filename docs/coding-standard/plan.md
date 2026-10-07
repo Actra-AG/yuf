@@ -73,3 +73,10 @@ but the existing code does not meet them yet, so `composer check` is red until t
   `SearchHelper::getBooleanQuery()`.
 - Released as v4.8.1. Remaining: task 3 (shrink the baseline with the refactoring of each area).
 
+### Task 3 (baseline) – ongoing
+
+- `#[Override]` added in 112 files of `src/` (all `method.missingOverride` entries, no behaviour change): baseline
+  1057 → 794 entries.
+- Remaining entries per area: `src/template` is the largest, followed by `src/common`, `src/form`, `src/core` and
+  `src/phone`. Most frequent identifiers: `argument.type`, `missingType.iterableValue`, `offsetAccess.notFound`.
+

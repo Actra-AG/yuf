@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\html;
 
 use LogicException;
+use Override;
 
 class HtmlTag extends HtmlElement
 {
@@ -82,6 +83,7 @@ class HtmlTag extends HtmlElement
      *
      * @return string : Generated html-code
      */
+    #[Override]
     public function render(): string
     {
         $tagName = $this->name; // MUST be HTML-safe!

@@ -13,6 +13,7 @@ use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQueryData;
 use actra\yuf\html\HtmlText;
 use LogicException;
+use Override;
 
 class OptionsFilterField extends AbstractTableFilterField
 {
@@ -45,11 +46,13 @@ class OptionsFilterField extends AbstractTableFilterField
         $this->filterOptions = $finalOptions;
     }
 
+    #[Override]
     public function init(): void
     {
         $this->selectedValue = (string) $this->getFromSession(index: $this->identifier);
     }
 
+    #[Override]
     public function reset(): void
     {
         $this->setSelectedValue(selectedValue: $this->defaultValue);
@@ -61,6 +64,7 @@ class OptionsFilterField extends AbstractTableFilterField
         $this->saveToSession(index: $this->identifier, value: $selectedValue);
     }
 
+    #[Override]
     public function checkInput(): void
     {
         $inputValue = (string) HttpRequest::getInputString(keyName: $this->identifier);
@@ -69,11 +73,13 @@ class OptionsFilterField extends AbstractTableFilterField
         }
     }
 
+    #[Override]
     public function getWhereCondition(): DbQueryData
     {
         return $this->filterOptions[$this->selectedValue]->whereCondition;
     }
 
+    #[Override]
     protected function renderField(): string
     {
         $filterName = $this->identifier;
@@ -100,6 +106,7 @@ class OptionsFilterField extends AbstractTableFilterField
         return implode(separator: PHP_EOL, array: $htmlArr);
     }
 
+    #[Override]
     public function isSelected(): bool
     {
         return ($this->selectedValue !== '');

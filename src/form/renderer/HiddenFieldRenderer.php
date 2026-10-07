@@ -13,11 +13,13 @@ use actra\yuf\form\component\field\InputField;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
+use Override;
 
 class HiddenFieldRenderer extends FormRenderer
 {
     public function __construct(private readonly InputField $hiddenField) {}
 
+    #[Override]
     public function prepare(): void
     {
         $hiddenField = $this->hiddenField;

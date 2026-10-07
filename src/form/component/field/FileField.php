@@ -19,6 +19,7 @@ use actra\yuf\form\upload\FileUploadStorage;
 use actra\yuf\form\upload\SessionFileUploadStorage;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
+use Override;
 
 /**
  * Uploads one or several files. The value is the list of the files uploaded so far (`getFiles()`, key = hash of the
@@ -84,6 +85,7 @@ final class FileField extends FormField
         return preg_replace(pattern: '/[^a-zA-Z\d_]/', replacement: '', subject: $pointer) ?? '';
     }
 
+    #[Override]
     public function getDefaultRenderer(): FormRenderer
     {
         return new FileFieldRenderer(fileField: $this);
@@ -104,6 +106,7 @@ final class FileField extends FormField
      * user asked to remove and adds the new uploads. Manipulated upload data adds one error and the rules do not run;
      * the files uploaded before stay. Texts, lists and invalid values posted under the name of the field are ignored.
      */
+    #[Override]
     protected function readInput(FormInput $input): void
     {
         $this->storage->removeExpired();
@@ -122,6 +125,7 @@ final class FileField extends FormField
     /**
      * The pointer of the files and the removal request come with the form, not with the files themselves.
      */
+    #[Override]
     protected function readAdditionalInput(FormInput $input): void
     {
         $this->readPointer(input: $input);
@@ -312,11 +316,13 @@ final class FileField extends FormField
         return $this->deleteFileHash !== null ? [$this->deleteFileHash] : [];
     }
 
+    #[Override]
     public function isValueEmpty(): bool
     {
         return $this->files === [];
     }
 
+    #[Override]
     public function valueHasChanged(): bool
     {
         return $this->files !== [];
@@ -325,6 +331,7 @@ final class FileField extends FormField
     /**
      * A file field has no text value to render.
      */
+    #[Override]
     public function renderValue(): string
     {
         return '';

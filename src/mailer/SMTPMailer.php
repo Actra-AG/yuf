@@ -11,6 +11,7 @@ namespace actra\yuf\mailer;
 
 use actra\yuf\common\StringUtils;
 use Exception;
+use Override;
 use RuntimeException;
 use Throwable;
 
@@ -29,21 +30,25 @@ class SMTPMailer extends AbstractMailer
         private readonly bool $useTls = true,
     ) {}
 
+    #[Override]
     public function headerHasTo(): bool
     {
         return true;
     }
 
+    #[Override]
     public function headerHasSubject(): bool
     {
         return true;
     }
 
+    #[Override]
     public function getMaxLineLength(): int
     {
         return MailerConstants::MAX_LINE_LENGTH;
     }
 
+    #[Override]
     public function sendMail(
         AbstractMail $abstractMail,
         MailMimeHeader $mailMimeHeader,

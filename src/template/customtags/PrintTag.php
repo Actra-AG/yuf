@@ -16,19 +16,23 @@ use actra\yuf\template\template\TagNode;
 use actra\yuf\template\template\TemplateEngine;
 use actra\yuf\template\template\TemplateTag;
 use DateTime;
+use Override;
 
 class PrintTag extends TemplateTag implements TagNode, TagInline
 {
+    #[Override]
     public static function getName(): string
     {
         return 'print';
     }
 
+    #[Override]
     public static function isElseCompatible(): bool
     {
         return false;
     }
 
+    #[Override]
     public static function isSelfClosing(): bool
     {
         return true;
@@ -47,6 +51,7 @@ class PrintTag extends TemplateTag implements TagNode, TagInline
         return $data;
     }
 
+    #[Override]
     public function replaceNode(TemplateEngine $tplEngine, ElementNode $elementNode): void
     {
         $replValue = $this->replace($elementNode->getAttribute('var')->value);
@@ -62,6 +67,7 @@ class PrintTag extends TemplateTag implements TagNode, TagInline
         return '<?php echo ' . __CLASS__ . '::generateOutput($this, \'' . $selector . '\'); ?>';
     }
 
+    #[Override]
     public function replaceInline(TemplateEngine $tplEngine, $tagArr): string
     {
         return $this->replace($tagArr['var']);

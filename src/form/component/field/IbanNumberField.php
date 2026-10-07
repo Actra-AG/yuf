@@ -12,6 +12,7 @@ namespace actra\yuf\form\component\field;
 use actra\yuf\datacheck\validatorTypes\IbanValidator;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlText;
+use Override;
 
 /**
  * A text field for an international bank account number (`IbanValidator`). The value is stored as typed (trimmed,
@@ -41,6 +42,7 @@ final class IbanNumberField extends TextField
     /**
      * The IBAN is only checked if the other rules passed, so a field has one error at a time.
      */
+    #[Override]
     public function validateCurrentValue(): bool
     {
         if (!parent::validateCurrentValue()) {

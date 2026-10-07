@@ -18,6 +18,7 @@ use actra\yuf\form\renderer\ToggleFieldRenderer;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlText;
 use Closure;
+use Override;
 
 /**
  * Checkboxes that show child components under the selected options. Replaces `ToggleField(multiple: true)`.
@@ -86,6 +87,7 @@ class MultiToggleField extends MultiOptionsField
         $this->toggleChildren->setDefaultChildFieldRenderer(rendererFactory: $rendererFactory);
     }
 
+    #[Override]
     public function getDefaultRenderer(): FormRenderer
     {
         return new ToggleFieldRenderer(
@@ -98,6 +100,7 @@ class MultiToggleField extends MultiOptionsField
     /**
      * Validates the child fields of the selected options with the same input, after this field is valid.
      */
+    #[Override]
     protected function validateChildFields(FormInput $input): void
     {
         $this->toggleChildren->validateSelected(input: $input);
@@ -106,6 +109,7 @@ class MultiToggleField extends MultiOptionsField
     /**
      * Validates the child fields of the selected options with their current values, after this field is valid.
      */
+    #[Override]
     protected function validateChildFieldsWithCurrentValues(): void
     {
         $this->toggleChildren->validateSelectedCurrentValues();

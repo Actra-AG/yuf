@@ -11,6 +11,7 @@ namespace actra\yuf\form\rule;
 
 use actra\yuf\common\ValidatedEmailAddress;
 use actra\yuf\html\HtmlText;
+use Override;
 
 /**
  * The text is an e-mail address (syntax and, optionally, a DNS lookup of the domain). The canonical form is set by
@@ -26,6 +27,7 @@ class ValidEmailAddressRule extends StringRule
         parent::__construct(defaultErrorMessage: $errorMessage);
     }
 
+    #[Override]
     public function validate(string $value): bool
     {
         $validatedEmailAddress = new ValidatedEmailAddress(emailAddress: $value);

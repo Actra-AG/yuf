@@ -15,6 +15,7 @@ use actra\yuf\form\component\layout\CheckboxOptionsLayoutEnum;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlText;
+use Override;
 
 /**
  * The v3 markup of a `BooleanField` that is not rendered as a single checkbox item: a list with one checkbox
@@ -28,6 +29,7 @@ class BooleanFieldListRenderer extends FormRenderer
         private readonly bool $withLegend,
     ) {}
 
+    #[Override]
     public function prepare(): void
     {
         $optionsField = $this->createOptionsField();

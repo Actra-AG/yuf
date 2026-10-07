@@ -16,6 +16,7 @@ use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
 use InvalidArgumentException;
+use Override;
 use UnexpectedValueException;
 
 /**
@@ -58,12 +59,14 @@ final class FloatField extends ParsedInputField
         }
     }
 
+    #[Override]
     protected function accept(string $text): void
     {
         $this->value = AmountParser::toFloat(value: $text);
         parent::accept(text: $this->value === null ? $text : $this->toText(value: $this->value));
     }
 
+    #[Override]
     protected function hasParsedValue(): bool
     {
         return $this->value !== null;
@@ -77,6 +80,7 @@ final class FloatField extends ParsedInputField
         $this->valueRules[] = $formRule;
     }
 
+    #[Override]
     protected function checkRules(): void
     {
         parent::checkRules();

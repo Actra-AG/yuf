@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\html;
 
+use Override;
+
 class HtmlTagAttribute extends HtmlElement
 {
     public string|int|null $value;
@@ -29,6 +31,7 @@ class HtmlTagAttribute extends HtmlElement
      *
      * @return string : Generated html-code
      */
+    #[Override]
     public function render(): string
     {
         if ($this->value === null) {

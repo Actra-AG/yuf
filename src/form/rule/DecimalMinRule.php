@@ -11,6 +11,7 @@ namespace actra\yuf\form\rule;
 
 use actra\yuf\html\HtmlText;
 use InvalidArgumentException;
+use Override;
 
 /**
  * The value is at least `$min` (decimal strings, compared without float rounding).
@@ -29,6 +30,7 @@ class DecimalMinRule extends DecimalRule
         $this->min = DecimalRule::toLimit(decimal: $min);
     }
 
+    #[Override]
     public function validate(string $value): bool
     {
         return DecimalRule::compare(left: $value, right: $this->min) >= 0;

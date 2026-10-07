@@ -11,6 +11,7 @@ namespace actra\yuf\form;
 
 use actra\yuf\form\renderer\DefaultCollectionRenderer;
 use LogicException;
+use Override;
 
 abstract class FormCollection extends FormComponent
 {
@@ -59,6 +60,7 @@ abstract class FormCollection extends FormComponent
         unset($this->childComponents[$childComponentName]);
     }
 
+    #[Override]
     public function getDefaultRenderer(): FormRenderer
     {
         return new DefaultCollectionRenderer($this);

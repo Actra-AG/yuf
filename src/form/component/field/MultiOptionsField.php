@@ -17,6 +17,7 @@ use actra\yuf\form\rule\StringRule;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlText;
 use LogicException;
+use Override;
 use TypeError;
 
 /**
@@ -159,6 +160,7 @@ abstract class MultiOptionsField extends OptionsField
         $this->keyRules[] = $formRule;
     }
 
+    #[Override]
     protected function checkRules(): void
     {
         if ($this->isValueEmpty()) {
@@ -180,16 +182,19 @@ abstract class MultiOptionsField extends OptionsField
         }
     }
 
+    #[Override]
     public function isSelected(string $optionKey): bool
     {
         return in_array(needle: $optionKey, haystack: $this->values, strict: true);
     }
 
+    #[Override]
     final public function isMultiple(): bool
     {
         return true;
     }
 
+    #[Override]
     public function isValueEmpty(): bool
     {
         return $this->values === [];
@@ -198,6 +203,7 @@ abstract class MultiOptionsField extends OptionsField
     /**
      * Compares the selection, the order of the keys does not matter.
      */
+    #[Override]
     public function valueHasChanged(): bool
     {
         return $this->getAddedValues() !== [] || $this->getRemovedValues() !== [];
@@ -206,6 +212,7 @@ abstract class MultiOptionsField extends OptionsField
     /**
      * A list has no single text: the selected keys are rendered by the options.
      */
+    #[Override]
     public function renderValue(): string
     {
         return '';
@@ -216,6 +223,7 @@ abstract class MultiOptionsField extends OptionsField
      * value is empty. A single text (`name=a` instead of `name[]=a`), a non-string entry and an unknown key are
      * rejected: the value is reset to `[]`, one error is added and the rules do not run.
      */
+    #[Override]
     final protected function readInput(FormInput $input): void
     {
         $list = $input->getList(name: $this->name);

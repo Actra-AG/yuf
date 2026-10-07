@@ -14,11 +14,13 @@ use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 use actra\yuf\html\HtmlText;
+use Override;
 
 class LegendAndListRenderer extends FormRenderer
 {
     public function __construct(private readonly OptionsField $optionsField) {}
 
+    #[Override]
     public function prepare(): void
     {
         $optionsField = $this->optionsField;

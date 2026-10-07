@@ -15,19 +15,23 @@ use actra\yuf\template\template\TagNode;
 use actra\yuf\template\template\TemplateEngine;
 use actra\yuf\template\template\TemplateTag;
 use Exception;
+use Override;
 
 class LoadSubTplTag extends TemplateTag implements TagNode
 {
+    #[Override]
     public static function getName(): string
     {
         return 'loadSubTpl';
     }
 
+    #[Override]
     public static function isElseCompatible(): bool
     {
         return false;
     }
 
+    #[Override]
     public static function isSelfClosing(): bool
     {
         return true;
@@ -48,6 +52,7 @@ class LoadSubTplTag extends TemplateTag implements TagNode
         echo $tplEngine->getResultAsHtml(tplFile: $file, dataPool: $tplEngine->getAllData());
     }
 
+    #[Override]
     public function replaceNode(TemplateEngine $tplEngine, ElementNode $elementNode): void
     {
         $dataKey = $elementNode->getAttribute(name: 'tplfile')->value;

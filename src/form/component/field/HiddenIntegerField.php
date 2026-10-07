@@ -14,6 +14,7 @@ use actra\yuf\form\FormFieldValueMissingException;
 use actra\yuf\form\renderer\HiddenFieldRenderer;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
+use Override;
 use UnexpectedValueException;
 
 /**
@@ -44,17 +45,20 @@ final class HiddenIntegerField extends ParsedInputField
     /**
      * A hidden value is sent back as rendered, so only zero-width spaces are removed (the parser ignores whitespace).
      */
+    #[Override]
     protected function normalize(string $input): string
     {
         return $this->removeZeroWidthSpaces(input: $input);
     }
 
+    #[Override]
     protected function accept(string $text): void
     {
         $this->value = AmountParser::toInt(value: $text);
         parent::accept(text: $this->value === null ? $text : (string) $this->value);
     }
 
+    #[Override]
     protected function hasParsedValue(): bool
     {
         return $this->value !== null;

@@ -15,6 +15,7 @@ use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 use actra\yuf\html\HtmlText;
+use Override;
 
 /**
  * The markup of `ToggleField` and `MultiToggleField`: a list of radio buttons or checkboxes, each with the child
@@ -28,6 +29,7 @@ class ToggleFieldRenderer extends FormRenderer
         private readonly bool $displayLegend,
     ) {}
 
+    #[Override]
     public function prepare(): void
     {
         $ulTag = $this->createListTag();

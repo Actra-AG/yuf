@@ -361,12 +361,6 @@ parameters:
 			path: src/auth/MicrosoftIdToken.php
 
 		-
-			rawMessage: 'Method actra\yuf\auth\MicrosoftIdToken::getUserName() overrides method actra\yuf\auth\AuthWebToken::getUserName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/auth/MicrosoftIdToken.php
-
-		-
 			rawMessage: 'Method actra\yuf\auth\MicrosoftIdToken::getUserName() should return string but returns mixed.'
 			identifier: return.type
 			count: 1
@@ -381,12 +375,6 @@ parameters:
 		-
 			rawMessage: 'Method actra\yuf\auth\MicrosoftIdToken::parseKeySet() return type has no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
-			count: 1
-			path: src/auth/MicrosoftIdToken.php
-
-		-
-			rawMessage: 'Method actra\yuf\auth\MicrosoftIdToken::verify() overrides method actra\yuf\auth\AuthWebToken::verify() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/auth/MicrosoftIdToken.php
 
@@ -461,18 +449,6 @@ parameters:
 			identifier: offsetAccess.invalidOffset
 			count: 2
 			path: src/auth/MicrosoftIdToken.php
-
-		-
-			rawMessage: 'Method actra\yuf\clock\FixedClock::now() overrides method actra\yuf\clock\Clock::now() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/clock/FixedClock.php
-
-		-
-			rawMessage: 'Method actra\yuf\clock\SystemClock::now() overrides method actra\yuf\clock\Clock::now() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/clock/SystemClock.php
 
 		-
 			rawMessage: 'Method actra\yuf\common\CSVFile::__construct() has parameter $headersList with no value type specified in iterable type array.'
@@ -843,12 +819,6 @@ parameters:
 		-
 			rawMessage: 'Method actra\yuf\common\SimpleXMLExtended::addCData() has parameter $cdata_text with no type specified.'
 			identifier: missingType.parameter
-			count: 1
-			path: src/common/SimpleXMLExtended.php
-
-		-
-			rawMessage: 'Method actra\yuf\common\SimpleXMLExtended::addChild() overrides method SimpleXMLElement::addChild() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/common/SimpleXMLExtended.php
 
@@ -1981,18 +1951,6 @@ parameters:
 			path: src/db/FrameworkDB.php
 
 		-
-			rawMessage: 'Method actra\yuf\db\FrameworkDB::beginTransaction() overrides method PDO::beginTransaction() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/db/FrameworkDB.php
-
-		-
-			rawMessage: 'Method actra\yuf\db\FrameworkDB::commit() overrides method PDO::commit() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/db/FrameworkDB.php
-
-		-
 			rawMessage: 'Method actra\yuf\db\FrameworkDB::createInQuery() has parameter $paramArr with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
@@ -2017,26 +1975,8 @@ parameters:
 			path: src/db/FrameworkDB.php
 
 		-
-			rawMessage: 'Method actra\yuf\db\FrameworkDB::lastInsertId() overrides method PDO::lastInsertId() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/db/FrameworkDB.php
-
-		-
 			rawMessage: 'Method actra\yuf\db\FrameworkDB::prepare() has parameter $options with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
-			count: 1
-			path: src/db/FrameworkDB.php
-
-		-
-			rawMessage: 'Method actra\yuf\db\FrameworkDB::prepare() overrides method PDO::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/db/FrameworkDB.php
-
-		-
-			rawMessage: 'Method actra\yuf\db\FrameworkDB::rollBack() overrides method PDO::rollBack() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/db/FrameworkDB.php
 
@@ -2053,8 +1993,20 @@ parameters:
 			path: src/db/FrameworkDB.php
 
 		-
+			rawMessage: 'Parameter #1 $name (string) of method actra\yuf\db\FrameworkDB::lastInsertId() should be contravariant with parameter $name (string|null) of method PDO::lastInsertId()'
+			identifier: method.childParameterType
+			count: 1
+			path: src/db/FrameworkDB.php
+
+		-
 			rawMessage: Property actra\yuf\db\FrameworkDB::$instances type has no value type specified in iterable type array.
 			identifier: missingType.iterableValue
+			count: 1
+			path: src/db/FrameworkDB.php
+
+		-
+			rawMessage: 'Return type (int) of method actra\yuf\db\FrameworkDB::lastInsertId() should be compatible with return type (string|false) of method PDO::lastInsertId()'
+			identifier: method.childReturnType
 			count: 1
 			path: src/db/FrameworkDB.php
 
@@ -2173,34 +2125,16 @@ parameters:
 			path: src/form/FormCollection.php
 
 		-
-			rawMessage: 'Method actra\yuf\form\FormCollection::getDefaultRenderer() overrides method actra\yuf\form\FormComponent::getDefaultRenderer() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/FormCollection.php
-
-		-
 			rawMessage: 'Offset string might not exist on array<int|string, actra\yuf\form\FormComponent>.'
 			identifier: offsetAccess.notFound
 			count: 1
 			path: src/form/FormCollection.php
 
 		-
-			rawMessage: 'Method actra\yuf\form\FormComponent::render() overrides method actra\yuf\html\HtmlElement::render() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/FormComponent.php
-
-		-
 			rawMessage: 'Offset (int|string) might not exist on array<mixed, mixed>.'
 			identifier: offsetAccess.notFound
 			count: 4
 			path: src/form/FormInput.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\FormControl::getDefaultRenderer() overrides method actra\yuf\form\FormComponent::getDefaultRenderer() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/FormControl.php
 
 		-
 			rawMessage: Class actra\yuf\form\component\FormField has an uninitialized property $topFormComponent. Give it default value or assign it in the constructor.
@@ -2215,70 +2149,10 @@ parameters:
 			path: src/form/component/FormInfo.php
 
 		-
-			rawMessage: 'Method actra\yuf\form\component\FormInfo::getDefaultRenderer() overrides method actra\yuf\form\FormComponent::getDefaultRenderer() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/FormInfo.php
-
-		-
 			rawMessage: 'Calling uniqid() is forbidden, it is not a cryptographically secure generator, use random_bytes() instead.'
 			identifier: disallowed.function
 			count: 1
 			path: src/form/component/FormSubHeadline.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\FormSubHeadline::getHtmlTag() overrides method actra\yuf\form\FormComponent::getHtmlTag() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/FormSubHeadline.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\collection\Form::getDefaultRenderer() overrides method actra\yuf\form\FormCollection::getDefaultRenderer() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/collection/Form.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\collection\Form::render() overrides method actra\yuf\form\FormComponent::render() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/collection/Form.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\BooleanField::getDefaultRenderer() overrides method actra\yuf\form\FormComponent::getDefaultRenderer() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/BooleanField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\BooleanField::isValueEmpty() overrides method actra\yuf\form\component\FormField::isValueEmpty() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/BooleanField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\BooleanField::readInput() overrides method actra\yuf\form\component\FormField::readInput() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/BooleanField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\BooleanField::renderValue() overrides method actra\yuf\form\component\FormField::renderValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/BooleanField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\BooleanField::valueHasChanged() overrides method actra\yuf\form\component\FormField::valueHasChanged() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/BooleanField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\CheckboxOptionsField::getDefaultRenderer() overrides method actra\yuf\form\FormComponent::getDefaultRenderer() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/CheckboxOptionsField.php
 
 		-
 			rawMessage: 'Using the switch control structure is forbidden, use match.'
@@ -2287,436 +2161,16 @@ parameters:
 			path: src/form/component/field/CheckboxOptionsField.php
 
 		-
-			rawMessage: 'Method actra\yuf\form\component\field\CsrfTokenField::accept() overrides method actra\yuf\form\component\field\TextualField::accept() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/CsrfTokenField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\CsrfTokenField::normalize() overrides method actra\yuf\form\component\field\TextualField::normalize() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/CsrfTokenField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\CsrfTokenField::readAdditionalInput() overrides method actra\yuf\form\component\FormField::readAdditionalInput() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/CsrfTokenField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\CsrfTokenField::renderValue() overrides method actra\yuf\form\component\field\TextualField::renderValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/CsrfTokenField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\CsrfTokenField::validateCurrentValue() overrides method actra\yuf\form\component\FormField::validateCurrentValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/CsrfTokenField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\DateField::accept() overrides method actra\yuf\form\component\field\TextualField::accept() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/DateField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\DateField::hasParsedValue() overrides method actra\yuf\form\component\field\ParsedInputField::hasParsedValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/DateField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\DecimalField::accept() overrides method actra\yuf\form\component\field\TextualField::accept() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/DecimalField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\DecimalField::checkRules() overrides method actra\yuf\form\component\field\TextualField::checkRules() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/DecimalField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\DecimalField::hasParsedValue() overrides method actra\yuf\form\component\field\ParsedInputField::hasParsedValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/DecimalField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\EmailField::normalize() overrides method actra\yuf\form\component\field\TextualField::normalize() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/EmailField.php
-
-		-
 			rawMessage: 'Calling uniqid() is forbidden, it is not a cryptographically secure generator, use random_bytes() instead.'
 			identifier: disallowed.function
 			count: 1
 			path: src/form/component/field/FileField.php
 
 		-
-			rawMessage: 'Method actra\yuf\form\component\field\FileField::getDefaultRenderer() overrides method actra\yuf\form\FormComponent::getDefaultRenderer() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/FileField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\FileField::isValueEmpty() overrides method actra\yuf\form\component\FormField::isValueEmpty() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/FileField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\FileField::readAdditionalInput() overrides method actra\yuf\form\component\FormField::readAdditionalInput() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/FileField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\FileField::readInput() overrides method actra\yuf\form\component\FormField::readInput() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/FileField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\FileField::renderValue() overrides method actra\yuf\form\component\FormField::renderValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/FileField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\FileField::valueHasChanged() overrides method actra\yuf\form\component\FormField::valueHasChanged() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/FileField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\FloatField::accept() overrides method actra\yuf\form\component\field\TextualField::accept() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/FloatField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\FloatField::checkRules() overrides method actra\yuf\form\component\field\TextualField::checkRules() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/FloatField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\FloatField::hasParsedValue() overrides method actra\yuf\form\component\field\ParsedInputField::hasParsedValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/FloatField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\HiddenField::normalize() overrides method actra\yuf\form\component\field\TextualField::normalize() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/HiddenField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\HiddenIntegerField::accept() overrides method actra\yuf\form\component\field\TextualField::accept() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/HiddenIntegerField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\HiddenIntegerField::hasParsedValue() overrides method actra\yuf\form\component\field\ParsedInputField::hasParsedValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/HiddenIntegerField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\HiddenIntegerField::normalize() overrides method actra\yuf\form\component\field\TextualField::normalize() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/HiddenIntegerField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\IbanNumberField::validateCurrentValue() overrides method actra\yuf\form\component\FormField::validateCurrentValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/IbanNumberField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\InputField::getDefaultRenderer() overrides method actra\yuf\form\FormComponent::getDefaultRenderer() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/InputField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\IntegerField::accept() overrides method actra\yuf\form\component\field\TextualField::accept() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/IntegerField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\IntegerField::checkRules() overrides method actra\yuf\form\component\field\TextualField::checkRules() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/IntegerField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\IntegerField::hasParsedValue() overrides method actra\yuf\form\component\field\ParsedInputField::hasParsedValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/IntegerField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\MultiOptionsField::checkRules() overrides method actra\yuf\form\component\FormField::checkRules() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/MultiOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\MultiOptionsField::isMultiple() overrides method actra\yuf\form\component\field\OptionsField::isMultiple() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/MultiOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\MultiOptionsField::isSelected() overrides method actra\yuf\form\component\field\OptionsField::isSelected() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/MultiOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\MultiOptionsField::isValueEmpty() overrides method actra\yuf\form\component\FormField::isValueEmpty() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/MultiOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\MultiOptionsField::readInput() overrides method actra\yuf\form\component\FormField::readInput() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/MultiOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\MultiOptionsField::renderValue() overrides method actra\yuf\form\component\FormField::renderValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/MultiOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\MultiOptionsField::valueHasChanged() overrides method actra\yuf\form\component\FormField::valueHasChanged() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/MultiOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\MultiSelectOptionsField::getDefaultRenderer() overrides method actra\yuf\form\FormComponent::getDefaultRenderer() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/MultiSelectOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\MultiToggleField::getDefaultRenderer() overrides method actra\yuf\form\FormComponent::getDefaultRenderer() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/MultiToggleField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\MultiToggleField::validateChildFields() overrides method actra\yuf\form\component\FormField::validateChildFields() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/MultiToggleField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\MultiToggleField::validateChildFieldsWithCurrentValues() overrides method actra\yuf\form\component\FormField::validateChildFieldsWithCurrentValues() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/MultiToggleField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\NullField::render() overrides method actra\yuf\form\FormComponent::render() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/NullField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\NumericField::getDefaultRenderer() overrides method actra\yuf\form\component\field\InputField::getDefaultRenderer() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/NumericField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\ParsedInputField::validateCurrentValue() overrides method actra\yuf\form\component\FormField::validateCurrentValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/ParsedInputField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\PasswordField::normalize() overrides method actra\yuf\form\component\field\TextualField::normalize() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/PasswordField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\PasswordField::renderValue() overrides method actra\yuf\form\component\field\TextualField::renderValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/PasswordField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\PhoneNumberField::normalize() overrides method actra\yuf\form\component\field\TextualField::normalize() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/PhoneNumberField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\PhoneNumberField::readAdditionalInput() overrides method actra\yuf\form\component\FormField::readAdditionalInput() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/PhoneNumberField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\PhoneNumberField::renderValue() overrides method actra\yuf\form\component\field\TextualField::renderValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/PhoneNumberField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\PhoneNumberField::validateCurrentValue() overrides method actra\yuf\form\component\FormField::validateCurrentValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/PhoneNumberField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\RadioOptionsField::getDefaultRenderer() overrides method actra\yuf\form\FormComponent::getDefaultRenderer() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/RadioOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\RadioOptionsField::validateCurrentValue() overrides method actra\yuf\form\component\FormField::validateCurrentValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/RadioOptionsField.php
-
-		-
 			rawMessage: 'Using the switch control structure is forbidden, use match.'
 			identifier: disallowed.switch
 			count: 1
 			path: src/form/component/field/RadioOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\SelectOptionsField::getDefaultRenderer() overrides method actra\yuf\form\FormComponent::getDefaultRenderer() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/SelectOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\SingleOptionsField::checkRules() overrides method actra\yuf\form\component\FormField::checkRules() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/SingleOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\SingleOptionsField::isMultiple() overrides method actra\yuf\form\component\field\OptionsField::isMultiple() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/SingleOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\SingleOptionsField::isSelected() overrides method actra\yuf\form\component\field\OptionsField::isSelected() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/SingleOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\SingleOptionsField::isValueEmpty() overrides method actra\yuf\form\component\FormField::isValueEmpty() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/SingleOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\SingleOptionsField::readInput() overrides method actra\yuf\form\component\FormField::readInput() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/SingleOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\SingleOptionsField::renderValue() overrides method actra\yuf\form\component\FormField::renderValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/SingleOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\SingleOptionsField::valueHasChanged() overrides method actra\yuf\form\component\FormField::valueHasChanged() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/SingleOptionsField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\TextAreaField::checkRules() overrides method actra\yuf\form\component\field\TextualField::checkRules() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/TextAreaField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\TextAreaField::getDefaultRenderer() overrides method actra\yuf\form\FormComponent::getDefaultRenderer() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/TextAreaField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\TextAreaField::normalize() overrides method actra\yuf\form\component\field\TextualField::normalize() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/TextAreaField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\TextualField::checkRules() overrides method actra\yuf\form\component\FormField::checkRules() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/TextualField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\TextualField::isValueEmpty() overrides method actra\yuf\form\component\FormField::isValueEmpty() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/TextualField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\TextualField::readInput() overrides method actra\yuf\form\component\FormField::readInput() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/TextualField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\TextualField::renderValue() overrides method actra\yuf\form\component\FormField::renderValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/TextualField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\TextualField::valueHasChanged() overrides method actra\yuf\form\component\FormField::valueHasChanged() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/TextualField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\TimeField::accept() overrides method actra\yuf\form\component\field\TextualField::accept() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/TimeField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\TimeField::hasParsedValue() overrides method actra\yuf\form\component\field\ParsedInputField::hasParsedValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/TimeField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\TimeField::renderValue() overrides method actra\yuf\form\component\field\TextualField::renderValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/TimeField.php
 
 		-
 			rawMessage: 'Calling isset() is forbidden, compare explicitly: array_key_exists(), !== null or a typed property (see standards/php.md).'
@@ -2725,256 +2179,10 @@ parameters:
 			path: src/form/component/field/ToggleChildren.php
 
 		-
-			rawMessage: 'Method actra\yuf\form\component\field\ToggleField::getDefaultRenderer() overrides method actra\yuf\form\FormComponent::getDefaultRenderer() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\ToggleField::validateChildFields() overrides method actra\yuf\form\component\FormField::validateChildFields() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\ToggleField::validateChildFieldsWithCurrentValues() overrides method actra\yuf\form\component\FormField::validateChildFieldsWithCurrentValues() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/ToggleField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\ZipCodeField::readAdditionalInput() overrides method actra\yuf\form\component\FormField::readAdditionalInput() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/ZipCodeField.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\component\field\ZipCodeField::validateCurrentValue() overrides method actra\yuf\form\component\FormField::validateCurrentValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/component/field/ZipCodeField.php
-
-		-
 			rawMessage: 'Calling sha1() is forbidden, use hash() with at least SHA-256 for secure hash, or password_hash() for passwords.'
 			identifier: disallowed.function
 			count: 1
 			path: src/form/model/UploadedFile.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\BooleanFieldListRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/BooleanFieldListRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\CheckboxItemRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/CheckboxItemRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\DefaultCollectionRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/DefaultCollectionRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\DefaultComponentRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/DefaultComponentRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\DefaultFormRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/DefaultFormRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\DefaultOptionsRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/DefaultOptionsRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\DefinitionListRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/DefinitionListRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\FileFieldRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/FileFieldRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\FormControlRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/FormControlRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\FormInfoRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/FormInfoRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\HiddenFieldRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/HiddenFieldRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\InputFieldRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/InputFieldRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\LegendAndListRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/LegendAndListRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\NumericFieldRenderer::prepare() overrides method actra\yuf\form\renderer\InputFieldRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/NumericFieldRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\SelectOptionsRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/SelectOptionsRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\TextAreaRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/TextAreaRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\renderer\ToggleFieldRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/renderer/ToggleFieldRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\rule\DecimalMaxRule::validate() overrides method actra\yuf\form\rule\DecimalRule::validate() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/rule/DecimalMaxRule.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\rule\DecimalMinRule::validate() overrides method actra\yuf\form\rule\DecimalRule::validate() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/rule/DecimalMinRule.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\rule\FloatMaxRule::validate() overrides method actra\yuf\form\rule\FloatRule::validate() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/rule/FloatMaxRule.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\rule\FloatMinRule::validate() overrides method actra\yuf\form\rule\FloatRule::validate() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/rule/FloatMinRule.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\rule\IntegerMaxRule::validate() overrides method actra\yuf\form\rule\IntegerRule::validate() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/rule/IntegerMaxRule.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\rule\IntegerMinRule::validate() overrides method actra\yuf\form\rule\IntegerRule::validate() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/rule/IntegerMinRule.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\rule\MaxCountRule::validate() overrides method actra\yuf\form\rule\StringListRule::validate() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/rule/MaxCountRule.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\rule\MaxLengthRule::validate() overrides method actra\yuf\form\rule\StringRule::validate() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/rule/MaxLengthRule.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\rule\MinCountRule::validate() overrides method actra\yuf\form\rule\StringListRule::validate() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/rule/MinCountRule.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\rule\MinLengthRule::validate() overrides method actra\yuf\form\rule\StringRule::validate() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/rule/MinLengthRule.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\rule\RegexRule::validate() overrides method actra\yuf\form\rule\StringRule::validate() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/rule/RegexRule.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\rule\ValidEmailAddressRule::validate() overrides method actra\yuf\form\rule\StringRule::validate() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/rule/ValidEmailAddressRule.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\rule\ValidValueRule::validate() overrides method actra\yuf\form\rule\StringRule::validate() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/rule/ValidValueRule.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\upload\SessionFileUploadStorage::clear() overrides method actra\yuf\form\upload\FileUploadStorage::clear() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/upload/SessionFileUploadStorage.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\upload\SessionFileUploadStorage::delete() overrides method actra\yuf\form\upload\FileUploadStorage::delete() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/upload/SessionFileUploadStorage.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\upload\SessionFileUploadStorage::load() overrides method actra\yuf\form\upload\FileUploadStorage::load() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/upload/SessionFileUploadStorage.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\upload\SessionFileUploadStorage::removeExpired() overrides method actra\yuf\form\upload\FileUploadStorage::removeExpired() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/upload/SessionFileUploadStorage.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\upload\SessionFileUploadStorage::save() overrides method actra\yuf\form\upload\FileUploadStorage::save() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/upload/SessionFileUploadStorage.php
-
-		-
-			rawMessage: 'Method actra\yuf\form\upload\SessionFileUploadStorage::store() overrides method actra\yuf\form\upload\FileUploadStorage::store() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/form/upload/SessionFileUploadStorage.php
 
 		-
 			rawMessage: Binary operation "." between mixed and ' ' results in an error.
@@ -3139,24 +2347,6 @@ parameters:
 			path: src/html/HtmlTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\html\HtmlTag::render() overrides method actra\yuf\html\HtmlElement::render() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/html/HtmlTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\html\HtmlTagAttribute::render() overrides method actra\yuf\html\HtmlElement::render() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/html/HtmlTagAttribute.php
-
-		-
-			rawMessage: 'Method actra\yuf\html\HtmlText::render() overrides method actra\yuf\html\HtmlElement::render() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/html/HtmlText.php
-
-		-
 			rawMessage: 'Calling mt_rand() is forbidden, it is not a cryptographically secure generator, use random_int() instead.'
 			identifier: disallowed.function
 			count: 1
@@ -3197,30 +2387,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/mailer/AbstractMailer.php
-
-		-
-			rawMessage: 'Method actra\yuf\mailer\MailMailer::getMaxLineLength() overrides method actra\yuf\mailer\AbstractMailer::getMaxLineLength() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/mailer/MailMailer.php
-
-		-
-			rawMessage: 'Method actra\yuf\mailer\MailMailer::headerHasSubject() overrides method actra\yuf\mailer\AbstractMailer::headerHasSubject() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/mailer/MailMailer.php
-
-		-
-			rawMessage: 'Method actra\yuf\mailer\MailMailer::headerHasTo() overrides method actra\yuf\mailer\AbstractMailer::headerHasTo() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/mailer/MailMailer.php
-
-		-
-			rawMessage: 'Method actra\yuf\mailer\MailMailer::sendMail() overrides method actra\yuf\mailer\AbstractMailer::sendMail() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/mailer/MailMailer.php
 
 		-
 			rawMessage: 'Only booleans are allowed in an if condition, int|false given.'
@@ -3353,30 +2519,6 @@ parameters:
 			identifier: preDec.unused
 			count: 1
 			path: src/mailer/MailerFunctions.php
-
-		-
-			rawMessage: 'Method actra\yuf\mailer\SMTPMailer::getMaxLineLength() overrides method actra\yuf\mailer\AbstractMailer::getMaxLineLength() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/mailer/SMTPMailer.php
-
-		-
-			rawMessage: 'Method actra\yuf\mailer\SMTPMailer::headerHasSubject() overrides method actra\yuf\mailer\AbstractMailer::headerHasSubject() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/mailer/SMTPMailer.php
-
-		-
-			rawMessage: 'Method actra\yuf\mailer\SMTPMailer::headerHasTo() overrides method actra\yuf\mailer\AbstractMailer::headerHasTo() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/mailer/SMTPMailer.php
-
-		-
-			rawMessage: 'Method actra\yuf\mailer\SMTPMailer::sendMail() overrides method actra\yuf\mailer\AbstractMailer::sendMail() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/mailer/SMTPMailer.php
 
 		-
 			rawMessage: 'Only booleans are allowed in &&, int given on the left side.'
@@ -3973,18 +3115,6 @@ parameters:
 			path: src/security/CsrfToken.php
 
 		-
-			rawMessage: 'Method actra\yuf\security\SessionCsrfTokenSource::getToken() overrides method actra\yuf\security\CsrfTokenSource::getToken() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/security/SessionCsrfTokenSource.php
-
-		-
-			rawMessage: 'Method actra\yuf\security\SessionCsrfTokenSource::isValid() overrides method actra\yuf\security\CsrfTokenSource::isValid() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/security/SessionCsrfTokenSource.php
-
-		-
 			rawMessage: 'Call to function ini_get() with deprecated option ''session.sid_bits_per_character''.'
 			identifier: function.deprecated
 			count: 1
@@ -4025,12 +3155,6 @@ parameters:
 			identifier: disallowed.variable
 			count: 1
 			path: src/session/AbstractSessionHandler.php
-
-		-
-			rawMessage: 'Method actra\yuf\session\FileSessionHandler::executePreStartActions() overrides method actra\yuf\session\AbstractSessionHandler::executePreStartActions() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/session/FileSessionHandler.php
 
 		-
 			rawMessage: 'Method actra\yuf\table\TableHelper::createCallbackColumn() has parameter $callbackFunction with no signature specified for callable.'
@@ -4087,12 +3211,6 @@ parameters:
 			path: src/table/column/ActionsColumn.php
 
 		-
-			rawMessage: 'Method actra\yuf\table\column\ActionsColumn::renderCellValue() overrides method actra\yuf\table\column\AbstractTableColumn::renderCellValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/column/ActionsColumn.php
-
-		-
 			rawMessage: 'Parameter $array of function implode expects array<string>, array given.'
 			identifier: argument.type
 			count: 1
@@ -4117,20 +3235,8 @@ parameters:
 			path: src/table/column/ActionsColumn.php
 
 		-
-			rawMessage: 'Method actra\yuf\table\column\BooleanColumn::renderCellValue() overrides method actra\yuf\table\column\AbstractTableColumn::renderCellValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/column/BooleanColumn.php
-
-		-
 			rawMessage: 'Method actra\yuf\table\column\CallbackColumn::__construct() has parameter $callbackFunction with no signature specified for callable.'
 			identifier: missingType.callable
-			count: 1
-			path: src/table/column/CallbackColumn.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\column\CallbackColumn::renderCellValue() overrides method actra\yuf\table\column\AbstractTableColumn::renderCellValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/table/column/CallbackColumn.php
 
@@ -4153,24 +3259,6 @@ parameters:
 			path: src/table/column/DateColumn.php
 
 		-
-			rawMessage: 'Method actra\yuf\table\column\DateColumn::renderCellValue() overrides method actra\yuf\table\column\AbstractTableColumn::renderCellValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/column/DateColumn.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\column\DefaultColumn::renderCellValue() overrides method actra\yuf\table\column\AbstractTableColumn::renderCellValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/column/DefaultColumn.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\column\FileSizeColumn::renderCellValue() overrides method actra\yuf\table\column\AbstractTableColumn::renderCellValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/column/FileSizeColumn.php
-
-		-
 			rawMessage: 'Parameter $bytes of static method actra\yuf\common\StringUtils::formatBytes() expects float|int, mixed given.'
 			identifier: argument.type
 			count: 1
@@ -4179,12 +3267,6 @@ parameters:
 		-
 			rawMessage: 'Method actra\yuf\table\column\OptionsColumn::__construct() has parameter $options with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
-			count: 1
-			path: src/table/column/OptionsColumn.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\column\OptionsColumn::renderCellValue() overrides method actra\yuf\table\column\AbstractTableColumn::renderCellValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/table/column/OptionsColumn.php
 
@@ -4201,12 +3283,6 @@ parameters:
 			path: src/table/column/OptionsColumn.php
 
 		-
-			rawMessage: 'Method actra\yuf\table\column\StripHtmlTagsColumn::renderCellValue() overrides method actra\yuf\table\column\AbstractTableColumn::renderCellValue() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/column/StripHtmlTagsColumn.php
-
-		-
 			rawMessage: 'Parameter $string of function strip_tags expects string, mixed given.'
 			identifier: argument.type
 			count: 1
@@ -4219,80 +3295,8 @@ parameters:
 			path: src/table/filter/DateFilterField.php
 
 		-
-			rawMessage: 'Method actra\yuf\table\filter\DateFilterField::checkInput() overrides method actra\yuf\table\filter\AbstractTableFilterField::checkInput() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/DateFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\DateFilterField::getWhereCondition() overrides method actra\yuf\table\filter\AbstractTableFilterField::getWhereCondition() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/DateFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\DateFilterField::init() overrides method actra\yuf\table\filter\AbstractTableFilterField::init() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/DateFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\DateFilterField::isSelected() overrides method actra\yuf\table\filter\AbstractTableFilterField::isSelected() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/DateFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\DateFilterField::renderField() overrides method actra\yuf\table\filter\AbstractTableFilterField::renderField() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/DateFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\DateFilterField::reset() overrides method actra\yuf\table\filter\AbstractTableFilterField::reset() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/DateFilterField.php
-
-		-
 			rawMessage: 'Method actra\yuf\table\filter\OptionsFilterField::__construct() has parameter $filterOptions with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
-			count: 1
-			path: src/table/filter/OptionsFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\OptionsFilterField::checkInput() overrides method actra\yuf\table\filter\AbstractTableFilterField::checkInput() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/OptionsFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\OptionsFilterField::getWhereCondition() overrides method actra\yuf\table\filter\AbstractTableFilterField::getWhereCondition() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/OptionsFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\OptionsFilterField::init() overrides method actra\yuf\table\filter\AbstractTableFilterField::init() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/OptionsFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\OptionsFilterField::isSelected() overrides method actra\yuf\table\filter\AbstractTableFilterField::isSelected() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/OptionsFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\OptionsFilterField::renderField() overrides method actra\yuf\table\filter\AbstractTableFilterField::renderField() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/OptionsFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\OptionsFilterField::reset() overrides method actra\yuf\table\filter\AbstractTableFilterField::reset() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/table/filter/OptionsFilterField.php
 
@@ -4321,42 +3325,6 @@ parameters:
 			path: src/table/filter/TableFilter.php
 
 		-
-			rawMessage: 'Method actra\yuf\table\filter\TextFilterField::checkInput() overrides method actra\yuf\table\filter\AbstractTableFilterField::checkInput() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/TextFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\TextFilterField::getWhereCondition() overrides method actra\yuf\table\filter\AbstractTableFilterField::getWhereCondition() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/TextFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\TextFilterField::init() overrides method actra\yuf\table\filter\AbstractTableFilterField::init() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/TextFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\TextFilterField::isSelected() overrides method actra\yuf\table\filter\AbstractTableFilterField::isSelected() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/TextFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\TextFilterField::renderField() overrides method actra\yuf\table\filter\AbstractTableFilterField::renderField() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/TextFilterField.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\filter\TextFilterField::reset() overrides method actra\yuf\table\filter\AbstractTableFilterField::reset() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/filter/TextFilterField.php
-
-		-
 			rawMessage: Possibly invalid array key type string|null.
 			identifier: array.invalidKey
 			count: 1
@@ -4371,18 +3339,6 @@ parameters:
 		-
 			rawMessage: Class actra\yuf\table\renderer\SortableTableHeadRenderer has an uninitialized property $dbResultTable. Give it default value or assign it in the constructor.
 			identifier: property.uninitialized
-			count: 1
-			path: src/table/renderer/SortableTableHeadRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\renderer\SortableTableHeadRenderer::render() overrides method actra\yuf\table\renderer\TableHeadRenderer::render() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/renderer/SortableTableHeadRenderer.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\renderer\SortableTableHeadRenderer::renderColumnHead() overrides method actra\yuf\table\renderer\TableHeadRenderer::renderColumnHead() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/table/renderer/SortableTableHeadRenderer.php
 
@@ -4435,12 +3391,6 @@ parameters:
 			path: src/table/table/DbResultTable.php
 
 		-
-			rawMessage: 'Method actra\yuf\table\table\DbResultTable::addColumn() overrides method actra\yuf\table\table\SmartTable::addColumn() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/table/DbResultTable.php
-
-		-
 			rawMessage: 'Method actra\yuf\table\table\DbResultTable::getCurrentSortDirection() should return string but returns string|null.'
 			identifier: return.type
 			count: 1
@@ -4453,20 +3403,8 @@ parameters:
 			path: src/table/table/DbResultTable.php
 
 		-
-			rawMessage: 'Method actra\yuf\table\table\DbResultTable::getTotalAmount() overrides method actra\yuf\table\table\SmartTable::getTotalAmount() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/table/table/DbResultTable.php
-
-		-
 			rawMessage: 'Method actra\yuf\table\table\DbResultTable::getTotalAmount() should return int but returns int|null.'
 			identifier: return.type
-			count: 1
-			path: src/table/table/DbResultTable.php
-
-		-
-			rawMessage: 'Method actra\yuf\table\table\DbResultTable::render() overrides method actra\yuf\table\table\SmartTable::render() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/table/table/DbResultTable.php
 
@@ -4501,24 +3439,6 @@ parameters:
 			path: src/table/table/SmartTable.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\CheckboxOptionsTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/CheckboxOptionsTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\CheckboxOptionsTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/CheckboxOptionsTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\CheckboxOptionsTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/CheckboxOptionsTag.php
-
-		-
 			rawMessage: 'Method actra\yuf\template\customtags\CheckboxOptionsTag::render() has parameter $checkedSelector with no type specified.'
 			identifier: missingType.parameter
 			count: 1
@@ -4533,12 +3453,6 @@ parameters:
 		-
 			rawMessage: 'Method actra\yuf\template\customtags\CheckboxOptionsTag::render() has parameter $optionsSelector with no type specified.'
 			identifier: missingType.parameter
-			count: 1
-			path: src/template/customtags/CheckboxOptionsTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\CheckboxOptionsTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/template/customtags/CheckboxOptionsTag.php
 
@@ -4559,30 +3473,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/template/customtags/CheckboxOptionsTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\CheckboxTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/CheckboxTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\CheckboxTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/CheckboxTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\CheckboxTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/CheckboxTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\CheckboxTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/CheckboxTag.php
 
 		-
 			rawMessage: 'Argument of an invalid type mixed supplied for foreach, only iterables are supported.'
@@ -4633,30 +3523,6 @@ parameters:
 			path: src/template/customtags/DateTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\DateTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/DateTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\DateTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/DateTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\DateTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/DateTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\DateTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/DateTag.php
-
-		-
 			rawMessage: 'Cannot call method removeNode() on actra\yuf\template\htmlparser\HtmlNode|null.'
 			identifier: method.nonObject
 			count: 1
@@ -4669,30 +3535,6 @@ parameters:
 			path: src/template/customtags/ElseTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\ElseTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/ElseTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\ElseTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/ElseTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\ElseTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/ElseTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\ElseTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/ElseTag.php
-
-		-
 			rawMessage: 'Cannot call method removeNode() on actra\yuf\template\htmlparser\HtmlNode|null.'
 			identifier: method.nonObject
 			count: 1
@@ -4701,30 +3543,6 @@ parameters:
 		-
 			rawMessage: 'Cannot call method replaceNode() on actra\yuf\template\htmlparser\HtmlNode|null.'
 			identifier: method.nonObject
-			count: 1
-			path: src/template/customtags/ElseifTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\ElseifTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/ElseifTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\ElseifTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/ElseifTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\ElseifTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/ElseifTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\ElseifTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/template/customtags/ElseifTag.php
 
@@ -4737,30 +3555,6 @@ parameters:
 		-
 			rawMessage: 'Cannot call method replaceNode() on actra\yuf\template\htmlparser\HtmlNode|null.'
 			identifier: method.nonObject
-			count: 1
-			path: src/template/customtags/For2Tag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\For2Tag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/For2Tag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\For2Tag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/For2Tag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\For2Tag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/For2Tag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\For2Tag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/template/customtags/For2Tag.php
 
@@ -4873,32 +3667,8 @@ parameters:
 			path: src/template/customtags/ForTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\ForTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/ForTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\ForTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/ForTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\ForTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/ForTag.php
-
-		-
 			rawMessage: 'Method actra\yuf\template\customtags\ForTag::replaceEcho() has parameter $m with no type specified.'
 			identifier: missingType.parameter
-			count: 1
-			path: src/template/customtags/ForTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\ForTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/template/customtags/ForTag.php
 
@@ -4981,24 +3751,6 @@ parameters:
 			path: src/template/customtags/ForgroupTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\ForgroupTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/ForgroupTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\ForgroupTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/ForgroupTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\ForgroupTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/ForgroupTag.php
-
-		-
 			rawMessage: 'Method actra\yuf\template\customtags\ForgroupTag::prepareHtml() has parameter $html with no type specified.'
 			identifier: missingType.parameter
 			count: 1
@@ -5019,12 +3771,6 @@ parameters:
 		-
 			rawMessage: 'Method actra\yuf\template\customtags\ForgroupTag::replaceForeign() has parameter $matches with no type specified.'
 			identifier: missingType.parameter
-			count: 1
-			path: src/template/customtags/ForgroupTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\ForgroupTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/template/customtags/ForgroupTag.php
 
@@ -5095,24 +3841,6 @@ parameters:
 			path: src/template/customtags/FormAddRemoveTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\FormAddRemoveTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/FormAddRemoveTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\FormAddRemoveTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/FormAddRemoveTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\FormAddRemoveTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/FormAddRemoveTag.php
-
-		-
 			rawMessage: 'Method actra\yuf\template\customtags\FormAddRemoveTag::render() has parameter $chosenSelector with no type specified.'
 			identifier: missingType.parameter
 			count: 1
@@ -5127,12 +3855,6 @@ parameters:
 		-
 			rawMessage: 'Method actra\yuf\template\customtags\FormAddRemoveTag::render() has parameter $poolSelector with no type specified.'
 			identifier: missingType.parameter
-			count: 1
-			path: src/template/customtags/FormAddRemoveTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\FormAddRemoveTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/template/customtags/FormAddRemoveTag.php
 
@@ -5155,24 +3877,6 @@ parameters:
 			path: src/template/customtags/FormComponentTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\FormComponentTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/FormComponentTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\FormComponentTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/FormComponentTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\FormComponentTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/FormComponentTag.php
-
-		-
 			rawMessage: 'Method actra\yuf\template\customtags\FormComponentTag::render() has parameter $componentName with no type specified.'
 			identifier: missingType.parameter
 			count: 1
@@ -5187,12 +3891,6 @@ parameters:
 		-
 			rawMessage: 'Method actra\yuf\template\customtags\FormComponentTag::render() should return string but returns mixed.'
 			identifier: return.type
-			count: 1
-			path: src/template/customtags/FormComponentTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\FormComponentTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/template/customtags/FormComponentTag.php
 
@@ -5221,30 +3919,6 @@ parameters:
 			path: src/template/customtags/IfTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\IfTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/IfTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\IfTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/IfTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\IfTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/IfTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\IfTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/IfTag.php
-
-		-
 			rawMessage: 'Parameter $string of function strlen expects string, int|string|null given.'
 			identifier: argument.type
 			count: 1
@@ -5269,12 +3943,6 @@ parameters:
 			path: src/template/customtags/LangTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\LangTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/LangTag.php
-
-		-
 			rawMessage: 'Method actra\yuf\template\customtags\LangTag::getText() has parameter $key with no type specified.'
 			identifier: missingType.parameter
 			count: 1
@@ -5287,18 +3955,6 @@ parameters:
 			path: src/template/customtags/LangTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\LangTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/LangTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\LangTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/LangTag.php
-
-		-
 			rawMessage: 'Method actra\yuf\template\customtags\LangTag::replace() has parameter $key with no type specified.'
 			identifier: missingType.parameter
 			count: 1
@@ -5307,18 +3963,6 @@ parameters:
 		-
 			rawMessage: 'Method actra\yuf\template\customtags\LangTag::replaceInline() has parameter $tagArr with no type specified.'
 			identifier: missingType.parameter
-			count: 1
-			path: src/template/customtags/LangTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\LangTag::replaceInline() overrides method actra\yuf\template\template\TagInline::replaceInline() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/LangTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\LangTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/template/customtags/LangTag.php
 
@@ -5359,58 +4003,10 @@ parameters:
 			path: src/template/customtags/LoadSubTplTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\LoadSubTplTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/LoadSubTplTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\LoadSubTplTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/LoadSubTplTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\LoadSubTplTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/LoadSubTplTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\LoadSubTplTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/LoadSubTplTag.php
-
-		-
 			rawMessage: 'Parameter $subject of function preg_match expects string, int|string|null given.'
 			identifier: argument.type
 			count: 1
 			path: src/template/customtags/LoadSubTplTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\OptionTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/OptionTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\OptionTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/OptionTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\OptionTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/OptionTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\OptionTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/OptionTag.php
 
 		-
 			rawMessage: Binary operation "." between non-falsy-string and mixed results in an error.
@@ -5427,24 +4023,6 @@ parameters:
 		-
 			rawMessage: 'Cannot call method removeNode() on actra\yuf\template\htmlparser\HtmlNode|null.'
 			identifier: method.nonObject
-			count: 1
-			path: src/template/customtags/OptionsTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\OptionsTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/OptionsTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\OptionsTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/OptionsTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\OptionsTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/template/customtags/OptionsTag.php
 
@@ -5469,12 +4047,6 @@ parameters:
 		-
 			rawMessage: 'Method actra\yuf\template\customtags\OptionsTag::renderOptions() has parameter $selection with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
-			count: 1
-			path: src/template/customtags/OptionsTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\OptionsTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/template/customtags/OptionsTag.php
 
@@ -5509,24 +4081,6 @@ parameters:
 			path: src/template/customtags/PrintTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\PrintTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/PrintTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\PrintTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/PrintTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\PrintTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/PrintTag.php
-
-		-
 			rawMessage: 'Method actra\yuf\template\customtags\PrintTag::replace() has parameter $selector with no type specified.'
 			identifier: missingType.parameter
 			count: 1
@@ -5537,36 +4091,6 @@ parameters:
 			identifier: missingType.parameter
 			count: 1
 			path: src/template/customtags/PrintTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\PrintTag::replaceInline() overrides method actra\yuf\template\template\TagInline::replaceInline() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/PrintTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\PrintTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/PrintTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\RadioOptionsTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/RadioOptionsTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\RadioOptionsTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/RadioOptionsTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\RadioOptionsTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/RadioOptionsTag.php
 
 		-
 			rawMessage: 'Method actra\yuf\template\customtags\RadioOptionsTag::render() has parameter $checkedSelector with no type specified.'
@@ -5583,12 +4107,6 @@ parameters:
 		-
 			rawMessage: 'Method actra\yuf\template\customtags\RadioOptionsTag::render() has parameter $optionsSelector with no type specified.'
 			identifier: missingType.parameter
-			count: 1
-			path: src/template/customtags/RadioOptionsTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\RadioOptionsTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/template/customtags/RadioOptionsTag.php
 
@@ -5611,68 +4129,14 @@ parameters:
 			path: src/template/customtags/RadioOptionsTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\RadioTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/RadioTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\RadioTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/RadioTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\RadioTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/RadioTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\RadioTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/RadioTag.php
-
-		-
 			rawMessage: 'Cannot call method replaceNode() on actra\yuf\template\htmlparser\HtmlNode|null.'
 			identifier: method.nonObject
 			count: 1
 			path: src/template/customtags/SnippetTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\SnippetTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/SnippetTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\SnippetTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/SnippetTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\SnippetTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/SnippetTag.php
-
-		-
 			rawMessage: 'Method actra\yuf\template\customtags\SnippetTag::replaceInline() has parameter $tagArr with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
-			count: 1
-			path: src/template/customtags/SnippetTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\SnippetTag::replaceInline() overrides method actra\yuf\template\template\TagInline::replaceInline() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/SnippetTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\SnippetTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/template/customtags/SnippetTag.php
 
@@ -5713,24 +4177,6 @@ parameters:
 			path: src/template/customtags/TextTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\TextTag::getName() overrides method actra\yuf\template\template\TagNode::getName() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/TextTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\TextTag::isElseCompatible() overrides method actra\yuf\template\template\TagNode::isElseCompatible() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/TextTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\TextTag::isSelfClosing() overrides method actra\yuf\template\template\TagNode::isSelfClosing() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/TextTag.php
-
-		-
 			rawMessage: 'Method actra\yuf\template\customtags\TextTag::replace() has parameter $params with no type specified.'
 			identifier: missingType.parameter
 			count: 1
@@ -5739,18 +4185,6 @@ parameters:
 		-
 			rawMessage: 'Method actra\yuf\template\customtags\TextTag::replaceInline() has parameter $tagArr with no type specified.'
 			identifier: missingType.parameter
-			count: 1
-			path: src/template/customtags/TextTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\TextTag::replaceInline() overrides method actra\yuf\template\template\TagInline::replaceInline() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/customtags/TextTag.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\customtags\TextTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/template/customtags/TextTag.php
 
@@ -5959,20 +4393,8 @@ parameters:
 			path: src/template/htmlparser/HtmlNode.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\template\DirectoryTemplateCache::addCachedTplFile() overrides method actra\yuf\template\template\TemplateCacheStrategy::addCachedTplFile() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
-			count: 1
-			path: src/template/template/DirectoryTemplateCache.php
-
-		-
 			rawMessage: 'Method actra\yuf\template\template\DirectoryTemplateCache::getCacheFileName() should return string but returns string|null.'
 			identifier: return.type
-			count: 1
-			path: src/template/template/DirectoryTemplateCache.php
-
-		-
-			rawMessage: 'Method actra\yuf\template\template\DirectoryTemplateCache::getCachedTplFile() overrides method actra\yuf\template\template\TemplateCacheStrategy::getCachedTplFile() but is missing the #[\Override] attribute.'
-			identifier: method.missingOverride
 			count: 1
 			path: src/template/template/DirectoryTemplateCache.php
 

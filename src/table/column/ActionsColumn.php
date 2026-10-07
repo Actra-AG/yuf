@@ -11,6 +11,7 @@ namespace actra\yuf\table\column;
 
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\table\TableItemModel;
+use Override;
 
 class ActionsColumn extends AbstractTableColumn
 {
@@ -59,6 +60,7 @@ class ActionsColumn extends AbstractTableColumn
         $this->hideDeleteLinkValue = $hideValue;
     }
 
+    #[Override]
     protected function renderCellValue(TableItemModel $tableItemModel): string
     {
         $actionLinks = $this->actionLinks;

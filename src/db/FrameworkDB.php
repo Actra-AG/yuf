@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\db;
 
 use LogicException;
+use Override;
 use PDO;
 use Pdo\Mysql;
 use PDOException;
@@ -106,6 +107,7 @@ class FrameworkDB extends PDO
      * @param string $query Valid SQL statement
      * @param array|null $options One or more key=>value pairs to set attribute values for the returned PDOStatement
      */
+    #[Override]
     public function prepare(string $query, $options = null): PDOStatement
     {
         if ($options === null) {
@@ -228,6 +230,7 @@ class FrameworkDB extends PDO
      * @throws LogicException
      * @throws RuntimeException
      */
+    #[Override]
     public function beginTransaction(): bool
     {
         // Some drivers are mocking about the transaction. We can't tolerate that!
@@ -252,6 +255,7 @@ class FrameworkDB extends PDO
      * @throws LogicException
      * @throws RuntimeException
      */
+    #[Override]
     public function commit(): bool
     {
         if (!$this->inTransaction()) {
@@ -271,6 +275,7 @@ class FrameworkDB extends PDO
      * @throws LogicException
      * @throws RuntimeException
      */
+    #[Override]
     public function rollBack(): bool
     {
         if (!$this->inTransaction()) {
@@ -299,6 +304,7 @@ class FrameworkDB extends PDO
         return DbQueryLogList::getLog();
     }
 
+    #[Override]
     #[ReturnTypeWillChange]
     public function lastInsertId($name = null): int
     {

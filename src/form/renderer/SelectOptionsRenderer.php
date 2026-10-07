@@ -14,11 +14,13 @@ use actra\yuf\form\component\field\SelectOptionsField;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
+use Override;
 
 class SelectOptionsRenderer extends FormRenderer
 {
     public function __construct(private readonly SelectOptionsField|MultiSelectOptionsField $selectOptionsField) {}
 
+    #[Override]
     public function prepare(): void
     {
         $selectOptionsField = $this->selectOptionsField;

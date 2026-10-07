@@ -16,19 +16,23 @@ use actra\yuf\template\template\TagInline;
 use actra\yuf\template\template\TagNode;
 use actra\yuf\template\template\TemplateEngine;
 use actra\yuf\template\template\TemplateTag;
+use Override;
 
 class SnippetTag extends TemplateTag implements TagNode, TagInline
 {
+    #[Override]
     public static function getName(): string
     {
         return 'snippet';
     }
 
+    #[Override]
     public static function isElseCompatible(): bool
     {
         return false;
     }
 
+    #[Override]
     public static function isSelfClosing(): bool
     {
         return true;
@@ -55,6 +59,7 @@ class SnippetTag extends TemplateTag implements TagNode, TagInline
         );
     }
 
+    #[Override]
     public function replaceNode(TemplateEngine $tplEngine, ElementNode $elementNode): void
     {
         $textNode = new TextNode();
@@ -72,6 +77,7 @@ class SnippetTag extends TemplateTag implements TagNode, TagInline
         return '<?php ' . __CLASS__ . '::requireFile(file: \'' . $snippetPath . '\', tplEngine: $this); ?>';
     }
 
+    #[Override]
     public function replaceInline(TemplateEngine $tplEngine, array $tagArr): string
     {
         return $this->getReplaceValue(

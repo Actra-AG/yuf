@@ -15,24 +15,29 @@ use actra\yuf\template\template\TagInline;
 use actra\yuf\template\template\TagNode;
 use actra\yuf\template\template\TemplateEngine;
 use actra\yuf\template\template\TemplateTag;
+use Override;
 
 class TextTag extends TemplateTag implements TagNode, TagInline
 {
+    #[Override]
     public static function getName(): string
     {
         return 'text';
     }
 
+    #[Override]
     public static function isElseCompatible(): bool
     {
         return false;
     }
 
+    #[Override]
     public static function isSelfClosing(): bool
     {
         return true;
     }
 
+    #[Override]
     public function replaceNode(TemplateEngine $tplEngine, ElementNode $elementNode): void
     {
         $replValue = $this->replace($elementNode->getAttribute('value')->value);
@@ -48,6 +53,7 @@ class TextTag extends TemplateTag implements TagNode, TagInline
         return '<?php echo $this->getDataFromSelector(\'' . $params . '\'); ?>';
     }
 
+    #[Override]
     public function replaceInline(TemplateEngine $tplEngine, $tagArr): string
     {
         return $this->replace($tagArr['value']);

@@ -13,6 +13,7 @@ use actra\yuf\form\component\FormInfo;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
+use Override;
 
 class FormInfoRenderer extends FormRenderer
 {
@@ -23,6 +24,7 @@ class FormInfoRenderer extends FormRenderer
         $this->formInfo = $formInfo;
     }
 
+    #[Override]
     public function prepare(): void
     {
         $formInfo = $this->formInfo;

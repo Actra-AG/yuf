@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\html;
 
+use Override;
+
 class HtmlText extends HtmlElement
 {
     private string $textContent;
@@ -36,6 +38,7 @@ class HtmlText extends HtmlElement
      *
      * @return string Generated html-code
      */
+    #[Override]
     public function render(): string
     {
         return $this->isEncodedForRendering ? $this->textContent : HtmlEncoder::encode(value: $this->textContent);

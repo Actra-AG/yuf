@@ -13,19 +13,23 @@ use actra\yuf\template\htmlparser\ElementNode;
 use actra\yuf\template\template\TagNode;
 use actra\yuf\template\template\TemplateEngine;
 use actra\yuf\template\template\TemplateTag;
+use Override;
 
 class RadioOptionsTag extends TemplateTag implements TagNode
 {
+    #[Override]
     public static function getName(): string
     {
         return 'radioOptions';
     }
 
+    #[Override]
     public static function isElseCompatible(): bool
     {
         return false;
     }
 
+    #[Override]
     public static function isSelfClosing(): bool
     {
         return true;
@@ -42,6 +46,7 @@ class RadioOptionsTag extends TemplateTag implements TagNode
         );
     }
 
+    #[Override]
     public function replaceNode(TemplateEngine $tplEngine, ElementNode $elementNode): void
     {
         CustomTagsHelper::replaceOptionsNode(templateEngine: $tplEngine, elementNode: $elementNode, multiple: false);

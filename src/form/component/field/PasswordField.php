@@ -12,6 +12,7 @@ namespace actra\yuf\form\component\field;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
+use Override;
 
 /**
  * A password is read exactly as typed (no normalization), has no setter and no initial value, and is never rendered
@@ -39,6 +40,7 @@ final class PasswordField extends StringInputField
         $this->addRequiredRule(errorMessage: $requiredError);
     }
 
+    #[Override]
     protected function normalize(string $input): string
     {
         return $input;
@@ -48,6 +50,7 @@ final class PasswordField extends StringInputField
      * A password is never rendered back into the HTML (e.g. when the form is shown again with validation errors),
      * so it cannot end up in the page source, browser caches or logs.
      */
+    #[Override]
     public function renderValue(): string
     {
         return '';

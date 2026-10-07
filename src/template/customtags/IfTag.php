@@ -16,24 +16,29 @@ use actra\yuf\template\template\TagNode;
 use actra\yuf\template\template\TemplateEngine;
 use actra\yuf\template\template\TemplateTag;
 use LogicException;
+use Override;
 
 class IfTag extends TemplateTag implements TagNode
 {
+    #[Override]
     public static function getName(): string
     {
         return 'if';
     }
 
+    #[Override]
     public static function isElseCompatible(): bool
     {
         return true;
     }
 
+    #[Override]
     public static function isSelfClosing(): bool
     {
         return false;
     }
 
+    #[Override]
     public function replaceNode(TemplateEngine $tplEngine, ElementNode $elementNode): void
     {
         $tplEngine->checkRequiredAttributes(

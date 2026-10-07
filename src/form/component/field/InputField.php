@@ -14,6 +14,7 @@ use actra\yuf\form\renderer\InputFieldRenderer;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
+use Override;
 
 abstract class InputField extends TextualField
 {
@@ -31,6 +32,7 @@ abstract class InputField extends TextualField
         );
     }
 
+    #[Override]
     public function getDefaultRenderer(): FormRenderer
     {
         return new InputFieldRenderer(formField: $this);

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\common;
 
+use Override;
 use SimpleXMLElement;
 use stdClass;
 use Throwable;
@@ -109,6 +110,7 @@ class SimpleXMLExtended extends SimpleXMLElement
         return true;
     }
 
+    #[Override]
     public function addChild(string $qualifiedName, ?string $value = null, ?string $namespace = null): ?static
     {
         $new_child = parent::addChild($qualifiedName, null, $namespace);

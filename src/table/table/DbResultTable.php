@@ -19,6 +19,7 @@ use actra\yuf\table\renderer\TablePaginationRenderer;
 use actra\yuf\table\TableHelper;
 use actra\yuf\table\TableItemCollection;
 use actra\yuf\table\TableItemModel;
+use Override;
 
 class DbResultTable extends SmartTable
 {
@@ -64,6 +65,7 @@ class DbResultTable extends SmartTable
         $this->tablePaginationRenderer = $tablePaginationRenderer === null ? new TablePaginationRenderer() : $tablePaginationRenderer;
     }
 
+    #[Override]
     public function addColumn(AbstractTableColumn $abstractTableColumn, bool $isDefaultSortColumn = false): void
     {
         parent::addColumn(abstractTableColumn: $abstractTableColumn);
@@ -73,6 +75,7 @@ class DbResultTable extends SmartTable
         }
     }
 
+    #[Override]
     public function render(): string
     {
         $this->fillBySelectQuery();
@@ -288,6 +291,7 @@ class DbResultTable extends SmartTable
         $this->additionalLinkParameters[urlencode(string: $key)] = urlencode(string: $value);
     }
 
+    #[Override]
     public function getTotalAmount(): int
     {
         if ($this->totalAmount !== null) {

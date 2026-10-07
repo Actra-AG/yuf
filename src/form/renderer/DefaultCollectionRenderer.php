@@ -13,11 +13,13 @@ use actra\yuf\form\FormCollection;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
+use Override;
 
 class DefaultCollectionRenderer extends FormRenderer
 {
     public function __construct(private readonly FormCollection $formCollection) {}
 
+    #[Override]
     public function prepare(): void
     {
         $componentTag = new HtmlTag($this->formCollection->name, false);

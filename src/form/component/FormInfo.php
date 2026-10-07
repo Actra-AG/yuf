@@ -13,6 +13,7 @@ use actra\yuf\form\FormComponent;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\FormInfoRenderer;
 use actra\yuf\html\HtmlText;
+use Override;
 
 class FormInfo extends FormComponent
 {
@@ -31,6 +32,7 @@ class FormInfo extends FormComponent
         parent::__construct(uniqid());
     }
 
+    #[Override]
     public function getDefaultRenderer(): FormRenderer
     {
         return new FormInfoRenderer(formInfo: $this);

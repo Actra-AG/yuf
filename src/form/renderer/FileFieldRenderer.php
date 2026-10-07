@@ -15,6 +15,7 @@ use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 use actra\yuf\html\HtmlText;
+use Override;
 
 class FileFieldRenderer extends FormRenderer
 {
@@ -22,6 +23,7 @@ class FileFieldRenderer extends FormRenderer
 
     public function __construct(private readonly FileField $fileField) {}
 
+    #[Override]
     public function prepare(): void
     {
         $fileField = $this->fileField;

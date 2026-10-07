@@ -15,24 +15,29 @@ use actra\yuf\template\template\TagNode;
 use actra\yuf\template\template\TemplateEngine;
 use actra\yuf\template\template\TemplateTag;
 use Exception;
+use Override;
 
 class For2Tag extends TemplateTag implements TagNode
 {
+    #[Override]
     public static function getName(): string
     {
         return 'for2';
     }
 
+    #[Override]
     public static function isElseCompatible(): bool
     {
         return true;
     }
 
+    #[Override]
     public static function isSelfClosing(): bool
     {
         return false;
     }
 
+    #[Override]
     public function replaceNode(TemplateEngine $tplEngine, ElementNode $elementNode): void
     {
         $tplEngine->checkRequiredAttributes($elementNode, ['var', 'as']);

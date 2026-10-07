@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\form\rule;
 
 use actra\yuf\html\HtmlText;
+use Override;
 
 /**
  * At least `$minCount` selected values (replaces `MinLengthRule` on a list of values).
@@ -21,6 +22,7 @@ class MinCountRule extends StringListRule
         parent::__construct(defaultErrorMessage: $errorMessage);
     }
 
+    #[Override]
     public function validate(array $values): bool
     {
         return count(value: $values) >= $this->minCount;

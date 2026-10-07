@@ -14,6 +14,7 @@ use actra\yuf\clock\SystemClock;
 use actra\yuf\Core;
 use actra\yuf\exception\UnauthorizedException;
 use OpenSSLAsymmetricKey;
+use Override;
 use stdClass;
 
 class MicrosoftIdToken extends AuthWebToken
@@ -30,11 +31,13 @@ class MicrosoftIdToken extends AuthWebToken
         parent::__construct(jwtString: $jwtString);
     }
 
+    #[Override]
     public function getUserName(): string
     {
         return $this->payload->email;
     }
 
+    #[Override]
     protected function verify(): bool
     {
         $header = $this->header;

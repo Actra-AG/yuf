@@ -17,6 +17,7 @@ use actra\yuf\form\renderer\CheckboxOptionsRenderer;
 use actra\yuf\form\renderer\DefinitionListRenderer;
 use actra\yuf\form\renderer\LegendAndListRenderer;
 use actra\yuf\html\HtmlText;
+use Override;
 
 class CheckboxOptionsField extends MultiOptionsField
 {
@@ -56,6 +57,7 @@ class CheckboxOptionsField extends MultiOptionsField
         }
     }
 
+    #[Override]
     public function getDefaultRenderer(): FormRenderer
     {
         return new CheckboxOptionsRenderer(checkboxOptionsField: $this);

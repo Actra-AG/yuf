@@ -14,11 +14,13 @@ use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 use actra\yuf\html\HtmlText;
+use Override;
 
 class TextAreaRenderer extends FormRenderer
 {
     public function __construct(private readonly TextAreaField $textAreaField) {}
 
+    #[Override]
     public function prepare(): void
     {
         $textAreaField = $this->textAreaField;

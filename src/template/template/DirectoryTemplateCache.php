@@ -11,6 +11,7 @@ namespace actra\yuf\template\template;
 
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
+use Override;
 
 class DirectoryTemplateCache extends TemplateCacheStrategy
 {
@@ -28,6 +29,7 @@ class DirectoryTemplateCache extends TemplateCacheStrategy
         $this->baseDirLength = strlen($templateBaseDirectory);
     }
 
+    #[Override]
     public function getCachedTplFile(string $tplFile): ?TemplateCacheEntry
     {
         $cacheFileName = $this->getCacheFileName($tplFile);
@@ -44,6 +46,7 @@ class DirectoryTemplateCache extends TemplateCacheStrategy
         return new TemplateCacheEntry($cacheFileName, $changeTime, -1);
     }
 
+    #[Override]
     public function addCachedTplFile(
         string $tplFile,
         ?TemplateCacheEntry $currentCacheEntry,

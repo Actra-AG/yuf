@@ -14,6 +14,7 @@ use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQueryData;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
+use Override;
 
 class TextFilterField extends AbstractTableFilterField
 {
@@ -34,21 +35,25 @@ class TextFilterField extends AbstractTableFilterField
         );
     }
 
+    #[Override]
     public function init(): void
     {
         $this->value = (string) $this->getFromSession(index: $this->identifier);
     }
 
+    #[Override]
     public function reset(): void
     {
         $this->setValue(value: '');
     }
 
+    #[Override]
     public function checkInput(): void
     {
         $this->setValue(value: (string) HttpRequest::getInputString(keyName: $this->identifier));
     }
 
+    #[Override]
     public function getWhereCondition(): DbQueryData
     {
         return SearchHelper::createSQLFilters(filterArr: [
@@ -71,6 +76,7 @@ class TextFilterField extends AbstractTableFilterField
         $this->saveToSession(index: $this->identifier, value: $value);
     }
 
+    #[Override]
     protected function renderField(): string
     {
         $classes = ['text'];
@@ -89,6 +95,7 @@ class TextFilterField extends AbstractTableFilterField
         ) . '">';
     }
 
+    #[Override]
     public function isSelected(): bool
     {
         return ($this->value !== '');

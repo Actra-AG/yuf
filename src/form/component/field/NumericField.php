@@ -12,6 +12,7 @@ namespace actra\yuf\form\component\field;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\NumericFieldRenderer;
 use actra\yuf\html\HtmlText;
+use Override;
 
 /**
  * An integer field for digit codes (e.g. a house number): renders `inputmode="numeric"` and a `pattern` from
@@ -40,6 +41,7 @@ final class NumericField extends IntegerField
         );
     }
 
+    #[Override]
     public function getDefaultRenderer(): FormRenderer
     {
         return new NumericFieldRenderer(numericField: $this);

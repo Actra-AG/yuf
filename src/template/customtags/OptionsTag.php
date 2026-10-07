@@ -14,19 +14,23 @@ use actra\yuf\template\htmlparser\TextNode;
 use actra\yuf\template\template\TagNode;
 use actra\yuf\template\template\TemplateEngine;
 use actra\yuf\template\template\TemplateTag;
+use Override;
 
 class OptionsTag extends TemplateTag implements TagNode
 {
+    #[Override]
     public static function getName(): string
     {
         return 'options';
     }
 
+    #[Override]
     public static function isElseCompatible(): bool
     {
         return false;
     }
 
+    #[Override]
     public static function isSelfClosing(): bool
     {
         return true;
@@ -69,6 +73,7 @@ class OptionsTag extends TemplateTag implements TagNode
         return $html;
     }
 
+    #[Override]
     public function replaceNode(TemplateEngine $tplEngine, ElementNode $elementNode): void
     {
         $tplEngine->checkRequiredAttributes($elementNode, ['options']);

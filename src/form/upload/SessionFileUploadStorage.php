@@ -15,6 +15,7 @@ use actra\yuf\form\model\UploadedFile;
 use actra\yuf\form\model\UploadInput;
 use DirectoryIterator;
 use InvalidArgumentException;
+use Override;
 
 /**
  * Keeps the uploaded files in a directory below the temp directory (one directory per pointer) and the list of the
@@ -53,6 +54,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
         );
     }
 
+    #[Override]
     public function load(string $pointer): array
     {
         $this->assertValidPointer(pointer: $pointer);
@@ -71,6 +73,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
         return $files;
     }
 
+    #[Override]
     public function save(string $pointer, array $files): void
     {
         $this->assertValidPointer(pointer: $pointer);
@@ -86,6 +89,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
         $_SESSION[$pointer] = $storedFiles;
     }
 
+    #[Override]
     public function store(string $pointer, UploadInput $upload): ?UploadedFile
     {
         if (!is_uploaded_file(filename: $upload->tmpName)) {
@@ -114,6 +118,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
         return new UploadedFile(name: $upload->name, type: $upload->type, size: $upload->size, path: $path);
     }
 
+    #[Override]
     public function delete(UploadedFile $file): void
     {
         if ($this->isInsideRootDirectory(path: $file->path) && is_file(filename: $file->path)) {
@@ -121,6 +126,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
         }
     }
 
+    #[Override]
     public function clear(string $pointer): void
     {
         $directory = $this->getPointerDirectory(pointer: $pointer);
@@ -130,6 +136,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
         unset($_SESSION[$pointer]);
     }
 
+    #[Override]
     public function removeExpired(): void
     {
         if (!is_dir(filename: $this->rootDirectory)) {

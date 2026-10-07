@@ -13,6 +13,7 @@ use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQueryData;
 use actra\yuf\html\HtmlText;
 use DateTimeImmutable;
+use Override;
 use Throwable;
 
 class DateFilterField extends AbstractTableFilterField
@@ -36,6 +37,7 @@ class DateFilterField extends AbstractTableFilterField
         );
     }
 
+    #[Override]
     public function init(): void
     {
         $valueFromSession = (string) $this->getFromSession(index: $this->identifier);
@@ -44,6 +46,7 @@ class DateFilterField extends AbstractTableFilterField
         }
     }
 
+    #[Override]
     public function checkInput(): void
     {
         $inputValue = (string) HttpRequest::getInputString(keyName: $this->identifier);
@@ -70,12 +73,14 @@ class DateFilterField extends AbstractTableFilterField
         }
     }
 
+    #[Override]
     public function reset(): void
     {
         $this->value = null;
         $this->saveToSession(index: $this->identifier, value: '');
     }
 
+    #[Override]
     public function getWhereCondition(): DbQueryData
     {
         return new DbQueryData(
@@ -84,6 +89,7 @@ class DateFilterField extends AbstractTableFilterField
         );
     }
 
+    #[Override]
     protected function renderField(): string
     {
         $classes = ['text'];
@@ -100,6 +106,7 @@ class DateFilterField extends AbstractTableFilterField
         ) . '" name="' . $this->identifier . '" id="filter-' . $this->identifier . '" value="' . ($this->value === null ? '' : $this->value->format(format: $this->renderFormat)) . '">';
     }
 
+    #[Override]
     public function isSelected(): bool
     {
         return $this->value !== null;

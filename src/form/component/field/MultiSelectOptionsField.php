@@ -14,6 +14,7 @@ use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\SelectOptionsRenderer;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlText;
+use Override;
 
 /**
  * A select with multiple selected options (`name[]`). Replaces `SelectOptionsField(acceptMultipleSelections: true)`.
@@ -59,6 +60,7 @@ class MultiSelectOptionsField extends MultiOptionsField
         );
     }
 
+    #[Override]
     public function getDefaultRenderer(): FormRenderer
     {
         return new SelectOptionsRenderer(selectOptionsField: $this);

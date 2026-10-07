@@ -14,6 +14,7 @@ use actra\yuf\table\table\DbResultTable;
 use actra\yuf\table\table\SmartTable;
 use actra\yuf\table\TableHelper;
 use LogicException;
+use Override;
 
 class SortableTableHeadRenderer extends TableHeadRenderer
 {
@@ -27,6 +28,7 @@ class SortableTableHeadRenderer extends TableHeadRenderer
     public string $sortableColumnLabelAdditionActiveDesc = '';
     private DbResultTable $dbResultTable;
 
+    #[Override]
     public function render(SmartTable $smartTable): string
     {
         if (!($smartTable instanceof DbResultTable)) {
@@ -38,6 +40,7 @@ class SortableTableHeadRenderer extends TableHeadRenderer
         return parent::render(smartTable: $smartTable);
     }
 
+    #[Override]
     protected function renderColumnHead(AbstractTableColumn $abstractTableColumn): string
     {
         $columnLabel = $abstractTableColumn->label;

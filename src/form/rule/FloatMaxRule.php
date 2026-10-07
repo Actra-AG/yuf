@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\form\rule;
 
 use actra\yuf\html\HtmlText;
+use Override;
 
 /**
  * The value is at most `$max`.
@@ -21,6 +22,7 @@ class FloatMaxRule extends FloatRule
         parent::__construct(defaultErrorMessage: $errorMessage);
     }
 
+    #[Override]
     public function validate(float $value): bool
     {
         return $value <= $this->max;

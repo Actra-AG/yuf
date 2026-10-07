@@ -16,6 +16,7 @@ use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
 use InvalidArgumentException;
+use Override;
 use UnexpectedValueException;
 
 /**
@@ -70,12 +71,14 @@ final class DecimalField extends ParsedInputField
         }
     }
 
+    #[Override]
     protected function accept(string $text): void
     {
         $this->value = AmountParser::toDecimal(value: $text, scale: $this->scale);
         parent::accept(text: $this->value ?? $text);
     }
 
+    #[Override]
     protected function hasParsedValue(): bool
     {
         return $this->value !== null;
@@ -89,6 +92,7 @@ final class DecimalField extends ParsedInputField
         $this->valueRules[] = $formRule;
     }
 
+    #[Override]
     protected function checkRules(): void
     {
         parent::checkRules();

@@ -12,6 +12,7 @@ namespace actra\yuf\form\renderer;
 use actra\yuf\form\component\field\NumericField;
 use actra\yuf\html\HtmlTagAttribute;
 use LogicException;
+use Override;
 
 class NumericFieldRenderer extends InputFieldRenderer
 {
@@ -20,6 +21,7 @@ class NumericFieldRenderer extends InputFieldRenderer
         parent::__construct(formField: $numericField);
     }
 
+    #[Override]
     public function prepare(): void
     {
         parent::prepare();

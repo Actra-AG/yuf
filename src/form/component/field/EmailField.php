@@ -14,6 +14,7 @@ use actra\yuf\form\rule\ValidEmailAddressRule;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
+use Override;
 
 final class EmailField extends SettableStringInputField
 {
@@ -54,6 +55,7 @@ final class EmailField extends SettableStringInputField
      * A valid address is stored in its canonical form (lower case, no whitespace); an invalid one stays as typed
      * (trimmed), so the user can correct it.
      */
+    #[Override]
     protected function normalize(string $input): string
     {
         $text = parent::normalize(input: $input);

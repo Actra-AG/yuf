@@ -11,6 +11,7 @@ namespace actra\yuf\form\rule;
 
 use actra\yuf\html\HtmlText;
 use InvalidArgumentException;
+use Override;
 
 /**
  * The value is at most `$max` (decimal strings, compared without float rounding).
@@ -29,6 +30,7 @@ class DecimalMaxRule extends DecimalRule
         $this->max = DecimalRule::toLimit(decimal: $max);
     }
 
+    #[Override]
     public function validate(string $value): bool
     {
         return DecimalRule::compare(left: $value, right: $this->max) <= 0;

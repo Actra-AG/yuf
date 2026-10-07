@@ -17,6 +17,7 @@ use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
 use LogicException;
+use Override;
 
 /**
  * An options field with one selected key. The value is the key, `''` means none.
@@ -81,6 +82,7 @@ abstract class SingleOptionsField extends OptionsField
         $this->rules[] = $formRule;
     }
 
+    #[Override]
     protected function checkRules(): void
     {
         if ($this->isValueEmpty()) {
@@ -93,26 +95,31 @@ abstract class SingleOptionsField extends OptionsField
         }
     }
 
+    #[Override]
     public function isSelected(string $optionKey): bool
     {
         return $this->value === $optionKey;
     }
 
+    #[Override]
     final public function isMultiple(): bool
     {
         return false;
     }
 
+    #[Override]
     public function isValueEmpty(): bool
     {
         return $this->value === '';
     }
 
+    #[Override]
     public function valueHasChanged(): bool
     {
         return $this->value !== $this->initialValue;
     }
 
+    #[Override]
     public function renderValue(): string
     {
         return HtmlEncoder::encode(value: $this->value);
@@ -122,6 +129,7 @@ abstract class SingleOptionsField extends OptionsField
      * Reads the value from the request: a text must be an option key (or empty), a missing value is empty, a list
      * or manipulated input is rejected. Rejected input resets the value, adds one error and skips the rules.
      */
+    #[Override]
     final protected function readInput(FormInput $input): void
     {
         $text = $input->getText(name: $this->name);

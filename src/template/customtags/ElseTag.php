@@ -15,24 +15,29 @@ use actra\yuf\template\template\TagNode;
 use actra\yuf\template\template\TemplateEngine;
 use actra\yuf\template\template\TemplateTag;
 use Exception;
+use Override;
 
 class ElseTag extends TemplateTag implements TagNode
 {
+    #[Override]
     public static function getName(): string
     {
         return 'else';
     }
 
+    #[Override]
     public static function isElseCompatible(): bool
     {
         return false;
     }
 
+    #[Override]
     public static function isSelfClosing(): bool
     {
         return false;
     }
 
+    #[Override]
     public function replaceNode(TemplateEngine $tplEngine, ElementNode $elementNode): void
     {
         $lastTplTag = $tplEngine->lastTplTag;

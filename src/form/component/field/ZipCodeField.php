@@ -13,6 +13,7 @@ use actra\yuf\datacheck\validatorTypes\ZipCodeValidator;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlText;
+use Override;
 
 /**
  * A text field for a zip code, checked against the format of its country (`ZipCodeValidator`). The country code can
@@ -43,6 +44,7 @@ final class ZipCodeField extends TextField
         );
     }
 
+    #[Override]
     protected function readAdditionalInput(FormInput $input): void
     {
         // Only text is accepted: manipulated (array) input is ignored, the current country code stays.
@@ -52,6 +54,7 @@ final class ZipCodeField extends TextField
         }
     }
 
+    #[Override]
     public function validateCurrentValue(): bool
     {
         if (

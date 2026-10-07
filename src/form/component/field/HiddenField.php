@@ -12,6 +12,7 @@ namespace actra\yuf\form\component\field;
 use actra\yuf\form\renderer\HiddenFieldRenderer;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
+use Override;
 
 final class HiddenField extends SettableStringInputField
 {
@@ -31,6 +32,7 @@ final class HiddenField extends SettableStringInputField
     /**
      * A hidden value is sent back exactly as rendered, so it is not trimmed.
      */
+    #[Override]
     protected function normalize(string $input): string
     {
         return $this->removeZeroWidthSpaces(input: $input);

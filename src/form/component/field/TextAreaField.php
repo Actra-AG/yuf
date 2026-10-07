@@ -14,6 +14,7 @@ use actra\yuf\form\renderer\TextAreaRenderer;
 use actra\yuf\form\rule\StringRule;
 use actra\yuf\html\HtmlText;
 use LogicException;
+use Override;
 use UnexpectedValueException;
 
 class TextAreaField extends TextualField
@@ -50,6 +51,7 @@ class TextAreaField extends TextualField
     /**
      * Leading spaces, indentation and line breaks are part of the text, so it is not trimmed.
      */
+    #[Override]
     protected function normalize(string $input): string
     {
         return $this->removeZeroWidthSpaces(input: $input);
@@ -70,6 +72,7 @@ class TextAreaField extends TextualField
         $this->placeholder = $placeholder;
     }
 
+    #[Override]
     public function getDefaultRenderer(): FormRenderer
     {
         return new TextAreaRenderer($this);
@@ -110,6 +113,7 @@ class TextAreaField extends TextualField
         $this->lineRules[] = $formRule;
     }
 
+    #[Override]
     protected function checkRules(): void
     {
         parent::checkRules();

@@ -17,6 +17,7 @@ use actra\yuf\html\HtmlText;
 use actra\yuf\phone\PhoneNumber;
 use actra\yuf\phone\PhoneParseException;
 use actra\yuf\phone\PhoneRenderer;
+use Override;
 
 /**
  * A text field for a phone number. A valid number is stored in the internal format (`+41.446681800`), also when it is
@@ -60,6 +61,7 @@ final class PhoneNumberField extends SettableStringInputField
      * A valid number is stored in the internal format, an invalid one stays as typed (trimmed), so the user can
      * correct it.
      */
+    #[Override]
     protected function normalize(string $input): string
     {
         $text = parent::normalize(input: $input);
@@ -68,6 +70,7 @@ final class PhoneNumberField extends SettableStringInputField
         return $phoneNumber === null ? $text : PhoneRenderer::renderInternalFormat(phoneNumber: $phoneNumber);
     }
 
+    #[Override]
     protected function readAdditionalInput(FormInput $input): void
     {
         // Only text is accepted: manipulated (array) input is ignored, the current country code stays.
@@ -77,6 +80,7 @@ final class PhoneNumberField extends SettableStringInputField
         }
     }
 
+    #[Override]
     public function validateCurrentValue(): bool
     {
         if (!$this->isValueEmpty() && $this->parsePhoneNumber(text: $this->getValueAsString()) === null) {
@@ -86,6 +90,7 @@ final class PhoneNumberField extends SettableStringInputField
         return parent::validateCurrentValue();
     }
 
+    #[Override]
     public function renderValue(): string
     {
         if ($this->isValueEmpty()) {

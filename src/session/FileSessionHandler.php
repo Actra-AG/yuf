@@ -11,6 +11,7 @@ namespace actra\yuf\session;
 
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
+use Override;
 
 class FileSessionHandler extends AbstractSessionHandler
 {
@@ -21,6 +22,7 @@ class FileSessionHandler extends AbstractSessionHandler
         parent::__construct(sessionSettingsModel: $sessionSettingsModel, clock: $clock);
     }
 
+    #[Override]
     protected function executePreStartActions(): void
     {
         $savePath = $this->sessionSettingsModel->savePath;

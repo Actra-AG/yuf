@@ -18,6 +18,7 @@ use actra\yuf\html\HtmlText;
 use actra\yuf\security\CsrfToken;
 use actra\yuf\security\CsrfTokenSource;
 use actra\yuf\security\SessionCsrfTokenSource;
+use Override;
 
 /**
  * The hidden field with the CSRF token of the user. It renders the token of the `CsrfTokenSource` (read when the
@@ -47,11 +48,13 @@ final class CsrfTokenField extends InputField
     /**
      * The token is sent back exactly as rendered, so it is not trimmed.
      */
+    #[Override]
     protected function normalize(string $input): string
     {
         return $this->removeZeroWidthSpaces(input: $input);
     }
 
+    #[Override]
     protected function readAdditionalInput(FormInput $input): void
     {
         $this->queryToken = $input->getShape(name: $this->name) === InputShapeEnum::MISSING
@@ -59,6 +62,7 @@ final class CsrfTokenField extends InputField
             : null;
     }
 
+    #[Override]
     protected function accept(string $text): void
     {
         $token = $this->queryToken ?? $text;
@@ -70,6 +74,7 @@ final class CsrfTokenField extends InputField
      * Adds an error if the posted token is not the token of the user. Rejected input (an array) already has its
      * error.
      */
+    #[Override]
     public function validateCurrentValue(): bool
     {
         if (!$this->postedTokenIsValid && !$this->hasErrors(withChildElements: false)) {
@@ -82,6 +87,7 @@ final class CsrfTokenField extends InputField
     /**
      * Always the token of the user, never the posted one.
      */
+    #[Override]
     public function renderValue(): string
     {
         return HtmlEncoder::encode(value: $this->tokenSource->getToken());

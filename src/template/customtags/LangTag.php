@@ -16,19 +16,23 @@ use actra\yuf\template\template\TagInline;
 use actra\yuf\template\template\TagNode;
 use actra\yuf\template\template\TemplateEngine;
 use actra\yuf\template\template\TemplateTag;
+use Override;
 
 class LangTag extends TemplateTag implements TagNode, TagInline
 {
+    #[Override]
     public static function getName(): string
     {
         return 'lang';
     }
 
+    #[Override]
     public static function isElseCompatible(): bool
     {
         return false;
     }
 
+    #[Override]
     public static function isSelfClosing(): bool
     {
         return true;
@@ -39,6 +43,7 @@ class LangTag extends TemplateTag implements TagNode, TagInline
         return LocaleHandler::get()->getText(key: $key, replacements: $phpVars);
     }
 
+    #[Override]
     public function replaceNode(TemplateEngine $tplEngine, ElementNode $elementNode): void
     {
         $replValue = LangTag::replace(
@@ -69,6 +74,7 @@ class LangTag extends TemplateTag implements TagNode, TagInline
         return '<?php echo ' . __CLASS__ . '::getText(\'' . $key . '\'' . $phpVars . '); ?>';
     }
 
+    #[Override]
     public function replaceInline(TemplateEngine $tplEngine, $tagArr): string
     {
         $vars = (array_key_exists('vars', $tagArr)) ? $tagArr['vars'] : null;

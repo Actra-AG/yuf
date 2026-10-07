@@ -13,6 +13,7 @@ use actra\yuf\form\FormFieldValueMissingException;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
+use Override;
 use UnexpectedValueException;
 
 /**
@@ -86,6 +87,7 @@ abstract class ParsedInputField extends InputField
         );
     }
 
+    #[Override]
     public function validateCurrentValue(): bool
     {
         if ($this->holdsUnparsableText()) {

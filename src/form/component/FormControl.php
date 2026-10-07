@@ -15,6 +15,7 @@ use actra\yuf\form\FormMessages;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\FormControlRenderer;
 use actra\yuf\html\HtmlText;
+use Override;
 
 class FormControl extends FormComponent
 {
@@ -56,6 +57,7 @@ class FormControl extends FormComponent
         return $this->messages;
     }
 
+    #[Override]
     public function getDefaultRenderer(): FormRenderer
     {
         return new FormControlRenderer($this);

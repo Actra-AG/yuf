@@ -15,27 +15,32 @@ use actra\yuf\template\htmlparser\TextNode;
 use actra\yuf\template\template\TagNode;
 use actra\yuf\template\template\TemplateEngine;
 use actra\yuf\template\template\TemplateTag;
+use Override;
 
 class ForgroupTag extends TemplateTag implements TagNode
 {
     private ?string $var = null;
     private ?string $no = null;
 
+    #[Override]
     public static function getName(): string
     {
         return 'forgroup';
     }
 
+    #[Override]
     public static function isElseCompatible(): bool
     {
         return false;
     }
 
+    #[Override]
     public static function isSelfClosing(): bool
     {
         return false;
     }
 
+    #[Override]
     public function replaceNode(TemplateEngine $tplEngine, ElementNode $elementNode): void
     {
         $var = Sanitizer::trimmedString($elementNode->getAttribute('var')->value);

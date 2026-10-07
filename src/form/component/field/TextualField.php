@@ -15,6 +15,7 @@ use actra\yuf\form\InputShapeEnum;
 use actra\yuf\form\rule\StringRule;
 use actra\yuf\html\HtmlEncoder;
 use LogicException;
+use Override;
 
 /**
  * A field whose request value is one text. It owns the pipeline of the input text: `normalize()`, then `accept()`.
@@ -81,6 +82,7 @@ abstract class TextualField extends FormField
      * Reads the value of this field from the request: TEXT is normalized and accepted, MISSING gives the empty text,
      * a list or manipulated input is rejected (empty value, one error, no rules).
      */
+    #[Override]
     final protected function readInput(FormInput $input): void
     {
         $text = $input->getText(name: $this->name);
@@ -106,6 +108,7 @@ abstract class TextualField extends FormField
         $this->rules[] = $formRule;
     }
 
+    #[Override]
     protected function checkRules(): void
     {
         if ($this->isValueEmpty()) {
@@ -118,16 +121,19 @@ abstract class TextualField extends FormField
         }
     }
 
+    #[Override]
     public function isValueEmpty(): bool
     {
         return trim(string: $this->text) === '';
     }
 
+    #[Override]
     public function valueHasChanged(): bool
     {
         return $this->text !== $this->initialText;
     }
 
+    #[Override]
     public function renderValue(): string
     {
         return HtmlEncoder::encode(value: $this->text);

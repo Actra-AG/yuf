@@ -14,6 +14,7 @@ use actra\yuf\form\FormFieldValueMissingException;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
+use Override;
 use UnexpectedValueException;
 
 /**
@@ -48,17 +49,20 @@ final class TimeField extends ParsedInputField
         }
     }
 
+    #[Override]
     protected function accept(string $text): void
     {
         $this->value = TimeOfDay::fromString(time: $text);
         parent::accept(text: $this->value?->toString() ?? $text);
     }
 
+    #[Override]
     protected function hasParsedValue(): bool
     {
         return $this->value !== null;
     }
 
+    #[Override]
     public function renderValue(): string
     {
         return $this->value === null ? parent::renderValue() : $this->value->toShortString();

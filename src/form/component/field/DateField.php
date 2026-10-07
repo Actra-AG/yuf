@@ -14,6 +14,7 @@ use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
 use DateTimeImmutable;
+use Override;
 use UnexpectedValueException;
 
 /**
@@ -50,6 +51,7 @@ final class DateField extends ParsedInputField
         }
     }
 
+    #[Override]
     protected function accept(string $text): void
     {
         $this->value = DateField::parse(text: $text);
@@ -72,6 +74,7 @@ final class DateField extends ParsedInputField
         return new DateTimeImmutable(datetime: sprintf('%04d-%02d-%02d', (int) $year, (int) $month, (int) $day));
     }
 
+    #[Override]
     protected function hasParsedValue(): bool
     {
         return $this->value !== null;

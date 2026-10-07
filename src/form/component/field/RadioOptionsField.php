@@ -16,6 +16,7 @@ use actra\yuf\form\renderer\DefinitionListRenderer;
 use actra\yuf\form\renderer\LegendAndListRenderer;
 use actra\yuf\form\renderer\RadioOptionsRenderer;
 use actra\yuf\html\HtmlText;
+use Override;
 
 class RadioOptionsField extends SingleOptionsField
 {
@@ -62,6 +63,7 @@ class RadioOptionsField extends SingleOptionsField
      * The default text of the required rule comes from the messages of the form, which the field only gets after
      * its construction.
      */
+    #[Override]
     public function validateCurrentValue(): bool
     {
         if ($this->hasDefaultRequiredMessage) {
@@ -73,6 +75,7 @@ class RadioOptionsField extends SingleOptionsField
         return parent::validateCurrentValue();
     }
 
+    #[Override]
     public function getDefaultRenderer(): FormRenderer
     {
         return new RadioOptionsRenderer(radioOptionsField: $this);

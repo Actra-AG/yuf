@@ -15,6 +15,7 @@ use actra\yuf\html\HtmlElement;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlText;
 use LogicException;
+use Override;
 
 abstract class FormComponent extends HtmlElement
 {
@@ -54,6 +55,7 @@ abstract class FormComponent extends HtmlElement
      *
      * @return string : Generated html-code
      */
+    #[Override]
     public function render(): string
     {
         return $this->getHtmlTag()->render();

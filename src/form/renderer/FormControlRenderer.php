@@ -13,11 +13,13 @@ use actra\yuf\form\component\FormControl;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
+use Override;
 
 class FormControlRenderer extends FormRenderer
 {
     public function __construct(private readonly FormControl $formControl) {}
 
+    #[Override]
     public function prepare(): void
     {
         $formControl = $this->formControl;

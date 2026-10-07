@@ -14,6 +14,7 @@ use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 use actra\yuf\html\HtmlText;
+use Override;
 
 class DefinitionListRenderer extends FormRenderer
 {
@@ -26,6 +27,7 @@ class DefinitionListRenderer extends FormRenderer
         $this->formField = $formField;
     }
 
+    #[Override]
     public function prepare(): void
     {
         $formField = $this->formField;

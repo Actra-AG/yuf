@@ -14,6 +14,7 @@ use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\SelectOptionsRenderer;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlText;
+use Override;
 
 /**
  * A select with one selected option. See `MultiSelectOptionsField` for a multiple selection.
@@ -58,6 +59,7 @@ class SelectOptionsField extends SingleOptionsField
         );
     }
 
+    #[Override]
     public function getDefaultRenderer(): FormRenderer
     {
         return new SelectOptionsRenderer(selectOptionsField: $this);

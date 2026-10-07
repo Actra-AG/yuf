@@ -25,6 +25,7 @@ use actra\yuf\security\CsrfToken;
 use actra\yuf\security\CsrfTokenSource;
 use actra\yuf\security\SessionCsrfTokenSource;
 use Exception;
+use Override;
 
 class Form extends FormCollection
 {
@@ -179,6 +180,7 @@ class Form extends FormCollection
         return $childComponent;
     }
 
+    #[Override]
     public function render(): string
     {
         if (
@@ -213,6 +215,7 @@ class Form extends FormCollection
         $this->renderRequiredAbbr = false;
     }
 
+    #[Override]
     public function getDefaultRenderer(): FormRenderer
     {
         return new DefaultFormRenderer(form: $this);

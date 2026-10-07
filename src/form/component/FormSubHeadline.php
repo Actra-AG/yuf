@@ -12,6 +12,7 @@ namespace actra\yuf\form\component;
 use actra\yuf\form\FormComponent;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlText;
+use Override;
 
 class FormSubHeadline extends FormComponent
 {
@@ -26,6 +27,7 @@ class FormSubHeadline extends FormComponent
         parent::__construct(uniqid());
     }
 
+    #[Override]
     public function getHtmlTag(): HtmlTag
     {
         $headline = new HtmlTag('h' . $this->headingLevel, false, []);
