@@ -266,11 +266,15 @@ class ExceptionHandler
     private function loadLocalizedText(
         RequestHandler $requestHandler,
     ): void {
-        LocaleHandler::register();
+        $localeHandler = new LocaleHandler(
+            language: $requestHandler->language,
+            availableLanguages: Core::get()->availableLanguages,
+        );
+        LocaleHandler::register(localeHandler: $localeHandler);
         $defaultRouteForLanguage = $requestHandler->defaultRoutesByLanguage->getRouteForLanguage(
             languageCode: $requestHandler->language->code,
         );
-        $defaultRouteForLanguage->loadLocalizedText(fileTitle: '');
+        $defaultRouteForLanguage->loadLocalizedText(fileTitle: '', localeHandler: $localeHandler);
     }
 
     protected function sendNotFoundHttpResponseAndExit(Throwable $throwable): void

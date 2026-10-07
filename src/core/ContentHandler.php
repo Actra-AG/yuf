@@ -44,7 +44,7 @@ class ContentHandler
         return $this->htmlDocument;
     }
 
-    private function processRequest(RequestHandler $requestHandler): void
+    private function processRequest(RequestHandler $requestHandler, LocaleHandler $localeHandler): void
     {
         $route = $requestHandler->route;
         if ($route->viewCallback !== null) {
@@ -53,13 +53,17 @@ class ContentHandler
         }
         ob_start();
         ob_implicit_flush(enable: false);
-        $route->loadLocalizedText(fileTitle: $requestHandler->fileTitle);
+        $route->loadLocalizedText(
+            fileTitle: $requestHandler->fileTitle,
+            localeHandler: $localeHandler,
+        );
         $context = new ViewContext(
             route: $route,
             fileGroup: $requestHandler->fileGroup,
             fileTitle: $requestHandler->fileTitle,
             pathVars: new PathVars(values: $requestHandler->pathVars),
             content: $this,
+            locale: $localeHandler,
         );
         $view = ($route->viewFactory ?? new ClassNameViewFactory())->createView(context: $context);
         if ($view === null) {
@@ -96,7 +100,7 @@ class ContentHandler
         return trim(string: $this->content) !== '';
     }
 
-    public static function register(CspNonce $cspNonce): ContentHandler
+    public static function register(CspNonce $cspNonce, LocaleHandler $localeHandler): ContentHandler
     {
         if (ContentHandler::$registeredInstance !== null) {
             throw new LogicException(message: 'ContentHandler is already registered.');
@@ -111,7 +115,7 @@ class ContentHandler
             cspNonce: $cspNonce,
         );
         ContentHandler::$registeredInstance = $contentHandler;
-        $contentHandler->processRequest(requestHandler: $requestHandler);
+        $contentHandler->processRequest(requestHandler: $requestHandler, localeHandler: $localeHandler);
 
         return $contentHandler;
     }

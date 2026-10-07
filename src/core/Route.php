@@ -38,23 +38,22 @@ class Route
         }
     }
 
-    public function loadLocalizedText(string $fileTitle): void
+    public function loadLocalizedText(string $fileTitle, LocaleHandler $localeHandler): void
     {
         $dir = $this->viewDirectory . 'language' . DIRECTORY_SEPARATOR . $this->language->code . DIRECTORY_SEPARATOR;
         if (!is_dir(filename: $dir)) {
             return;
         }
         $langGlobal = $dir . 'global.lang.php';
-        $locale = LocaleHandler::get();
         if (file_exists(filename: $langGlobal)) {
-            $locale->loadLanguageFile(filePath: $langGlobal);
+            $localeHandler->loadLanguageFile(filePath: $langGlobal);
         }
         if ($fileTitle === '') {
             return;
         }
         $langFile = $dir . $fileTitle . '.lang.php';
         if (file_exists(filename: $langFile)) {
-            $locale->loadLanguageFile(filePath: $langFile);
+            $localeHandler->loadLanguageFile(filePath: $langFile);
         }
     }
 }

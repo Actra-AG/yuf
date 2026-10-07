@@ -9,45 +9,54 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
-use actra\yuf\Core;
 use Exception;
 use LogicException;
 
 class LocaleHandler
 {
     private static ?LocaleHandler $registeredInstance = null;
+    public readonly ?Language $language;
     public private(set) array $loadedLangFiles = [];
     private array $languageBlocks = [];
 
-    private function __construct()
-    {
-        if (LocaleHandler::$registeredInstance !== null) {
-            throw new LogicException(message: 'LocaleHandler is already registered');
-        }
-        LocaleHandler::$registeredInstance = $this;
-        $language = RequestHandler::get()->language;
+    /**
+     * @throws LogicException if the language is not one of the available languages
+     */
+    public function __construct(
+        ?Language $language,
+        LanguageCollection $availableLanguages,
+    ) {
         if ($language === null) {
+            $this->language = null;
             return;
         }
-        $requestLanguageCode = RequestHandler::get()->language->code;
-        $activeLanguage = Core::get()->availableLanguages->getLanguageByCode(
-            languageCode: $requestLanguageCode,
-        );
-        if ($activeLanguage === null) {
-            throw new Exception(message: 'Language ' . $requestLanguageCode . ' is not available');
+        $availableLanguage = $availableLanguages->getLanguageByCode(languageCode: $language->code);
+        if ($availableLanguage === null) {
+            throw new LogicException(message: 'Language ' . $language->code . ' is not available');
         }
-        setlocale(category: LC_ALL, locales: $activeLanguage->locale);
-        setlocale(category: LC_NUMERIC, locales: 'en_US');
+        $this->language = $availableLanguage;
     }
 
+    /**
+     * The compiled templates (LangTag) read the texts through this accessor until the template refactoring. Views get
+     * the instance through ViewContext::$locale.
+     */
     public static function get(): LocaleHandler
     {
         return LocaleHandler::$registeredInstance;
     }
 
-    public static function register(): void
+    public static function register(LocaleHandler $localeHandler): void
     {
-        new LocaleHandler();
+        if (LocaleHandler::$registeredInstance !== null) {
+            throw new LogicException(message: 'LocaleHandler is already registered');
+        }
+        LocaleHandler::$registeredInstance = $localeHandler;
+        if ($localeHandler->language === null) {
+            return;
+        }
+        setlocale(category: LC_ALL, locales: $localeHandler->language->locale);
+        setlocale(category: LC_NUMERIC, locales: 'en_US');
     }
 
     public static function isRegistered(): bool
@@ -75,7 +84,7 @@ class LocaleHandler
     private function parseLanguageFile(string $filePath): void
     {
         $txt = [];
-        require_once $filePath;
+        require $filePath;
 
         foreach ($txt as $key => $val) {
             $this->languageBlocks[$key] = $val;

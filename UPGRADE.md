@@ -4,6 +4,92 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.21.0] – 2026-10-08
+
+### ⚠️ `LocaleHandler::register()` takes a `LocaleHandler`
+
+Only relevant for projects that call it themselves (`Core` does it). `LocaleHandler` has a public constructor and no
+longer reads the request or `Core`.
+
+Before:
+
+```php
+LocaleHandler::register(); // read the language from RequestHandler::get()
+```
+
+After:
+
+```php
+LocaleHandler::register(
+    localeHandler: new LocaleHandler(language: $requestHandler->language, availableLanguages: $availableLanguages),
+);
+```
+
+### ⚠️ `Route::loadLocalizedText()` needs the `LocaleHandler`
+
+Before:
+
+```php
+$route->loadLocalizedText(fileTitle: 'index');
+```
+
+After:
+
+```php
+$route->loadLocalizedText(fileTitle: 'index', localeHandler: $localeHandler);
+```
+
+### ⚠️ `ViewContext` has the new argument `locale:`
+
+Only relevant for projects that create a `ViewContext` themselves (for example in tests). Views read their texts from
+the context.
+
+Before:
+
+```php
+LocaleHandler::get()->getText(key: 'title');
+new ViewContext(route: $route, fileGroup: null, fileTitle: 'index', pathVars: $pathVars, content: $content);
+```
+
+After:
+
+```php
+$this->context->locale->getText(key: 'title');
+new ViewContext(
+    route: $route,
+    fileGroup: null,
+    fileTitle: 'index',
+    pathVars: $pathVars,
+    content: $content,
+    locale: $localeHandler,
+);
+```
+
+### ⚠️ `ContentHandler::register()` needs `localeHandler:`
+
+Only relevant for projects that call it themselves (`Core` does it).
+
+Before:
+
+```php
+ContentHandler::register(cspNonce: $cspNonce);
+```
+
+After:
+
+```php
+ContentHandler::register(cspNonce: $cspNonce, localeHandler: $localeHandler);
+```
+
+### Other changes
+
+- `LocaleHandler` has a public constructor `(?Language $language, LanguageCollection $availableLanguages)` and the
+  readonly property `$language`. An unavailable language throws a `LogicException` (was `Exception`, same message).
+  `LocaleHandler::get()` and `isRegistered()` stay for the compiled templates (`{lang}` tag).
+- `RequestHandler::register()` returns the created `RequestHandler` (was `void`).
+
+---
+
 ## [v4.20.0] – 2026-10-08
 
 ### ⚠️ `Logger::register()` and `Logger::get()` are removed

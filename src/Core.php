@@ -206,9 +206,13 @@ class Core
         if (!$routeCollection->hasRoutes()) {
             throw new LogicException(message: 'There must be at least one route');
         }
-        RequestHandler::register(routeCollection: $routeCollection);
-        LocaleHandler::register();
-        $contentHandler = ContentHandler::register(cspNonce: $cspNonce);
+        $requestHandler = RequestHandler::register(routeCollection: $routeCollection);
+        $localeHandler = new LocaleHandler(
+            language: $requestHandler->language,
+            availableLanguages: $this->availableLanguages,
+        );
+        LocaleHandler::register(localeHandler: $localeHandler);
+        $contentHandler = ContentHandler::register(cspNonce: $cspNonce, localeHandler: $localeHandler);
         if (!$contentHandler->hasContent()) {
             throw new NotFoundException();
         }

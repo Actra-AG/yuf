@@ -11,6 +11,8 @@ namespace actra\yuf\tests\Double\core;
 
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentType;
+use actra\yuf\core\LanguageCollection;
+use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\PathVars;
 use actra\yuf\core\Route;
 use actra\yuf\core\ViewContext;
@@ -46,6 +48,7 @@ final class ViewContextFactory
                 contentType: $contentType ?? ContentType::createHtml(),
                 cspNonce: CspNonce::create(),
             ),
+            locale: new LocaleHandler(language: null, availableLanguages: new LanguageCollection()),
         );
     }
 }

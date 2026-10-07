@@ -27,6 +27,7 @@ final class ViewContext
         public readonly string $fileTitle,
         public readonly PathVars $pathVars,
         public readonly ContentHandler $content,
+        public readonly LocaleHandler $locale,
     ) {}
 
     public function getHtmlDocument(): HtmlDocument

@@ -468,20 +468,23 @@ afterwards: `CsvFile`, `SmtpMailer`, `DB extends FrameworkDb`, table constants i
 - Tests: `ExceptionHandlerTest` with a hand-written `RecordingLogger` double (`tests/Double/core/`).
 - The other `Core::get()` / `RequestHandler::get()` uses in `ExceptionHandler::getHtmlContent()` stay for step 10.
 
-### Step 10 – v4.21.0 and later: locale and `Core::get()` inside yuf
+### Step 10 – locale and `Core::get()` inside yuf
 
 Smaller releases, each for one area:
 
-- `LocaleHandler` gets the language and the available languages through its constructor (no
-  `RequestHandler::get()` / `Core::get()`); `Route::loadLocalizedText()` gets the `LocaleHandler`; `ViewContext` gets
-  `$locale`. `LocaleHandler::get()` stays for the compiled templates (`LangTag`) until the template refactoring.
-- `Route` resolves `'{default}'` of `viewDirectory` without `Core::get()` (the `RouteCollection` or `Core` sets the
-  default directory). `SessionSettings` resolves its default `savePath` in `FileSessionHandler` (gets the cache
-  directory). `LogFile`, `HtmlSnippet`, `HtmlDocument`, `MicrosoftAuthenticator`, `MicrosoftIdToken`: directories and
-  settings through the constructor.
-- `RequestHandler::get()` and `ContentHandler::get()` are removed once no yuf class needs them.
-- `Core::get()` stays for `IfTag` / `SnippetTag` until the template refactoring; `tests/Double/CoreTestInstance` stays
-  as long as `Core::get()` exists.
+- **10.1 (v4.21.0) locale:** `LocaleHandler` gets the language and the available languages through its constructor (no
+  `RequestHandler::get()` / `Core::get()`); `LocaleHandler::register()` takes the instance; `Route::loadLocalizedText()`
+  gets the `LocaleHandler`; `ViewContext` gets `$locale`.
+- **10.2 directories and settings (v4.22.0 and later):** `Route` resolves `'{default}'` of `viewDirectory` without
+  `Core::get()` (the `RouteCollection` or `Core` sets the default directory). `SessionSettings` resolves its default
+  `savePath` in `FileSessionHandler` (gets the cache directory). `LogFile`, `HtmlSnippet`, `MicrosoftAuthenticator`,
+  `MicrosoftIdToken`, `AbstractSessionHandler` (available languages): directories and settings through the constructor
+  instead of `Core::get()`.
+- **10.3 request data (v4.22.0 and later):** `HtmlDocument` and `ExceptionHandler` without `RequestHandler::get()` /
+  `Core::get()` / `ContentHandler::get()`; then `RequestHandler::get()` and `ContentHandler::get()` / `isRegistered()`
+  are removed.
+- **Stays:** `Core::get()` and `LocaleHandler::get()` for the compiled templates (`IfTag`, `SnippetTag`, `LangTag`)
+  until the template refactoring; `tests/Double/CoreTestInstance` stays as long as `Core::get()` exists.
 
 ### Later (separate plans)
 
@@ -608,3 +611,16 @@ Smaller releases, each for one area:
   `restore_exception_handler()` in `tearDown()`.
 - Not covered by tests: `handleException()` (every path sends the response and exits), so `RecordingLogger` is only
   used to construct the context; and that `Core` builds the context from its own values.
+
+### Step 10.1 (v4.21.0) – done
+
+- `LocaleHandler` has a public, pure constructor `(?Language, LanguageCollection)` and `$language`; `register()` takes
+  the instance and calls `setlocale()`. `get()` / `isRegistered()` stay (comment: `LangTag`). The unavailable language
+  throws a `LogicException`. `parseLanguageFile()` uses `require` instead of `require_once` (the per-instance
+  `loadedLangFiles` guard is enough, and several instances in tests need the file).
+- `RequestHandler::register()` returns the instance; `Core` creates and registers the `LocaleHandler` and passes it to
+  `ContentHandler::register()`, `Route::loadLocalizedText()` and `ViewContext::$locale`.
+- `ExceptionHandler::loadLocalizedText()` creates its `LocaleHandler` with the new constructor (still `Core::get()` /
+  `RequestHandler::get()` there: part 10.3).
+- New `LocaleHandlerTest` with fixtures `tests/Fixture/localeTexts.lang.php` / `localeEmpty.lang.php`; `register()` is
+  not tested (`setlocale()` is process-wide). `ViewContextFactory` uses a `LocaleHandler` without language.

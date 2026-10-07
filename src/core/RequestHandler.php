@@ -219,9 +219,9 @@ class RequestHandler
         throw new NotFoundException();
     }
 
-    public static function register(RouteCollection $routeCollection): void
+    public static function register(RouteCollection $routeCollection): RequestHandler
     {
-        new RequestHandler(allRoutes: $routeCollection);
+        return new RequestHandler(allRoutes: $routeCollection);
     }
 
     public function getPathVar(int $nr): ?string
