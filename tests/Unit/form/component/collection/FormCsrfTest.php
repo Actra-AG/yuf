@@ -166,7 +166,7 @@ final class FormCsrfTest extends TestCase
         $this->send(form: $form, post: ['csrftoken' => 'wrong']);
 
         $this->assertSame(
-            'Das Formular konnte wegen eines technischen Problems (ungültiges CSRF) nicht übermittelt werden.'
+            'Das Formular konnte wegen eines technischen Problems (ungültiges CSRF-Token) nicht übermittelt werden.'
             . ' Bitte versuchen Sie es erneut.',
             $form->errorCollection->getFirstError()->render()
         );

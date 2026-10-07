@@ -4,6 +4,49 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.8.0] – 2026-10-07
+
+### ⚙️ Backend & API
+
+* **Clear the session on logout.** New `AbstractSessionHandler::clearUserData()` (static) removes all data of the user
+  from the session and keeps only the data of the session handler, the preferred language and the CSP nonce. See the
+  README section "Clearing the session on logout".
+* `AuthSession::logOut()` calls `clearUserData()` (security fix), so a logout no longer leaves the data of the previous
+  user (breadcrumb, table and search state, uploads, CSRF token, project data, …) in the session. Data that has to
+  survive a logout must be written to the session after `logOut()`:
+  ```php
+  // Before
+  $_SESSION['loginMessage'] = 'Logged out';
+  AuthSession::logOut();
+
+  // After
+  AuthSession::logOut();
+  $_SESSION['loginMessage'] = 'Logged out';
+  ```
+* `CspNonce::SESSION_INDICATOR` is public now.
+* **Migration hint:** projects that clear the session themselves after the logout with a copied list of yuf's session
+  keys drop that code:
+  ```php
+  // Before
+  AuthSession::logOut();
+  $_SESSION = array_intersect_key($_SESSION, array_flip(['sessionCreated', 'trustedRemoteAddress', /* … */]));
+
+  // After
+  AuthSession::logOut();
+  ```
+
+### 🐛 Bug Fixes
+
+* `AbstractSessionHandler::getSessionHandler()` throws a `LogicException` with a hint to `register()` instead of a
+  `TypeError` when no session handler is registered. A session cookie that is not a string is discarded like an invalid
+  session ID, and an invalid stored CSP nonce is replaced, instead of causing a `TypeError`.
+* `AuthSession::getAuthSessionID()` throws an `UnexpectedValueException` instead of a `TypeError` when the session
+  contains no auth session ID.
+* The German default message `FormMessages::invalidCsrfToken` says "ungültiges CSRF-Token" instead of the incomplete
+  "ungültiges CSRF".
+
+---
+
 ## [v4.7.1] – 2026-10-06
 
 ### 🐛 Bug Fixes

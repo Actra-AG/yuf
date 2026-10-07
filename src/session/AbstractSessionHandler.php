@@ -14,10 +14,12 @@ use actra\yuf\Core;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\Language;
 use actra\yuf\exception\UnauthorizedException;
+use actra\yuf\security\CspNonce;
 use Exception;
 use LogicException;
 use SessionHandler;
 use Throwable;
+use UnexpectedValueException;
 
 abstract class AbstractSessionHandler extends SessionHandler
 {
@@ -26,11 +28,23 @@ abstract class AbstractSessionHandler extends SessionHandler
     private const string TRUSTED_USER_AGENT_INDICATOR = 'trustedUserAgent';
     private const string LAST_ACTIVITY_INDICATOR = 'lastActivity';
     private const string PREFERRED_LANGUAGE_INDICATOR = 'preferredLanguage';
+    /**
+     * Session data that is not bound to the user: the session handler needs its own data on every request, and the
+     * CSP nonce may already be in the header of the current response.
+     */
+    private const array SESSION_KEYS_WITHOUT_USER_DATA = [
+        AbstractSessionHandler::SESSION_CREATED_INDICATOR,
+        AbstractSessionHandler::TRUSTED_REMOTE_ADDRESS_INDICATOR,
+        AbstractSessionHandler::TRUSTED_USER_AGENT_INDICATOR,
+        AbstractSessionHandler::LAST_ACTIVITY_INDICATOR,
+        AbstractSessionHandler::PREFERRED_LANGUAGE_INDICATOR,
+        CspNonce::SESSION_INDICATOR,
+    ];
     private static null|false|AbstractSessionHandler $abstractSessionHandler = null;
     private(set) ?string $name = null {
         get {
             if (is_null(value: $this->name)) {
-                $this->name = session_name();
+                $this->name = AbstractSessionHandler::readSessionName();
             }
 
             return $this->name;
@@ -156,10 +170,10 @@ abstract class AbstractSessionHandler extends SessionHandler
         // Just generate a new session id if current from cookie contains illegal characters
         // Inspired from http://stackoverflow.com/questions/32898857/session-start-issues-regarding-illegal-characters-empty-session-id-and-failed
         $sessionName = session_name();
-        if (isset($_COOKIE[$sessionName]) && $this->checkSessionIdAgainstSidBitsPerChar(
+        if (isset($_COOKIE[$sessionName]) && (!is_string(value: $_COOKIE[$sessionName]) || $this->checkSessionIdAgainstSidBitsPerChar(
                 sessionId: $_COOKIE[$sessionName],
                 sidBitsPerChar: (int)ini_get(option: 'session.sid_bits_per_character')
-            ) === false) {
+            ) === false)) {
             unset($_COOKIE[$sessionName]);
         }
     }
@@ -204,7 +218,7 @@ abstract class AbstractSessionHandler extends SessionHandler
                 if (ini_get(option: 'session.use_cookies')) {
                     $params = session_get_cookie_params();
                     setcookie(
-                        session_name(),
+                        AbstractSessionHandler::readSessionName(),
                         '',
                         $this->currentTime - 42000,
                         $params['path'],
@@ -218,7 +232,7 @@ abstract class AbstractSessionHandler extends SessionHandler
                     'use_strict_mode' => true,
                 ]);
                 session_regenerate_id();
-                $this->ID = session_id();
+                $this->ID = AbstractSessionHandler::readSessionID();
             } catch (Throwable $throwable) {
                 if (!str_contains(haystack: $throwable->getMessage(), needle: 'Session object destruction failed')) {
                     throw $throwable;
@@ -247,20 +261,31 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     public function getTrustedRemoteAddress(): string
     {
-        return $_SESSION[AbstractSessionHandler::TRUSTED_REMOTE_ADDRESS_INDICATOR];
+        $trustedRemoteAddress = $_SESSION[AbstractSessionHandler::TRUSTED_REMOTE_ADDRESS_INDICATOR] ?? null;
+        if (!is_string(value: $trustedRemoteAddress)) {
+            throw new UnexpectedValueException(message: 'The session contains no trusted remote address.');
+        }
+
+        return $trustedRemoteAddress;
     }
 
     public function getTrustedUserAgent(): string
     {
-        return $_SESSION[AbstractSessionHandler::TRUSTED_USER_AGENT_INDICATOR];
+        $trustedUserAgent = $_SESSION[AbstractSessionHandler::TRUSTED_USER_AGENT_INDICATOR] ?? null;
+        if (!is_string(value: $trustedUserAgent)) {
+            throw new UnexpectedValueException(message: 'The session contains no trusted user agent.');
+        }
+
+        return $trustedUserAgent;
     }
 
     private function isSessionExpired(): bool
     {
+        $lastActivity = $_SESSION[AbstractSessionHandler::LAST_ACTIVITY_INDICATOR] ?? null;
+
         return (
-            !is_null(value: $this->sessionSettingsModel->maxLifeTime)
-            && array_key_exists(key: AbstractSessionHandler::LAST_ACTIVITY_INDICATOR, array: $_SESSION)
-            && ($this->currentTime - $_SESSION[AbstractSessionHandler::LAST_ACTIVITY_INDICATOR] > $this->sessionSettingsModel->maxLifeTime)
+            is_int(value: $lastActivity)
+            && ($this->currentTime - $lastActivity > $this->sessionSettingsModel->maxLifeTime)
         );
     }
 
@@ -271,13 +296,18 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     public function getSessionCreated(): int
     {
-        return $_SESSION[AbstractSessionHandler::SESSION_CREATED_INDICATOR];
+        $sessionCreated = $_SESSION[AbstractSessionHandler::SESSION_CREATED_INDICATOR] ?? null;
+        if (!is_int(value: $sessionCreated)) {
+            throw new UnexpectedValueException(message: 'The session contains no creation time.');
+        }
+
+        return $sessionCreated;
     }
 
     public function regenerateID(): void
     {
         session_regenerate_id();
-        $this->ID = session_id();
+        $this->ID = AbstractSessionHandler::readSessionID();
         $this->setSessionCreated();
     }
 
@@ -304,16 +334,59 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     public static function getSessionHandler(): AbstractSessionHandler
     {
-        return AbstractSessionHandler::$abstractSessionHandler;
+        $abstractSessionHandler = AbstractSessionHandler::$abstractSessionHandler;
+        if (!$abstractSessionHandler instanceof AbstractSessionHandler) {
+            throw new LogicException(
+                message: 'No session handler is registered. Register one with AbstractSessionHandler::register().'
+            );
+        }
+
+        return $abstractSessionHandler;
+    }
+
+    /**
+     * Removes all data of the user from the session, e.g. on logout (breadcrumb, table and search state, uploads, CSRF
+     * token, login state, project data, …). Keeps only the data of the session handler, the preferred language and
+     * the CSP nonce. Does nothing if sessions are disabled.
+     */
+    public static function clearUserData(): void
+    {
+        if (!AbstractSessionHandler::enabled()) {
+            return;
+        }
+        $_SESSION = array_intersect_key(
+            $_SESSION,
+            array_flip(array: AbstractSessionHandler::SESSION_KEYS_WITHOUT_USER_DATA)
+        );
     }
 
     public function getID(): string
     {
         if (is_null(value: $this->ID)) {
-            $this->ID = session_id();
+            $this->ID = AbstractSessionHandler::readSessionID();
         }
 
         return $this->ID;
+    }
+
+    private static function readSessionID(): string
+    {
+        $sessionID = session_id();
+        if ($sessionID === false) {
+            throw new LogicException(message: 'The session ID could not be read.');
+        }
+
+        return $sessionID;
+    }
+
+    private static function readSessionName(): string
+    {
+        $sessionName = session_name();
+        if ($sessionName === false) {
+            throw new LogicException(message: 'The session name could not be read.');
+        }
+
+        return $sessionName;
     }
 
     public function setPreferredLanguage(Language $language): void
@@ -327,10 +400,9 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     public function getPreferredLanguageCode(): ?string
     {
-        return array_key_exists(
-            key: AbstractSessionHandler::PREFERRED_LANGUAGE_INDICATOR,
-            array: $_SESSION
-        ) ? $_SESSION[AbstractSessionHandler::PREFERRED_LANGUAGE_INDICATOR] : null;
+        $preferredLanguageCode = $_SESSION[AbstractSessionHandler::PREFERRED_LANGUAGE_INDICATOR] ?? null;
+
+        return is_string(value: $preferredLanguageCode) ? $preferredLanguageCode : null;
     }
 
     public function changeCookieSameSiteToLax(): void

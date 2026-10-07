@@ -205,36 +205,6 @@ parameters:
 			path: src/auth/AccessRightCollection.php
 
 		-
-			message: '#^Cannot access offset string on mixed\.$#'
-			identifier: offsetAccess.nonOffsetAccessible
-			count: 2
-			path: src/auth/AuthSession.php
-
-		-
-			message: '#^Method actra\\yuf\\auth\\AuthSession\:\:getAuthSessionID\(\) should return int but returns bool\|int\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: src/auth/AuthSession.php
-
-		-
-			message: '#^Method actra\\yuf\\auth\\AuthSession\:\:getFromSession\(\) should return bool\|int\|null but returns mixed\.$#'
-			identifier: return.type
-			count: 1
-			path: src/auth/AuthSession.php
-
-		-
-			message: '#^Method actra\\yuf\\auth\\AuthSession\:\:isLoggedIn\(\) should return bool but returns bool\|int\.$#'
-			identifier: return.type
-			count: 1
-			path: src/auth/AuthSession.php
-
-		-
-			message: '#^Parameter \$array of function array_key_exists expects array, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/auth/AuthSession.php
-
-		-
 			message: '#^Method actra\\yuf\\auth\\AuthUser\:\:__construct\(\) has parameter \$ipWhitelist with no value type specified in iterable type array\.$#'
 			identifier: missingType.iterableValue
 			count: 1
@@ -2347,82 +2317,10 @@ parameters:
 			path: src/response/HttpErrorResponseContent.php
 
 		-
-			message: '#^Method actra\\yuf\\security\\CspNonce\:\:get\(\) should return string but returns mixed\.$#'
-			identifier: return.type
-			count: 1
-			path: src/security/CspNonce.php
-
-		-
 			message: '#^Method actra\\yuf\\security\\CsrfToken\:\:getToken\(\) should return string but returns mixed\.$#'
 			identifier: return.type
 			count: 1
 			path: src/security/CsrfToken.php
-
-		-
-			message: '#^Binary operation "\-" between int and mixed results in an error\.$#'
-			identifier: binaryOp.invalid
-			count: 1
-			path: src/session/AbstractSessionHandler.php
-
-		-
-			message: '#^Call to function is_null\(\) with int will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: src/session/AbstractSessionHandler.php
-
-		-
-			message: '#^Method actra\\yuf\\session\\AbstractSessionHandler\:\:getPreferredLanguageCode\(\) should return string\|null but returns mixed\.$#'
-			identifier: return.type
-			count: 1
-			path: src/session/AbstractSessionHandler.php
-
-		-
-			message: '#^Method actra\\yuf\\session\\AbstractSessionHandler\:\:getSessionCreated\(\) should return int but returns mixed\.$#'
-			identifier: return.type
-			count: 1
-			path: src/session/AbstractSessionHandler.php
-
-		-
-			message: '#^Method actra\\yuf\\session\\AbstractSessionHandler\:\:getSessionHandler\(\) should return actra\\yuf\\session\\AbstractSessionHandler but returns actra\\yuf\\session\\AbstractSessionHandler\|false\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: src/session/AbstractSessionHandler.php
-
-		-
-			message: '#^Method actra\\yuf\\session\\AbstractSessionHandler\:\:getTrustedRemoteAddress\(\) should return string but returns mixed\.$#'
-			identifier: return.type
-			count: 1
-			path: src/session/AbstractSessionHandler.php
-
-		-
-			message: '#^Method actra\\yuf\\session\\AbstractSessionHandler\:\:getTrustedUserAgent\(\) should return string but returns mixed\.$#'
-			identifier: return.type
-			count: 1
-			path: src/session/AbstractSessionHandler.php
-
-		-
-			message: '#^Parameter \#1 \$name of function setcookie expects string, string\|false given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/session/AbstractSessionHandler.php
-
-		-
-			message: '#^Parameter \$sessionId of method actra\\yuf\\session\\AbstractSessionHandler\:\:checkSessionIdAgainstSidBitsPerChar\(\) expects string, mixed given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/session/AbstractSessionHandler.php
-
-		-
-			message: '#^Property actra\\yuf\\session\\AbstractSessionHandler\:\:\$ID \(string\|null\) does not accept string\|false\.$#'
-			identifier: assign.propertyType
-			count: 3
-			path: src/session/AbstractSessionHandler.php
-
-		-
-			message: '#^Property actra\\yuf\\session\\AbstractSessionHandler\:\:\$name \(string\|null\) does not accept string\|false\.$#'
-			identifier: assign.propertyType
-			count: 1
-			path: src/session/AbstractSessionHandler.php
 
 		-
 			message: '#^Method actra\\yuf\\table\\TableHelper\:\:createDbResultTable\(\) has parameter \$params with no value type specified in iterable type array\.$#'

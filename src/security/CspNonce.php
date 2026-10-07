@@ -12,18 +12,20 @@ use actra\yuf\session\AbstractSessionHandler;
 
 class CspNonce
 {
-    private const string SESSION_INDICATOR = 'security_cspNonce';
+    public const string SESSION_INDICATOR = 'security_cspNonce';
 
     public static function get(): string
     {
         if (!AbstractSessionHandler::enabled()) {
             return '';
         }
-        if (!array_key_exists(key: CspNonce::SESSION_INDICATOR, array: $_SESSION)) {
-            $_SESSION[CspNonce::SESSION_INDICATOR] = CspNonce::generate();
+        $cspNonce = $_SESSION[CspNonce::SESSION_INDICATOR] ?? null;
+        if (!is_string(value: $cspNonce)) {
+            $cspNonce = CspNonce::generate();
+            $_SESSION[CspNonce::SESSION_INDICATOR] = $cspNonce;
         }
 
-        return $_SESSION[CspNonce::SESSION_INDICATOR];
+        return $cspNonce;
     }
 
     private static function generate(): string

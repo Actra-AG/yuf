@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace actra\yuf\auth;
 
 use actra\yuf\session\AbstractSessionHandler;
+use UnexpectedValueException;
 
 class AuthSession
 {
@@ -29,7 +30,19 @@ class AuthSession
 
     private static function saveToSession(string $key, bool|int $value): void
     {
-        $_SESSION[AuthSession::SESSION_KEY][$key] = $value;
+        $authSessionData = AuthSession::readSessionData();
+        $authSessionData[$key] = $value;
+        $_SESSION[AuthSession::SESSION_KEY] = $authSessionData;
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    private static function readSessionData(): array
+    {
+        $authSessionData = $_SESSION[AuthSession::SESSION_KEY] ?? null;
+
+        return is_array(value: $authSessionData) ? $authSessionData : [];
     }
 
     private static function setAuthSessionID(int $authSessionID): void
@@ -37,6 +50,10 @@ class AuthSession
         AuthSession::saveToSession(key: AuthSession::authSessionIdIndicator, value: $authSessionID);
     }
 
+    /**
+     * Logs the user out and removes all data of the user from the session (see
+     * AbstractSessionHandler::clearUserData()). Does nothing if no user is logged in.
+     */
     final public static function logOut(): void
     {
         if (!AuthSession::isLoggedIn()) {
@@ -47,8 +64,8 @@ class AuthSession
 
     final public static function isLoggedIn(): bool
     {
-        $isLoggedIn = AuthSession::getFromSession(key: AuthSession::isLoggedInIndicator);
-        if (is_null(value: $isLoggedIn)) {
+        $isLoggedIn = AuthSession::readSessionData()[AuthSession::isLoggedInIndicator] ?? null;
+        if (!is_bool(value: $isLoggedIn)) {
             AuthSession::setIsLoggedIn(isLoggedIn: false);
 
             return false;
@@ -57,20 +74,9 @@ class AuthSession
         return $isLoggedIn;
     }
 
-    private static function getFromSession(string $key): null|bool|int
-    {
-        if (!array_key_exists(key: AuthSession::SESSION_KEY, array: $_SESSION)) {
-            $_SESSION[AuthSession::SESSION_KEY] = [];
-        }
-        if (!array_key_exists(key: $key, array: $_SESSION[AuthSession::SESSION_KEY])) {
-            $_SESSION[AuthSession::SESSION_KEY][$key] = null;
-        }
-
-        return $_SESSION[AuthSession::SESSION_KEY][$key];
-    }
-
     private static function resetSession(): void
     {
+        AbstractSessionHandler::clearUserData();
         AuthSession::setIsLoggedIn(isLoggedIn: false);
         AuthSession::setAuthSessionID(authSessionID: 0);
         AbstractSessionHandler::getSessionHandler()->regenerateID();
@@ -78,6 +84,11 @@ class AuthSession
 
     final public static function getAuthSessionID(): int
     {
-        return AuthSession::getFromSession(key: AuthSession::authSessionIdIndicator);
+        $authSessionID = AuthSession::readSessionData()[AuthSession::authSessionIdIndicator] ?? null;
+        if (!is_int(value: $authSessionID)) {
+            throw new UnexpectedValueException(message: 'The session contains no auth session ID.');
+        }
+
+        return $authSessionID;
     }
 }

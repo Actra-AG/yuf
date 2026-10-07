@@ -48,7 +48,7 @@ final class FormMessagesTest extends TestCase
         $this->assertSame('-- Bitte auswählen --', $messages->selectEmptyOption);
         $this->assertSame('Ungültige Auswahl im Feld [field].', $messages->invalidOption);
         $this->assertSame(
-            'Das Formular konnte wegen eines technischen Problems (ungültiges CSRF) nicht übermittelt werden.'
+            'Das Formular konnte wegen eines technischen Problems (ungültiges CSRF-Token) nicht übermittelt werden.'
             . ' Bitte versuchen Sie es erneut.',
             $messages->invalidCsrfToken
         );

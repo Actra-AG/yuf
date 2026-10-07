@@ -133,6 +133,17 @@ $page = $this->getPathVarAsInt(nr: 3) ?? 1;       // ?int, null if missing or no
 Integers must be strictly formatted: optional minus and digits only (no `+`, no spaces, no decimals); values outside
 the integer range count as not an integer.
 
+## Clearing the session on logout
+
+`AuthSession::logOut()` resets the login and calls `AbstractSessionHandler::clearUserData()`, so the next user of the
+same browser does not see the data of the previous one (breadcrumb, table and search state, uploads, CSRF token, own
+project data, …). Projects do not need to clear the session themselves.
+
+`clearUserData()` removes everything except the data of the session handler, the preferred language and the CSP nonce
+(which may already be in the header of the current response). It does nothing if sessions are disabled. Call it
+directly to clear the session without a logout. Data that has to survive a logout (e.g. a message for the login page)
+must be written to the session after `AuthSession::logOut()`.
+
 ## REST/API Endpoints
 
 `yuf` includes lightweight helpers for building REST-style endpoints without adding external dependencies.

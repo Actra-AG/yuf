@@ -45,7 +45,7 @@ final readonly class FormMessages
             selectOneOption: 'Bitte wählen Sie eine der Optionen aus.',
             selectEmptyOption: '-- Bitte auswählen --',
             invalidOption: 'Ungültige Auswahl im Feld [field].',
-            invalidCsrfToken: 'Das Formular konnte wegen eines technischen Problems (ungültiges CSRF) nicht'
+            invalidCsrfToken: 'Das Formular konnte wegen eines technischen Problems (ungültiges CSRF-Token) nicht'
             . ' übermittelt werden. Bitte versuchen Sie es erneut.',
             cancel: 'Abbrechen',
             removeFile: 'löschen',
