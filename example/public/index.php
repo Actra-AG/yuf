@@ -35,6 +35,7 @@ $core->prepareHttpResponse(
             // (ClassNameViewFactory: the class name is built from the route and the file name).
             new Route(
                 path: '/',
+                viewDirectory: $core->viewDirectory,
                 viewGroup: 'frontend',
                 defaultFileName: 'index.html',
                 defaultContentType: ContentType::createHtml(),

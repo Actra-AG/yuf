@@ -76,6 +76,11 @@ class RequestHandler
                     || $preferredLanguageCode !== $this->language->code
                 )
             ) {
+                if (!$core->availableLanguages->hasLanguage(languageCode: $this->language->code)) {
+                    throw new LogicException(
+                        message: 'The preferred language ' . $this->language->code . ' is not available',
+                    );
+                }
                 $sessionHandler->setPreferredLanguage(language: $this->language);
             }
         }

@@ -17,6 +17,7 @@ class FileSessionHandler extends AbstractSessionHandler
 {
     public function __construct(
         private readonly SessionSettings $sessionSettings,
+        private readonly string $defaultSavePath,
         Clock $clock = new SystemClock(),
     ) {
         parent::__construct(sessionSettings: $sessionSettings, clock: $clock);
@@ -25,7 +26,7 @@ class FileSessionHandler extends AbstractSessionHandler
     #[Override]
     protected function executePreStartActions(): void
     {
-        $savePath = $this->sessionSettings->savePath;
+        $savePath = $this->sessionSettings->savePath ?? $this->defaultSavePath;
         if ($savePath !== '') {
             if (!is_dir(filename: $savePath)) {
                 mkdir(

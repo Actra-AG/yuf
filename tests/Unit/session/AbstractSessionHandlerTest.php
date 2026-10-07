@@ -13,7 +13,6 @@ use actra\yuf\security\CsrfToken;
 use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\session\FileSessionHandler;
 use actra\yuf\session\SessionSettings;
-use actra\yuf\tests\Double\CoreTestInstance;
 use Override;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -83,7 +82,7 @@ final class AbstractSessionHandlerTest extends TestCase
             $sessionHandler = new FileSessionHandler(sessionSettings: new SessionSettings(
                 savePath: $savePath,
                 individualName: AbstractSessionHandlerTest::SESSION_NAME,
-            ));
+            ), defaultSavePath: '/not/used');
             $sessionId = $sessionHandler->getId();
             session_write_close();
         } finally {
@@ -97,6 +96,28 @@ final class AbstractSessionHandlerTest extends TestCase
         );
     }
 
+    #[RunInSeparateProcess]
+    public function testDefaultSavePathIsUsedWithoutSavePathInSettings(): void
+    {
+        $defaultSavePath = $this->createSessionSavePath();
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+
+        try {
+            $sessionHandler = new FileSessionHandler(
+                sessionSettings: new SessionSettings(individualName: AbstractSessionHandlerTest::SESSION_NAME),
+                defaultSavePath: $defaultSavePath,
+            );
+            $sessionId = $sessionHandler->getId();
+            $usedSavePath = session_save_path();
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $defaultSavePath);
+        }
+
+        $this->assertSame(AbstractSessionHandlerTest::COOKIE_SESSION_ID, $sessionId);
+        $this->assertSame($defaultSavePath, $usedSavePath);
+    }
+
     /**
      * Creates a save path with an existing session for the ID of the cookie and of the request input, so the strict
      * mode of PHP accepts both IDs.
@@ -105,7 +126,6 @@ final class AbstractSessionHandlerTest extends TestCase
     {
         $savePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-session-test-' . bin2hex(string: random_bytes(length: 8));
         mkdir(directory: $savePath);
-        CoreTestInstance::register(cacheDirectory: $savePath . DIRECTORY_SEPARATOR);
         foreach ([AbstractSessionHandlerTest::COOKIE_SESSION_ID, AbstractSessionHandlerTest::REQUESTED_SESSION_ID] as $sessionId) {
             file_put_contents(filename: $savePath . DIRECTORY_SEPARATOR . 'sess_' . $sessionId, data: '');
         }

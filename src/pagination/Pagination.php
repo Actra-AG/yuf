@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace actra\yuf\pagination;
 
-use actra\yuf\Core;
 use actra\yuf\html\HtmlDataObject;
 use actra\yuf\html\HtmlDataObjectCollection;
 use actra\yuf\html\HtmlReplacementCollection;
@@ -102,8 +101,7 @@ class Pagination
         );
 
         return new HtmlSnippet(
-            htmlSnippetFilePath: $individualHtmlSnippetPath === null ? Core::get(
-            )->frameworkDirectory . 'pagination' . DIRECTORY_SEPARATOR . 'pagination.html' : $individualHtmlSnippetPath,
+            htmlSnippetFilePath: $individualHtmlSnippetPath === null ? __DIR__ . DIRECTORY_SEPARATOR . 'pagination.html' : $individualHtmlSnippetPath,
             replacements: $replacements,
         )->render();
     }

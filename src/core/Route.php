@@ -18,8 +18,8 @@ class Route
 
     public function __construct(
         public readonly string $path,
+        string $viewDirectory,
         public readonly ?Closure $viewCallback = null,
-        string $viewDirectory = '{default}',
         public readonly string $viewClassPrefix = Core::APP_CLASS_PREFIX,
         public readonly string $viewGroup = '',
         public readonly string $defaultFileName = '',
@@ -31,11 +31,7 @@ class Route
         public readonly ?string $forceFileName = null,
         public readonly ?ViewFactory $viewFactory = null,
     ) {
-        if ($viewDirectory === '{default}') {
-            $this->viewDirectory = Core::get()->viewDirectory . $viewGroup . '/';
-        } else {
-            $this->viewDirectory = $viewDirectory . $viewGroup . '/';
-        }
+        $this->viewDirectory = $viewDirectory . $viewGroup . '/';
     }
 
     public function loadLocalizedText(string $fileTitle, LocaleHandler $localeHandler): void

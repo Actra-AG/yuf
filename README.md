@@ -133,6 +133,7 @@ document and the JSON request body.
 ```php
 new Route(
     path: '/',
+    viewDirectory: $core->viewDirectory,
     viewGroup: 'frontend',
     viewFactory: new ViewMap()->add(
         fileTitle: 'index',

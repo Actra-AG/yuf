@@ -475,19 +475,27 @@ Smaller releases, each for one area:
 - **10.1 (v4.21.0) locale:** `LocaleHandler` gets the language and the available languages through its constructor (no
   `RequestHandler::get()` / `Core::get()`); `LocaleHandler::register()` takes the instance; `Route::loadLocalizedText()`
   gets the `LocaleHandler`; `ViewContext` gets `$locale`.
-- **10.2 directories and settings (v4.22.0 and later):** `Route` resolves `'{default}'` of `viewDirectory` without
-  `Core::get()` (the `RouteCollection` or `Core` sets the default directory). `SessionSettings` resolves its default
-  `savePath` in `FileSessionHandler` (gets the cache directory). `LogFile`, `HtmlSnippet`, `MicrosoftAuthenticator`,
-  `MicrosoftIdToken`, `AbstractSessionHandler` (available languages): directories and settings through the constructor
-  instead of `Core::get()`.
-- **10.3 request data (v4.22.0 and later):** `HtmlDocument` and `ExceptionHandler` without `RequestHandler::get()` /
+- **10.2 (v4.22.0) directories and settings:** what needs a directory of `Core` gets it explicitly (projects have the
+  `Core` instance at hand: `$core->viewDirectory`, `$core->cacheDirectory`, `$core->logDirectory`). `Route` requires
+  `viewDirectory` (second parameter, no `'{default}'`). `SessionSettings::$savePath` is `?string` (`null` = default of
+  the handler); `FileSessionHandler` gets `defaultSavePath`; `Core::prepareHttpResponse()` creates the default handler
+  itself when `individualSessionHandler` is `null` (`false` = no session). `AbstractSessionHandler::setPreferredLanguage()`
+  does not check the available languages (`RequestHandler` does). `MicrosoftAuthenticator` gets `logDirectory` and
+  `cacheDirectory` through its constructor and passes the cache directory to `MicrosoftIdToken`. `Pagination` and
+  `TableFilter` find their snippets with `__DIR__`.
+- **10.3 request data (v4.23.0 and later):** `HtmlDocument` and `ExceptionHandler` without `RequestHandler::get()` /
   `Core::get()` / `ContentHandler::get()`; then `RequestHandler::get()` and `ContentHandler::get()` / `isRegistered()`
   are removed.
 - **Stays:** `Core::get()` and `LocaleHandler::get()` for the compiled templates (`IfTag`, `SnippetTag`, `LangTag`)
   until the template refactoring; `tests/Double/CoreTestInstance` stays as long as `Core::get()` exists.
+  Also `HtmlSnippet::render()` and `HtmlDocument` (they create the `TemplateEngine` with `Core::get()->cacheDirectory` /
+  `baseDirectory`: template infrastructure; the request data of `HtmlDocument` is 10.3), and `Core::get()` in
+  `ExceptionHandler` / `RequestHandler` (10.3).
 
 ### Later (separate plans)
 
+- `LogFile` (static facade `LogFile::info()/debug()/error()` with a static registry of open files, reads
+  `Core::get()->logDirectory`): replacing it needs a logger instance.
 - `HttpRequest` as an instance (`HttpRequest::fromGlobals()`) passed through `ViewContext`.
 - Session object instead of `AbstractSessionHandler::getSessionHandler()`, `AuthSession`, `CsrfToken`,
   `FormNameRegistry`.
@@ -624,3 +632,17 @@ Smaller releases, each for one area:
   `RequestHandler::get()` there: part 10.3).
 - New `LocaleHandlerTest` with fixtures `tests/Fixture/localeTexts.lang.php` / `localeEmpty.lang.php`; `register()` is
   not tested (`setlocale()` is process-wide). `ViewContextFactory` uses a `LocaleHandler` without language.
+
+### Step 10.2 (v4.22.0) – done
+
+- `Route`, `SessionSettings`, `FileSessionHandler`, `Core::prepareHttpResponse()`, `MicrosoftAuthenticator` and
+  `MicrosoftIdToken` as described in 10.2; UPGRADE.md has a ⚠️ entry for each. `Route::$viewDirectory` moved right
+  after `path` (a required parameter after optional ones is deprecated); named-argument callers are unaffected.
+- `RequestHandler` throws a `LogicException` (was `Exception` in `setPreferredLanguage()`) with the same message before
+  it sets an unavailable language as the preferred one.
+- Tests: new `RouteTest`, `SessionSettingsTest`, `MicrosoftIdTokenTest` (prepared key file in a temp cache directory,
+  no network); `AbstractSessionHandlerTest` checks the default save path of `FileSessionHandler` and no longer needs
+  `CoreTestInstance`. Not covered: `MicrosoftAuthenticator` (logging, needs sessions/HTTP), the `Core` default session
+  handler, the language check in `RequestHandler` (needs a request).
+- Baseline unchanged (765 entries). Remaining `Core::get()` uses: `LogFile`, `HtmlSnippet`, `HtmlDocument`,
+  `ExceptionHandler`, `RequestHandler`, `IfTag`, `SnippetTag`.

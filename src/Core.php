@@ -178,9 +178,7 @@ class Core
         RouteCollection $routeCollection = new RouteCollection(),
         ?ExceptionHandler $individualExceptionHandler = null,
         ?CspPolicySettings $cspPolicySettings = new CspPolicySettings(),
-        false|AbstractSessionHandler $individualSessionHandler = new FileSessionHandler(
-            sessionSettings: new SessionSettings(),
-        ),
+        false|AbstractSessionHandler|null $individualSessionHandler = null,
     ): HttpResponse {
         if (Core::$httpResponse !== null) {
             throw new LogicException(message: 'The HttpResponse is already prepared');
@@ -202,6 +200,12 @@ class Core
                 isDebug: $this->debug,
             ),
         );
+        if ($individualSessionHandler === null) {
+            $individualSessionHandler = new FileSessionHandler(
+                sessionSettings: new SessionSettings(),
+                defaultSavePath: $this->cacheDirectory . 'sessions',
+            );
+        }
         AbstractSessionHandler::register(individualSessionHandler: $individualSessionHandler);
         if (!$routeCollection->hasRoutes()) {
             throw new LogicException(message: 'There must be at least one route');

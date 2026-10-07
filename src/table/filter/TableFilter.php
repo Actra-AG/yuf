@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace actra\yuf\table\filter;
 
-use actra\yuf\Core;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\RequestMethodEnum;
 use actra\yuf\html\HtmlDataObjectCollection;
@@ -189,8 +188,7 @@ class TableFilter
         $individualHtmlSnippetPath = $this->individualHtmlSnippetPath;
 
         return new HtmlSnippet(
-            htmlSnippetFilePath: $individualHtmlSnippetPath === null ? Core::get(
-            )->frameworkDirectory . 'table' . DIRECTORY_SEPARATOR . 'filter' . DIRECTORY_SEPARATOR . 'tableFilter.html' : $individualHtmlSnippetPath,
+            htmlSnippetFilePath: $individualHtmlSnippetPath === null ? __DIR__ . DIRECTORY_SEPARATOR . 'tableFilter.html' : $individualHtmlSnippetPath,
             replacements: $replacements,
         )->render();
     }

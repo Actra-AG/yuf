@@ -4,6 +4,153 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.22.0] – 2026-10-08
+
+### ⚠️ `Route` needs `viewDirectory:`
+
+The placeholder `'{default}'` and the default value are gone: `Core::get()->viewDirectory` is no longer read by
+`Route`. `viewDirectory` is now the second parameter (right after `path`, because a required parameter must not follow
+optional ones); this only matters for positional arguments. Calls with named arguments only need the new argument.
+
+Before:
+
+```php
+new Route(path: '/', viewGroup: 'frontend');
+new Route(path: '/', viewDirectory: '{default}', viewGroup: 'frontend');
+```
+
+After:
+
+```php
+new Route(path: '/', viewDirectory: $core->viewDirectory, viewGroup: 'frontend');
+```
+
+### ⚠️ `SessionSettings`: `savePath` is `?string`, no `'{default}'`
+
+`null` (default) means the default directory of the session handler. A project that passed `'{default}'` or a path
+containing it must pass `null` or a real path.
+
+Before:
+
+```php
+new SessionSettings(savePath: '{default}');
+new SessionSettings(savePath: '{default}/custom');
+```
+
+After:
+
+```php
+new SessionSettings();
+new SessionSettings(savePath: $core->cacheDirectory . 'sessions/custom');
+```
+
+### ⚠️ `FileSessionHandler` needs `defaultSavePath:`
+
+Used when `SessionSettings::$savePath` is `null`. Previously this was `Core::get()->cacheDirectory . 'sessions'`.
+
+Before:
+
+```php
+new FileSessionHandler(sessionSettings: new SessionSettings());
+```
+
+After:
+
+```php
+new FileSessionHandler(
+    sessionSettings: new SessionSettings(),
+    defaultSavePath: $core->cacheDirectory . 'sessions',
+);
+```
+
+### ⚠️ `Core::prepareHttpResponse()`: `individualSessionHandler` defaults to `null`
+
+`null` creates the default `FileSessionHandler` (`new SessionSettings()`, save path `<cacheDirectory>sessions`);
+`false` still disables sessions. Only relevant for projects that relied on the default object in a different way, for
+example by passing `new FileSessionHandler(sessionSettings: ...)` themselves (see above); the behaviour of the default
+is unchanged.
+
+Before:
+
+```php
+$core->prepareHttpResponse(individualSessionHandler: new FileSessionHandler(sessionSettings: new SessionSettings()));
+```
+
+After:
+
+```php
+$core->prepareHttpResponse(); // same as individualSessionHandler: null
+$core->prepareHttpResponse(individualSessionHandler: false); // no session
+```
+
+### ⚠️ `AbstractSessionHandler::setPreferredLanguage()` no longer checks the available languages
+
+Only relevant for projects that call it themselves: they no longer get the `Exception` for a language that is not
+available (`Core::get()->availableLanguages` is not read any more). `RequestHandler` checks it before and throws a
+`LogicException` with the same message (previously `Exception`).
+
+### ⚠️ `MicrosoftAuthenticator` has a constructor with directories
+
+Subclasses must call it; the SSO log goes to `$logDirectory`, the public keys to `$cacheDirectory`
+(`ssoMicrosoftKeys.json`). Both directories end with a slash (like `Core::$logDirectory` / `Core::$cacheDirectory`).
+
+Before:
+
+```php
+final class AppAuthenticator extends MicrosoftAuthenticator
+{
+    public function __construct()
+    {
+        parent::__construct(maxAllowedWrongPasswordAttempts: 5);
+    }
+}
+```
+
+After:
+
+```php
+final class AppAuthenticator extends MicrosoftAuthenticator
+{
+    public function __construct(Core $core)
+    {
+        parent::__construct(
+            maxAllowedWrongPasswordAttempts: 5,
+            logDirectory: $core->logDirectory,
+            cacheDirectory: $core->cacheDirectory,
+        );
+    }
+}
+```
+
+### ⚠️ `MicrosoftIdToken` needs `cacheDirectory:`
+
+Only relevant for projects that create it themselves (`MicrosoftAuthenticator` does it). The new argument comes after
+`jwtString:` and before `clock:`.
+
+Before:
+
+```php
+new MicrosoftIdToken(tenantId: $tenantId, clientId: $clientId, ssoNonce: $ssoNonce, jwtString: $jwt);
+```
+
+After:
+
+```php
+new MicrosoftIdToken(
+    tenantId: $tenantId,
+    clientId: $clientId,
+    ssoNonce: $ssoNonce,
+    jwtString: $jwt,
+    cacheDirectory: $core->cacheDirectory,
+);
+```
+
+### `Pagination` and `TableFilter`
+
+No API change: the default snippet files are found relative to the class files instead of through `Core`.
+
+---
+
 ## [v4.21.0] – 2026-10-08
 
 ### ⚠️ `LocaleHandler::register()` takes a `LocaleHandler`

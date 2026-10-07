@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace actra\yuf\auth;
 
-use actra\yuf\Core;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\session\AbstractSessionHandler;
 use DateTimeImmutable;
@@ -19,6 +18,14 @@ use Throwable;
 abstract class MicrosoftAuthenticator extends Authenticator
 {
     private const string AUTHORIZE_PATH = 'https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/' . 'authorize';
+
+    protected function __construct(
+        int $maxAllowedWrongPasswordAttempts,
+        private readonly string $logDirectory,
+        private readonly string $cacheDirectory,
+    ) {
+        parent::__construct(maxAllowedWrongPasswordAttempts: $maxAllowedWrongPasswordAttempts);
+    }
 
     protected function redirectToMicrosoftLogin(
         string $tenantId,
@@ -62,6 +69,7 @@ abstract class MicrosoftAuthenticator extends Authenticator
                 clientId: $clientId,
                 ssoNonce: $ssoNonce,
                 jwtString: $microsoftIdToken,
+                cacheDirectory: $this->cacheDirectory,
             );
         } catch (Throwable $throwable) {
             $this->logException(throwable: $throwable, ssoNonce: $ssoNonce, inputIdTokenString: $microsoftIdToken);
@@ -78,7 +86,7 @@ abstract class MicrosoftAuthenticator extends Authenticator
 
     private function logException(Throwable $throwable, string $ssoNonce, string $inputIdTokenString): void
     {
-        $logFile = fopen(filename: Core::get()->logDirectory . 'ssoMicrosoft.log', mode: 'a+');
+        $logFile = fopen(filename: $this->logDirectory . 'ssoMicrosoft.log', mode: 'a+');
         fwrite(
             stream: $logFile,
             data: (

@@ -11,11 +11,9 @@ namespace actra\yuf\session;
 
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
-use actra\yuf\Core;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\Language;
 use actra\yuf\exception\UnauthorizedException;
-use Exception;
 use LogicException;
 use SessionHandler;
 use Throwable;
@@ -386,10 +384,6 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     public function setPreferredLanguage(Language $language): void
     {
-        if (!Core::get()->availableLanguages->hasLanguage(languageCode: $language->code)) {
-            throw new Exception(message: 'The preferred language ' . $language->code . ' is not available');
-        }
-
         $_SESSION[AbstractSessionHandler::PREFERRED_LANGUAGE_INDICATOR] = $language->code;
     }
 

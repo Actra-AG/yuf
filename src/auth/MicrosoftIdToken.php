@@ -11,7 +11,6 @@ namespace actra\yuf\auth;
 
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
-use actra\yuf\Core;
 use actra\yuf\exception\UnauthorizedException;
 use OpenSSLAsymmetricKey;
 use Override;
@@ -26,6 +25,7 @@ class MicrosoftIdToken extends AuthWebToken
         private readonly string $clientId,
         private readonly string $ssoNonce,
         string $jwtString,
+        private readonly string $cacheDirectory,
         private readonly Clock $clock = new SystemClock(),
     ) {
         parent::__construct(jwtString: $jwtString);
@@ -47,7 +47,7 @@ class MicrosoftIdToken extends AuthWebToken
         if (!property_exists(object_or_class: $header, property: 'kid')) {
             throw new UnauthorizedException(message: 'Missing kid');
         }
-        $cachePath = Core::get()->cacheDirectory . 'ssoMicrosoftKeys.json';
+        $cachePath = $this->cacheDirectory . 'ssoMicrosoftKeys.json';
         $publicKeysPath = str_replace(
             search: '{tenantId}',
             replace: $this->tenantId,
