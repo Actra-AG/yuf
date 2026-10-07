@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,7 +20,7 @@ final class PhoneNumberFieldValueTest extends TestCase
     private function createField(
         ?string $value = null,
         string $countryCode = 'CH',
-        ?HtmlText $requiredErrorMessage = null
+        ?HtmlText $requiredErrorMessage = null,
     ): PhoneNumberField {
         return new PhoneNumberField(
             name: 'phone',
@@ -27,7 +28,7 @@ final class PhoneNumberFieldValueTest extends TestCase
             value: $value,
             invalidErrorMessage: HtmlText::encoded(textContent: 'Invalid'),
             requiredErrorMessage: $requiredErrorMessage,
-            countryCode: $countryCode
+            countryCode: $countryCode,
         );
     }
 
@@ -98,7 +99,7 @@ final class PhoneNumberFieldValueTest extends TestCase
         $this->assertSame('abc', $field->getValueAsString());
         $this->assertSame(['Invalid'], array_map(
             callback: fn(HtmlText $error): string => $error->render(),
-            array: $field->errorCollection->listErrors()
+            array: $field->errorCollection->listErrors(),
         ));
     }
 
@@ -175,7 +176,7 @@ final class PhoneNumberFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'Phone'),
             value: null,
             invalidErrorMessage: HtmlText::encoded(textContent: 'Invalid'),
-            countryCodeFieldName: 'country'
+            countryCodeFieldName: 'country',
         );
 
         $field->validate(input: FormInput::fromArray(data: ['phone' => '030 123456', 'country' => 'DE', 'countryCode' => 'FR']));
@@ -223,7 +224,7 @@ final class PhoneNumberFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'Phone'),
             value: '044 668 18 00',
             invalidErrorMessage: HtmlText::encoded(textContent: 'Invalid'),
-            renderInternalFormat: true
+            renderInternalFormat: true,
         );
 
         $this->assertSame('+41.446681800', $field->renderValue());

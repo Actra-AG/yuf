@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -51,7 +52,7 @@ final class SpecialFieldRenderersTest extends TestCase
             value: $value,
             invalidErrorMessage: $this->text('Invalid'),
             requiredErrorMessage: $this->text('Req'),
-            renderInternalFormat: $internalFormat
+            renderInternalFormat: $internalFormat,
         );
     }
 
@@ -62,7 +63,7 @@ final class SpecialFieldRenderersTest extends TestCase
             label: $this->text('Zip'),
             value: $value,
             requiredError: $this->text('Req'),
-            maxLength: 10
+            maxLength: 10,
         );
     }
 
@@ -73,7 +74,7 @@ final class SpecialFieldRenderersTest extends TestCase
             label: $this->text('Iban'),
             value: $value,
             invalidError: $this->text('Invalid'),
-            requiredError: $this->text('Req')
+            requiredError: $this->text('Req'),
         );
     }
 
@@ -82,7 +83,7 @@ final class SpecialFieldRenderersTest extends TestCase
         return new Form(
             name: 'specialFieldsForm' . SpecialFieldRenderersTest::$formCounter++,
             messages: $messages,
-            csrfTokenSource: new InMemoryCsrfTokenSource(token: 'tok+en/1=')
+            csrfTokenSource: new InMemoryCsrfTokenSource(token: 'tok+en/1='),
         );
     }
 
@@ -95,7 +96,7 @@ final class SpecialFieldRenderersTest extends TestCase
     {
         $this->assertSame(
             '<input type="tel" name="phone" id="phone" value="+41 44 668 18 00">',
-            $this->phone(value: '044 668 18 00')->render()
+            $this->phone(value: '044 668 18 00')->render(),
         );
     }
 
@@ -103,7 +104,7 @@ final class SpecialFieldRenderersTest extends TestCase
     {
         $this->assertSame(
             '<input type="tel" name="phone" id="phone" value="+41.446681800">',
-            $this->phone(value: '044 668 18 00', internalFormat: true)->render()
+            $this->phone(value: '044 668 18 00', internalFormat: true)->render(),
         );
     }
 
@@ -111,7 +112,7 @@ final class SpecialFieldRenderersTest extends TestCase
     {
         $this->assertSame(
             '<input type="tel" name="phone" id="phone" value="a&quot;b&lt;c">',
-            $this->phone(value: 'a"b<c')->render()
+            $this->phone(value: 'a"b<c')->render(),
         );
     }
 
@@ -122,7 +123,7 @@ final class SpecialFieldRenderersTest extends TestCase
 
         $this->assertSame(
             '<input type="tel" name="phone" id="phone" value="+41 44 668 18 00">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -149,7 +150,7 @@ final class SpecialFieldRenderersTest extends TestCase
 
         $this->assertSame(
             '<input type="tel" name="phone" id="phone" value="abc" aria-invalid="true" aria-describedby="phone-error">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -161,7 +162,7 @@ final class SpecialFieldRenderersTest extends TestCase
         $this->assertSame(
             '<input type="tel" name="phone" id="phone" value="&quot;&gt;&lt;b&gt;x" aria-invalid="true"'
             . ' aria-describedby="phone-error">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -172,7 +173,7 @@ final class SpecialFieldRenderersTest extends TestCase
 
         $this->assertSame(
             '<input type="tel" name="phone" id="phone" value="" aria-invalid="true" aria-describedby="phone-error">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -184,12 +185,12 @@ final class SpecialFieldRenderersTest extends TestCase
             value: null,
             invalidErrorMessage: $this->text('Invalid'),
             placeholder: 'p',
-            autoComplete: AutoCompleteEnum::TEL
+            autoComplete: AutoCompleteEnum::TEL,
         );
 
         $this->assertSame(
             '<input type="tel" name="phone" id="phone" value="" placeholder="p" autocomplete="tel">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -197,7 +198,7 @@ final class SpecialFieldRenderersTest extends TestCase
     {
         $this->assertSame(
             '<input type="text" name="zip" id="zip" value="" maxlength="10">',
-            $this->zip()->render()
+            $this->zip()->render(),
         );
     }
 
@@ -205,7 +206,7 @@ final class SpecialFieldRenderersTest extends TestCase
     {
         $this->assertSame(
             '<input type="text" name="zip" id="zip" value="8000" maxlength="10">',
-            $this->zip(value: '8000')->render()
+            $this->zip(value: '8000')->render(),
         );
     }
 
@@ -225,7 +226,7 @@ final class SpecialFieldRenderersTest extends TestCase
         $this->assertSame(
             '<input type="text" name="zip" id="zip" value="x&quot;y" maxlength="10" aria-invalid="true"'
             . ' aria-describedby="zip-error">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -237,7 +238,7 @@ final class SpecialFieldRenderersTest extends TestCase
         $this->assertSame(
             '<input type="text" name="zip" id="zip" value="" maxlength="10" aria-invalid="true"'
             . ' aria-describedby="zip-error">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -250,7 +251,7 @@ final class SpecialFieldRenderersTest extends TestCase
     {
         $this->assertSame(
             '<input type="text" name="iban" id="iban" value="CH93 0076 2011 6238 5295 7">',
-            $this->iban(value: 'CH93 0076 2011 6238 5295 7')->render()
+            $this->iban(value: 'CH93 0076 2011 6238 5295 7')->render(),
         );
     }
 
@@ -261,7 +262,7 @@ final class SpecialFieldRenderersTest extends TestCase
 
         $this->assertSame(
             '<input type="text" name="iban" id="iban" value="ch9300762011623852957">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -273,7 +274,7 @@ final class SpecialFieldRenderersTest extends TestCase
         $this->assertSame(
             '<input type="text" name="iban" id="iban" value="xx&lt;" aria-invalid="true"'
             . ' aria-describedby="iban-error">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -281,7 +282,7 @@ final class SpecialFieldRenderersTest extends TestCase
     {
         $this->assertSame(
             '<input type="hidden" name="h" value="a&quot;b">',
-            new HiddenField(name: 'h', value: 'a"b')->render()
+            new HiddenField(name: 'h', value: 'a"b')->render(),
         );
     }
 
@@ -291,13 +292,13 @@ final class SpecialFieldRenderersTest extends TestCase
             name: 'pw',
             label: $this->text('Pw'),
             requiredError: $this->text('Req'),
-            purpose: PasswordPurposeEnum::CURRENT
+            purpose: PasswordPurposeEnum::CURRENT,
         );
         $field->validate(input: FormInput::fromArray(data: ['pw' => 'secret"x']));
 
         $this->assertSame(
             '<input type="password" name="pw" id="pw" value="" autocomplete="current-password">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -309,13 +310,13 @@ final class SpecialFieldRenderersTest extends TestCase
             requiredError: $this->text('Req'),
             purpose: PasswordPurposeEnum::NEW,
             placeholder: 'ph',
-            maxLength: 50
+            maxLength: 50,
         );
 
         $this->assertSame(
             '<input type="password" name="pw" id="pw" value="" placeholder="ph" autocomplete="new-password"'
             . ' maxlength="50">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -335,7 +336,7 @@ final class SpecialFieldRenderersTest extends TestCase
             . '<input type="text" name="zip" id="zip" value="" maxlength="10"></dd></dl>'
             . '<dl><dt><label for="iban">Iban<span class="required">*</span></label></dt><dd>'
             . '<input type="text" name="iban" id="iban" value=""></dd></dl></form>',
-            $form->render()
+            $form->render(),
         );
     }
 
@@ -350,8 +351,8 @@ final class SpecialFieldRenderersTest extends TestCase
         $isValid = $form->validate(
             input: FormInput::fromArray(
                 data: ['phone' => 'abc', 'zip' => 'x', 'iban' => 'x', 'csrftoken' => 'tok+en/1='],
-                query: [$formName => '']
-            )
+                query: [$formName => ''],
+            ),
         );
 
         $this->assertFalse($isValid);
@@ -369,7 +370,7 @@ final class SpecialFieldRenderersTest extends TestCase
             . '<input type="text" name="iban" id="iban" value="x" aria-invalid="true"'
             . ' aria-describedby="iban-error"><div class="form-input-error" id="iban-error" role="alert"'
             . ' aria-live="assertive">Invalid</div></dd></dl></form>',
-            $form->render()
+            $form->render(),
         );
     }
 
@@ -382,8 +383,8 @@ final class SpecialFieldRenderersTest extends TestCase
         $isValid = $form->validate(
             input: FormInput::fromArray(
                 data: ['phone' => '044 668 18 00', 'csrftoken' => 'wrong'],
-                query: [$formName => '']
-            )
+                query: [$formName => ''],
+            ),
         );
 
         $this->assertFalse($isValid);
@@ -394,7 +395,7 @@ final class SpecialFieldRenderersTest extends TestCase
             . '<input type="hidden" name="csrftoken" value="tok+en/1=">'
             . '<dl><dt><label for="phone">Phone<span class="required">*</span></label></dt><dd>'
             . '<input type="tel" name="phone" id="phone" value="+41 44 668 18 00"></dd></dl></form>',
-            $form->render()
+            $form->render(),
         );
     }
 
@@ -407,8 +408,8 @@ final class SpecialFieldRenderersTest extends TestCase
         $isValid = $form->validate(
             input: FormInput::fromArray(
                 data: ['phone' => '044 668 18 00'],
-                query: [$formName => '', 'csrftoken' => 'tok+en/1=']
-            )
+                query: [$formName => '', 'csrftoken' => 'tok+en/1='],
+            ),
         );
 
         $this->assertTrue($isValid);
@@ -416,7 +417,7 @@ final class SpecialFieldRenderersTest extends TestCase
             '<form method="post" action="?' . $formName . '"><input type="hidden" name="csrftoken" value="tok+en/1=">'
             . '<dl><dt><label for="phone">Phone<span class="required">*</span></label></dt><dd>'
             . '<input type="tel" name="phone" id="phone" value="+41 44 668 18 00"></dd></dl></form>',
-            $form->render()
+            $form->render(),
         );
     }
 }

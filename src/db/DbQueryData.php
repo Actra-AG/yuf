@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -12,7 +13,6 @@ readonly class DbQueryData
 {
     public function __construct(
         public string $query,
-        public array $params
-    ) {
-    }
+        public array $params,
+    ) {}
 }

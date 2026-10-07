@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -23,9 +24,9 @@ class TableFilter
     /** @var TableFilter[] */
     private static array $instances = [];
 
-    private(set) bool $filtersApplied = false;
+    public private(set) bool $filtersApplied = false;
     /** @var AbstractTableFilterField[] $allFilterFields */
-    private(set) array $allFilterFields = [];
+    public private(set) array $allFilterFields = [];
     /** @var AbstractTableFilterField[] $primaryFields */
     private array $primaryFields = [];
     /** @var AbstractTableFilterField[] $secondaryFields */
@@ -37,7 +38,7 @@ class TableFilter
         private readonly string $resetParameter = 'reset',
         private readonly ?string $individualHtmlSnippetPath = null,
         private readonly string $submitButtonLabel = 'Filter anwenden',
-        private readonly string $resetLinkLabel = 'Filter zurücksetzen'
+        private readonly string $resetLinkLabel = 'Filter zurücksetzen',
     ) {
         if (array_key_exists(key: $identifier, array: TableFilter::$instances)) {
             throw new LogicException(message: 'There is already a filter with the same identifier ' . $identifier);
@@ -47,10 +48,10 @@ class TableFilter
 
     public function validate(DbResultTable $dbResultTable): void
     {
-        if (!is_null(value: HttpRequest::getInputString(keyName: $this->resetParameter))) {
+        if (HttpRequest::getInputString(keyName: $this->resetParameter) !== null) {
             $this->reset(dbResultTable: $dbResultTable);
         }
-        if (!is_null(value: HttpRequest::getInputString(keyName: $this->identifier))) {
+        if (HttpRequest::getInputString(keyName: $this->identifier) !== null) {
             $this->reset(dbResultTable: $dbResultTable);
             $this->checkInput();
         }
@@ -93,7 +94,7 @@ class TableFilter
         $this->addWhereConditionsToSelectQuery(
             dbResultTable: $dbResultTable,
             whereConds: $whereConditions,
-            params: $parameters
+            params: $parameters,
         );
 
         return true;
@@ -102,7 +103,7 @@ class TableFilter
     private function addWhereConditionsToSelectQuery(
         DbResultTable $dbResultTable,
         array $whereConds,
-        array $params
+        array $params,
     ): void {
         foreach ($whereConds as $key => $val) {
             $whereConds[$key] = '(' . $val . ')';
@@ -110,7 +111,7 @@ class TableFilter
 
         $dbResultTable->dbQuery->addWherePart(
             wherePart: implode(separator: ' AND ', array: $whereConds),
-            parameters: $params
+            parameters: $params,
         );
     }
 
@@ -134,7 +135,7 @@ class TableFilter
         $replacements->addBool(identifier: 'showLegend', booleanValue: $this->showLegend);
         $replacements->addEncodedText(
             identifier: 'formAction',
-            content: '?' . $this->identifier . '&' . DbResultTable::PARAM_FIND
+            content: '?' . $this->identifier . '&' . DbResultTable::PARAM_FIND,
         );
         $replacements->addEncodedText(identifier: 'csrfField', content: CsrfToken::renderAsHiddenPostField());
         $primaryFields = new HtmlDataObjectCollection();
@@ -143,7 +144,7 @@ class TableFilter
         }
         $replacements->addHtmlDataObjectCollection(
             identifier: 'primaryFields',
-            htmlDataObjectCollection: $primaryFields
+            htmlDataObjectCollection: $primaryFields,
         );
         if (count(value: $this->secondaryFields) > 0) {
             $secondaryFields = new HtmlDataObjectCollection();
@@ -158,7 +159,7 @@ class TableFilter
             $replacements->addBool(identifier: 'isSecondaryFilterTriggered', booleanValue: $isSecondaryFilterTriggered);
             $replacements->addHtmlDataObjectCollection(
                 identifier: 'secondaryFields',
-                htmlDataObjectCollection: $secondaryFields
+                htmlDataObjectCollection: $secondaryFields,
             );
         } else {
             $replacements->addBool(identifier: 'hasSecondaryFilters', booleanValue: false);
@@ -170,8 +171,8 @@ class TableFilter
         $individualHtmlSnippetPath = $this->individualHtmlSnippetPath;
 
         return new HtmlSnippet(
-            htmlSnippetFilePath: is_null(value: $individualHtmlSnippetPath) ? Core::get(
-                )->frameworkDirectory . 'table' . DIRECTORY_SEPARATOR . 'filter' . DIRECTORY_SEPARATOR . 'tableFilter.html' : $individualHtmlSnippetPath,
+            htmlSnippetFilePath: $individualHtmlSnippetPath === null ? Core::get(
+            )->frameworkDirectory . 'table' . DIRECTORY_SEPARATOR . 'filter' . DIRECTORY_SEPARATOR . 'tableFilter.html' : $individualHtmlSnippetPath,
             replacements: $replacements,
         )->render();
     }
@@ -181,7 +182,7 @@ class TableFilter
         return DbResultTable::getFromSession(
             dataType: TableFilter::sessionDataType,
             identifier: $this->identifier,
-            index: $index
+            index: $index,
         );
     }
 
@@ -191,7 +192,7 @@ class TableFilter
             dataType: TableFilter::sessionDataType,
             identifier: $this->identifier,
             index: $index,
-            value: $value
+            value: $value,
         );
     }
 }

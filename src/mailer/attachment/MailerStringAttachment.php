@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -42,7 +43,7 @@ readonly class MailerStringAttachment
         string $contentString,
         string $fileName,
         string $type,
-        public bool $dispositionInline = false
+        public bool $dispositionInline = false,
     ) {
         $contentString = trim(string: $contentString);
         $fileName = trim(string: $fileName);

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -22,7 +23,7 @@ class CurlHeadRequest extends AbstractCurlRequest
             requestTypeSpecificCurlOptions: [
                 CURLOPT_NOBODY => true,
                 CURLOPT_HEADER => true,
-            ]
+            ],
         );
     }
 

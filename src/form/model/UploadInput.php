@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -20,7 +21,6 @@ final readonly class UploadInput
         public string $tmpName,
         public string $type,
         public int $error,
-        public int $size
-    ) {
-    }
+        public int $size,
+    ) {}
 }

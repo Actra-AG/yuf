@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,7 +20,7 @@ class CurlGetRequest extends AbstractCurlRequest
     {
         parent::__construct(
             requestTargetUrl: $requestTargetUrl,
-            requestTypeSpecificCurlOptions: [CURLOPT_HTTPGET => true]
+            requestTypeSpecificCurlOptions: [CURLOPT_HTTPGET => true],
         );
     }
 

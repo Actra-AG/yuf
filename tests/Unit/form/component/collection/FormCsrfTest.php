@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -24,7 +25,7 @@ use PHPUnit\Framework\TestCase;
 final class FormCsrfTest extends TestCase
 {
     private const string ENGLISH_MESSAGE = 'The form could not be submitted because of a technical problem'
-    . ' (invalid CSRF token). Please try again.';
+        . ' (invalid CSRF token). Please try again.';
 
     private static int $formCounter = 0;
 
@@ -36,14 +37,14 @@ final class FormCsrfTest extends TestCase
     private function createForm(
         bool $methodPost = true,
         FormMessages $messages = new FormMessages(),
-        ?HtmlText $globalErrorMessage = null
+        ?HtmlText $globalErrorMessage = null,
     ): Form {
         return new Form(
             name: 'csrfForm' . FormCsrfTest::$formCounter++,
             globalErrorMessage: $globalErrorMessage,
             methodPost: $methodPost,
             messages: $messages,
-            csrfTokenSource: new InMemoryCsrfTokenSource(token: 'expected-token')
+            csrfTokenSource: new InMemoryCsrfTokenSource(token: 'expected-token'),
         );
     }
 
@@ -54,7 +55,7 @@ final class FormCsrfTest extends TestCase
     private function send(Form $form, array $post, array $query = []): bool
     {
         return $form->validate(
-            input: FormInput::fromArray(data: $post, query: [$form->sentIndicator => ''] + $query)
+            input: FormInput::fromArray(data: $post, query: [$form->sentIndicator => ''] + $query),
         );
     }
 
@@ -116,7 +117,7 @@ final class FormCsrfTest extends TestCase
         $isValid = $this->send(
             form: $form,
             post: ['csrftoken' => 'wrong'],
-            query: ['csrftoken' => 'expected-token']
+            query: ['csrftoken' => 'expected-token'],
         );
 
         $this->assertFalse($isValid);
@@ -137,8 +138,8 @@ final class FormCsrfTest extends TestCase
             formField: new TextField(
                 name: 'name',
                 label: HtmlText::encoded(textContent: 'Name'),
-                requiredError: HtmlText::encoded(textContent: 'Required')
-            )
+                requiredError: HtmlText::encoded(textContent: 'Required'),
+            ),
         );
 
         $isValid = $this->send(form: $form, post: ['csrftoken' => 'wrong', 'name' => '']);
@@ -168,7 +169,7 @@ final class FormCsrfTest extends TestCase
         $this->assertSame(
             'Das Formular konnte wegen eines technischen Problems (ungültiges CSRF-Token) nicht übermittelt werden.'
             . ' Bitte versuchen Sie es erneut.',
-            $form->errorCollection->getFirstError()->render()
+            $form->errorCollection->getFirstError()->render(),
         );
     }
 
@@ -186,7 +187,7 @@ final class FormCsrfTest extends TestCase
 
         $this->assertStringContainsString(
             '<input type="hidden" name="csrftoken" value="expected-token">',
-            $form->render()
+            $form->render(),
         );
     }
 }

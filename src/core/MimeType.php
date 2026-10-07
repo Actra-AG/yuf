@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,9 +20,8 @@ class MimeType
     public const string JS = 'application/javascript';
 
     public function __construct(
-        public readonly string $value
-    ) {
-    }
+        public readonly string $value,
+    ) {}
 
     public static function createHtml(): MimeType
     {
@@ -617,7 +617,7 @@ class MimeType
         ];
 
         return array_key_exists(key: $extension, array: $mimeTypes) ? new MimeType(
-            value: $mimeTypes[$extension]
+            value: $mimeTypes[$extension],
         ) : new MimeType(value: MimeType::DEFAULT);
     }
 }

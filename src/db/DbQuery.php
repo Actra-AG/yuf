@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -55,9 +56,7 @@ class DbQuery
     private array $whereParameters = [];
     private array $orderParameters = [];
 
-    private function __construct()
-    {
-    }
+    private function __construct() {}
 
     public static function createFromSqlQuery(string $query, array $parameters = []): DbQuery
     {
@@ -66,7 +65,7 @@ class DbQuery
         $dbQuery = new DbQuery();
         $dbQuery->selectParts = $sectionTokens[DbQuery::SECTION_SELECT];
         [$dbQuery->fromParts, $dbQuery->joinParts] = DbQuery::splitOffJoinClauses(
-            tokens: $sectionTokens[DbQuery::SECTION_FROM]
+            tokens: $sectionTokens[DbQuery::SECTION_FROM],
         );
         if (count(value: $sectionTokens[DbQuery::SECTION_WHERE]) > 0) {
             $dbQuery->whereParts[] = implode(separator: ' ', array: $sectionTokens[DbQuery::SECTION_WHERE]);
@@ -77,26 +76,26 @@ class DbQuery
         $dbQuery->selectParameters = DbQuery::extractParameters(
             parameters: $parameters,
             queryParts: $dbQuery->selectParts,
-            section: DbQuery::SECTION_SELECT
+            section: DbQuery::SECTION_SELECT,
         );
         $dbQuery->fromParameters = DbQuery::extractParameters(
             parameters: $parameters,
             queryParts: $dbQuery->fromParts,
-            section: DbQuery::SECTION_FROM
+            section: DbQuery::SECTION_FROM,
         );
         $dbQuery->joinParameters = DbQuery::extractParameters(
             parameters: $parameters,
             queryParts: $dbQuery->joinParts,
-            section: DbQuery::SECTION_JOIN
+            section: DbQuery::SECTION_JOIN,
         );
         $dbQuery->whereParameters = DbQuery::extractParameters(
             parameters: $parameters,
             queryParts: $dbQuery->whereParts,
-            section: DbQuery::SECTION_WHERE
+            section: DbQuery::SECTION_WHERE,
         );
         if (count(value: $parameters) > 0) {
             throw new LogicException(
-                message: 'There are more parameters than "?" placeholders within the query.'
+                message: 'There are more parameters than "?" placeholders within the query.',
             );
         }
 
@@ -151,7 +150,7 @@ class DbQuery
             if ($lowercaseToken === 'select') {
                 if ($section !== null) {
                     throw new LogicException(
-                        message: '"SELECT" is not allowed if already in "SELECT", "FROM" or "WHERE".'
+                        message: '"SELECT" is not allowed if already in "SELECT", "FROM" or "WHERE".',
                     );
                 }
                 $section = DbQuery::SECTION_SELECT;
@@ -173,7 +172,7 @@ class DbQuery
             }
             if (in_array(needle: $lowercaseToken, haystack: DbQuery::UNSUPPORTED_KEYWORDS, strict: true)) {
                 throw new LogicException(
-                    message: '"' . strtoupper(string: $lowercaseToken) . '" is not supported within the query.'
+                    message: '"' . strtoupper(string: $lowercaseToken) . '" is not supported within the query.',
                 );
             }
             if ($section === null) {
@@ -255,7 +254,7 @@ class DbQuery
         return in_array(
             needle: strtolower(string: $tokens[$index]),
             haystack: DbQuery::JOIN_KEYWORDS,
-            strict: true
+            strict: true,
         );
     }
 
@@ -264,7 +263,7 @@ class DbQuery
         return in_array(
             needle: strtolower(string: $token),
             haystack: DbQuery::JOIN_MODIFIER_KEYWORDS,
-            strict: true
+            strict: true,
         );
     }
 
@@ -285,8 +284,8 @@ class DbQuery
             queryPart: str_replace(
                 search: ['(', ')'],
                 replace: [' ( ', ' ) '],
-                subject: $query
-            )
+                subject: $query,
+            ),
         );
         if ($normalizedQuery === '') {
             throw new LogicException(message: 'The query must not be empty.');
@@ -305,8 +304,8 @@ class DbQuery
             string: preg_replace(
                 pattern: '!\s+!',
                 replacement: ' ',
-                subject: $queryPart
-            )
+                subject: $queryPart,
+            ),
         );
     }
 
@@ -318,11 +317,11 @@ class DbQuery
     {
         $amountOfPlaceholders = substr_count(
             haystack: implode(separator: ' ', array: $queryParts),
-            needle: '?'
+            needle: '?',
         );
         if (count(value: $parameters) < $amountOfPlaceholders) {
             throw new LogicException(
-                message: 'There are not enough parameters for the "?" placeholders within the "' . $section . '" part.'
+                message: 'There are not enough parameters for the "?" placeholders within the "' . $section . '" part.',
             );
         }
 
@@ -330,22 +329,18 @@ class DbQuery
     }
 
     /**
-     * @param FrameworkDB $db
-     * @param int $offset
-     * @param int $rowCount
-     *
      * @return stdClass[]
      */
     public function selectFromDb(FrameworkDB $db, int $offset, int $rowCount): array
     {
         $dbQueryData = $this->getDbQueryData(
             offset: $offset,
-            rowCount: $rowCount
+            rowCount: $rowCount,
         );
 
         return $db->select(
             sql: $dbQueryData->query,
-            parameters: $dbQueryData->params
+            parameters: $dbQueryData->params,
         );
     }
 
@@ -372,7 +367,7 @@ class DbQuery
 
         return new DbQueryData(
             query: $query,
-            params: $parameters
+            params: $parameters,
         );
     }
 
@@ -392,17 +387,17 @@ class DbQuery
             queryParts: [
                 'SELECT COUNT(*) AS amount',
                 ...$this->getFromJoinAndWhereParts(),
-            ]
+            ],
         );
         $parameters = $this->getFromJoinAndWhereParameters();
         DbQuery::checkParameterCount(queryPart: $query, parameters: $parameters);
 
         $result = $db->select(
             sql: $query,
-            parameters: $parameters
+            parameters: $parameters,
         );
 
-        return (int)$result[0]->amount;
+        return (int) $result[0]->amount;
     }
 
     /**
@@ -440,7 +435,7 @@ class DbQuery
         return str_replace(
             search: ' (',
             replace: '(',
-            subject: implode(separator: ' ', array: $queryParts)
+            subject: implode(separator: ' ', array: $queryParts),
         );
     }
 
@@ -450,11 +445,11 @@ class DbQuery
         if (
             preg_match(
                 pattern: '!(^|\s)(' . implode(separator: '|', array: DbQuery::JOIN_KEYWORDS) . ')\s!i',
-                subject: $joinPart
+                subject: $joinPart,
             ) !== 1
         ) {
             throw new LogicException(
-                message: 'The join part must contain the complete JOIN clause, e.g. "LEFT JOIN t ON t.id = x.id".'
+                message: 'The join part must contain the complete JOIN clause, e.g. "LEFT JOIN t ON t.id = x.id".',
             );
         }
         DbQuery::checkParameterCount(queryPart: $joinPart, parameters: $parameters);
@@ -482,7 +477,7 @@ class DbQuery
         if ($amountOfPlaceholders !== $amountOfParameters) {
             throw new LogicException(
                 message: 'The amount of parameters (' . $amountOfParameters . ') does not match the amount of "?"'
-                . ' placeholders (' . $amountOfPlaceholders . ') in "' . $queryPart . '".'
+                . ' placeholders (' . $amountOfPlaceholders . ') in "' . $queryPart . '".',
             );
         }
     }
@@ -514,12 +509,12 @@ class DbQuery
         if (
             preg_match(
                 pattern: '!\s(' . DbQuery::SORT_ASC . '|' . DbQuery::SORT_DESC . ')$!i',
-                subject: $expression
+                subject: $expression,
             ) === 1
         ) {
             throw new LogicException(
                 message: 'The order expression "' . $expression . '" must not contain the sort direction;'
-                . ' it is added according to the "ascending" argument.'
+                . ' it is added according to the "ascending" argument.',
             );
         }
         DbQuery::checkParameterCount(queryPart: $expression, parameters: $parameters);
@@ -556,7 +551,7 @@ class DbQuery
         // Existing backticks are removed first to prevent double-escaping.
         $identifierParts = explode(
             separator: '.',
-            string: str_replace(search: '`', replace: '', subject: $column)
+            string: str_replace(search: '`', replace: '', subject: $column),
         );
         foreach ($identifierParts as $identifierPart) {
             if (trim(string: $identifierPart) === '') {

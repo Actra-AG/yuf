@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -16,9 +17,7 @@ use actra\yuf\html\HtmlTagAttribute;
 
 class CheckboxItemRenderer extends FormRenderer
 {
-    public function __construct(private readonly CheckboxOptionsField|BooleanField $checkboxOptionsField)
-    {
-    }
+    public function __construct(private readonly CheckboxOptionsField|BooleanField $checkboxOptionsField) {}
 
     public function prepare(): void
     {
@@ -26,7 +25,7 @@ class CheckboxItemRenderer extends FormRenderer
 
         $divFormCheck = new HtmlTag(
             name: 'div',
-            selfClosing: false
+            selfClosing: false,
         );
         $formItemCheckboxClasses = ['form-check'];
         if ($checkboxOptionsField->hasErrors(withChildElements: true)) {
@@ -37,41 +36,41 @@ class CheckboxItemRenderer extends FormRenderer
                 name: 'class',
                 value: implode(
                     separator: ' ',
-                    array: $formItemCheckboxClasses
+                    array: $formItemCheckboxClasses,
                 ),
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         $divFormCheck->addTag(htmlTag: $this->getInputTag());
         $labelTag = new HtmlTag(
             name: 'label',
-            selfClosing: false
+            selfClosing: false,
         );
         $labelTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'for',
                 value: $this->checkboxOptionsField->id,
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         $labelTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'class',
                 value: 'form-check-label',
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         $labelTag->addText(htmlText: $checkboxOptionsField->label);
         $divFormCheck->addTag(htmlTag: $labelTag);
-        if (!is_null(value: $checkboxOptionsField->fieldInfo)) {
+        if ($checkboxOptionsField->fieldInfo !== null) {
             FormRenderer::addFieldInfoToParentHtmlTag(
                 formFieldWithFieldInfo: $checkboxOptionsField,
-                parentHtmlTag: $divFormCheck
+                parentHtmlTag: $divFormCheck,
             );
         }
         FormRenderer::addErrorsToParentHtmlTag(
             formComponentWithErrors: $checkboxOptionsField,
-            parentHtmlTag: $divFormCheck
+            parentHtmlTag: $divFormCheck,
         );
         $this->setHtmlTag(htmlTag: $divFormCheck);
     }
@@ -80,44 +79,44 @@ class CheckboxItemRenderer extends FormRenderer
     {
         $inputTag = new HtmlTag(
             name: 'input',
-            selfClosing: true
+            selfClosing: true,
         );
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'type',
                 value: 'checkbox',
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'name',
                 value: $this->checkboxOptionsField->name . '[]',
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'id',
                 value: $this->checkboxOptionsField->id,
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         $optionValue = $this->getOptionKey();
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'value',
                 value: $optionValue,
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         if ($this->isChecked(optionKey: $optionValue)) {
             $inputTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'checked',
                     value: null,
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
         }
         $ariaDescribedBy = [];
@@ -126,12 +125,12 @@ class CheckboxItemRenderer extends FormRenderer
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'aria-invalid',
                     value: 'true',
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
             $ariaDescribedBy[] = $this->checkboxOptionsField->name . '-error';
         }
-        if (!is_null(value: $this->checkboxOptionsField->fieldInfo)) {
+        if ($this->checkboxOptionsField->fieldInfo !== null) {
             $ariaDescribedBy[] = $this->checkboxOptionsField->name . '-info';
         }
         if (count(value: $ariaDescribedBy) > 0) {
@@ -140,10 +139,10 @@ class CheckboxItemRenderer extends FormRenderer
                     name: 'aria-describedby',
                     value: implode(
                         separator: ' ',
-                        array: $ariaDescribedBy
+                        array: $ariaDescribedBy,
                     ),
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
         }
 
@@ -159,7 +158,7 @@ class CheckboxItemRenderer extends FormRenderer
             return BooleanField::CHECKED_KEY;
         }
 
-        return (string)key(array: $this->checkboxOptionsField->formOptions->data);
+        return (string) key(array: $this->checkboxOptionsField->formOptions->data);
     }
 
     private function isChecked(string $optionKey): bool

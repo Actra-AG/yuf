@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -28,11 +29,11 @@ abstract class OptionsField extends FormField
         string $name,
         HtmlText $label,
         public FormOptions $formOptions,
-        public readonly ?AutoCompleteEnum $autoComplete
+        public readonly ?AutoCompleteEnum $autoComplete,
     ) {
         parent::__construct(
             name: $name,
-            label: $label
+            label: $label,
         );
     }
 
@@ -66,7 +67,7 @@ abstract class OptionsField extends FormField
     final protected function rejectInvalidOption(): void
     {
         $this->rejectInput(
-            errorMessage: str_replace(search: '[field]', replace: $this->name, subject: $this->messages->invalidOption)
+            errorMessage: str_replace(search: '[field]', replace: $this->name, subject: $this->messages->invalidOption),
         );
     }
 }

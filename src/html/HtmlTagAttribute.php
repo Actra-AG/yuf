@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -10,15 +11,14 @@ namespace actra\yuf\html;
 
 class HtmlTagAttribute extends HtmlElement
 {
-    public null|string|int $value;
+    public string|int|null $value;
     private bool $valueIsEncodedForRendering;
 
     public function __construct(
         string          $name,
-        null|string|int $value,
-        bool            $valueIsEncodedForRendering
-    )
-    {
+        string|int|null $value,
+        bool            $valueIsEncodedForRendering,
+    ) {
         $this->value = $value;
         $this->valueIsEncodedForRendering = $valueIsEncodedForRendering;
         parent::__construct($name);
@@ -31,11 +31,11 @@ class HtmlTagAttribute extends HtmlElement
      */
     public function render(): string
     {
-        if (is_null($this->value)) {
+        if ($this->value === null) {
             return $this->name;
         }
 
-        $renderValue = $this->valueIsEncodedForRendering ? (string)$this->value : HtmlEncoder::encode(value: $this->value);
+        $renderValue = $this->valueIsEncodedForRendering ? (string) $this->value : HtmlEncoder::encode(value: $this->value);
 
         return $this->name . '="' . $renderValue . '"';
     }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -33,7 +34,7 @@ final class MultiSelectOptionsFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'Select'),
             formOptions: $formOptions,
             initialValues: $initialValues,
-            requiredError: $requiredError
+            requiredError: $requiredError,
         );
     }
 
@@ -245,7 +246,7 @@ final class MultiSelectOptionsFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'Select'),
             formOptions: new FormOptions(),
             initialValues: [],
-            renderAsChosenEnhancedField: true
+            renderAsChosenEnhancedField: true,
         );
 
         $this->assertSame(['chosen'], $field->cssClasses);

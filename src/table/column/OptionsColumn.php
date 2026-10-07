@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -17,13 +18,13 @@ class OptionsColumn extends AbstractTableColumn
         string $label,
         private readonly array $options,
         bool $isOrderAble,
-        bool $orderAscending = true
+        bool $orderAscending = true,
     ) {
         parent::__construct(
             identifier: $identifier,
             label: $label,
             isSortable: $isOrderAble,
-            sortAscendingByDefault: $orderAscending
+            sortAscendingByDefault: $orderAscending,
         );
     }
 

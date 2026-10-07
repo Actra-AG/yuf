@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -40,7 +41,7 @@ class HtmlMail extends AbstractMail
         string $alternativeBody,
         string $charSet = MailerConstants::CHARSET_UTF8,
         string $encoding = MailerConstants::ENCODING_QUOTED_PRINTABLE,
-        int $priority = MailerConstants::PRIORITY_NORMAL
+        int $priority = MailerConstants::PRIORITY_NORMAL,
     ) {
         parent::__construct(
             senderEmail: $senderEmail,
@@ -51,7 +52,7 @@ class HtmlMail extends AbstractMail
             subject: $subject,
             charSet: $charSet,
             encoding: $encoding,
-            priority: $priority
+            priority: $priority,
         );
         $this->setHtmlBody(htmlBody: $htmlBody, alternativeBody: $alternativeBody);
     }

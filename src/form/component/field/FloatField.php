@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -40,7 +41,7 @@ final class FloatField extends ParsedInputField
         ?HtmlText $requiredError = null,
         ?string $placeholder = null,
         ?AutoCompleteEnum $autoComplete = null,
-        ?int $maxLength = null
+        ?int $maxLength = null,
     ) {
         parent::__construct(
             inputType: InputTypeEnum::TEXT,
@@ -50,7 +51,7 @@ final class FloatField extends ParsedInputField
             requiredError: $requiredError,
             placeholder: $placeholder,
             autoComplete: $autoComplete,
-            maxLength: $maxLength
+            maxLength: $maxLength,
         );
         if ($initialValue !== null) {
             $this->changeInitialText(text: $this->toText(value: $initialValue));
@@ -131,7 +132,7 @@ final class FloatField extends ParsedInputField
     {
         if (!is_finite(num: $value)) {
             throw new InvalidArgumentException(
-                message: 'The value of field ' . $this->name . ' must be a finite number.'
+                message: 'The value of field ' . $this->name . ' must be a finite number.',
             );
         }
         $text = json_encode(value: $value, flags: JSON_THROW_ON_ERROR);

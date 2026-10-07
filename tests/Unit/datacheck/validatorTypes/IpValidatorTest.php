@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -59,7 +60,7 @@ final class IpValidatorTest extends TestCase
     {
         $this->assertSame(
             $expectedResult,
-            IpValidator::isInWhitelist(whiteList: $whiteList, ipAddressToCheck: $ipAddressToCheck)
+            IpValidator::isInWhitelist(whiteList: $whiteList, ipAddressToCheck: $ipAddressToCheck),
         );
     }
 }

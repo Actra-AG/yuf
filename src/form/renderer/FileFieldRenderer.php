@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,9 +20,7 @@ class FileFieldRenderer extends FormRenderer
 {
     public bool $enhanceMultipleField = true;
 
-    public function __construct(private readonly FileField $fileField)
-    {
-    }
+    public function __construct(private readonly FileField $fileField) {}
 
     public function prepare(): void
     {
@@ -34,33 +33,33 @@ class FileFieldRenderer extends FormRenderer
         $wrapperClass = ($stillAllowedToUploadCount > 1 && $this->enhanceMultipleField) ? 'fileupload-enhanced' : 'fileupload';
         $divFileUpload = new HtmlTag(
             name: 'div',
-            selfClosing: false
+            selfClosing: false,
         );
         $divFileUpload->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'class',
                 value: $wrapperClass,
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         $divFileUpload->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'data-max-files',
-                value: (string)$stillAllowedToUploadCount,
-                valueIsEncodedForRendering: true
-            )
+                value: (string) $stillAllowedToUploadCount,
+                valueIsEncodedForRendering: true,
+            ),
         );
         if (count(value: $alreadyUploadedFiles) > 0) {
             $ulFileUploadList = new HtmlTag(
                 name: 'ul',
-                selfClosing: false
+                selfClosing: false,
             );
             $ulFileUploadList->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'class',
                     value: 'fileupload-list',
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
             $htmlContent = '';
             $removeButtonName = $fileField->name . '_removeAttachment';
@@ -75,68 +74,68 @@ class FileFieldRenderer extends FormRenderer
         }
         $inputTag = new HtmlTag(
             name: 'input',
-            selfClosing: true
+            selfClosing: true,
         );
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'type',
                 value: 'file',
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'name',
                 value: $fileField->name . '[]',
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'id',
                 value: $fileField->id,
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         if ($stillAllowedToUploadCount > 1) {
             $inputTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'multiple',
                     value: null,
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
         }
         FormRenderer::addAriaAttributesToHtmlTag(
             formField: $fileField,
-            parentHtmlTag: $inputTag
+            parentHtmlTag: $inputTag,
         );
         $divFileUpload->addTag(htmlTag: $inputTag);
         // Add the fileStore-Pointer-ID for the SESSION as a hidden field
         $hiddenField = new HtmlTag(
             name: 'input',
-            selfClosing: true
+            selfClosing: true,
         );
         $hiddenField->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'type',
                 value: 'hidden',
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         $hiddenField->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'name',
                 value: $this->fileField->name . '_UID',
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         $hiddenField->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'value',
                 value: $fileField->uniqueSessFileStorePointer,
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         $divFileUpload->addTag(htmlTag: $hiddenField);
         $this->setHtmlTag(htmlTag: $divFileUpload);

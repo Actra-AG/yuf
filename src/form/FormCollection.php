@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -17,14 +18,14 @@ abstract class FormCollection extends FormComponent
      * @var array<int|string, FormComponent> The child components by name (numeric names become int keys), can also be
      *     collections
      */
-    private(set) array $childComponents = [];
+    public private(set) array $childComponents = [];
 
     final public function addChildComponent(FormComponent $formComponent): void
     {
         $childComponentName = $formComponent->name;
         if (isset($this->childComponents[$childComponentName])) {
             throw new LogicException(
-                'There is already an existing child component with the same name: ' . $childComponentName
+                'There is already an existing child component with the same name: ' . $childComponentName,
             );
         }
         $formComponent->setParentFormComponent($this);
@@ -36,7 +37,7 @@ abstract class FormCollection extends FormComponent
     {
         if (!$this->hasChildComponent($childComponentName)) {
             throw new LogicException(
-                'FormCollection ' . $this->name . ' does not contain requested ChildComponent ' . $childComponentName
+                'FormCollection ' . $this->name . ' does not contain requested ChildComponent ' . $childComponentName,
             );
         }
 
@@ -52,7 +53,7 @@ abstract class FormCollection extends FormComponent
     {
         if (!$this->hasChildComponent($childComponentName)) {
             throw new LogicException(
-                'FormCollection ' . $this->name . ' does not contain requested ChildComponent ' . $childComponentName
+                'FormCollection ' . $this->name . ' does not contain requested ChildComponent ' . $childComponentName,
             );
         }
         unset($this->childComponents[$childComponentName]);

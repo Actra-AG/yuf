@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -41,7 +42,7 @@ final class FormComponentTest extends TestCase
             name: 'control',
             submitLabel: $this->text('Save'),
             cancelLink: '/back',
-            cancelLabel: $cancelLabel
+            cancelLabel: $cancelLabel,
         );
     }
 
@@ -71,10 +72,10 @@ final class FormComponentTest extends TestCase
         $this->assertSame('one', $collection->getFirstError()->render());
         $this->assertSame(['one', 'two'], array_map(
             callback: static fn(HtmlText $error): string => $error->render(),
-            array: $collection->listErrors()
+            array: $collection->listErrors(),
         ));
         $this->expectException(LogicException::class);
-        (new ErrorCollection())->getFirstError();
+        new ErrorCollection()->getFirstError();
     }
 
     public function testControlRendersTheEnglishCancelTextWithoutAForm(): void
@@ -82,7 +83,7 @@ final class FormComponentTest extends TestCase
         $this->assertSame(
             '<div class="form-control"><button type="submit" name="control">Save</button>'
             . '<a href="/back" class="link-cancel">Cancel</a></div>',
-            $this->createControl()->render()
+            $this->createControl()->render(),
         );
     }
 
@@ -91,7 +92,7 @@ final class FormComponentTest extends TestCase
         $form = new Form(
             name: 'german',
             messages: FormMessages::german(),
-            csrfTokenSource: new InMemoryCsrfTokenSource()
+            csrfTokenSource: new InMemoryCsrfTokenSource(),
         );
         $control = $this->createControl();
         $form->addComponent(formComponent: $control);
@@ -104,7 +105,7 @@ final class FormComponentTest extends TestCase
         $form = new Form(
             name: 'childComponent',
             messages: FormMessages::german(),
-            csrfTokenSource: new InMemoryCsrfTokenSource()
+            csrfTokenSource: new InMemoryCsrfTokenSource(),
         );
         $control = $this->createControl();
         $form->addChildComponent(formComponent: $control);
@@ -117,7 +118,7 @@ final class FormComponentTest extends TestCase
         $form = new Form(
             name: 'individual',
             messages: FormMessages::german(),
-            csrfTokenSource: new InMemoryCsrfTokenSource()
+            csrfTokenSource: new InMemoryCsrfTokenSource(),
         );
         $control = $this->createControl(cancelLabel: $this->text('Back'));
         $form->addComponent(formComponent: $control);
@@ -139,12 +140,12 @@ final class FormComponentTest extends TestCase
             content: $this->text('Content'),
             dlClasses: ['dl-a', 'dl-b'],
             dtClasses: ['dt-a'],
-            ddClasses: ['dd-a']
+            ddClasses: ['dd-a'],
         );
 
         $this->assertSame(
             '<dl class="dl-a dl-b"><dt class="dt-a">Title</dt><dd class="dd-a">Content</dd></dl>',
-            $info->render()
+            $info->render(),
         );
     }
 
@@ -152,7 +153,7 @@ final class FormComponentTest extends TestCase
     {
         $this->assertSame(
             '<h3>Contact</h3>',
-            (new FormSubHeadline(headingLevel: 3, content: $this->text('Contact')))->render()
+            new FormSubHeadline(headingLevel: 3, content: $this->text('Contact'))->render(),
         );
     }
 }

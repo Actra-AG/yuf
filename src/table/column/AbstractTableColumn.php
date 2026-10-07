@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -13,8 +14,8 @@ use actra\yuf\table\TableItemModel;
 
 abstract class AbstractTableColumn
 {
-    private(set) array $columnCssClasses = [];
-    private(set) array $cellCssClasses = [];
+    public private(set) array $columnCssClasses = [];
+    public private(set) array $cellCssClasses = [];
     public ?string $tableIdentifier = null;
 
     public function __construct(
@@ -22,7 +23,7 @@ abstract class AbstractTableColumn
         public readonly string $label,
         public readonly bool $isSortable = false,
         public readonly bool $sortAscendingByDefault = true,
-        public readonly string $sortableColumnClass = 'sort'
+        public readonly string $sortableColumnClass = 'sort',
     ) {
         if ($this->isSortable) {
             $this->addColumnCssClass(className: $sortableColumnClass);
@@ -33,7 +34,8 @@ abstract class AbstractTableColumn
     {
         if (in_array(
             needle: $className,
-            haystack: $this->columnCssClasses
+            haystack: $this->columnCssClasses,
+            strict: true,
         )) {
             return;
         }
@@ -44,7 +46,8 @@ abstract class AbstractTableColumn
     {
         if (in_array(
             needle: $className,
-            haystack: $this->cellCssClasses
+            haystack: $this->cellCssClasses,
+            strict: true,
         )) {
             return;
         }
@@ -64,7 +67,7 @@ abstract class AbstractTableColumn
                 '<' . implode(separator: ' ', array: $attributesArr) . '>',
                 $this->renderCellValue(tableItemModel: $tableItemModel),
                 '</td>',
-            ]
+            ],
         );
     }
 

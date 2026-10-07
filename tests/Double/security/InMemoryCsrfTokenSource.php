@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -15,9 +16,7 @@ use actra\yuf\security\CsrfTokenSource;
  */
 final readonly class InMemoryCsrfTokenSource implements CsrfTokenSource
 {
-    public function __construct(private string $token = 'expected-token')
-    {
-    }
+    public function __construct(private string $token = 'expected-token') {}
 
     public function getToken(): string
     {

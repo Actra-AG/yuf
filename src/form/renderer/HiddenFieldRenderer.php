@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -15,9 +16,7 @@ use actra\yuf\html\HtmlTagAttribute;
 
 class HiddenFieldRenderer extends FormRenderer
 {
-    public function __construct(private readonly InputField $hiddenField)
-    {
-    }
+    public function __construct(private readonly InputField $hiddenField) {}
 
     public function prepare(): void
     {

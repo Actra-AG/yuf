@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -16,9 +17,8 @@ class JsonRequestBody extends RequestBody
     private static ?JsonRequestBody $instance = null;
 
     private function __construct(
-        public readonly stdClass $data
-    ) {
-    }
+        public readonly stdClass $data,
+    ) {}
 
     public static function get(): JsonRequestBody
     {
@@ -37,7 +37,7 @@ class JsonRequestBody extends RequestBody
         return JsonRequestBody::$instance;
     }
 
-    private function getValue(string $keyName): null|int|float|string|array
+    private function getValue(string $keyName): int|float|string|array|null
     {
         $data = $this->data;
         return property_exists(object_or_class: $data, property: $keyName) ? $data->{$keyName} : null;
@@ -106,7 +106,7 @@ class JsonRequestBody extends RequestBody
             return $value;
         }
         if (is_int(value: $value)) {
-            return (float)$value;
+            return (float) $value;
         }
         throw new InvalidArgumentException(message: 'Invalid JSON property (float): ' . $keyName);
     }

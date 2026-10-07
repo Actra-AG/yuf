@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -15,7 +16,7 @@ class IpValidator
         $filterFlags = match ($ipType) {
             IpTypeEnum::ipv4 => FILTER_FLAG_IPV4,
             IpTypeEnum::ipv6 => FILTER_FLAG_IPV6,
-            default => ['flags' => null]
+            default => ['flags' => null],
         };
 
         return (filter_var(value: $input, filter: FILTER_VALIDATE_IP, options: $filterFlags) !== false);
@@ -29,7 +30,7 @@ class IpValidator
             }
             if (!str_contains(
                 haystack: $whitelistItem,
-                needle: '/'
+                needle: '/',
             )) {
                 continue;
             }
@@ -40,7 +41,7 @@ class IpValidator
             $ip1 = preg_replace(
                 pattern: '_(\d+\.\d+\.\d+\.\d+).*$_',
                 replacement: '$1',
-                subject: "$whitelistItem.0.0.0"
+                subject: "$whitelistItem.0.0.0",
             );
             // Calculate range
             $ip2 = long2ip(ip: ip2long(ip: $ip1) - 1 + (1 << (32 - $mask)));

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -17,12 +18,12 @@ abstract class AuthUser
     public function __construct(
         public readonly int $ID,
         public readonly bool $isActive,
-        private(set) int $wrongPasswordAttempts,
+        public private(set) int $wrongPasswordAttempts,
         private readonly AccessRightCollection $accessRightCollection,
-        private(set) Password $password,
-        private(set) readonly array $ipWhitelist
+        public private(set) Password $password,
+        public private(set) readonly array $ipWhitelist,
     ) {
-        if (!is_null(value: AuthUser::$instance)) {
+        if (AuthUser::$instance !== null) {
             throw new LogicException(message: 'There can only be one AuthUser instance.');
         }
         AuthUser::$instance = $this;

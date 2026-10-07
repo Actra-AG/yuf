@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -41,18 +42,18 @@ class MailerFunctions
             return false;
         }
 
-        return (bool)filter_var(
-                value: $address,
-                filter: FILTER_VALIDATE_EMAIL,
-                options: FILTER_FLAG_EMAIL_UNICODE
-            ) !== false;
+        return (bool) filter_var(
+            value: $address,
+            filter: FILTER_VALIDATE_EMAIL,
+            options: FILTER_FLAG_EMAIL_UNICODE,
+        ) !== false;
     }
 
     public static function punyEncodeDomain(string $domain): string
     {
         return !MailerFunctions::has8bitChars(text: $domain) ? $domain : idn_to_ascii(
             domain: $domain,
-            flags: IDNA_DEFAULT | IDNA_USE_STD3_RULES | IDNA_CHECK_BIDI | IDNA_CHECK_CONTEXTJ | IDNA_NONTRANSITIONAL_TO_ASCII
+            flags: IDNA_DEFAULT | IDNA_USE_STD3_RULES | IDNA_CHECK_BIDI | IDNA_CHECK_CONTEXTJ | IDNA_NONTRANSITIONAL_TO_ASCII,
         );
     }
 
@@ -78,16 +79,16 @@ class MailerFunctions
                 return chunk_split(
                     string: base64_encode(string: $string),
                     length: MailerConstants::STD_LINE_LENGTH,
-                    separator: MailerConstants::CRLF
+                    separator: MailerConstants::CRLF,
                 );
             case MailerConstants::ENCODING_7BIT:
             case MailerConstants::ENCODING_8BIT:
                 $encoded = MailerFunctions::normalizeBreaks(text: $string);
                 // Make sure it ends with a line break
                 if (substr(
-                        string: $encoded,
-                        offset: -(strlen(string: MailerConstants::CRLF))
-                    ) !== MailerConstants::CRLF) {
+                    string: $encoded,
+                    offset: -(strlen(string: MailerConstants::CRLF)),
+                ) !== MailerConstants::CRLF) {
                     $encoded .= MailerConstants::CRLF;
                 }
 
@@ -119,7 +120,7 @@ class MailerFunctions
     public static function encodeHeaderPhrase(
         string $string,
         int $maxLineLength,
-        string $defaultCharSet
+        string $defaultCharSet,
     ): string {
         if (!preg_match(pattern: '/[\200-\377]/', subject: $string)) {
             //Can't use addslashes as we don't know the value of magic_quotes_sybase
@@ -139,7 +140,7 @@ class MailerFunctions
             maxLineLength: $maxLineLength,
             matchCount: preg_match_all(pattern: '/[^\040\041\043-\133\135-\176]/', subject: $string),
             defaultCharSet: $defaultCharSet,
-            isPhrase: true
+            isPhrase: true,
         );
     }
 
@@ -148,7 +149,7 @@ class MailerFunctions
         int $maxLineLength,
         int $matchCount,
         string $defaultCharSet,
-        bool $isPhrase
+        bool $isPhrase,
     ): string {
         if (MailerFunctions::has8bitChars(text: $string)) {
             $charset = $defaultCharSet;
@@ -187,7 +188,7 @@ class MailerFunctions
                 $encoded = preg_replace(
                     pattern: '/^(.*)$/m',
                     replacement: ' =?' . $charset . "?$encoding?\\1?=",
-                    subject: $encoded
+                    subject: $encoded,
                 );
                 break;
             case 'Q':
@@ -196,17 +197,17 @@ class MailerFunctions
                     message: $encoded,
                     length: $maxLength,
                     charSet: $defaultCharSet,
-                    qp_mode: true
+                    qp_mode: true,
                 );
                 $encoded = str_replace(
                     search: '=' . MailerConstants::CRLF,
                     replace: "\n",
-                    subject: trim(string: $encoded)
+                    subject: trim(string: $encoded),
                 );
                 $encoded = preg_replace(
                     pattern: '/^(.*)$/m',
                     replacement: ' =?' . $charset . "?$encoding?\\1?=",
-                    subject: $encoded
+                    subject: $encoded,
                 );
                 break;
             default:
@@ -261,11 +262,11 @@ class MailerFunctions
         if (preg_match_all(
             pattern: "/[$pattern]/",
             subject: $encoded,
-            matches: $matches
+            matches: $matches,
         )) {
             // If the string contains an '=', make sure it's the first thing we replace so as to avoid double-encoding
             $eqkey = array_search(needle: '=', haystack: $matches[0], strict: true);
-            if (false !== $eqkey) {
+            if ($eqkey !== false) {
                 unset($matches[0][$eqkey]);
                 array_unshift($matches[0], '=');
             }
@@ -286,7 +287,7 @@ class MailerFunctions
             $soft_break = MailerConstants::CRLF;
         }
         // If utf-8 encoding is used, we will need to make sure we don't split multibyte characters when we wrap
-        $is_utf8 = MailerConstants::CHARSET_UTF8 === strtolower($charSet);
+        $is_utf8 = strtolower($charSet) === MailerConstants::CHARSET_UTF8;
         $lelen = strlen(string: MailerConstants::CRLF);
         $crlflen = strlen(string: MailerConstants::CRLF);
 
@@ -341,7 +342,7 @@ class MailerFunctions
                     }
                     $buf .= $word;
 
-                    if ('' !== $buf_o && strlen(string: $buf) > $length) {
+                    if ($buf_o !== '' && strlen(string: $buf) > $length) {
                         $message .= $buf_o . $soft_break;
                         $buf = $word;
                     }
@@ -359,10 +360,10 @@ class MailerFunctions
         if ($is_utf8) {
             return MailerFunctions::utf8CharBoundary(encodedText: $word, maxLength: $len);
         }
-        if ('=' === substr(string: $word, offset: $len - 1, length: 1)) {
+        if (substr(string: $word, offset: $len - 1, length: 1) === '=') {
             return --$len;
         }
-        if ('=' === substr(string: $word, offset: $len - 2, length: 1)) {
+        if (substr(string: $word, offset: $len - 2, length: 1) === '=') {
             $len -= 2;
 
             return $len;
@@ -378,7 +379,7 @@ class MailerFunctions
         while (!$foundSplitPos) {
             $lastChunk = substr(string: $encodedText, offset: $maxLength - $lookBack, length: $lookBack);
             $encodedCharPos = strpos(haystack: $lastChunk, needle: '=');
-            if (false !== $encodedCharPos) {
+            if ($encodedCharPos !== false) {
                 // Found start of encoded character byte within $lookBack block.
                 // Check the encoded byte value (the 2 chars after the '=')
                 $hex = substr(string: $encodedText, offset: $maxLength - $lookBack + $encodedCharPos + 1, length: 2);
@@ -411,14 +412,14 @@ class MailerFunctions
     public static function encodeHeaderText(
         string $string,
         int $maxLineLength,
-        string $defaultCharSet
+        string $defaultCharSet,
     ): string {
         return MailerFunctions::encodeHeader(
             string: $string,
             maxLineLength: $maxLineLength,
             matchCount: preg_match_all(pattern: '/[\000-\010\013\014\016-\037\177-\377]/', subject: $string),
             defaultCharSet: $defaultCharSet,
-            isPhrase: false
+            isPhrase: false,
         );
     }
 
@@ -451,7 +452,7 @@ class MailerFunctions
     {
         if (
             escapeshellcmd(command: $string) !== $string
-            || !in_array(escapeshellarg(arg: $string), ["'$string'", "\"$string\""])
+            || !in_array(escapeshellarg(arg: $string), ["'$string'", "\"$string\""], true)
         ) {
             return false;
         }
@@ -476,7 +477,7 @@ class MailerFunctions
     {
         // In case the path is a URL, strip any query string before getting extension
         $qpos = strpos($fileName, '?');
-        if (false !== $qpos) {
+        if ($qpos !== false) {
             $fileName = substr($fileName, 0, $qpos);
         }
         $extension = MailerFunctions::mb_pathinfo(path: $fileName, options: PATHINFO_EXTENSION);
@@ -491,7 +492,7 @@ class MailerFunctions
         if (preg_match(
             pattern: '#^(.*?)[\\\\/]*(([^/\\\\]*?)(\.([^.\\\\/]+?)|))[\\\\/.]*$#m',
             subject: $path,
-            matches: $pathInfo
+            matches: $pathInfo,
         )) {
             if (array_key_exists(key: 1, array: $pathInfo)) {
                 $ret['dirname'] = $pathInfo[1];

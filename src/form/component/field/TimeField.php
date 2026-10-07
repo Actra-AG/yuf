@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -31,7 +32,7 @@ final class TimeField extends ParsedInputField
         HtmlText $invalidError,
         ?HtmlText $requiredError = null,
         ?string $placeholder = null,
-        ?AutoCompleteEnum $autoComplete = null
+        ?AutoCompleteEnum $autoComplete = null,
     ) {
         parent::__construct(
             inputType: InputTypeEnum::TIME,
@@ -40,7 +41,7 @@ final class TimeField extends ParsedInputField
             invalidError: $invalidError,
             requiredError: $requiredError,
             placeholder: $placeholder,
-            autoComplete: $autoComplete
+            autoComplete: $autoComplete,
         );
         if ($value !== null) {
             $this->changeInitialText(text: $value->toString());
@@ -90,7 +91,6 @@ final class TimeField extends ParsedInputField
 
     /**
      * Changes the current value only, the initial value stays (so `valueHasChanged()` compares with it).
-     *
      */
     public function setValue(?TimeOfDay $value): void
     {

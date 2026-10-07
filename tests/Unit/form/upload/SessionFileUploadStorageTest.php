@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -8,14 +9,14 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\form\upload;
 
-use DirectoryIterator;
-use InvalidArgumentException;
 use actra\yuf\clock\FixedClock;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\form\model\UploadInput;
 use actra\yuf\form\upload\SessionFileUploadStorage;
-use PHPUnit\Framework\Attributes\DataProvider;
 use DateTimeImmutable;
+use DirectoryIterator;
+use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
@@ -75,7 +76,7 @@ final class SessionFileUploadStorageTest extends TestCase
     private function createStoredFile(
         string $pointer = 'ptr',
         string $name = 'a.txt',
-        string $fileName = 'php1'
+        string $fileName = 'php1',
     ): UploadedFile {
         $directory = $this->rootDirectory . DIRECTORY_SEPARATOR . $pointer;
         if (!is_dir(filename: $directory)) {
@@ -105,7 +106,7 @@ final class SessionFileUploadStorageTest extends TestCase
 
         $this->assertSame(
             [['name' => 'a.txt', 'type' => 'text/plain', 'size' => 7, 'path' => $file->path]],
-            $_SESSION['ptr']
+            $_SESSION['ptr'],
         );
     }
 
@@ -228,7 +229,7 @@ final class SessionFileUploadStorageTest extends TestCase
             name: 'a',
             type: 't',
             size: 1,
-            path: $this->rootDirectory . DIRECTORY_SEPARATOR . 'ptr' . DIRECTORY_SEPARATOR . 'gone'
+            path: $this->rootDirectory . DIRECTORY_SEPARATOR . 'ptr' . DIRECTORY_SEPARATOR . 'gone',
         );
 
         $this->createStorage()->delete(file: $file);
@@ -298,7 +299,7 @@ final class SessionFileUploadStorageTest extends TestCase
 
         new SessionFileUploadStorage(
             rootDirectory: $this->rootDirectory,
-            clock: new FixedClock(now: new DateTimeImmutable(datetime: '@' . $now))
+            clock: new FixedClock(now: new DateTimeImmutable(datetime: '@' . $now)),
         )->removeExpired();
 
         $this->assertFileExists($exactlyAtLimit->path);
@@ -390,7 +391,7 @@ final class SessionFileUploadStorageTest extends TestCase
     #[DataProvider('serverNameProvider')]
     public function testStorageOfTheCurrentRequestLivesInADirectoryNamedAfterTheSanitizedServerName(
         string $serverName,
-        string $expectedDirectoryName
+        string $expectedDirectoryName,
     ): void {
         $_SERVER['SERVER_NAME'] = $serverName;
         $directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $expectedDirectoryName . DIRECTORY_SEPARATOR . 'yufptr';

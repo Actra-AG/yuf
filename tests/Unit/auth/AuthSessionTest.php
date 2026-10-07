@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -9,8 +10,8 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\auth;
 
 use actra\yuf\auth\AuthSession;
-use actra\yuf\security\CsrfToken;
 use actra\yuf\security\CspNonce;
+use actra\yuf\security\CsrfToken;
 use actra\yuf\session\AbstractSessionHandler;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
@@ -28,7 +29,7 @@ final class AuthSessionTest extends TestCase
     {
         $this->handlerProperty = new ReflectionProperty(
             class: AbstractSessionHandler::class,
-            property: 'abstractSessionHandler'
+            property: 'abstractSessionHandler',
         );
         $_SESSION = [];
     }
@@ -78,7 +79,7 @@ final class AuthSessionTest extends TestCase
                 CspNonce::SESSION_INDICATOR => 'nonce',
                 'auth_userSession' => ['isLoggedIn' => false, 'authSessionID' => 0],
             ],
-            $_SESSION
+            $_SESSION,
         );
         $this->assertFalse(AuthSession::isLoggedIn());
         $this->assertSame(0, AuthSession::getAuthSessionID());
@@ -97,7 +98,7 @@ final class AuthSessionTest extends TestCase
                 'sess_breadcrumb' => ['home' => ['title' => 'Home', 'link' => 'home']],
                 'auth_userSession' => ['isLoggedIn' => false],
             ],
-            $_SESSION
+            $_SESSION,
         );
         $this->assertSame(0, $sessionHandler->regenerations);
     }
@@ -118,13 +119,9 @@ final class AuthSessionTestSessionHandler extends AbstractSessionHandler
     /**
      * Does not start a session.
      */
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
-    protected function executePreStartActions(): void
-    {
-    }
+    protected function executePreStartActions(): void {}
 
     public function regenerateID(): void
     {

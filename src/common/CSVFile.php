@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,16 +20,15 @@ class CSVFile
         private readonly array $headersList = [],
         private readonly bool $utf8Encode = true,
         private readonly string $delimiter = ';',
-        private readonly string $enclosure = '"'
-    ) {
-    }
+        private readonly string $enclosure = '"',
+    ) {}
 
     public static function stringToArray(
         string $string,
         string $delimiter = ';',
         string $enclosure = '"',
         string $escape = '\\',
-        string $terminator = "\n"
+        string $terminator = "\n",
     ): array {
         $r = [];
         $string = trim(string: $string);
@@ -55,15 +55,15 @@ class CSVFile
 
     public function createTemporaryFile(): string
     {
-        $path = sys_get_temp_dir() . DIRECTORY_SEPARATOR . date(format: 'YmdHis') . rand(
-                min: 10000,
-                max: 99999
-            ) . '.csv';
+        $path = sys_get_temp_dir() . DIRECTORY_SEPARATOR . date(format: 'YmdHis') . random_int(
+            min: 10000,
+            max: 99999,
+        ) . '.csv';
         $fileResource = fopen(filename: $path, mode: 'w');
         if ($this->utf8Encode) {
-            fputs(
+            fwrite(
                 stream: $fileResource,
-                data: (chr(codepoint: 0xEF) . chr(codepoint: 0xBB) . chr(codepoint: 0xBF))
+                data: (chr(codepoint: 0xEF) . chr(codepoint: 0xBB) . chr(codepoint: 0xBF)),
             ); // Byte Order Mark (BOM)
         }
 
@@ -73,7 +73,7 @@ class CSVFile
                 fields: $this->headersList,
                 separator: $this->delimiter,
                 enclosure: $this->enclosure,
-                escape: ''
+                escape: '',
             );
         }
         foreach ($this->rows as $row) {
@@ -82,7 +82,7 @@ class CSVFile
                 fields: $row,
                 separator: $this->delimiter,
                 enclosure: $this->enclosure,
-                escape: ''
+                escape: '',
             );
         }
         fclose(stream: $fileResource);
@@ -95,7 +95,7 @@ class CSVFile
             absolutePathToFile: $this->createTemporaryFile(),
             forceDownload: true,
             individualFileName: $this->fileName,
-            maxAge: 0
+            maxAge: 0,
         );
         $httpResponse->sendAndExit();
     }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -17,7 +18,7 @@ class CheckboxOptionsRenderer extends DefaultOptionsRenderer
         parent::__construct(
             optionsField: $checkboxOptionsField,
             inputFieldType: 'checkbox',
-            acceptMultipleValues: true
+            acceptMultipleValues: true,
         );
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -24,14 +25,14 @@ final class DbRowValueException extends UnexpectedValueException
     {
         return new DbRowValueException(
             message: 'Column "' . $column . '" is NULL, but expected ' . $expectedType
-            . '. Use the nullable getter if NULL is allowed.'
+            . '. Use the nullable getter if NULL is allowed.',
         );
     }
 
     public static function wrongType(string $column, string $expectedType, string $actualType): DbRowValueException
     {
         return new DbRowValueException(
-            message: 'Column "' . $column . '" has the type ' . $actualType . ', but expected ' . $expectedType . '.'
+            message: 'Column "' . $column . '" has the type ' . $actualType . ', but expected ' . $expectedType . '.',
         );
     }
 
@@ -41,7 +42,7 @@ final class DbRowValueException extends UnexpectedValueException
     public static function invalidValue(string $column, string $expectedType, string $reason): DbRowValueException
     {
         return new DbRowValueException(
-            message: 'Column "' . $column . '" does not hold a valid ' . $expectedType . ': ' . $reason . '.'
+            message: 'Column "' . $column . '" does not hold a valid ' . $expectedType . ': ' . $reason . '.',
         );
     }
 }

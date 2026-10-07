@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -32,11 +33,11 @@ final class HiddenIntegerField extends ParsedInputField
             invalidError: null,
             requiredError: null,
             placeholder: null,
-            autoComplete: null
+            autoComplete: null,
         );
         $this->setRenderer(renderer: new HiddenFieldRenderer(hiddenField: $this));
         if ($value !== null) {
-            $this->changeInitialText(text: (string)$value);
+            $this->changeInitialText(text: (string) $value);
         }
     }
 
@@ -51,7 +52,7 @@ final class HiddenIntegerField extends ParsedInputField
     protected function accept(string $text): void
     {
         $this->value = AmountParser::toInt(value: $text);
-        parent::accept(text: $this->value === null ? $text : (string)$this->value);
+        parent::accept(text: $this->value === null ? $text : (string) $this->value);
     }
 
     protected function hasParsedValue(): bool
@@ -86,10 +87,9 @@ final class HiddenIntegerField extends ParsedInputField
 
     /**
      * Changes the current value only, the initial value stays.
-     *
      */
     public function setValue(?int $value): void
     {
-        $this->changeText(text: $value === null ? '' : (string)$value);
+        $this->changeText(text: $value === null ? '' : (string) $value);
     }
 }

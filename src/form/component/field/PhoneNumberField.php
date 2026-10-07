@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -26,7 +27,7 @@ use actra\yuf\phone\PhoneRenderer;
  */
 final class PhoneNumberField extends SettableStringInputField
 {
-    private(set) string $countryCode;
+    public private(set) string $countryCode;
 
     public function __construct(
         string $name,
@@ -38,7 +39,7 @@ final class PhoneNumberField extends SettableStringInputField
         public readonly string $countryCodeFieldName = 'countryCode',
         public readonly bool $renderInternalFormat = false,
         ?string $placeholder = null,
-        ?AutoCompleteEnum $autoComplete = null
+        ?AutoCompleteEnum $autoComplete = null,
     ) {
         // The value is normalized in the parent constructor, which needs the country code.
         $this->countryCode = $countryCode;
@@ -48,7 +49,7 @@ final class PhoneNumberField extends SettableStringInputField
             label: $label,
             value: $value,
             placeholder: $placeholder,
-            autoComplete: $autoComplete
+            autoComplete: $autoComplete,
         );
         if ($requiredErrorMessage !== null) {
             $this->addRequiredRule(errorMessage: $requiredErrorMessage);

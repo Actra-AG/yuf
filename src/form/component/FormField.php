@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -29,8 +30,8 @@ abstract class FormField extends FormComponent
     public Form $topFormComponent;
     public bool $renderRequiredAbbr = true;
     public string $id;
-    private(set) HtmlText $label;
-    private(set) bool $renderLabel = true;
+    public private(set) HtmlText $label;
+    public private(set) bool $renderLabel = true;
     public bool $autoFocus = false;
     /** The texts of the form; set by `Form::addField()`, a field without a form uses the English defaults. */
     public FormMessages $messages;
@@ -51,9 +52,8 @@ abstract class FormField extends FormComponent
     public function __construct(
         string    $name,
         HtmlText  $label,
-        ?HtmlText $labelInfoText = null
-    )
-    {
+        ?HtmlText $labelInfoText = null,
+    ) {
         $this->id = $name;
         $this->label = $label;
         parent::__construct(name: $name);
@@ -85,32 +85,24 @@ abstract class FormField extends FormComponent
      * Hook for request input besides the field's own value (e.g. the country code of a phone number or the pointer
      * of uploaded files). It runs before the value is read, so the value can depend on it.
      */
-    protected function readAdditionalInput(FormInput $input): void
-    {
-    }
+    protected function readAdditionalInput(FormInput $input): void {}
 
     /**
      * Hook: adds one error per failed rule. Called for input that was not rejected; the families check their typed
      * rules here (never for an empty value).
      */
-    protected function checkRules(): void
-    {
-    }
+    protected function checkRules(): void {}
 
     /**
      * Hook: validates the fields that depend on this one (the children of a toggle field), after this field is valid.
      */
-    protected function validateChildFields(FormInput $input): void
-    {
-    }
+    protected function validateChildFields(FormInput $input): void {}
 
     /**
      * Hook: validates the dependent fields with their current values, when `validateCurrentValue()` is called directly
      * (not as part of `validate()`) and this field is valid.
      */
-    protected function validateChildFieldsWithCurrentValues(): void
-    {
-    }
+    protected function validateChildFieldsWithCurrentValues(): void {}
 
     /**
      * Adds the check that the field is not empty. Replaces an earlier required message.
@@ -169,12 +161,12 @@ abstract class FormField extends FormComponent
             if ($this->isValueEmpty()) {
                 $formFieldListener->onEmptyValueBeforeValidation(
                     form: $this->topFormComponent,
-                    formField: $this
+                    formField: $this,
                 );
             } else {
                 $formFieldListener->onNotEmptyValueBeforeValidation(
                     form: $this->topFormComponent,
-                    formField: $this
+                    formField: $this,
                 );
             }
         }
@@ -189,24 +181,24 @@ abstract class FormField extends FormComponent
             if ($this->isValueEmpty()) {
                 $formFieldListener->onEmptyValueAfterValidation(
                     form: $this->topFormComponent,
-                    formField: $this
+                    formField: $this,
                 );
             } else {
                 $formFieldListener->onNotEmptyValueAfterValidation(
                     form: $this->topFormComponent,
-                    formField: $this
+                    formField: $this,
                 );
             }
 
             if ($hasErrors) {
                 $formFieldListener->onValidationError(
                     form: $this->topFormComponent,
-                    formField: $this
+                    formField: $this,
                 );
             } else {
                 $formFieldListener->onValidationSuccess(
                     form: $this->topFormComponent,
-                    formField: $this
+                    formField: $this,
                 );
             }
         }
@@ -253,7 +245,7 @@ abstract class FormField extends FormComponent
         if ($this->inputReceived) {
             throw new LogicException(
                 message: 'The initial value of field ' . $this->name . ' cannot be set after the field has been '
-                . 'validated. Use the public setter to change the current value.'
+                . 'validated. Use the public setter to change the current value.',
             );
         }
     }

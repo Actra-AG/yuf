@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -18,7 +19,7 @@ class FileSizeColumn extends AbstractTableColumn
     protected function renderCellValue(TableItemModel $tableItemModel): string
     {
         $bytes = $tableItemModel->getRawValue(name: $this->identifier);
-        if (is_null(value: $bytes)) {
+        if ($bytes === null) {
             return '';
         }
 

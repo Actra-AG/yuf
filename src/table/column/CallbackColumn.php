@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -20,14 +21,14 @@ class CallbackColumn extends AbstractTableColumn
         string $label,
         callable $callbackFunction,
         bool $isSortable = false,
-        bool $sortAscendingByDefault = true
+        bool $sortAscendingByDefault = true,
     ) {
         $this->callbackFunction = $callbackFunction;
         parent::__construct(
             identifier: $identifier,
             label: $label,
             isSortable: $isSortable,
-            sortAscendingByDefault: $sortAscendingByDefault
+            sortAscendingByDefault: $sortAscendingByDefault,
         );
     }
 
@@ -35,7 +36,7 @@ class CallbackColumn extends AbstractTableColumn
     {
         return call_user_func(
             $this->callbackFunction,
-            $tableItemModel
+            $tableItemModel,
         ); // TODO: Named parameters not working in PHP 8.0
     }
 }

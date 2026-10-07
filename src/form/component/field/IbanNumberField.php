@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -25,7 +26,7 @@ final class IbanNumberField extends TextField
         private readonly HtmlText $invalidError,
         ?HtmlText $requiredError = null,
         ?string $placeholder = null,
-        ?AutoCompleteEnum $autoComplete = null
+        ?AutoCompleteEnum $autoComplete = null,
     ) {
         parent::__construct(
             name: $name,
@@ -33,7 +34,7 @@ final class IbanNumberField extends TextField
             value: $value,
             requiredError: $requiredError,
             placeholder: $placeholder,
-            autoComplete: $autoComplete
+            autoComplete: $autoComplete,
         );
     }
 

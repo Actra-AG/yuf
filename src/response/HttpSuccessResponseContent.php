@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -33,8 +34,8 @@ class HttpSuccessResponseContent extends HttpResponseContent
         return new HttpSuccessResponseContent(
             content: HttpSuccessResponseContent::SUCCESS_STATUS . PHP_EOL . print_r(
                 value: $data,
-                return: true
-            )
+                return: true,
+            ),
         );
     }
 }

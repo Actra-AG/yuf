@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -30,7 +31,7 @@ class Route
         public readonly ?Language $language = null,
         public readonly ?string $acceptedExtension = null,
         public readonly ?string $forceFileGroup = null,
-        public readonly ?string $forceFileName = null
+        public readonly ?string $forceFileName = null,
     ) {
         if (array_key_exists(key: $path, array: Route::$routesByPath)) {
             throw new LogicException(message: 'There is already a route with this path: ' . $path);
@@ -72,14 +73,14 @@ class Route
             'php',
         ];
         $requestHandler = RequestHandler::get();
-        if (!is_null(value: $requestHandler->fileGroup)) {
+        if ($requestHandler->fileGroup !== null) {
             $phpClassNameParts[] = $requestHandler->fileGroup;
         }
         $phpClassNameParts[] = $requestHandler->fileTitle;
 
         return implode(
             separator: '\\',
-            array: $phpClassNameParts
+            array: $phpClassNameParts,
         );
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -87,7 +88,7 @@ final class BooleanFieldV3MarkupTest extends TestCase
             label: HtmlText::encoded(textContent: 'L'),
             isCheckedByDefault: $checked,
             requiredError: HtmlText::encoded(textContent: 'Req'),
-            layout: $layout
+            layout: $layout,
         );
         $field->fieldInfo = HtmlText::encoded(textContent: 'Info');
         $form->addField(formField: $field);
@@ -98,7 +99,7 @@ final class BooleanFieldV3MarkupTest extends TestCase
         $html = preg_replace(
             pattern: '#<input type="hidden" name="csrftoken"[^>]*>#',
             replacement: '',
-            subject: $form->render()
+            subject: $form->render(),
         );
 
         $this->assertSame(sprintf($expected, $formName), $html);

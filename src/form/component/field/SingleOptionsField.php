@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -32,13 +33,13 @@ abstract class SingleOptionsField extends OptionsField
         HtmlText $label,
         FormOptions $formOptions,
         ?string $initialValue,
-        ?AutoCompleteEnum $autoComplete
+        ?AutoCompleteEnum $autoComplete,
     ) {
         parent::__construct(
             name: $name,
             label: $label,
             formOptions: $formOptions,
-            autoComplete: $autoComplete
+            autoComplete: $autoComplete,
         );
         $this->setInitialValue(value: $initialValue);
     }

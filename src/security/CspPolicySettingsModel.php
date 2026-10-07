@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -18,10 +19,10 @@ readonly class CspPolicySettingsModel
     // Content Security Policy Reference: https://content-security-policy.com/
 
     public function __construct(
-        private string $defaultSrc = "'self' data: " . CspPolicySettingsModel::PROTOCOL_PLACEHOLDER . "://" . CspPolicySettingsModel::HOST_PLACEHOLDER,
+        private string $defaultSrc = "'self' data: " . CspPolicySettingsModel::PROTOCOL_PLACEHOLDER . '://' . CspPolicySettingsModel::HOST_PLACEHOLDER,
         private string $styleSrc = "'self'",
         private string $fontSrc = "'self'",
-        private string $imgSrc = "'self' data: " . CspPolicySettingsModel::PROTOCOL_PLACEHOLDER . "://" . CspPolicySettingsModel::HOST_PLACEHOLDER,
+        private string $imgSrc = "'self' data: " . CspPolicySettingsModel::PROTOCOL_PLACEHOLDER . '://' . CspPolicySettingsModel::HOST_PLACEHOLDER,
         private string $objectSrc = "'none'",
         private string $mediaSrc = '',
         private string $scriptSrc = "'strict-dynamic'",
@@ -29,8 +30,7 @@ readonly class CspPolicySettingsModel
         private string $baseUri = "'self'",
         private string $frameSrc = "'none'",
         private string $frameAncestors = "'none'",
-    ) {
-    }
+    ) {}
 
     public function getHttpHeaderDataString(string $nonce): string
     {
@@ -68,7 +68,7 @@ readonly class CspPolicySettingsModel
                 !str_contains(haystack: $val, needle: "'none'")
                 && !str_contains(
                     haystack: $val,
-                    needle: "'unsafe-inline'"
+                    needle: "'unsafe-inline'",
                 )
                 && $nonce !== ''
             ) {
@@ -90,23 +90,21 @@ readonly class CspPolicySettingsModel
         }
 
         return (count(value: $dataArray) === 0) ? '' : implode(
-                separator: '; ',
-                array: array_map(
-                    callback: function ($value) {
-                        return str_replace(
-                            search: [
-                                CspPolicySettingsModel::PROTOCOL_PLACEHOLDER,
-                                CspPolicySettingsModel::HOST_PLACEHOLDER,
-                            ],
-                            replace: [
-                                HttpRequest::getProtocol(),
-                                HttpRequest::getHost(),
-                            ],
-                            subject: $value
-                        );
-                    },
-                    array: $dataArray
-                )
-            ) . ';';
+            separator: '; ',
+            array: array_map(
+                callback: fn($value) => str_replace(
+                    search: [
+                        CspPolicySettingsModel::PROTOCOL_PLACEHOLDER,
+                        CspPolicySettingsModel::HOST_PLACEHOLDER,
+                    ],
+                    replace: [
+                        HttpRequest::getProtocol(),
+                        HttpRequest::getHost(),
+                    ],
+                    subject: $value,
+                ),
+                array: $dataArray,
+            ),
+        ) . ';';
     }
 }

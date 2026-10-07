@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -13,11 +14,9 @@ use actra\yuf\html\HtmlText;
 final class FormOptions
 {
     /** @var array<int|string, HtmlText> The keys of numeric strings become integers in a PHP array. */
-    private(set) array $data = [];
+    public private(set) array $data = [];
 
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function addItem(string $key, HtmlText $htmlText): void
     {
@@ -28,7 +27,7 @@ final class FormOptions
     {
         return array_key_exists(
             key: $key,
-            array: $this->data
+            array: $this->data,
         );
     }
 }

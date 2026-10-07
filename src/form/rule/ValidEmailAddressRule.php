@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -20,7 +21,7 @@ class ValidEmailAddressRule extends StringRule
     public function __construct(
         HtmlText $errorMessage,
         private readonly bool $dnsCheck = true,
-        private readonly bool $trueOnDnsError = true
+        private readonly bool $trueOnDnsError = true,
     ) {
         parent::__construct(defaultErrorMessage: $errorMessage);
     }

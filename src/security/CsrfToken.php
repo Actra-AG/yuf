@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -23,8 +24,6 @@ class CsrfToken
      * Returns a CSRF-Token (generate and stores it, if not already done)
      *
      * @param bool $forceNew : (optional) if set to true, the old Token will be replaced
-     *
-     * @return string
      */
     public static function getToken(bool $forceNew = false): string
     {

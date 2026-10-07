@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -16,9 +17,7 @@ use actra\yuf\html\HtmlText;
 
 class LegendAndListRenderer extends FormRenderer
 {
-    public function __construct(private readonly OptionsField $optionsField)
-    {
-    }
+    public function __construct(private readonly OptionsField $optionsField) {}
 
     public function prepare(): void
     {
@@ -26,23 +25,23 @@ class LegendAndListRenderer extends FormRenderer
         $fieldsetTag = LegendAndListRenderer::createFieldsetTag(optionsField: $optionsField);
         $fieldsetTag->addTag(htmlTag: LegendAndListRenderer::createLegendTag(optionsField: $optionsField));
         $listDescription = $optionsField->listDescription;
-        if (!is_null(value: $listDescription)) {
+        if ($listDescription !== null) {
             $fieldsetTag->addText(
                 htmlText: HtmlText::encoded(
-                    textContent: '<div class="fieldset-info">' . $listDescription->render() . '</div>'
-                )
+                    textContent: '<div class="fieldset-info">' . $listDescription->render() . '</div>',
+                ),
             );
         }
         $defaultFormFieldRenderer = $optionsField->getDefaultRenderer();
         $fieldsetTag->addTag(htmlTag: $defaultFormFieldRenderer->prepareHtmlTag());
         FormRenderer::addErrorsToParentHtmlTag(
             formComponentWithErrors: $optionsField,
-            parentHtmlTag: $fieldsetTag
+            parentHtmlTag: $fieldsetTag,
         );
-        if (!is_null(value: $optionsField->fieldInfo)) {
+        if ($optionsField->fieldInfo !== null) {
             FormRenderer::addFieldInfoToParentHtmlTag(
                 formFieldWithFieldInfo: $optionsField,
-                parentHtmlTag: $fieldsetTag
+                parentHtmlTag: $fieldsetTag,
             );
         }
         $this->setHtmlTag(htmlTag: $fieldsetTag);
@@ -57,9 +56,9 @@ class LegendAndListRenderer extends FormRenderer
                 new HtmlTagAttribute(
                     name: 'class',
                     value: 'legend-and-list',
-                    valueIsEncodedForRendering: true
+                    valueIsEncodedForRendering: true,
                 ),
-            ]
+            ],
         );
         FormRenderer::addAriaAttributesToHtmlTag(formField: $optionsField, parentHtmlTag: $fieldsetTag);
 
@@ -73,28 +72,28 @@ class LegendAndListRenderer extends FormRenderer
             $legendAttributes[] = new HtmlTagAttribute(
                 name: 'class',
                 value: 'visuallyhidden',
-                valueIsEncodedForRendering: true
+                valueIsEncodedForRendering: true,
             );
         }
         $labelText = $optionsField->label;
         $labelInfoText = $optionsField->labelInfoText;
-        if (!is_null(value: $labelInfoText)) {
+        if ($labelInfoText !== null) {
             // Add a space to separate it from the following labelInfo-Tag
             $labelText = HtmlText::encoded(textContent: ' ' . $labelText->render());
         }
         $legendTag = new HtmlTag(
             name: 'legend',
             selfClosing: false,
-            htmlTagAttributes: $legendAttributes
+            htmlTagAttributes: $legendAttributes,
         );
         $legendTag->addText(htmlText: $labelText);
-        if (!is_null(value: $labelInfoText)) {
+        if ($labelInfoText !== null) {
             $labelInfoTag = new HtmlTag(
                 name: 'i',
                 selfClosing: false,
                 htmlTagAttributes: [
                     new HtmlTagAttribute(name: 'class', value: 'legend-info', valueIsEncodedForRendering: true),
-                ]
+                ],
             );
             $labelInfoTag->addText(htmlText: $labelInfoText);
             $legendTag->addTag(htmlTag: $labelInfoTag);
@@ -110,9 +109,9 @@ class LegendAndListRenderer extends FormRenderer
                     new HtmlTagAttribute(
                         name: 'class',
                         value: 'required',
-                        valueIsEncodedForRendering: true
+                        valueIsEncodedForRendering: true,
                     ),
-                ]
+                ],
             );
             $spanTag->addText(htmlText: HtmlText::encoded(textContent: '*'));
             $legendTag->addTag(htmlTag: $spanTag);

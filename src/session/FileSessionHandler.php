@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -15,7 +16,7 @@ class FileSessionHandler extends AbstractSessionHandler
 {
     public function __construct(
         private readonly SessionSettingsModel $sessionSettingsModel,
-        Clock $clock = new SystemClock()
+        Clock $clock = new SystemClock(),
     ) {
         parent::__construct(sessionSettingsModel: $sessionSettingsModel, clock: $clock);
     }
@@ -27,7 +28,7 @@ class FileSessionHandler extends AbstractSessionHandler
             if (!is_dir(filename: $savePath)) {
                 mkdir(
                     directory: $savePath,
-                    recursive: true
+                    recursive: true,
                 );
             }
             session_save_path(path: $savePath);

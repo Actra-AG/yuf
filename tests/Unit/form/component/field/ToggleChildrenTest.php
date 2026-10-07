@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -50,7 +51,7 @@ final class ToggleChildrenTest extends TestCase
             name: 'toggle',
             label: HtmlText::encoded(textContent: 'Toggle'),
             formOptions: $this->createOptions(),
-            initialValue: $initialValue
+            initialValue: $initialValue,
         );
     }
 
@@ -63,7 +64,7 @@ final class ToggleChildrenTest extends TestCase
             name: 'toggle',
             label: HtmlText::encoded(textContent: 'Toggle'),
             formOptions: $this->createOptions(),
-            initialValues: $initialValues
+            initialValues: $initialValues,
         );
     }
 
@@ -183,7 +184,7 @@ final class ToggleChildrenTest extends TestCase
         $this->assertSame($form, $child->topFormComponent);
         $this->assertSame(
             'Die ungültige Eingabe wurde ignoriert.',
-            $child->errorCollection->getFirstError()->render()
+            $child->errorCollection->getFirstError()->render(),
         );
     }
 
@@ -229,8 +230,8 @@ final class ToggleChildrenTest extends TestCase
         $toggle->addChildField(mainOption: 'a', childField: $this->createChild(name: 'childA', required: false));
         $toggle->setDefaultChildFieldRenderer(
             rendererFactory: static fn(FormField $childField): FormRenderer => new DefaultComponentRenderer(
-                formComponent: $childField
-            )
+                formComponent: $childField,
+            ),
         );
 
         $html = $toggle->render();

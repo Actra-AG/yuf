@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -24,7 +25,7 @@ class MicrosoftIdToken extends AuthWebToken
         private readonly string $clientID,
         private readonly string $ssoNonce,
         string $jwtString,
-        private readonly Clock $clock = new SystemClock()
+        private readonly Clock $clock = new SystemClock(),
     ) {
         parent::__construct(jwtString: $jwtString);
     }
@@ -47,7 +48,7 @@ class MicrosoftIdToken extends AuthWebToken
         $publicKeysPath = str_replace(
             search: '{tenantID}',
             replace: $this->tenantID,
-            subject: MicrosoftIdToken::PUBLIC_KEYS_PATH
+            subject: MicrosoftIdToken::PUBLIC_KEYS_PATH,
         );
         if (!file_exists(filename: $cachePath)) {
             copy(from: $publicKeysPath, to: $cachePath);
@@ -59,11 +60,11 @@ class MicrosoftIdToken extends AuthWebToken
         $publicKeySet = MicrosoftIdToken::parseKeySet(sourceFilePath: $cachePath);
         $publicKey = $publicKeySet[$header->kid];
         if (openssl_verify(
-                data: "$this->base64Header.$this->base64Payload",
-                signature: $this->secret,
-                public_key: $publicKey,
-                algorithm: OPENSSL_ALGO_SHA256
-            ) !== 1) {
+            data: "$this->base64Header.$this->base64Payload",
+            signature: $this->secret,
+            public_key: $publicKey,
+            algorithm: OPENSSL_ALGO_SHA256,
+        ) !== 1) {
             throw new UnauthorizedException(message: 'Signature verification failed');
         }
         $payload = $this->payload;
@@ -107,7 +108,7 @@ class MicrosoftIdToken extends AuthWebToken
                     '-----BEGIN CERTIFICATE-----',
                     chunk_split(string: $x5c, length: 64, separator: PHP_EOL) . '-----END CERTIFICATE-----',
                     '',
-                ])
+                ]),
             );
         }
         // Verify validity of certificate chain (each one is signed by the next, except root cert)

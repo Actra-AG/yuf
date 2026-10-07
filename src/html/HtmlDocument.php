@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -51,39 +52,39 @@ class HtmlDocument
         $core = Core::get();
         $replacements->addEncodedText(
             identifier: 'bodyClassName',
-            content: 'body-' . $fileTitle
+            content: 'body-' . $fileTitle,
         );
         $replacements->addEncodedText(
             identifier: 'language',
-            content: $requestHandler->language->code
+            content: $requestHandler->language->code,
         );
         $replacements->addEncodedText(
             identifier: 'charset',
-            content: 'UTF-8'
+            content: 'UTF-8',
         );
         $replacements->addEncodedText(
             identifier: 'copyright',
-            content: $core->renderCopyrightYear()
+            content: $core->renderCopyrightYear(),
         );
         $replacements->addEncodedText(
             identifier: 'robots',
-            content: $core->robots
+            content: $core->robots,
         );
         $replacements->addEncodedText(
             identifier: 'scripts',
-            content: ''
+            content: '',
         );
         $replacements->addEncodedText(
             identifier: 'cspNonce',
-            content: CspNonce::get()
+            content: CspNonce::get(),
         );
         $replacements->addEncodedText(
             identifier: 'csrfField',
-            content: CsrfToken::renderAsHiddenPostField()
+            content: CsrfToken::renderAsHiddenPostField(),
         );
         $replacements->addEncodedText(
             identifier: 'requestedFileName',
-            content: $requestHandler->fileName
+            content: $requestHandler->fileName,
         );
     }
 
@@ -105,7 +106,7 @@ class HtmlDocument
     {
         return array_key_exists(
             key: $key,
-            array: $this->activeHtmlIds
+            array: $this->activeHtmlIds,
         );
     }
 
@@ -137,7 +138,7 @@ class HtmlDocument
         }
         $this->replacements->addEncodedText(
             identifier: 'this',
-            content: $fullContentFilePath
+            content: $fullContentFilePath,
         );
         $templateName = $this->templateName;
         $templateFilePath = $this->templateDirectory . $templateName . '.html';
@@ -151,20 +152,20 @@ class HtmlDocument
         $tplEngine = new TemplateEngine(
             templateCacheInterface: new DirectoryTemplateCache(
                 cachePath: $core->cacheDirectory,
-                templateBaseDirectory: $core->baseDirectory
+                templateBaseDirectory: $core->baseDirectory,
             ),
-            tplNsPrefix: 'tst'
+            tplNsPrefix: 'tst',
         );
         if ($this->activeHtmlIds === []) {
             $fileTitle = $requestHandler->fileTitle;
             $this->setActiveHtmlId(
                 key: 1,
-                val: $fileGroup === null ? $fileTitle : $fileGroup . '-' . $fileTitle
+                val: $fileGroup === null ? $fileTitle : $fileGroup . '-' . $fileTitle,
             );
         }
         $htmlAfterReplacements = $tplEngine->getResultAsHtml(
             tplFile: $templateFilePath,
-            dataPool: $this->replacements->getArrayObject()
+            dataPool: $this->replacements->getArrayObject(),
         );
 
         return preg_replace_callback(
@@ -173,7 +174,7 @@ class HtmlDocument
                 $this,
                 'setCSSActive',
             ],
-            subject: $htmlAfterReplacements
+            subject: $htmlAfterReplacements,
         );
     }
 
@@ -181,7 +182,8 @@ class HtmlDocument
     {
         if (!in_array(
             needle: $m[2],
-            haystack: $this->activeHtmlIds
+            haystack: $this->activeHtmlIds,
+            strict: true,
         )) {
             // The id is not within activeHtmlIds, so we just return the whole unmodified string
             return $m[0];

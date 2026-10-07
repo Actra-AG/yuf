@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -36,11 +37,11 @@ class BooleanField extends FormField
         HtmlText $label,
         bool $isCheckedByDefault,
         ?HtmlText $requiredError = null,
-        CheckboxOptionsLayoutEnum $layout = CheckboxOptionsLayoutEnum::CHECKBOX_ITEM
+        CheckboxOptionsLayoutEnum $layout = CheckboxOptionsLayoutEnum::CHECKBOX_ITEM,
     ) {
         parent::__construct(
             name: $name,
-            label: $label
+            label: $label,
         );
         $this->setInitiallyChecked(checked: $isCheckedByDefault);
         if ($requiredError !== null) {
@@ -48,13 +49,13 @@ class BooleanField extends FormField
         }
         match ($layout) {
             CheckboxOptionsLayoutEnum::DEFINITION_LIST => $this->setRenderer(
-                renderer: new DefinitionListRenderer(formField: $this)
+                renderer: new DefinitionListRenderer(formField: $this),
             ),
             CheckboxOptionsLayoutEnum::LEGEND_AND_LIST => $this->setRenderer(
-                renderer: new BooleanFieldListRenderer(booleanField: $this, withLegend: true)
+                renderer: new BooleanFieldListRenderer(booleanField: $this, withLegend: true),
             ),
             CheckboxOptionsLayoutEnum::CHECKBOX_ITEM => $this->setRenderer(
-                renderer: new CheckboxItemRenderer(checkboxOptionsField: $this)
+                renderer: new CheckboxItemRenderer(checkboxOptionsField: $this),
             ),
             CheckboxOptionsLayoutEnum::NONE => null,
         };

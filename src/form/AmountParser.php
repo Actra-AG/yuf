@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -49,10 +50,10 @@ final class AmountParser
         $digits = $digits === '' ? '0' : $digits;
         $normalized = ($trimmed[0] === '-' && $digits !== '0' ? '-' : '') . $digits;
 
-        $result = (int)$trimmed;
+        $result = (int) $trimmed;
 
         // An overflowing numeric string is cast to the nearest limit, which differs from the normalized digits.
-        return (string)$result === $normalized ? $result : null;
+        return (string) $result === $normalized ? $result : null;
     }
 
     /**
@@ -64,7 +65,7 @@ final class AmountParser
             return null;
         }
 
-        $result = (float)AmountParser::trim(value: $value);
+        $result = (float) AmountParser::trim(value: $value);
 
         return is_finite(num: $result) ? $result : null;
     }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -18,7 +19,7 @@ require __DIR__ . '/../../src/Core.php';
 $core = new Core(
     envFilePath: __DIR__ . '/../.env.php',
     copyrightYear: 2026,
-    autoloaderPath: __DIR__ . '/../../vendor/actra/autoloader/src/Autoloader.php'
+    autoloaderPath: __DIR__ . '/../../vendor/actra/autoloader/src/Autoloader.php',
 );
 $english = new Language(code: 'en', locale: 'en_US.UTF-8');
 $core->availableLanguages->add(language: $english);
@@ -31,9 +32,9 @@ $core->prepareHttpResponse(
                 viewGroup: 'frontend',
                 defaultFileName: 'index.html',
                 defaultContentType: ContentType::createHtml(),
-                language: $english
+                language: $english,
             ),
-        ]
+        ],
     ),
-    individualSessionHandler: false
+    individualSessionHandler: false,
 )->sendAndExit();

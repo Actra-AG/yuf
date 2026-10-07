@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -10,6 +11,4 @@ namespace actra\yuf\auth;
 
 use actra\yuf\exception\UnauthorizedException;
 
-class UnauthorizedAccessRightException extends UnauthorizedException
-{
-}
+class UnauthorizedAccessRightException extends UnauthorizedException {}

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -12,7 +13,7 @@ use stdClass;
 
 class HtmlDataObject
 {
-    private(set) stdClass $data;
+    public private(set) stdClass $data;
 
     public function __construct()
     {
@@ -21,7 +22,7 @@ class HtmlDataObject
 
     public function addTextElement(string $propertyName, ?string $content, bool $isEncodedForRendering): void
     {
-        if (is_null($content)) {
+        if ($content === null) {
             $this->data->{$propertyName} = null;
 
             return;
@@ -32,16 +33,15 @@ class HtmlDataObject
 
     public function addDataObject(string $propertyName, ?HtmlDataObject $htmlDataObject): void
     {
-        $this->data->{$propertyName} = is_null($htmlDataObject) ? null : $htmlDataObject->data;
+        $this->data->{$propertyName} = $htmlDataObject === null ? null : $htmlDataObject->data;
     }
 
     /**
-     * @param string $propertyName
      * @param HtmlDataObject[]|null $htmlDataObjectsArray
      */
     public function addHtmlDataObjectsArray(string $propertyName, ?array $htmlDataObjectsArray): void
     {
-        if (is_null($htmlDataObjectsArray)) {
+        if ($htmlDataObjectsArray === null) {
             $this->data->{$propertyName} = null;
 
             return;

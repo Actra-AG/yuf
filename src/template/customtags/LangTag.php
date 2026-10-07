@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -42,7 +43,7 @@ class LangTag extends TemplateTag implements TagNode, TagInline
     {
         $replValue = LangTag::replace(
             $elementNode->getAttribute('key')->value,
-            $elementNode->getAttribute('vars')->value
+            $elementNode->getAttribute('vars')->value,
         );
 
         $replNode = new TextNode();
@@ -54,7 +55,7 @@ class LangTag extends TemplateTag implements TagNode, TagInline
     public function replace($key, ?string $vars = null): string
     {
         $phpVars = ', array()';
-        if (!is_null($vars)) {
+        if ($vars !== null) {
             $varsEx = explode(',', $vars);
             $varsFull = [];
 

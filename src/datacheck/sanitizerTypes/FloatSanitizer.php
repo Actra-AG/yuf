@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,7 +20,7 @@ final class FloatSanitizer
             return $input;
         }
         if (is_int($input)) {
-            return (float)$input;
+            return (float) $input;
         }
         // It is a STRING
         $input = Sanitizer::trimmedString(input: $input);
@@ -35,8 +36,8 @@ final class FloatSanitizer
                 if (preg_match('/^-?0*$/', $input[0]) === 1) {
                     return 0.0;
                 }
-                $value = floatval($input);
-                if ($value == 0) { // Yes, '==' is correct
+                $value = (float) $input;
+                if ($value === 0.0) { // Also true for -0.0
                     throw new RuntimeException('Value is not suitable as FLOAT.');
                 }
 
@@ -68,8 +69,8 @@ final class FloatSanitizer
         }
         // Convert it to "international format":
         $input = str_replace(',', '.', $input);
-        $value = floatval($input);
-        if ($value == 0) { // Yes, '==' is correct
+        $value = (float) $input;
+        if ($value === 0.0) { // Also true for -0.0
             throw new RuntimeException('Value is not suitable as FLOAT.');
         }
 

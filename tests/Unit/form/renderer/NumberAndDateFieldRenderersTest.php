@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -66,7 +67,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
 
         $this->assertSame(
             '<input type="text" name="a" id="a" value="abc" aria-invalid="true" aria-describedby="a-error">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -77,12 +78,12 @@ final class NumberAndDateFieldRenderersTest extends TestCase
             label: $this->label(),
             initialValue: 1.5,
             placeholder: 'ph',
-            maxLength: 9
+            maxLength: 9,
         );
 
         $this->assertSame(
             '<input type="text" name="a" id="a" value="1.5" placeholder="ph" maxlength="9">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -106,7 +107,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
 
         $this->assertSame(
             '<input type="text" name="n" id="n" value="7" maxlength="4" inputmode="numeric" pattern="\d{2,4}">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -116,7 +117,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
 
         $this->assertSame(
             '<input type="text" name="n" id="n" value="" inputmode="numeric" pattern="\d{2,}">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -126,7 +127,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
 
         $this->assertSame(
             '<input type="text" name="n" id="n" value="12" maxlength="2" inputmode="numeric" pattern="\d{2}">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -143,7 +144,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
             name: 'd',
             label: $this->label(),
             value: new DateTimeImmutable(datetime: '2020-01-02'),
-            invalidError: $this->error()
+            invalidError: $this->error(),
         );
 
         $this->assertSame('<input type="date" name="d" id="d" value="2020-01-02">', $field->render());
@@ -171,7 +172,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
 
         $this->assertSame(
             '<input type="date" name="d" id="d" value="2020-02-30" aria-invalid="true" aria-describedby="d-error">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -182,7 +183,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
             label: $this->label(),
             value: new TimeOfDay(hour: 8, minute: 30),
             invalidError: $this->error(),
-            placeholder: 'x'
+            placeholder: 'x',
         );
 
         $this->assertSame('<input type="time" name="t" id="t" value="08:30" placeholder="x">', $field->render());
@@ -194,7 +195,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
             name: 't',
             label: $this->label(),
             value: new TimeOfDay(hour: 8, minute: 30, second: 15),
-            invalidError: $this->error()
+            invalidError: $this->error(),
         );
 
         $this->assertSame('<input type="time" name="t" id="t" value="08:30">', $field->render());
@@ -207,7 +208,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
 
         $this->assertSame(
             '<input type="time" name="t" id="t" value="25:00" aria-invalid="true" aria-describedby="t-error">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -218,13 +219,13 @@ final class NumberAndDateFieldRenderersTest extends TestCase
             label: $this->label(),
             value: null,
             invalidError: $this->error(),
-            requiredError: HtmlText::encoded(textContent: 'Req')
+            requiredError: HtmlText::encoded(textContent: 'Req'),
         );
         $field->validate(input: FormInput::fromArray(data: ['t' => '']));
 
         $this->assertSame(
             '<input type="time" name="t" id="t" value="" aria-invalid="true" aria-describedby="t-error">',
-            $field->render()
+            $field->render(),
         );
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -15,24 +16,24 @@ use LogicException;
 class LocaleHandler
 {
     private static ?LocaleHandler $registeredInstance = null;
-    private(set) array $loadedLangFiles = [];
+    public private(set) array $loadedLangFiles = [];
     private array $languageBlocks = [];
 
     private function __construct()
     {
-        if (!is_null(value: LocaleHandler::$registeredInstance)) {
+        if (LocaleHandler::$registeredInstance !== null) {
             throw new LogicException(message: 'LocaleHandler is already registered');
         }
         LocaleHandler::$registeredInstance = $this;
         $language = RequestHandler::get()->language;
-        if (is_null(value: $language)) {
+        if ($language === null) {
             return;
         }
         $requestLanguageCode = RequestHandler::get()->language->code;
         $activeLanguage = Core::get()->availableLanguages->getLanguageByCode(
-            languageCode: $requestLanguageCode
+            languageCode: $requestLanguageCode,
         );
-        if (is_null(value: $activeLanguage)) {
+        if ($activeLanguage === null) {
             throw new Exception(message: 'Language ' . $requestLanguageCode . ' is not available');
         }
         setlocale(category: LC_ALL, locales: $activeLanguage->locale);
@@ -58,12 +59,13 @@ class LocaleHandler
     {
         if (in_array(
             needle: $filePath,
-            haystack: $this->loadedLangFiles
+            haystack: $this->loadedLangFiles,
+            strict: true,
         )) {
             return;
         }
 
-        if ((int)filesize(filename: $filePath) === 0) {
+        if ((int) filesize(filename: $filePath) === 0) {
             return;
         }
         $this->parseLanguageFile(filePath: $filePath);
@@ -90,7 +92,7 @@ class LocaleHandler
             $search = [];
             $replace = [];
             foreach ($replacements as $k => $v) {
-                $search[] = "[" . strtoupper(string: $k) . "]";
+                $search[] = '[' . strtoupper(string: $k) . ']';
                 $replace[] = $v;
             }
             $block = str_ireplace(search: $search, replace: $replace, subject: $block);

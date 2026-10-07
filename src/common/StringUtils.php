@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -46,9 +47,9 @@ class StringUtils
     public static function insertBeforeLast(string $str, string $beforeLast, string $newStr): string
     {
         return StringUtils::beforeLast($str, $beforeLast) . $newStr . $beforeLast . StringUtils::afterLast(
-                $str,
-                $beforeLast
-            );
+            $str,
+            $beforeLast,
+        );
     }
 
     public static function beforeLast(string $str, string $before): string
@@ -75,7 +76,7 @@ class StringUtils
     public static function breakUp(string $sentence, int $atIndex): string
     {
         if (mb_strlen($sentence) > $atIndex) {
-            return StringUtils::beforeLast(mb_substr($sentence, 0, 50), " ");
+            return StringUtils::beforeLast(mb_substr($sentence, 0, 50), ' ');
         }
 
         return $sentence;
@@ -113,27 +114,27 @@ class StringUtils
         $string = iconv(
             from_encoding: 'UTF-8',
             to_encoding: 'ASCII//TRANSLIT',
-            string: $string
+            string: $string,
         );
         $string = preg_replace(
             pattern: '/[^a-zA-Z0-9\-.]/',
             replacement: '-',
-            subject: $string
+            subject: $string,
         );
         $string = preg_replace(
             pattern: '/-+/',
             replacement: '-',
-            subject: $string
+            subject: $string,
         );
         $string = trim(
             string: $string,
-            characters: '-'
+            characters: '-',
         );
         if ($separator !== '-') {
             $string = str_replace(
                 search: '-',
                 replace: $separator,
-                subject: $string
+                subject: $string,
             );
         }
         if ($string === '') {
@@ -144,7 +145,7 @@ class StringUtils
         return $maxLength === 0 ? $string : substr(
             string: $string,
             offset: 0,
-            length: $maxLength
+            length: $maxLength,
         );
     }
 
@@ -176,7 +177,7 @@ class StringUtils
         $bytes = max($bytes, 0);
         $pow = floor(num: ($bytes ? log(num: $bytes) : 0) / log(num: 1024));
         $pow = min($pow, count(value: $units) - 1);
-        $bytes /= pow(num: 1024, exponent: $pow);
+        $bytes /= 1024 ** $pow;
 
         return round(num: $bytes, precision: $precision) . ' ' . $units[$pow];
     }
@@ -189,8 +190,6 @@ class StringUtils
      *
      * @param int $requiredStringLength Required length of the random string
      * @param bool $noSpecialChars Set to true to only use numbers and letters
-     *
-     * @return string
      */
     public static function randomString(int $requiredStringLength, bool $noSpecialChars): string
     {
@@ -207,18 +206,18 @@ class StringUtils
 
         $unShuffledRandomString = '';
         foreach ($characterSets as $characterSet) {
-            $unShuffledRandomString .= $characterSet[mt_rand(
+            $unShuffledRandomString .= $characterSet[random_int(
                 min: 0,
-                max: mb_strlen(string: $characterSet, encoding: '8bit') - 1
+                max: mb_strlen(string: $characterSet, encoding: '8bit') - 1,
             )];
         }
 
         $allCharacters = implode(separator: StringUtils::IMPLODE_DEFAULT_SEPARATOR, array: $characterSets);
         $currentRandomStringLength = mb_strlen(string: $unShuffledRandomString);
         while ($currentRandomStringLength < $requiredStringLength) {
-            $unShuffledRandomString .= $allCharacters[mt_rand(
+            $unShuffledRandomString .= $allCharacters[random_int(
                 min: 0,
-                max: mb_strlen(string: $allCharacters, encoding: '8bit') - 1
+                max: mb_strlen(string: $allCharacters, encoding: '8bit') - 1,
             )];
             $currentRandomStringLength++;
         }
@@ -232,7 +231,7 @@ class StringUtils
         $charsLength = mb_strlen(string: $chars);
         $salt = '';
         for ($i = 0; $i < $length; $i++) {
-            $salt .= mb_substr(string: $chars, start: (rand() % $charsLength), length: 1);
+            $salt .= mb_substr(string: $chars, start: random_int(min: 0, max: $charsLength - 1), length: 1);
         }
 
         return $salt;

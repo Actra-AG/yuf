@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -18,9 +19,7 @@ use stdClass;
  */
 final readonly class IdTokenTimeClaimsValidator
 {
-    public function __construct(private Clock $clock = new SystemClock(), private int $leewayInSeconds = 60)
-    {
-    }
+    public function __construct(private Clock $clock = new SystemClock(), private int $leewayInSeconds = 60) {}
 
     /**
      * @throws UnauthorizedException If a claim is missing, not yet valid or expired

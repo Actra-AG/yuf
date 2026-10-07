@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -29,7 +30,7 @@ final class CoreTestInstance
                 $this->baseDirectory = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR;
             },
             newThis: $core,
-            newScope: Core::class
+            newScope: Core::class,
         )();
         $reflection->setStaticPropertyValue(name: 'instance', value: $core);
     }

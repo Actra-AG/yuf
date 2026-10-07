@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -33,8 +34,8 @@ class SimpleXMLExtended extends SimpleXMLElement
         }
         // actual conversion
         $arr = JsonUtils::decodeJsonString(
-            jsonString: JsonUtils::convertToJsonString((array)$tmp),
-            returnAssociativeArray: true
+            jsonString: JsonUtils::convertToJsonString((array) $tmp),
+            returnAssociativeArray: true,
         );
         SimpleXMLExtended::stringifyEmptyInnerArrays(data: $arr);
 
@@ -50,7 +51,7 @@ class SimpleXMLExtended extends SimpleXMLElement
     private static function stringifyEmptyInnerArrays(&$data, int $instanceCounter = 1): void
     {
         if (is_array($data)) {
-            if (count($data) == 0 && $instanceCounter != 1) {
+            if (count($data) === 0 && $instanceCounter !== 1) {
                 $data = '';
             } else {
                 foreach ($data as &$value) {
@@ -125,16 +126,12 @@ class SimpleXMLExtended extends SimpleXMLElement
     {
         $node = dom_import_simplexml($this);
         $no = $node->ownerDocument;
-        $node->appendChild($no->createCDATASection((string)$cdata_text));
+        $node->appendChild($no->createCDATASection((string) $cdata_text));
     }
 
     /**
      * Append another xml to current xmlElement.
      * Inspired by http://stackoverflow.com/questions/3418019/simplexml-append-one-tree-to-another
-     *
-     * @param SimpleXMLElement $xmlToAppend
-     *
-     * @return bool
      */
     public function addXML(SimpleXMLElement $xmlToAppend): bool
     {

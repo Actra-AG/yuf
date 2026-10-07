@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -62,8 +63,8 @@ final class InMemoryFileUploadStorage implements FileUploadStorage
             callback: fn(UploadedFile $file): bool => !in_array(
                 needle: $file->path,
                 haystack: $this->vanishedPaths,
-                strict: true
-            )
+                strict: true,
+            ),
         );
     }
 
@@ -83,7 +84,7 @@ final class InMemoryFileUploadStorage implements FileUploadStorage
             name: $upload->name,
             type: $upload->type,
             size: $upload->size,
-            path: 'memory://' . $pointer . '/' . ++$this->counter
+            path: 'memory://' . $pointer . '/' . ++$this->counter,
         );
     }
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -21,13 +22,12 @@ readonly class NavigationItem
         public AccessRightCollection $requiredAccessRights,
         public ?NavigationItemCollection $childNavigation = null,
         public string $activeSubToggleClass = 'nav-main-sub-toggle active',
-        public string $inactiveSubToggleClass = 'nav-main-sub-toggle'
-    ) {
-    }
+        public string $inactiveSubToggleClass = 'nav-main-sub-toggle',
+    ) {}
 
     public function render(
         string $activeMainNavigationItem,
-        AccessRightCollection $accessRightCollection
+        AccessRightCollection $accessRightCollection,
     ): HtmlDataObject {
         $childNavigationItemCollection = $this->childNavigation;
         $htmlDataObjectCollection = (
@@ -35,32 +35,32 @@ readonly class NavigationItem
             || $childNavigationItemCollection->isEmpty(accessRightCollection: $accessRightCollection)
         ) ? null : $childNavigationItemCollection->prepareForRenderer(
             activeSubNavigationItem: $activeMainNavigationItem,
-            accessRightCollection: $accessRightCollection
+            accessRightCollection: $accessRightCollection,
         );
         $htmlDataObject = new HtmlDataObject();
         $htmlDataObject->addTextElement(
             propertyName: 'href',
             content: $this->href,
-            isEncodedForRendering: true
+            isEncodedForRendering: true,
         );
         $htmlDataObject->addTextElement(
             propertyName: 'navKey',
             content: $this->navKey,
-            isEncodedForRendering: true
+            isEncodedForRendering: true,
         );
         $htmlDataObject->addTextElement(
             propertyName: 'svgPath',
             content: $this->svgPath,
-            isEncodedForRendering: true
+            isEncodedForRendering: true,
         );
         $htmlDataObject->addTextElement(
             propertyName: 'title',
             content: $this->title,
-            isEncodedForRendering: true
+            isEncodedForRendering: true,
         );
         $htmlDataObject->addHtmlDataObjectsArray(
             propertyName: 'subNavigation',
-            htmlDataObjectsArray: is_null(value: $htmlDataObjectCollection) ? null : $htmlDataObjectCollection->items
+            htmlDataObjectsArray: $htmlDataObjectCollection === null ? null : $htmlDataObjectCollection->items,
         );
         if (
             $childNavigationItemCollection === null
@@ -69,13 +69,13 @@ readonly class NavigationItem
             $htmlDataObject->addTextElement(
                 propertyName: 'cssClass',
                 content: '',
-                isEncodedForRendering: true
+                isEncodedForRendering: true,
             );
         } else {
             $htmlDataObject->addTextElement(
                 propertyName: 'cssClass',
                 content: $childNavigationItemCollection->isActive ? $this->activeSubToggleClass : $this->inactiveSubToggleClass,
-                isEncodedForRendering: true
+                isEncodedForRendering: true,
             );
         }
 

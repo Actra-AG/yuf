@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -52,10 +53,10 @@ abstract class AbstractCurlRequest
     protected function __construct(string $requestTargetUrl, array $requestTypeSpecificCurlOptions)
     {
         $this->instanceIndex = (count(AbstractCurlRequest::$instances) === 0) ? 1 : max(
-                value: array_keys(
-                    array: AbstractCurlRequest::$instances
-                )
-            ) + 1;
+            value: array_keys(
+                array: AbstractCurlRequest::$instances,
+            ),
+        ) + 1;
         AbstractCurlRequest::$instances[$this->instanceIndex] = $this;
         $this->curlOptions[CURLOPT_URL] = $requestTargetUrl;
         foreach ($requestTypeSpecificCurlOptions as $key => $val) {
@@ -68,7 +69,7 @@ abstract class AbstractCurlRequest
         unset(AbstractCurlRequest::$instances[$this->instanceIndex]);
         if (
             count(value: AbstractCurlRequest::$instances) === 0
-            && !is_null(AbstractCurlRequest::$curlHandle)
+            && AbstractCurlRequest::$curlHandle !== null
         ) {
             AbstractCurlRequest::$curlHandle = null;
         }
@@ -86,15 +87,15 @@ abstract class AbstractCurlRequest
 
     public function setHttpHeader(string $key, string $value): void
     {
-        if (in_array(needle: $key, haystack: AbstractCurlRequest::PROTECTED_HTTP_HEADERS)) {
+        if (in_array(needle: $key, haystack: AbstractCurlRequest::PROTECTED_HTTP_HEADERS, strict: true)) {
             throw new LogicException(message: 'You are not allowed to overwrite the HTTP-Header ' . $key);
         }
         $this->httpHeaders[$key] = $value;
     }
 
-    public function setCurlOption(int $optionIdentifier, null|string|int|bool $newValue): void
+    public function setCurlOption(int $optionIdentifier, string|int|bool|null $newValue): void
     {
-        if (in_array(needle: $optionIdentifier, haystack: AbstractCurlRequest::PROTECTED_CURL_OPTIONS)) {
+        if (in_array(needle: $optionIdentifier, haystack: AbstractCurlRequest::PROTECTED_CURL_OPTIONS, strict: true)) {
             throw new LogicException(message: 'You are not allowed to overwrite the cURL-Option ' . $optionIdentifier);
         }
         $this->curlOptions[$optionIdentifier] = $newValue;
@@ -102,7 +103,7 @@ abstract class AbstractCurlRequest
 
     public function removeCurlOption(int $optionIdentifier): void
     {
-        if (in_array(needle: $optionIdentifier, haystack: AbstractCurlRequest::PROTECTED_CURL_OPTIONS)) {
+        if (in_array(needle: $optionIdentifier, haystack: AbstractCurlRequest::PROTECTED_CURL_OPTIONS, strict: true)) {
             throw new LogicException(message: 'You are not allowed to remove the cURL-Option ' . $optionIdentifier);
         }
         unset($this->curlOptions[$optionIdentifier]);
@@ -138,7 +139,7 @@ abstract class AbstractCurlRequest
         }
         $this->isExecuted = true;
 
-        if (is_null(AbstractCurlRequest::$curlHandle)) {
+        if (AbstractCurlRequest::$curlHandle === null) {
             AbstractCurlRequest::$curlHandle = curl_init();
         } else {
             curl_reset(AbstractCurlRequest::$curlHandle);
@@ -153,7 +154,7 @@ abstract class AbstractCurlRequest
 
         return CurlResponse::createFromPreparedCurlHandle(
             preparedCurlHandle: AbstractCurlRequest::$curlHandle,
-            acceptRedirectionResponseCode: $this->acceptRedirectionResponseCode
+            acceptRedirectionResponseCode: $this->acceptRedirectionResponseCode,
         );
     }
 
@@ -161,7 +162,7 @@ abstract class AbstractCurlRequest
     {
         $postFieldsString = http_build_query(
             data: AbstractCurlRequest::convertAllDataToString(data: $postData),
-            encoding_type: PHP_QUERY_RFC3986
+            encoding_type: PHP_QUERY_RFC3986,
         );
         $this->httpHeaders[AbstractCurlRequest::CONTENT_TYPE] = 'application/x-www-form-urlencoded; charset=utf-8';
         $this->httpHeaders[AbstractCurlRequest::CONTENT_LENGTH] = strlen(string: $postFieldsString);
@@ -171,7 +172,7 @@ abstract class AbstractCurlRequest
     private static function convertAllDataToString(mixed $data): array|string
     {
         if (is_bool(value: $data)) {
-            return (string)(($data) ? 1 : 0);
+            return (string) (($data) ? 1 : 0);
         }
 
         if (is_object(value: $data)) {
@@ -196,7 +197,7 @@ abstract class AbstractCurlRequest
             return $arrPrepared;
         }
 
-        return (string)$data;
+        return (string) $data;
     }
 
     protected function setXmlBody(string $xmlString): void

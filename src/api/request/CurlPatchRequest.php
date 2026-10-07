@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,7 +20,7 @@ class CurlPatchRequest extends AbstractCurlRequest
     {
         parent::__construct(
             requestTargetUrl: $requestTargetUrl,
-            requestTypeSpecificCurlOptions: [CURLOPT_CUSTOMREQUEST => 'PATCH']
+            requestTypeSpecificCurlOptions: [CURLOPT_CUSTOMREQUEST => 'PATCH'],
         );
     }
 

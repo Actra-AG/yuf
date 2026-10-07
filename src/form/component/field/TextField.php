@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -21,7 +22,7 @@ class TextField extends SettableStringInputField
         ?HtmlText $requiredError = null,
         ?string $placeholder = null,
         ?AutoCompleteEnum $autoComplete = null,
-        ?int $maxLength = null
+        ?int $maxLength = null,
     ) {
         parent::__construct(
             inputType: InputTypeEnum::TEXT,
@@ -30,9 +31,9 @@ class TextField extends SettableStringInputField
             value: $value,
             placeholder: $placeholder,
             autoComplete: $autoComplete,
-            maxLength: $maxLength
+            maxLength: $maxLength,
         );
-        if (!is_null(value: $requiredError)) {
+        if ($requiredError !== null) {
             $this->addRequiredRule(errorMessage: $requiredError);
         }
     }

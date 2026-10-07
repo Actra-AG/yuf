@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -35,14 +36,14 @@ class SelectOptionsField extends SingleOptionsField
         bool $renderAsChosenEnhancedField = false,
         bool $renderEmptyValueOption = true,
         ?string $placeholder = null,
-        ?AutoCompleteEnum $autoComplete = null
+        ?AutoCompleteEnum $autoComplete = null,
     ) {
         parent::__construct(
             name: $name,
             label: $label,
             formOptions: $formOptions,
             initialValue: $initialValue,
-            autoComplete: $autoComplete
+            autoComplete: $autoComplete,
         );
         if ($requiredError !== null) {
             $this->addRequiredRule(errorMessage: $requiredError);
@@ -53,7 +54,7 @@ class SelectOptionsField extends SingleOptionsField
             cssClasses: $cssClasses,
             renderAsChosenEnhancedField: $renderAsChosenEnhancedField,
             renderEmptyValueOption: $renderEmptyValueOption,
-            placeholder: $placeholder
+            placeholder: $placeholder,
         );
     }
 

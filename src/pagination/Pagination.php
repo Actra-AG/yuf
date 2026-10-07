@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -30,7 +31,7 @@ class Pagination
         array $additionalLinkParameters = [],
         string $previousTitle = 'Previous',
         string $nextTitle = 'Next',
-        ?string $individualHtmlSnippetPath = null
+        ?string $individualHtmlSnippetPath = null,
     ): string {
         if ($totalAmount <= $entriesPerPage) {
             return '';
@@ -52,29 +53,29 @@ class Pagination
                 $pageObject = new HtmlDataObject();
                 $pageObject->addBooleanValue(
                     propertyName: 'groupPreviousPages',
-                    booleanValue: ($page === ($maxPage - $startEnd) && $currentPage < $maxPage - ($beforeAfter + 1) - $startEnd)
+                    booleanValue: ($page === ($maxPage - $startEnd) && $currentPage < $maxPage - ($beforeAfter + 1) - $startEnd),
                 );
                 $pageObject->addBooleanValue(
                     propertyName: 'isCurrentPage',
-                    booleanValue: ($page === $currentPage)
+                    booleanValue: ($page === $currentPage),
                 );
                 $pageObject->addTextElement(
                     propertyName: 'number',
-                    content: (string)$page,
-                    isEncodedForRendering: true
+                    content: (string) $page,
+                    isEncodedForRendering: true,
                 );
                 $pageObject->addTextElement(
                     propertyName: 'href',
                     content: Pagination::getLinkTarget(
                         listIdentifier: $listIdentifier,
                         pageNumber: $page,
-                        additionalLinkParameters: $additionalLinkParameters
+                        additionalLinkParameters: $additionalLinkParameters,
                     ),
-                    isEncodedForRendering: true
+                    isEncodedForRendering: true,
                 );
                 $pageObject->addBooleanValue(
                     propertyName: 'groupNextPages',
-                    booleanValue: ($page === ($firstPage + $startEnd) && $currentPage > $firstPage + ($beforeAfter + 1) + $startEnd)
+                    booleanValue: ($page === ($firstPage + $startEnd) && $currentPage > $firstPage + ($beforeAfter + 1) + $startEnd),
                 );
                 $pages->add(htmlDataObject: $pageObject);
             }
@@ -86,8 +87,8 @@ class Pagination
             content: ($currentPage === $firstPage) ? '' : Pagination::getLinkTarget(
                 listIdentifier: $listIdentifier,
                 pageNumber: $currentPage - 1,
-                additionalLinkParameters: $additionalLinkParameters
-            )
+                additionalLinkParameters: $additionalLinkParameters,
+            ),
         );
         $replacements->addHtmlDataObjectCollection(identifier: 'pages', htmlDataObjectCollection: $pages);
         $replacements->addUnencodedText(identifier: 'nextTitle', content: $nextTitle);
@@ -96,26 +97,28 @@ class Pagination
             content: ($currentPage === $maxPage) ? '' : Pagination::getLinkTarget(
                 listIdentifier: $listIdentifier,
                 pageNumber: $currentPage + 1,
-                additionalLinkParameters: $additionalLinkParameters
-            )
+                additionalLinkParameters: $additionalLinkParameters,
+            ),
         );
 
         return new HtmlSnippet(
-            htmlSnippetFilePath: is_null(value: $individualHtmlSnippetPath) ? Core::get(
-                )->frameworkDirectory . 'pagination' . DIRECTORY_SEPARATOR . 'pagination.html' : $individualHtmlSnippetPath,
-            replacements: $replacements
+            htmlSnippetFilePath: $individualHtmlSnippetPath === null ? Core::get(
+            )->frameworkDirectory . 'pagination' . DIRECTORY_SEPARATOR . 'pagination.html' : $individualHtmlSnippetPath,
+            replacements: $replacements,
         )->render();
     }
 
     private static function getLinkTarget(
         string $listIdentifier,
         int $pageNumber,
-        array $additionalLinkParameters
+        array $additionalLinkParameters,
     ): string {
         $getAttributes = [];
         foreach (
-            array_merge(['page' => $pageNumber . '|' . $listIdentifier],
-                $additionalLinkParameters) as $key => $val
+            array_merge(
+                ['page' => $pageNumber . '|' . $listIdentifier],
+                $additionalLinkParameters,
+            ) as $key => $val
         ) {
             $getAttributes[] = $key . '=' . $val;
         }

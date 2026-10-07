@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -47,8 +48,8 @@ final class ZipCodeValidator
         }
 
         return preg_match(
-                pattern: '/' . ZipCodeValidator::REGULAR_EXPRESSIONS[$countryCode] . '/i',
-                subject: $zipCode
-            ) === 1;
+            pattern: '/' . ZipCodeValidator::REGULAR_EXPRESSIONS[$countryCode] . '/i',
+            subject: $zipCode,
+        ) === 1;
     }
 }

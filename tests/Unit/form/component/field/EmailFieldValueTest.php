@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -23,7 +24,7 @@ final class EmailFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'Email'),
             value: $value,
             invalidError: HtmlText::encoded(textContent: 'Invalid'),
-            dnsCheck: false
+            dnsCheck: false,
         );
     }
 

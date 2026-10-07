@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,9 +20,8 @@ final readonly class UploadedFile
         public string $name,
         public string $type,
         public int $size,
-        public string $path
-    ) {
-    }
+        public string $path,
+    ) {}
 
     /**
      * The key of the file in `FileField::getFiles()` and the value posted to remove it (sha1 of the path).

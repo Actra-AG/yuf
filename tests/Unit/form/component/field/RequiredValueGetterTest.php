@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -103,39 +104,39 @@ final class RequiredValueGetterTest extends TestCase
             IntegerField::class => new IntegerField(
                 name: 'field',
                 label: self::label(),
-                initialValue: $initial === null ? null : (int)$initial,
-                requiredError: $requiredError
+                initialValue: $initial === null ? null : (int) $initial,
+                requiredError: $requiredError,
             ),
             HiddenIntegerField::class => new HiddenIntegerField(
                 name: 'field',
-                value: $initial === null ? null : (int)$initial
+                value: $initial === null ? null : (int) $initial,
             ),
             FloatField::class => new FloatField(
                 name: 'field',
                 label: self::label(),
-                initialValue: $initial === null ? null : (float)$initial,
-                requiredError: $requiredError
+                initialValue: $initial === null ? null : (float) $initial,
+                requiredError: $requiredError,
             ),
             DecimalField::class => new DecimalField(
                 name: 'field',
                 label: self::label(),
                 scale: 2,
                 initialValue: $initial,
-                requiredError: $requiredError
+                requiredError: $requiredError,
             ),
             DateField::class => new DateField(
                 name: 'field',
                 label: self::label(),
                 value: $initial === null ? null : new DateTimeImmutable(datetime: $initial),
                 invalidError: $invalid,
-                requiredError: $requiredError
+                requiredError: $requiredError,
             ),
             TimeField::class => new TimeField(
                 name: 'field',
                 label: self::label(),
                 value: $initial === null ? null : TimeOfDay::fromString(time: $initial . ':00'),
                 invalidError: $invalid,
-                requiredError: $requiredError
+                requiredError: $requiredError,
             ),
             default => throw new LogicException(message: 'Unknown field class ' . $class),
         };
@@ -157,7 +158,7 @@ final class RequiredValueGetterTest extends TestCase
         string $valid,
         string $invalid,
         callable $required,
-        mixed $expected
+        mixed $expected,
     ): void {
         $field = $this->createField(class: $class, required: true);
 
@@ -176,7 +177,7 @@ final class RequiredValueGetterTest extends TestCase
         string $valid,
         string $invalid,
         callable $required,
-        mixed $expected = null
+        mixed $expected = null,
     ): void {
         $field = $this->createField(class: $class, required: true);
         $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['field' => ''])));
@@ -198,7 +199,7 @@ final class RequiredValueGetterTest extends TestCase
         string $valid,
         string $invalid,
         callable $required,
-        mixed $expected = null
+        mixed $expected = null,
     ): void {
         $field = $this->createField(class: $class, required: false);
         $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['field' => ''])));
@@ -223,7 +224,7 @@ final class RequiredValueGetterTest extends TestCase
         string $valid,
         string $invalid,
         callable $required,
-        mixed $expected
+        mixed $expected,
     ): void {
         $initial = match ($class) {
             DateField::class => '2020-02-03',
@@ -249,7 +250,7 @@ final class RequiredValueGetterTest extends TestCase
         string $valid,
         string $invalid,
         callable $required,
-        mixed $expected = null
+        mixed $expected = null,
     ): void {
         $field = $this->createField(class: $class, required: true);
 
@@ -269,7 +270,7 @@ final class RequiredValueGetterTest extends TestCase
         string $valid,
         string $invalid,
         callable $required,
-        mixed $expected = null
+        mixed $expected = null,
     ): void {
         $field = $this->createField(class: $class, required: true);
         $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['field' => $invalid])));

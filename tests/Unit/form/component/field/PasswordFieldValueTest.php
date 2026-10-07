@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -25,7 +26,7 @@ final class PasswordFieldValueTest extends TestCase
             name: 'password',
             label: HtmlText::encoded(textContent: 'Password'),
             requiredError: HtmlText::encoded(textContent: 'Required'),
-            purpose: $purpose
+            purpose: $purpose,
         );
     }
 

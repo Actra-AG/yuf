@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -34,16 +35,16 @@ class PhoneRenderer
         // Metadata cannot be null because the country calling code is valid (which means that the region code cannot be ZZ and must be one of our supported region codes).
         $phoneMetaData = PhoneMetaData::getForRegionOrCallingCode(
             countryCallingCode: $countryCallingCode,
-            regionCode: $regionCode
+            regionCode: $regionCode,
         );
         $formattedNumber = PhoneRenderer::formatNsn(
             nationalSignificantNumber: $nationalSignificantNumber,
-            phoneMetaData: $phoneMetaData
+            phoneMetaData: $phoneMetaData,
         );
         PhoneRenderer::maybeAppendFormattedExtension(
             phoneNumber: $phoneNumber,
             phoneMetaData: $phoneMetaData,
-            formattedNumber: $formattedNumber
+            formattedNumber: $formattedNumber,
         );
 
         return PhoneConstants::PLUS_SIGN . $countryCallingCode . ' ' . $formattedNumber;
@@ -56,24 +57,21 @@ class PhoneRenderer
         $availableFormats = (count($intlNumberFormats) === 0) ? $phoneMetaData->numberFormats() : $intlNumberFormats;
         $formattingPattern = PhoneRenderer::chooseFormattingPatternForNumber(
             availableFormats: $availableFormats,
-            nationalNumber: $nationalSignificantNumber
+            nationalNumber: $nationalSignificantNumber,
         );
 
-        return is_null($formattingPattern) ? $nationalSignificantNumber : PhoneRenderer::formatNsnUsingPattern(
+        return $formattingPattern === null ? $nationalSignificantNumber : PhoneRenderer::formatNsnUsingPattern(
             nationalSignificantNumber: $nationalSignificantNumber,
-            formattingPattern: $formattingPattern
+            formattingPattern: $formattingPattern,
         );
     }
 
     /**
      * @param PhoneFormat[] $availableFormats
-     * @param string $nationalNumber
-     *
-     * @return PhoneFormat|null
      */
     private static function chooseFormattingPatternForNumber(
         array $availableFormats,
-        string $nationalNumber
+        string $nationalNumber,
     ): ?PhoneFormat {
         foreach ($availableFormats as $numFormat) {
             $leadingDigitsPatternMatcher = null;
@@ -82,13 +80,13 @@ class PhoneRenderer
             if ($size > 0) {
                 $leadingDigitsPatternMatcher = new PhoneMatcher(
                     pattern: $numFormat->getLeadingDigitsPattern($size - 1),
-                    subject: $nationalNumber
+                    subject: $nationalNumber,
                 );
             }
-            if ($size == 0 || $leadingDigitsPatternMatcher->lookingAt()) {
+            if ($size === 0 || $leadingDigitsPatternMatcher->lookingAt()) {
                 $m = new PhoneMatcher(
                     pattern: $numFormat->pattern,
-                    subject: $nationalNumber
+                    subject: $nationalNumber,
                 );
                 if ($m->matches() > 0) {
                     return $numFormat;
@@ -101,18 +99,18 @@ class PhoneRenderer
 
     private static function formatNsnUsingPattern(
         string $nationalSignificantNumber,
-        PhoneFormat $formattingPattern
+        PhoneFormat $formattingPattern,
     ): string {
         return new PhoneMatcher(
             pattern: $formattingPattern->pattern,
-            subject: $nationalSignificantNumber
+            subject: $nationalSignificantNumber,
         )->replaceAll(replacement: $formattingPattern->format);
     }
 
     private static function maybeAppendFormattedExtension(
         PhoneNumber $phoneNumber,
         PhoneMetaData $phoneMetaData,
-        string &$formattedNumber
+        string &$formattedNumber,
     ): void {
         if (mb_strlen(string: $phoneNumber->extension) > 0) {
             if ($phoneMetaData->hasPreferredExtnPrefix()) {

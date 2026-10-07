@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -31,7 +32,7 @@ final class CheckboxOptionsFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'Checkbox'),
             formOptions: $formOptions,
             initialValues: $initialValues,
-            requiredError: $requiredError
+            requiredError: $requiredError,
         );
     }
 
@@ -159,7 +160,7 @@ final class CheckboxOptionsFieldValueTest extends TestCase
      * @param null|string|array<mixed> $input
      */
     #[DataProvider('inputProvider')]
-    public function testValidationResultAndGetValuesNeverThrows(null|string|array $input, bool $expectedValid): void
+    public function testValidationResultAndGetValuesNeverThrows(string|array|null $input, bool $expectedValid): void
     {
         $field = $this->createField();
         $inputData = $input === null ? [] : ['checkbox' => $input];

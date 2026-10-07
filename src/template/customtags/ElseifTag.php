@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -41,16 +42,16 @@ class ElseifTag extends TemplateTag implements TagNode
         $phpCode = '<?php ';
 
         $phpCode .= 'elseif(' . preg_replace_callback(
-                pattern: '/\${(.*?)}/i',
-                callback: function ($m) {
-                    if (strlen($m[1]) === 0) {
-                        throw new Exception('Empty template data reference');
-                    }
+            pattern: '/\${(.*?)}/i',
+            callback: function ($m) {
+                if (strlen($m[1]) === 0) {
+                    throw new Exception('Empty template data reference');
+                }
 
-                    return '$this->getDataFromSelector(\'' . $m[1] . '\')';
-                },
-                subject: $condAttr
-            ) . '): ?>';
+                return '$this->getDataFromSelector(\'' . $m[1] . '\')';
+            },
+            subject: $condAttr,
+        ) . '): ?>';
         $phpCode .= $elementNode->getInnerHtml();
 
         if ($tplEngine->isFollowedBy($elementNode, ['else', 'elseif']) === false) {

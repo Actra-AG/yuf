@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -23,7 +24,7 @@ final class IbanNumberFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'IBAN'),
             value: $value,
             invalidError: HtmlText::encoded(textContent: 'Invalid'),
-            requiredError: $requiredError
+            requiredError: $requiredError,
         );
     }
 

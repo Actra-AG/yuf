@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -24,7 +25,7 @@ class Logger
     public function __construct(
         protected readonly string $logEmailRecipient,
         private readonly string $logDirectory,
-        private readonly Clock $clock = new SystemClock()
+        private readonly Clock $clock = new SystemClock(),
     ) {
         if (!is_dir(filename: $this->logDirectory)) {
             throw new Exception(message: 'Log directory does not exist: ' . $this->logDirectory);
@@ -33,7 +34,7 @@ class Logger
 
     public static function register(Logger $logger): void
     {
-        if (!is_null(value: Logger::$registeredInstance)) {
+        if (Logger::$registeredInstance !== null) {
             throw new LogicException(message: 'Logger is already registered.');
         }
         Logger::$registeredInstance = $logger;
@@ -47,23 +48,23 @@ class Logger
     public function logException(Throwable $throwable): void
     {
         $previousException = $throwable->getPrevious();
-        $realException = is_null(value: $previousException) ? $throwable : $previousException;
+        $realException = $previousException === null ? $throwable : $previousException;
         $message = get_class(object: $realException) . ': (' . $realException->getCode(
-            ) . ') "' . $realException->getMessage() . '"' . PHP_EOL;
+        ) . ') "' . $realException->getMessage() . '"' . PHP_EOL;
         $message .= 'thrown in file: ' . $realException->getFile() . ' (Line: ' . $realException->getLine(
-            ) . ')' . Logger::dnl;
+        ) . ')' . Logger::dnl;
         $hashableContent = $message;
         $message .= $realException->getTraceAsString();
 
         // Don't use dynamic data ($traceLineArray['args']) from backtrace for hash-able content
         foreach ($realException->getTrace() as $traceLineArray) {
-            $hashableContent .=
-                (array_key_exists(key: 'file', array: $traceLineArray) ? $traceLineArray['file'] : '') .
-                (array_key_exists(key: 'line', array: $traceLineArray) ? $traceLineArray['line'] : '') .
-                (array_key_exists(key: 'class', array: $traceLineArray) ? $traceLineArray['class'] : '') .
-                (array_key_exists(key: 'type', array: $traceLineArray) ? $traceLineArray['type'] : '') .
-                (array_key_exists(key: 'function', array: $traceLineArray) ? $traceLineArray['function'] : '') .
-                PHP_EOL;
+            $hashableContent
+                .= (array_key_exists(key: 'file', array: $traceLineArray) ? $traceLineArray['file'] : '')
+                . (array_key_exists(key: 'line', array: $traceLineArray) ? $traceLineArray['line'] : '')
+                . (array_key_exists(key: 'class', array: $traceLineArray) ? $traceLineArray['class'] : '')
+                . (array_key_exists(key: 'type', array: $traceLineArray) ? $traceLineArray['type'] : '')
+                . (array_key_exists(key: 'function', array: $traceLineArray) ? $traceLineArray['function'] : '')
+                . PHP_EOL;
         }
         $hash = hash(algo: 'sha256', data: $hashableContent);
         $this->deliverMessage(hash: $hash, message: $message);
@@ -112,7 +113,7 @@ class Logger
         error_log(
             message: $timestamp . PHP_EOL . $message . PHP_EOL . str_pad('', 70, '=') . PHP_EOL,
             message_type: 3,
-            destination: $filenameFullPath
+            destination: $filenameFullPath,
         );
     }
 
@@ -167,7 +168,7 @@ class Logger
                 'From: error@' . $_SERVER['SERVER_NAME'],
                 'Date: ' . $this->clock->now()->format(format: 'r'),
                 'Content-Type: text/plain; charset=UTF-8',
-            ])
+            ]),
         );
     }
 
@@ -177,9 +178,6 @@ class Logger
         $this->deliverMessage(hash: $hash, message: $message);
     }
 
-    /**
-     * @return bool
-     */
     public function lastIssueIsNew(): bool
     {
         return $this->lastIssueIsNew;

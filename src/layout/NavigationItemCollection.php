@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -13,13 +14,11 @@ use actra\yuf\html\HtmlDataObjectCollection;
 
 class NavigationItemCollection
 {
-    private(set) bool $isActive = false;
+    public private(set) bool $isActive = false;
     /** @var NavigationItem[] */
     private array $items = [];
 
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     public function addItem(NavigationItem $navigationItem): void
     {
@@ -38,8 +37,8 @@ class NavigationItemCollection
             $htmlDataObjectCollection->add(
                 htmlDataObject: $navigationItem->render(
                     activeMainNavigationItem: $activeSubNavigationItem,
-                    accessRightCollection: $accessRightCollection
-                )
+                    accessRightCollection: $accessRightCollection,
+                ),
             );
             if ($navigationItem->navKey === $activeSubNavigationItem) {
                 $this->isActive = true;
@@ -66,8 +65,8 @@ class NavigationItemCollection
         return array_find(
             $this->items,
             fn(NavigationItem $navigationItem) => $navigationItem->hasAccess(
-                accessRightCollection: $accessRightCollection
-            )
+                accessRightCollection: $accessRightCollection,
+            ),
         );
     }
 }

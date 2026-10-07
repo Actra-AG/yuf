@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -30,7 +31,7 @@ class FormInfoRenderer extends FormRenderer
         $dtClasses = $formInfo->dtClasses;
         if (count($dtClasses) > 0) {
             $dtTag->addHtmlTagAttribute(
-                new HtmlTagAttribute('class', implode(separator: ' ', array: $dtClasses), true)
+                new HtmlTagAttribute('class', implode(separator: ' ', array: $dtClasses), true),
             );
         }
         $dtTag->addText($formInfo->title);
@@ -39,7 +40,7 @@ class FormInfoRenderer extends FormRenderer
         $ddClasses = $formInfo->ddClasses;
         if (count($ddClasses) > 0) {
             $ddTag->addHtmlTagAttribute(
-                new HtmlTagAttribute('class', implode(separator: ' ', array: $ddClasses), true)
+                new HtmlTagAttribute('class', implode(separator: ' ', array: $ddClasses), true),
             );
         }
         $ddTag->addText($formInfo->content);
@@ -48,7 +49,7 @@ class FormInfoRenderer extends FormRenderer
         $dlClasses = $formInfo->dlClasses;
         if (count($dlClasses) > 0) {
             $dlTag->addHtmlTagAttribute(
-                new HtmlTagAttribute('class', implode(separator: ' ', array: $dlClasses), true)
+                new HtmlTagAttribute('class', implode(separator: ' ', array: $dlClasses), true),
             );
         }
         $dlTag->addTag($dtTag);

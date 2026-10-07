@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -39,7 +40,7 @@ final class OptionsInitialValueTest extends TestCase
             name: 'radio',
             label: HtmlText::encoded(textContent: 'Radio'),
             formOptions: $this->createOptions(),
-            initialValue: null
+            initialValue: null,
         );
     }
 
@@ -49,7 +50,7 @@ final class OptionsInitialValueTest extends TestCase
             name: 'checkbox',
             label: HtmlText::encoded(textContent: 'Checkbox'),
             formOptions: $this->createOptions(),
-            initialValues: []
+            initialValues: [],
         );
     }
 
@@ -58,7 +59,7 @@ final class OptionsInitialValueTest extends TestCase
         return new InitialValueBooleanField(
             name: 'boolean',
             label: HtmlText::encoded(textContent: 'Boolean'),
-            isCheckedByDefault: false
+            isCheckedByDefault: false,
         );
     }
 

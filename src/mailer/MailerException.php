@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -29,6 +30,4 @@ namespace actra\yuf\mailer;
 
 use Exception;
 
-class MailerException extends Exception
-{
-}
+class MailerException extends Exception {}

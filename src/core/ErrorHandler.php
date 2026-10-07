@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -17,7 +18,7 @@ class ErrorHandler
 
     public static function register(): void
     {
-        if (!is_null(value: ErrorHandler::$registeredInstance)) {
+        if (ErrorHandler::$registeredInstance !== null) {
             throw new LogicException(message: 'ErrorHandler is already registered.');
         }
         ErrorHandler::$registeredInstance = new ErrorHandler();

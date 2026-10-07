@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -36,7 +37,7 @@ class TableHelper
         return new SmartTable(
             identifier: $identifier,
             tableHeadRenderer: $tableHeadRenderer,
-            tableItemCollection: new TableItemCollection()
+            tableItemCollection: new TableItemCollection(),
         );
     }
 
@@ -48,7 +49,7 @@ class TableHelper
         ?TableFilter $tableFilter = null,
         ?TablePaginationRenderer $tablePaginationRenderer = null,
         ?SortableTableHeadRenderer $sortableTableHeadRenderer = null,
-        int $itemsPerPage = 25
+        int $itemsPerPage = 25,
     ): DbResultTable {
         return new DbResultTable(
             identifier: $identifier,
@@ -57,19 +58,19 @@ class TableHelper
             tableFilter: $tableFilter,
             tablePaginationRenderer: $tablePaginationRenderer,
             sortableTableHeadRenderer: $sortableTableHeadRenderer,
-            itemsPerPage: $itemsPerPage
+            itemsPerPage: $itemsPerPage,
         );
     }
 
     public static function createActionsColumn(
         string $identifier,
         string $label = '',
-        string $cellCssClass = 'action'
+        string $cellCssClass = 'action',
     ): ActionsColumn {
         return new ActionsColumn(
             identifier: $identifier,
             label: $label,
-            cellCssClass: $cellCssClass
+            cellCssClass: $cellCssClass,
         );
     }
 
@@ -77,13 +78,13 @@ class TableHelper
         string $identifier,
         string $label,
         bool $isSortable = false,
-        bool $sortAscendingByDefault = true
+        bool $sortAscendingByDefault = true,
     ): DateColumn {
         return new DateColumn(
             identifier: $identifier,
             label: $label,
             isSortable: $isSortable,
-            sortAscendingByDefault: $sortAscendingByDefault
+            sortAscendingByDefault: $sortAscendingByDefault,
         );
     }
 
@@ -91,13 +92,13 @@ class TableHelper
         string $identifier,
         string $label,
         bool $isSortable = false,
-        bool $sortAscendingByDefault = true
+        bool $sortAscendingByDefault = true,
     ): DefaultColumn {
         return new DefaultColumn(
             identifier: $identifier,
             label: $label,
             isSortable: $isSortable,
-            sortAscendingByDefault: $sortAscendingByDefault
+            sortAscendingByDefault: $sortAscendingByDefault,
         );
     }
 
@@ -106,14 +107,14 @@ class TableHelper
         string $label,
         array $options,
         bool $isOrderAble,
-        bool $orderAscending = true
+        bool $orderAscending = true,
     ): OptionsColumn {
         return new OptionsColumn(
             identifier: $identifier,
             label: $label,
             options: $options,
             isOrderAble: $isOrderAble,
-            orderAscending: $orderAscending
+            orderAscending: $orderAscending,
         );
     }
 
@@ -122,14 +123,14 @@ class TableHelper
         string $label,
         callable $callbackFunction,
         bool $isSortable = false,
-        bool $sortAscendingByDefault = true
+        bool $sortAscendingByDefault = true,
     ): CallbackColumn {
         return new CallbackColumn(
             identifier: $identifier,
             label: $label,
             callbackFunction: $callbackFunction,
             isSortable: $isSortable,
-            sortAscendingByDefault: $sortAscendingByDefault
+            sortAscendingByDefault: $sortAscendingByDefault,
         );
     }
 }

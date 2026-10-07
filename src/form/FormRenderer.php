@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -20,7 +21,7 @@ abstract class FormRenderer
 
     public static function addErrorsToParentHtmlTag(
         FormComponent $formComponentWithErrors,
-        HtmlTag $parentHtmlTag
+        HtmlTag $parentHtmlTag,
     ): void {
         if (!$formComponentWithErrors->hasErrors(withChildElements: false)) {
             return;
@@ -32,24 +33,24 @@ abstract class FormRenderer
                 new HtmlTagAttribute(
                     name: 'class',
                     value: 'form-input-error',
-                    valueIsEncodedForRendering: true
+                    valueIsEncodedForRendering: true,
                 ),
                 new HtmlTagAttribute(
                     name: 'id',
                     value: $formComponentWithErrors->name . '-error',
-                    valueIsEncodedForRendering: true
+                    valueIsEncodedForRendering: true,
                 ),
                 new HtmlTagAttribute(
                     name: 'role',
                     value: 'alert',
-                    valueIsEncodedForRendering: true
+                    valueIsEncodedForRendering: true,
                 ),
                 new HtmlTagAttribute(
                     name: 'aria-live',
                     value: 'assertive',
-                    valueIsEncodedForRendering: true
+                    valueIsEncodedForRendering: true,
                 ),
-            ]
+            ],
         );
         $errorsHTML = [];
         foreach ($formComponentWithErrors->errorCollection->listErrors() as $htmlText) {
@@ -70,7 +71,7 @@ abstract class FormRenderer
             new HtmlTagAttribute(
                 name: 'id',
                 value: $formFieldWithFieldInfo->name . '-info',
-                valueIsEncodedForRendering: true
+                valueIsEncodedForRendering: true,
             ),
         ]);
         $divTag->addText(htmlText: $fieldInfo);
@@ -85,12 +86,12 @@ abstract class FormRenderer
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'aria-invalid',
                     value: 'true',
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
             $ariaDescribedBy[] = $formField->name . '-error';
         }
-        if (!is_null(value: $formField->fieldInfo)) {
+        if ($formField->fieldInfo !== null) {
             $ariaDescribedBy[] = $formField->name . '-info';
         }
         if (count(value: $ariaDescribedBy) > 0) {
@@ -98,8 +99,8 @@ abstract class FormRenderer
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'aria-describedby',
                     value: implode(separator: ' ', array: $ariaDescribedBy),
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
         }
     }
@@ -117,7 +118,7 @@ abstract class FormRenderer
         $this->prepare();
 
         return $this->htmlTag ?? throw new LogicException(
-            message: static::class . '::prepare() must set the base Tag-Element with setHtmlTag().'
+            message: static::class . '::prepare() must set the base Tag-Element with setHtmlTag().',
         );
     }
 
@@ -138,7 +139,7 @@ abstract class FormRenderer
      */
     protected function setHtmlTag(HtmlTag $htmlTag): void
     {
-        if (!is_null(value: $this->htmlTag)) {
+        if ($this->htmlTag !== null) {
             throw new LogicException(message: 'You cannot overwrite an already defined Tag-Element.');
         }
         $this->htmlTag = $htmlTag;

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -25,7 +26,7 @@ final class BooleanFieldValueTest extends TestCase
             name: 'boolean',
             label: HtmlText::encoded(textContent: 'Boolean'),
             isCheckedByDefault: $isCheckedByDefault,
-            requiredError: $requiredError
+            requiredError: $requiredError,
         );
     }
 
@@ -159,7 +160,7 @@ final class BooleanFieldValueTest extends TestCase
                 name: 'boolean',
                 label: HtmlText::encoded(textContent: 'Boolean'),
                 isCheckedByDefault: false,
-                layout: $layout
+                layout: $layout,
             );
 
             $this->assertFalse($field->isChecked());

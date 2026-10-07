@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -94,7 +95,7 @@ class DbSelectStmt
         if (count(value: $rows) > 1) {
             throw DbRowCountException::moreThanOneRow(
                 rowCount: count(value: $rows),
-                sql: $this->pdoStatement->queryString
+                sql: $this->pdoStatement->queryString,
             );
         }
 

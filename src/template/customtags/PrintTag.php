@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -8,13 +9,13 @@ declare(strict_types=1);
 
 namespace actra\yuf\template\customtags;
 
-use actra\yuf\template\template\TagInline;
-use DateTime;
 use actra\yuf\template\htmlparser\ElementNode;
 use actra\yuf\template\htmlparser\TextNode;
+use actra\yuf\template\template\TagInline;
 use actra\yuf\template\template\TagNode;
 use actra\yuf\template\template\TemplateEngine;
 use actra\yuf\template\template\TemplateTag;
+use DateTime;
 
 class PrintTag extends TemplateTag implements TagNode, TagInline
 {

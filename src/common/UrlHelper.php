@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -23,7 +24,7 @@ class UrlHelper
                 $directory = ($directory === '/' || $directory === '\\') ? '/' : $directory . '/';
             }
             $absoluteUri = HttpRequest::getProtocol() . '://' . HttpRequest::getHost(
-                ) . $directory . $relativeOrAbsoluteUri;
+            ) . $directory . $relativeOrAbsoluteUri;
         } else {
             $absoluteUri = $relativeOrAbsoluteUri;
         }

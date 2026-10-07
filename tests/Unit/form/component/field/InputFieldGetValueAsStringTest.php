@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -47,7 +48,7 @@ final class InputFieldGetValueAsStringTest extends TestCase
                 name: 'field',
                 label: $label,
                 requiredError: $error,
-                purpose: PasswordPurposeEnum::CURRENT
+                purpose: PasswordPurposeEnum::CURRENT,
             ),
             'field',
         ];
@@ -96,7 +97,7 @@ final class InputFieldGetValueAsStringTest extends TestCase
             name: 'password',
             label: HtmlText::encoded(textContent: 'Password'),
             requiredError: HtmlText::encoded(textContent: 'Required'),
-            purpose: PasswordPurposeEnum::CURRENT
+            purpose: PasswordPurposeEnum::CURRENT,
         );
 
         $this->assertSame('', $field->getValueAsString());
@@ -108,7 +109,7 @@ final class InputFieldGetValueAsStringTest extends TestCase
             name: 'phone',
             label: HtmlText::encoded(textContent: 'Phone'),
             value: null,
-            invalidErrorMessage: HtmlText::encoded(textContent: 'Invalid')
+            invalidErrorMessage: HtmlText::encoded(textContent: 'Invalid'),
         );
 
         $field->validate(input: FormInput::fromArray(data: ['phone' => ' 044 668 18 00 ']));

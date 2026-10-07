@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -40,22 +41,22 @@ abstract class AbstractSessionHandler extends SessionHandler
         AbstractSessionHandler::PREFERRED_LANGUAGE_INDICATOR,
         CspNonce::SESSION_INDICATOR,
     ];
-    private static null|false|AbstractSessionHandler $abstractSessionHandler = null;
-    private(set) ?string $name = null {
+    private static false|AbstractSessionHandler|null $abstractSessionHandler = null;
+    public private(set) ?string $name = null {
         get {
-            if (is_null(value: $this->name)) {
+            if ($this->name === null) {
                 $this->name = AbstractSessionHandler::readSessionName();
             }
 
             return $this->name;
         }
     }
-    private(set) ?string $fingerprint = null {
+    public private(set) ?string $fingerprint = null {
         get {
-            if (is_null(value: $this->fingerprint)) {
+            if ($this->fingerprint === null) {
                 $this->fingerprint = hash(
                     algo: 'sha256',
-                    data: $this->getID() . $this->clientUserAgent
+                    data: $this->getID() . $this->clientUserAgent,
                 );
             }
 
@@ -69,7 +70,7 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     protected function __construct(
         private readonly SessionSettingsModel $sessionSettingsModel,
-        private readonly Clock $clock = new SystemClock()
+        private readonly Clock $clock = new SystemClock(),
     ) {
         $this->currentTime = $this->clock->now()->getTimestamp();
         $this->clientRemoteAddress = HttpRequest::getRemoteAddress();
@@ -84,14 +85,14 @@ abstract class AbstractSessionHandler extends SessionHandler
         $this->setDefaultConfigurationOptions(
             gcDivisor: $sessionSettingsModel->gcDivisor,
             maxLifeTime: $sessionSettingsModel->maxLifeTime,
-            gcProbability: $sessionSettingsModel->gcProbability
+            gcProbability: $sessionSettingsModel->gcProbability,
         );
         $this->setDefaultSecuritySettings(isSameSiteStrict: $sessionSettingsModel->isSameSiteStrict);
         $this->setSessionName(individualName: $sessionSettingsModel->individualName);
         $this->executePreStartActions();
         session_set_save_handler( // Named parameters are not supported for alternative prototypes: https://github.com/php/php-src/issues/17263
             $this,
-            true
+            true,
         );
         try {
             session_start(options: [
@@ -106,7 +107,7 @@ abstract class AbstractSessionHandler extends SessionHandler
         if (!$this->isSessionCreated()) {
             $this->initDefaultSessionData(destroyCurrentSessionData: false);
         } elseif ($this->getTrustedRemoteAddress() !== $this->clientRemoteAddress || $this->getTrustedUserAgent(
-            ) !== $this->clientUserAgent) {
+        ) !== $this->clientUserAgent) {
             $this->initDefaultSessionData(destroyCurrentSessionData: true);
         } elseif ($this->isSessionExpired()) {
             // Real session lifetime and regeneration after maxLifeTime
@@ -122,15 +123,15 @@ abstract class AbstractSessionHandler extends SessionHandler
     private function setDefaultConfigurationOptions(
         ?int $gcDivisor,
         ?int $maxLifeTime,
-        ?int $gcProbability
+        ?int $gcProbability,
     ): void {
-        if (!is_null(value: $gcDivisor)) {
+        if ($gcDivisor !== null) {
             ini_set(option: 'session.gc_divisor', value: $gcDivisor);
         }
-        if (!is_null(value: $maxLifeTime)) {
+        if ($maxLifeTime !== null) {
             ini_set(option: 'session.gc_maxlifetime', value: $maxLifeTime);
         }
-        if (!is_null(value: $gcProbability)) {
+        if ($gcProbability !== null) {
             ini_set(option: 'session.gc_probability', value: $gcProbability);
         }
     }
@@ -171,9 +172,9 @@ abstract class AbstractSessionHandler extends SessionHandler
         // Inspired from http://stackoverflow.com/questions/32898857/session-start-issues-regarding-illegal-characters-empty-session-id-and-failed
         $sessionName = session_name();
         if (isset($_COOKIE[$sessionName]) && (!is_string(value: $_COOKIE[$sessionName]) || $this->checkSessionIdAgainstSidBitsPerChar(
-                sessionId: $_COOKIE[$sessionName],
-                sidBitsPerChar: (int)ini_get(option: 'session.sid_bits_per_character')
-            ) === false)) {
+            sessionId: $_COOKIE[$sessionName],
+            sidBitsPerChar: (int) ini_get(option: 'session.sid_bits_per_character'),
+        ) === false)) {
             unset($_COOKIE[$sessionName]);
         }
     }
@@ -189,15 +190,15 @@ abstract class AbstractSessionHandler extends SessionHandler
      */
     protected function checkSessionIdAgainstSidBitsPerChar(string $sessionId, int $sidBitsPerChar): bool
     {
-        if ($sidBitsPerChar == 4 && preg_match(pattern: '/^[a-f\d]+$/', subject: $sessionId) === 0) {
+        if ($sidBitsPerChar === 4 && preg_match(pattern: '/^[a-f\d]+$/', subject: $sessionId) === 0) {
             return false;
         }
 
-        if ($sidBitsPerChar == 5 && preg_match(pattern: '/^[a-v\d]+$/', subject: $sessionId) === 0) {
+        if ($sidBitsPerChar === 5 && preg_match(pattern: '/^[a-v\d]+$/', subject: $sessionId) === 0) {
             return false;
         }
 
-        if ($sidBitsPerChar == 6 && preg_match(pattern: '/^[A-Za-z\d\-,]+$/i', subject: $sessionId) === 0) {
+        if ($sidBitsPerChar === 6 && preg_match(pattern: '/^[A-Za-z\d\-,]+$/i', subject: $sessionId) === 0) {
             return false;
         }
 
@@ -224,7 +225,7 @@ abstract class AbstractSessionHandler extends SessionHandler
                         $params['path'],
                         $params['domain'],
                         $params['secure'],
-                        $params['httponly']
+                        $params['httponly'],
                     );
                 }
                 session_destroy();
@@ -318,7 +319,7 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     public static function register(false|AbstractSessionHandler $individualSessionHandler): void
     {
-        if (!is_null(value: AbstractSessionHandler::$abstractSessionHandler)) {
+        if (AbstractSessionHandler::$abstractSessionHandler !== null) {
             throw new LogicException(message: 'SessionHandler handler is already registered.');
         }
         AbstractSessionHandler::$abstractSessionHandler = $individualSessionHandler;
@@ -328,7 +329,7 @@ abstract class AbstractSessionHandler extends SessionHandler
     {
         return (array_key_exists(
             key: '_SESSION',
-            array: $GLOBALS
+            array: $GLOBALS,
         ));
     }
 
@@ -337,7 +338,7 @@ abstract class AbstractSessionHandler extends SessionHandler
         $abstractSessionHandler = AbstractSessionHandler::$abstractSessionHandler;
         if (!$abstractSessionHandler instanceof AbstractSessionHandler) {
             throw new LogicException(
-                message: 'No session handler is registered. Register one with AbstractSessionHandler::register().'
+                message: 'No session handler is registered. Register one with AbstractSessionHandler::register().',
             );
         }
 
@@ -356,13 +357,13 @@ abstract class AbstractSessionHandler extends SessionHandler
         }
         $_SESSION = array_intersect_key(
             $_SESSION,
-            array_flip(array: AbstractSessionHandler::SESSION_KEYS_WITHOUT_USER_DATA)
+            array_flip(array: AbstractSessionHandler::SESSION_KEYS_WITHOUT_USER_DATA),
         );
     }
 
     public function getID(): string
     {
-        if (is_null(value: $this->ID)) {
+        if ($this->ID === null) {
             $this->ID = AbstractSessionHandler::readSessionID();
         }
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -88,8 +89,8 @@ final class TimeOfDayTest extends TestCase
     {
         $this->assertTrue(
             TimeOfDay::fromString(time: $time)?->equals(
-                other: new TimeOfDay(hour: $hour, minute: $minute, second: $second)
-            ) === true
+                other: new TimeOfDay(hour: $hour, minute: $minute, second: $second),
+            ) === true,
         );
     }
 
@@ -156,7 +157,7 @@ final class TimeOfDayTest extends TestCase
     public function testEqualsTreatsMissingSecondsAsZero(): void
     {
         $this->assertTrue(
-            new TimeOfDay(hour: 8, minute: 30)->equals(other: new TimeOfDay(hour: 8, minute: 30, second: 0))
+            new TimeOfDay(hour: 8, minute: 30)->equals(other: new TimeOfDay(hour: 8, minute: 30, second: 0)),
         );
     }
 }

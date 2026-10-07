@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -25,19 +26,19 @@ class LogFile
         $groupDirectoryPath = LogFile::createDirectoryIfMissing(path: Core::get()->logDirectory . $group);
         $dateArr = explode(separator: '-', string: $this->clock->now()->format(format: 'Y-m-d'));
         $yearDirectoryPath = LogFile::createDirectoryIfMissing(
-            path: $groupDirectoryPath . DIRECTORY_SEPARATOR . $dateArr[0]
+            path: $groupDirectoryPath . DIRECTORY_SEPARATOR . $dateArr[0],
         );
         $monthDirectoryPath = LogFile::createDirectoryIfMissing(
-            path: $yearDirectoryPath . DIRECTORY_SEPARATOR . $dateArr[1]
+            path: $yearDirectoryPath . DIRECTORY_SEPARATOR . $dateArr[1],
         );
         $dayDirectoryPath = LogFile::createDirectoryIfMissing(
-            path: $monthDirectoryPath . DIRECTORY_SEPARATOR . $dateArr[2]
+            path: $monthDirectoryPath . DIRECTORY_SEPARATOR . $dateArr[2],
         );
         $this->stream = fopen(
             filename: $dayDirectoryPath . DIRECTORY_SEPARATOR . $logFileName . '-' . uniqid(
-                more_entropy: true
+                more_entropy: true,
             ) . '.log',
-            mode: 'a'
+            mode: 'a',
         );
         LogFile::$openLogFiles[$group . '-' . $logFileName] = $this;
     }
@@ -50,7 +51,7 @@ class LogFile
             } catch (Throwable $throwable) {
                 if (str_contains(
                     haystack: $throwable->getMessage(),
-                    needle: 'mkdir(): Die Datei existiert bereits'
+                    needle: 'mkdir(): Die Datei existiert bereits',
                 )) {
                     return $path;
                 }
@@ -63,29 +64,29 @@ class LogFile
 
     public static function info(
         string $logFileName,
-        string $message
+        string $message,
     ): void {
         LogFile::log(
             group: 'info',
             logFileName: $logFileName,
-            message: $message
+            message: $message,
         );
     }
 
     private static function log(
         string $group,
         string $logFileName,
-        string $message
+        string $message,
     ): void {
         if (array_key_exists(
             key: $group . '-' . $logFileName,
-            array: LogFile::$openLogFiles
+            array: LogFile::$openLogFiles,
         )) {
             $logFile = LogFile::$openLogFiles[$group . '-' . $logFileName];
         } else {
             $logFile = new LogFile(
                 group: $group,
-                logFileName: $logFileName
+                logFileName: $logFileName,
             );
         }
         $logFile->write(line: $message);
@@ -101,29 +102,29 @@ class LogFile
         $timestamp = $now->format(format: 'Y-m-d H:i:s') . ',' . $now->format(format: 'u') . '00';
         fwrite(
             stream: $this->stream,
-            data: $timestamp . ' - ' . $line . PHP_EOL
+            data: $timestamp . ' - ' . $line . PHP_EOL,
         );
     }
 
     public static function debug(
         string $logFileName,
-        string $message
+        string $message,
     ): void {
         LogFile::log(
             group: 'debug',
             logFileName: $logFileName,
-            message: $message
+            message: $message,
         );
     }
 
     public static function error(
         string $logFileName,
-        string $message
+        string $message,
     ): void {
         LogFile::log(
             group: 'error',
             logFileName: $logFileName,
-            message: $message
+            message: $message,
         );
     }
 

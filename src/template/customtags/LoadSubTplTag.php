@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -36,7 +37,6 @@ class LoadSubTplTag extends TemplateTag implements TagNode
      * A special method that belongs to the LoadSubTplTag class but needs none static properties from this class and is called from the cached template files.
      *
      * @param string $file The full filepath to include (OR magic {this})
-     * @param TemplateEngine $tplEngine
      */
     public static function requireFile(string $file, TemplateEngine $tplEngine): void
     {
@@ -52,10 +52,10 @@ class LoadSubTplTag extends TemplateTag implements TagNode
     {
         $dataKey = $elementNode->getAttribute(name: 'tplfile')->value;
         $tplFile = (preg_match(
-                pattern: '/^{(.+)}$/',
-                subject: $dataKey,
-                matches: $res
-            ) === 1) ? '$this->getData(\'' . $res[1] . '\')' : '\'' . $dataKey . '\'';
+            pattern: '/^{(.+)}$/',
+            subject: $dataKey,
+            matches: $res,
+        ) === 1) ? '$this->getData(\'' . $res[1] . '\')' : '\'' . $dataKey . '\'';
 
         $newNode = new TextNode();
         $newNode->content = '<?php ' . __NAMESPACE__ . '\\LoadSubTplTag::requireFile(' . $tplFile . ', $this); ?>';
@@ -63,7 +63,7 @@ class LoadSubTplTag extends TemplateTag implements TagNode
         $elementNode->parentNode->replaceNode(nodeToReplace: $elementNode, replacementNode: $newNode);
     }
 
-    public function replaceInline()
+    public function replaceInline(): void
     {
         throw new Exception(message: 'Don\'t use this tag (LoadSubTpl) inline!');
     }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -50,101 +51,101 @@ class MailMimeHeader
         string $charSet,
         string $encoding,
         string $boundary1,
-        Clock $clock = new SystemClock()
+        Clock $clock = new SystemClock(),
     ) {
         $maxLineLength = $abstractMailer->getMaxLineLength();
         $this->addHeaderItemIfNotEmpty(
             item: MailerHeader::createRaw(
-            name: 'Date',
-            value: $clock->now()->format(format: 'r')
-        )
+                name: 'Date',
+                value: $clock->now()->format(format: 'r'),
+            ),
         );
         $this->addHeaderItemIfNotEmpty(
             item: MailerHeader::createRaw(
-            name: MailerAddressKindEnum::KIND_FROM->value,
-            value: $fromAddress->getFormattedAddressForMailer(
-                maxLineLength: $maxLineLength,
-                defaultCharSet: $defaultCharSet
-            )
-        )
+                name: MailerAddressKindEnum::KIND_FROM->value,
+                value: $fromAddress->getFormattedAddressForMailer(
+                    maxLineLength: $maxLineLength,
+                    defaultCharSet: $defaultCharSet,
+                ),
+            ),
         );
         if ($abstractMailer->headerHasTo()) {
             $this->addHeaderItemIfNotEmpty(
                 item: $mailerAddressCollection->getHeaderString(
-                mailerAddressKindEnum: MailerAddressKindEnum::KIND_TO,
-                maxLineLength: $maxLineLength,
-                defaultCharSet: $defaultCharSet
-            )
+                    mailerAddressKindEnum: MailerAddressKindEnum::KIND_TO,
+                    maxLineLength: $maxLineLength,
+                    defaultCharSet: $defaultCharSet,
+                ),
             );
         }
         $this->addHeaderItemIfNotEmpty(
             item: $mailerAddressCollection->getHeaderString(
-            mailerAddressKindEnum: MailerAddressKindEnum::KIND_CC,
-            maxLineLength: $maxLineLength,
-            defaultCharSet: $defaultCharSet
-        )
+                mailerAddressKindEnum: MailerAddressKindEnum::KIND_CC,
+                maxLineLength: $maxLineLength,
+                defaultCharSet: $defaultCharSet,
+            ),
         );
         $this->addHeaderItemIfNotEmpty(
             item: $mailerAddressCollection->getHeaderString(
-            mailerAddressKindEnum: MailerAddressKindEnum::KIND_BCC,
-            maxLineLength: $maxLineLength,
-            defaultCharSet: $defaultCharSet
-        )
+                mailerAddressKindEnum: MailerAddressKindEnum::KIND_BCC,
+                maxLineLength: $maxLineLength,
+                defaultCharSet: $defaultCharSet,
+            ),
         );
         if ($mailerAddressCollection->has(mailerAddressKindEnum: MailerAddressKindEnum::KIND_REPLY_TO)) {
             $this->addHeaderItemIfNotEmpty(
                 item: $mailerAddressCollection->getHeaderString(
-                mailerAddressKindEnum: MailerAddressKindEnum::KIND_REPLY_TO,
-                maxLineLength: $maxLineLength,
-                defaultCharSet: $defaultCharSet
-            )
+                    mailerAddressKindEnum: MailerAddressKindEnum::KIND_REPLY_TO,
+                    maxLineLength: $maxLineLength,
+                    defaultCharSet: $defaultCharSet,
+                ),
             );
         } else {
             $this->addHeaderItemIfNotEmpty(
                 item: MailerHeader::createRaw(
-                name: MailerAddressKindEnum::KIND_REPLY_TO->value,
-                value: $fromAddress->getFormattedAddressForMailer(
-                    maxLineLength: $maxLineLength,
-                    defaultCharSet: $defaultCharSet
-                )
-            )
+                    name: MailerAddressKindEnum::KIND_REPLY_TO->value,
+                    value: $fromAddress->getFormattedAddressForMailer(
+                        maxLineLength: $maxLineLength,
+                        defaultCharSet: $defaultCharSet,
+                    ),
+                ),
             );
         }
         if ($abstractMailer->headerHasSubject()) {
             $this->addHeaderItemIfNotEmpty(
                 item: MailerHeader::createRaw(
-                name: 'Subject',
-                value: $subjectForHeader
-            )
+                    name: 'Subject',
+                    value: $subjectForHeader,
+                ),
             );
         }
         $this->addHeaderItemIfNotEmpty(
             item: MailerHeader::createRaw(
-            name: 'Message-ID',
-            value: '<' . $uniqueId . '@' . $abstractMailer->getServerName() . '>'
-        )
+                name: 'Message-ID',
+                value: '<' . $uniqueId . '@' . $abstractMailer->getServerName() . '>',
+            ),
         );
         $this->addHeaderItemIfNotEmpty(
             item: MailerHeader::createRaw(
-            name: 'X-Mailer',
-            value: 'PHP/' . phpversion()
-        )
+                name: 'X-Mailer',
+                value: 'PHP/' . phpversion(),
+            ),
         );
         $this->addHeaderItemIfNotEmpty(
             item: MailerHeader::createRaw(
-            name: 'X-Priority',
-            value: (string)$priority
-        )
+                name: 'X-Priority',
+                value: (string) $priority,
+            ),
         );
-        if (!is_null(value: $confirmReadingToAddress)) {
+        if ($confirmReadingToAddress !== null) {
             $this->addHeaderItemIfNotEmpty(
                 item: MailerHeader::createRaw(
-                name: 'Disposition-Notification-To',
-                value: $confirmReadingToAddress->getFormattedAddressForMailer(
-                    maxLineLength: $maxLineLength,
-                    defaultCharSet: $defaultCharSet
-                )
-            )
+                    name: 'Disposition-Notification-To',
+                    value: $confirmReadingToAddress->getFormattedAddressForMailer(
+                        maxLineLength: $maxLineLength,
+                        defaultCharSet: $defaultCharSet,
+                    ),
+                ),
             );
         }
         foreach ($customHeaders->list() as $mailerHeader) {
@@ -152,18 +153,18 @@ class MailMimeHeader
         }
         $this->addHeaderItemIfNotEmpty(
             item: MailerHeader::createRaw(
-            name: 'MIME-Version',
-            value: '1.0'
-        )
+                name: 'MIME-Version',
+                value: '1.0',
+            ),
         );
         $this->addHeaderItemIfNotEmpty(
             item: $this->getMailMIME(
-            messageType: $messageType,
-            contentType: $contentType,
-            charSet: $charSet,
-            encoding: $encoding,
-            boundary1: $boundary1
-        )
+                messageType: $messageType,
+                contentType: $contentType,
+                charSet: $charSet,
+                encoding: $encoding,
+                boundary1: $boundary1,
+            ),
         );
     }
 
@@ -180,13 +181,13 @@ class MailMimeHeader
         string $contentType,
         string $charSet,
         string $encoding,
-        string $boundary1
+        string $boundary1,
     ): string {
         switch ($messageType) {
             case 'inline':
                 $result = MailerHeader::createRaw(
                     name: 'Content-Type',
-                    value: MailerConstants::CONTENT_TYPE_MULTIPART_RELATED . ';'
+                    value: MailerConstants::CONTENT_TYPE_MULTIPART_RELATED . ';',
                 );
                 $result .= MailerFunctions::textLine(value: ' boundary="' . $boundary1 . '"');
                 $isMultiPart = true;
@@ -197,7 +198,7 @@ class MailMimeHeader
             case 'alt_inline_attach':
                 $result = MailerHeader::createRaw(
                     name: 'Content-Type',
-                    value: MailerConstants::CONTENT_TYPE_MULTIPART_MIXED . ';'
+                    value: MailerConstants::CONTENT_TYPE_MULTIPART_MIXED . ';',
                 );
                 $result .= MailerFunctions::textLine(value: ' boundary="' . $boundary1 . '"');
                 $isMultiPart = true;
@@ -206,7 +207,7 @@ class MailMimeHeader
             case 'alt_inline':
                 $result = MailerHeader::createRaw(
                     name: 'Content-Type',
-                    value: MailerConstants::CONTENT_TYPE_MULTIPART_ALTERNATIVE . ';'
+                    value: MailerConstants::CONTENT_TYPE_MULTIPART_ALTERNATIVE . ';',
                 );
                 $result .= MailerFunctions::textLine(value: ' boundary="' . $boundary1 . '"');
                 $isMultiPart = true;
@@ -218,7 +219,7 @@ class MailMimeHeader
                 break;
         }
         // RFC1341 part 5 says 7bit is assumed if not specified
-        if (MailerConstants::ENCODING_7BIT === $encoding) {
+        if ($encoding === MailerConstants::ENCODING_7BIT) {
             return $result;
         }
 
@@ -229,10 +230,10 @@ class MailMimeHeader
             return $result;
         }
 
-        if (MailerConstants::ENCODING_8BIT === $encoding) {
+        if ($encoding === MailerConstants::ENCODING_8BIT) {
             $result .= MailerHeader::createRaw(
                 name: 'Content-Transfer-Encoding',
-                value: MailerConstants::ENCODING_8BIT
+                value: MailerConstants::ENCODING_8BIT,
             );
 
             return $result;
@@ -246,9 +247,9 @@ class MailMimeHeader
     {
         return MailerFunctions::stripTrailingWSP(
             text: implode(
-            separator: StringUtils::IMPLODE_DEFAULT_SEPARATOR,
-            array: $this->headerItems
-        )
+                separator: StringUtils::IMPLODE_DEFAULT_SEPARATOR,
+                array: $this->headerItems,
+            ),
         );
     }
 }

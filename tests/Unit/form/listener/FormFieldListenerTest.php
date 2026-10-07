@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -33,7 +34,7 @@ final class FormFieldListenerTest extends TestCase
         $field = new TextField(
             name: 'field',
             label: HtmlText::encoded(textContent: 'Field'),
-            requiredError: $required ? HtmlText::encoded(textContent: 'Required') : null
+            requiredError: $required ? HtmlText::encoded(textContent: 'Required') : null,
         );
         $form->addField(formField: $field);
         $field->addListener(formFieldListener: $listener);

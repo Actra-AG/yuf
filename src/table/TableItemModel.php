@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -50,7 +51,7 @@ readonly class TableItemModel
         if (!is_scalar(value: $value)) {
             throw new UnexpectedValueException(
                 message: 'Column "' . $name . '" holds a ' . get_debug_type(value: $value)
-                . ', which cannot be rendered. Use a CallbackColumn to render it.'
+                . ', which cannot be rendered. Use a CallbackColumn to render it.',
             );
         }
 
@@ -60,9 +61,9 @@ readonly class TableItemModel
                     value: str_replace(
                         search: '<br>',
                         replace: PHP_EOL,
-                        subject: (string)$value
-                    )
-                )
+                        subject: (string) $value,
+                    ),
+                ),
             );
         }
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -24,7 +25,7 @@ final class IbanValidator
         'al', 'ad', 'at', 'az', 'bh', 'be', 'ba', 'br', 'bg', 'cr', 'hr', 'cy', 'cz', 'dk', 'do', 'ee', 'fo', 'fi',
         'fr', 'ge', 'de', 'gi', 'gr', 'gl', 'gt', 'hu', 'is', 'ie', 'il', 'it', 'jo', 'kz', 'kw', 'lv', 'lb', 'li',
         'lt', 'lu', 'mk', 'mt', 'mr', 'mu', 'mc', 'md', 'me', 'nl', 'no', 'pk', 'ps', 'pl', 'pt', 'qa', 'ro', 'sm',
-        'sa', 'rs', 'sk', 'si', 'es', 'se', 'ch', 'tn', 'tr', 'ae', 'gb', 'vg'
+        'sa', 'rs', 'sk', 'si', 'es', 'se', 'ch', 'tn', 'tr', 'ae', 'gb', 'vg',
     ];
 
     public static function validate(string $input): bool
@@ -44,9 +45,9 @@ final class IbanValidator
         $digits = '';
         foreach (str_split(string: $movedIban) as $character) {
             // Letters count as numbers: a = 10, b = 11, ... z = 35
-            $digits .= ctype_digit(text: $character) ? $character : (string)(ord(character: $character) - 87);
+            $digits .= ctype_digit(text: $character) ? $character : (string) (ord(character: $character) - 87);
         }
 
-        return (int)bcmod(num1: $digits, num2: '97') === 1;
+        return (int) bcmod(num1: $digits, num2: '97') === 1;
     }
 }

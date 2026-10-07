@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -27,10 +28,8 @@ class ContentType
         public readonly MimeType $mimeType,
         public readonly bool     $forceDownloadByDefault,
         public readonly ?string  $charset,
-        public readonly ?string  $languageCode
-    )
-    {
-    }
+        public readonly ?string  $languageCode,
+    ) {}
 
     public static function createFromFileExtension(string $extension): ContentType
     {
@@ -43,7 +42,7 @@ class ContentType
             ContentType::TXT => ContentType::createTxt(),
             ContentType::CSV => ContentType::createCsv(),
             ContentType::JS => ContentType::createJs(),
-            default => ContentType::createDefault(type: $extension)
+            default => ContentType::createDefault(type: $extension),
         };
     }
 
@@ -54,7 +53,7 @@ class ContentType
             mimeType: MimeType::createHtml(),
             forceDownloadByDefault: false,
             charset: 'utf-8',
-            languageCode: 'de'
+            languageCode: 'de',
         );
     }
 
@@ -65,7 +64,7 @@ class ContentType
             mimeType: MimeType::createJson(),
             forceDownloadByDefault: false,
             charset: 'utf-8',
-            languageCode: null
+            languageCode: null,
         );
     }
 
@@ -76,7 +75,7 @@ class ContentType
             mimeType: MimeType::createXml(),
             forceDownloadByDefault: false,
             charset: 'utf-8',
-            languageCode: null
+            languageCode: null,
         );
     }
 
@@ -87,7 +86,7 @@ class ContentType
             mimeType: MimeType::createTxt(),
             forceDownloadByDefault: false,
             charset: 'utf-8',
-            languageCode: null
+            languageCode: null,
         );
     }
 
@@ -98,7 +97,7 @@ class ContentType
             mimeType: MimeType::createCsv(),
             forceDownloadByDefault: true,
             charset: 'utf-8',
-            languageCode: null
+            languageCode: null,
         );
     }
 
@@ -109,7 +108,7 @@ class ContentType
             mimeType: MimeType::createJs(),
             forceDownloadByDefault: false,
             charset: 'utf-8',
-            languageCode: null
+            languageCode: null,
         );
     }
 
@@ -126,10 +125,11 @@ class ContentType
                     ContentType::GIF => false,
                     ContentType::PNG => false,
                     ContentType::MOV => false,
-                ]
+                ],
+                strict: true,
             ),
             charset: null,
-            languageCode: null
+            languageCode: null,
         );
     }
 
@@ -156,7 +156,7 @@ class ContentType
     public function getHttpHeaderString(): string
     {
         $contentType = $this->mimeType->value;
-        if (!is_null(value: $this->charset)) {
+        if ($this->charset !== null) {
             $contentType .= '; charset=' . $this->charset;
         }
 

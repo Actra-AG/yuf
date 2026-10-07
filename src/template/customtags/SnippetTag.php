@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -42,7 +43,7 @@ class SnippetTag extends TemplateTag implements TagNode, TagInline
         }
         if (!str_ends_with(
             haystack: strtolower(string: $file),
-            needle: '.html'
+            needle: '.html',
         )) {
             echo file_get_contents(filename: $file);
             return;
@@ -50,7 +51,7 @@ class SnippetTag extends TemplateTag implements TagNode, TagInline
 
         echo $tplEngine->getResultAsHtml(
             tplFile: $file,
-            dataPool: $tplEngine->getAllData()
+            dataPool: $tplEngine->getAllData(),
         );
     }
 
@@ -60,7 +61,7 @@ class SnippetTag extends TemplateTag implements TagNode, TagInline
         $textNode->content = $this->getReplaceValue(snippetName: $elementNode->getAttribute(name: 'name')->value);
         $elementNode->parentNode->replaceNode(
             nodeToReplace: $elementNode,
-            replacementNode: $textNode
+            replacementNode: $textNode,
         );
     }
 
@@ -74,7 +75,7 @@ class SnippetTag extends TemplateTag implements TagNode, TagInline
     public function replaceInline(TemplateEngine $tplEngine, array $tagArr): string
     {
         return $this->getReplaceValue(
-            snippetName: $tagArr['name']
+            snippetName: $tagArr['name'],
         );
     }
 }

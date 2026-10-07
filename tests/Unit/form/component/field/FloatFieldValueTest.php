@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -28,7 +29,7 @@ final class FloatFieldValueTest extends TestCase
             name: 'amount',
             label: HtmlText::encoded(textContent: 'Amount'),
             initialValue: $initialValue,
-            requiredError: $requiredError
+            requiredError: $requiredError,
         );
     }
 
@@ -108,7 +109,7 @@ final class FloatFieldValueTest extends TestCase
         $this->assertSame('The given value is invalid.', $field->errorCollection->getFirstError()->render());
         $this->assertStringContainsString(
             'value="' . htmlspecialchars(string: $input, flags: ENT_QUOTES) . '"',
-            $field->render()
+            $field->render(),
         );
     }
 

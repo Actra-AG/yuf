@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -11,7 +12,7 @@ namespace actra\yuf\core;
 class LanguageCollection
 {
     /** @var Language[] */
-    private(set) array $languages = [];
+    public private(set) array $languages = [];
 
     public function __construct(array $languages = [])
     {
@@ -27,7 +28,7 @@ class LanguageCollection
 
     public function hasLanguage(string $languageCode): bool
     {
-        return !is_null(value: $this->getLanguageByCode(languageCode: $languageCode));
+        return $this->getLanguageByCode(languageCode: $languageCode) !== null;
     }
 
     public function getLanguageByCode(string $languageCode): ?Language

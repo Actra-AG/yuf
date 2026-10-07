@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -16,7 +17,7 @@ use LogicException;
 abstract class Authenticator
 {
     private static ?Authenticator $instance = null;
-    protected(set) AuthResult $authResult = AuthResult::UNDEFINED;
+    public protected(set) AuthResult $authResult = AuthResult::UNDEFINED;
 
     protected function __construct(private readonly int $maxAllowedWrongPasswordAttempts)
     {
@@ -31,14 +32,14 @@ abstract class Authenticator
         return $this->doLogin(
             authMethod: AuthMethod::PASSWORD,
             userName: $userName,
-            passwordToCheck: $inputPassword
+            passwordToCheck: $inputPassword,
         );
     }
 
     protected function doLogin(
         AuthMethod $authMethod,
         string $userName,
-        ?string $passwordToCheck
+        ?string $passwordToCheck,
     ): bool {
         if ($this->authResult !== AuthResult::UNDEFINED) {
             throw new LogicException(message: 'It is not allowed to execute this method multiple times.');
@@ -56,7 +57,7 @@ abstract class Authenticator
                 sessionID: $sessionID,
                 ip: $ipAddress,
                 userName: $userName,
-                authResult: $this->authResult
+                authResult: $this->authResult,
             );
 
             return false;
@@ -65,7 +66,7 @@ abstract class Authenticator
         if ($authUser->ipWhitelist !== []
             && !IpValidator::isInWhitelist(
                 whiteList: $authUser->ipWhitelist,
-                ipAddressToCheck: $ipAddress
+                ipAddressToCheck: $ipAddress,
             )
         ) {
             $this->authResult = AuthResult::ERROR_IP_NOT_ALLOWED;
@@ -74,7 +75,7 @@ abstract class Authenticator
                 sessionID: $sessionID,
                 ip: $ipAddress,
                 userName: $userName,
-                authResult: $this->authResult
+                authResult: $this->authResult,
             );
 
             return false;
@@ -88,7 +89,7 @@ abstract class Authenticator
                 sessionID: $sessionID,
                 ip: $ipAddress,
                 userName: $userName,
-                authResult: $this->authResult
+                authResult: $this->authResult,
             );
 
             return false;
@@ -100,7 +101,7 @@ abstract class Authenticator
                 sessionID: $sessionID,
                 ip: $ipAddress,
                 userName: $userName,
-                authResult: $this->authResult
+                authResult: $this->authResult,
             );
 
             return false;
@@ -112,7 +113,7 @@ abstract class Authenticator
                 sessionID: $sessionID,
                 ip: $ipAddress,
                 userName: $userName,
-                authResult: $this->authResult
+                authResult: $this->authResult,
             );
 
             return false;
@@ -120,8 +121,8 @@ abstract class Authenticator
         if ($passwordToCheck !== null) {
             if (!$authUser->hasOneOfRights(
                 accessRightCollection: AccessRightCollection::createFromStringArray(
-                    input: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN]
-                )
+                    input: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN],
+                ),
             )
             ) {
                 $this->authResult = AuthResult::ERROR_NO_PASSWORD_LOGIN_ACTIVE;
@@ -130,7 +131,7 @@ abstract class Authenticator
                     sessionID: $sessionID,
                     ip: $ipAddress,
                     userName: $userName,
-                    authResult: $this->authResult
+                    authResult: $this->authResult,
                 );
 
                 return false;
@@ -143,7 +144,7 @@ abstract class Authenticator
                     sessionID: $sessionID,
                     ip: $ipAddress,
                     userName: $userName,
-                    authResult: $this->authResult
+                    authResult: $this->authResult,
                 );
 
                 return false;
@@ -155,7 +156,7 @@ abstract class Authenticator
             sessionID: $sessionID,
             ip: $ipAddress,
             userName: $userName,
-            authResult: $this->authResult
+            authResult: $this->authResult,
         );
         AuthSession::logIn(authSessionID: $authUser->confirmSuccessfulLogin());
 
@@ -169,19 +170,19 @@ abstract class Authenticator
         string $sessionID,
         string $ip,
         string $userName,
-        AuthResult $authResult
+        AuthResult $authResult,
     ): void;
 
     abstract protected function checkLoginCredentials(AuthUser $authUser): bool;
 
     protected function authWebTokenLogin(
         AuthMethod $authMethod,
-        AuthWebToken $authWebToken
+        AuthWebToken $authWebToken,
     ): bool {
         return $this->doLogin(
             authMethod: $authMethod,
             userName: $authWebToken->getUserName(),
-            passwordToCheck: null
+            passwordToCheck: null,
         );
     }
 }

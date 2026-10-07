@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -34,7 +35,7 @@ class CheckboxTag extends TemplateTag implements TagNode
     {
         CustomTagsHelper::replaceRadioOrCheckboxFieldNode(
             elementNode: $elementNode,
-            isRadio: false
+            isRadio: false,
         );
     }
 }

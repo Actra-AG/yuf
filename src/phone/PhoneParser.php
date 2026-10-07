@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -18,7 +19,7 @@ class PhoneParser
 
     public static function getInstance(): PhoneParser
     {
-        if (is_null(PhoneParser::$instance)) {
+        if (PhoneParser::$instance === null) {
             PhoneParser::$instance = new PhoneParser();
         }
 
@@ -38,13 +39,13 @@ class PhoneParser
 
         $defaultCountryCode = str_starts_with(
             haystack: $numberToParse,
-            needle: PhoneConstants::PLUS_SIGN
+            needle: PhoneConstants::PLUS_SIGN,
         ) ? null : $defaultCountryCode;
 
         if (mb_strlen(string: $numberToParse) > PhoneConstants::MAX_INPUT_STRING_LENGTH) {
             throw new PhoneParseException(
                 message: 'The string supplied was too long to parse.',
-                code: PhoneParseException::TOO_LONG
+                code: PhoneParseException::TOO_LONG,
             );
         }
 
@@ -53,7 +54,7 @@ class PhoneParser
         if (!PhoneValidator::isViablePhoneNumber(number: $nationalNumber)) {
             throw new PhoneParseException(
                 message: 'The string supplied did not seem to be a phone number.',
-                code: PhoneParseException::NOT_A_NUMBER
+                code: PhoneParseException::NOT_A_NUMBER,
             );
         }
 
@@ -61,7 +62,7 @@ class PhoneParser
         if (!$this->checkRegionForParsing(numberToParse: $nationalNumber, defaultRegion: $defaultCountryCode)) {
             throw new PhoneParseException(
                 message: 'Missing or invalid default region.',
-                code: PhoneParseException::INVALID_COUNTRY_CODE
+                code: PhoneParseException::INVALID_COUNTRY_CODE,
             );
         }
 
@@ -75,7 +76,7 @@ class PhoneParser
             $countryCode = $this->maybeExtractCountryCode(
                 fullNumber: $nationalNumber,
                 defaultRegionMetaData: $regionMetaData,
-                normalizedNationalNumber: $normalizedNationalNumber
+                normalizedNationalNumber: $normalizedNationalNumber,
             );
         } catch (PhoneParseException $phoneParseException) {
             if ($phoneParseException->getCode() !== PhoneParseException::INVALID_COUNTRY_CODE) {
@@ -87,12 +88,12 @@ class PhoneParser
                 $countryCode = $this->maybeExtractCountryCode(
                     fullNumber: substr($nationalNumber, $matcher->end()),
                     defaultRegionMetaData: $regionMetaData,
-                    normalizedNationalNumber: $normalizedNationalNumber
+                    normalizedNationalNumber: $normalizedNationalNumber,
                 );
                 if ($countryCode === 0) {
                     throw new PhoneParseException(
                         message: 'Could not interpret numbers after plus-sign.',
-                        code: PhoneParseException::INVALID_COUNTRY_CODE
+                        code: PhoneParseException::INVALID_COUNTRY_CODE,
                     );
                 }
             }
@@ -100,48 +101,48 @@ class PhoneParser
         }
         if ($countryCode !== 0) {
             $phoneNumberRegion = PhoneRegionCountryCodeMap::getRegionCodeForCountryCode(
-                countryCallingCode: $countryCode
+                countryCallingCode: $countryCode,
             );
             if ($phoneNumberRegion !== $defaultCountryCode) {
                 // Metadata cannot be null because the country calling code is valid.
                 $regionMetaData = PhoneMetaData::getForRegionOrCallingCode(
                     countryCallingCode: $countryCode,
-                    regionCode: $phoneNumberRegion
+                    regionCode: $phoneNumberRegion,
                 );
             }
         } else {
             // If no extracted country calling code, use the region supplied instead.
             // The national number is just the normalized version of the number we were given to parse.
             $normalizedNationalNumber .= $this->normalize(number: $nationalNumber);
-            if (!is_null(value: $defaultCountryCode)) {
+            if ($defaultCountryCode !== null) {
                 $countryCode = $regionMetaData->countryCode;
             }
         }
         if (mb_strlen(string: $normalizedNationalNumber) < PhoneConstants::MIN_LENGTH_FOR_NSN) {
             throw new PhoneParseException(
                 message: 'The string supplied is too short to be a phone number.',
-                code: PhoneParseException::TOO_SHORT_NSN
+                code: PhoneParseException::TOO_SHORT_NSN,
             );
         }
-        if (!is_null(value: $regionMetaData)) {
+        if ($regionMetaData !== null) {
             $carrierCode = '';
             $potentialNationalNumber = $normalizedNationalNumber;
             $this->maybeStripNationalPrefixAndCarrierCode(
                 number: $potentialNationalNumber,
                 phoneMetaData: $regionMetaData,
-                carrierCode: $carrierCode
+                carrierCode: $carrierCode,
             );
             // We require that the NSN remaining after stripping the national prefix and carrier code be long enough to be a possible length for the region.
             // Otherwise, we don't do the stripping, since the original number could be a valid short number.
             $validationResult = PhoneValidator::testNumberLength(
                 number: $potentialNationalNumber,
-                phoneMetaData: $regionMetaData
+                phoneMetaData: $regionMetaData,
             );
             if (!in_array(needle: $validationResult, haystack: [
                 PhoneValidator::TOO_SHORT,
                 PhoneValidator::IS_POSSIBLE_LOCAL_ONLY,
                 PhoneValidator::INVALID_LENGTH,
-            ])) {
+            ], strict: true)) {
                 $normalizedNationalNumber = $potentialNationalNumber;
             }
         }
@@ -149,25 +150,25 @@ class PhoneParser
         if ($lengthOfNationalNumber < PhoneConstants::MIN_LENGTH_FOR_NSN) {
             throw new PhoneParseException(
                 message: 'The string supplied is too short to be a phone number.',
-                code: PhoneParseException::TOO_SHORT_NSN
+                code: PhoneParseException::TOO_SHORT_NSN,
             );
         }
         if ($lengthOfNationalNumber > PhoneConstants::MAX_LENGTH_FOR_NSN) {
             throw new PhoneParseException(
                 message: 'The string supplied is too long to be a phone number.',
-                code: PhoneParseException::TOO_LONG
+                code: PhoneParseException::TOO_LONG,
             );
         }
         $numberOfLeadingZeros = 1;
         // See https://github.com/giggsey/libphonenumber-for-php/issues/296 for an issue with italian leading zeros
-        if (!in_array(needle: $countryCode, haystack: PhoneConstants::ITALIAN_LEADING_ZERO_COUNTRY_CODES)) {
+        if (!in_array(needle: $countryCode, haystack: PhoneConstants::ITALIAN_LEADING_ZERO_COUNTRY_CODES, strict: true)) {
             $italianLeadingZero = false;
         } else {
             $italianLeadingZero = null;
             if (strlen(string: $normalizedNationalNumber) > 1 && str_starts_with(
-                    haystack: $normalizedNationalNumber,
-                    needle: '0'
-                )) {
+                haystack: $normalizedNationalNumber,
+                needle: '0',
+            )) {
                 $italianLeadingZero = true;
                 // Note that if the national number is all "0"s, the last "0" is not counted as a leading zero.
                 while (
@@ -178,9 +179,9 @@ class PhoneParser
                 }
             }
         }
-        $normalizedNationalNumber = ((int)$normalizedNationalNumber === 0) ? '0' : ltrim(
+        $normalizedNationalNumber = ((int) $normalizedNationalNumber === 0) ? '0' : ltrim(
             string: $normalizedNationalNumber,
-            characters: '0'
+            characters: '0',
         );
 
         return new PhoneNumber(
@@ -188,7 +189,7 @@ class PhoneParser
             countryCode: $countryCode,
             italianLeadingZero: $italianLeadingZero,
             numberOfLeadingZeros: $numberOfLeadingZeros,
-            nationalNumber: $normalizedNationalNumber
+            nationalNumber: $normalizedNationalNumber,
         );
     }
 
@@ -201,7 +202,7 @@ class PhoneParser
             // If the phone context contains a phone number prefix, we need to capture it, whereas domains will be ignored.
             if (
                 $phoneContextStart < (strlen($numberToParse) - 1)
-                && substr($numberToParse, $phoneContextStart, 1) == PhoneConstants::PLUS_SIGN
+                && substr($numberToParse, $phoneContextStart, 1) === PhoneConstants::PLUS_SIGN
             ) {
                 // Additional parameters might follow the phone context.
                 // If so, we will remove them here because the parameters after phone context are not important for parsing the phone number.
@@ -210,7 +211,7 @@ class PhoneParser
                     $nationalNumber .= substr(
                         $numberToParse,
                         $phoneContextStart,
-                        $phoneContextEnd - $phoneContextStart
+                        $phoneContextEnd - $phoneContextStart,
                     );
                 } else {
                     $nationalNumber .= substr($numberToParse, $phoneContextStart);
@@ -223,12 +224,12 @@ class PhoneParser
             // In that case, we append everything from the beginning.
             $indexOfRfc3966Prefix = strpos($numberToParse, PhoneConstants::RFC3966_PREFIX);
             $indexOfNationalNumber = ($indexOfRfc3966Prefix !== false) ? $indexOfRfc3966Prefix + strlen(
-                    PhoneConstants::RFC3966_PREFIX
-                ) : 0;
+                PhoneConstants::RFC3966_PREFIX,
+            ) : 0;
             $nationalNumber .= substr(
                 $numberToParse,
                 $indexOfNationalNumber,
-                $indexOfPhoneContext - $indexOfNationalNumber
+                $indexOfPhoneContext - $indexOfNationalNumber,
             );
         } else {
             // Extract a possible number from the string passed in (this strips leading characters that could not be the start of a phone number.)
@@ -252,11 +253,11 @@ class PhoneParser
     {
         $matches = [];
         if (preg_match(
-                pattern: '/' . PhonePatterns::VALID_START_CHAR_PATTERN . '/ui',
-                subject: $number,
-                matches: $matches,
-                flags: PREG_OFFSET_CAPTURE
-            ) !== 1
+            pattern: '/' . PhonePatterns::VALID_START_CHAR_PATTERN . '/ui',
+            subject: $number,
+            matches: $matches,
+            flags: PREG_OFFSET_CAPTURE,
+        ) !== 1
         ) {
             return '';
         }
@@ -270,11 +271,11 @@ class PhoneParser
 
         // Check for extra numbers at the end.
         if (preg_match(
-                pattern: '%' . PhonePatterns::SECOND_NUMBER_START_PATTERN . '%',
-                subject: $number,
-                matches: $matches,
-                flags: PREG_OFFSET_CAPTURE
-            ) === 1
+            pattern: '%' . PhonePatterns::SECOND_NUMBER_START_PATTERN . '%',
+            subject: $number,
+            matches: $matches,
+            flags: PREG_OFFSET_CAPTURE,
+        ) === 1
         ) {
             $number = substr(string: $number, offset: 0, length: $matches[0][1]);
         }
@@ -293,19 +294,19 @@ class PhoneParser
         }
 
         return (preg_match(
-                pattern: '/^' . PhonePatterns::PLUS_CHARS_PATTERN . '/ui',
-                subject: $numberToParse
-            ) === 1);
+            pattern: '/^' . PhonePatterns::PLUS_CHARS_PATTERN . '/ui',
+            subject: $numberToParse,
+        ) === 1);
     }
 
     private function maybeStripExtension(&$number): string
     {
         if (preg_match(
-                pattern: PhonePatterns::EXTN_PATTERN,
-                subject: $number,
-                matches: $matches,
-                flags: PREG_OFFSET_CAPTURE
-            ) !== 1) {
+            pattern: PhonePatterns::EXTN_PATTERN,
+            subject: $number,
+            matches: $matches,
+            flags: PREG_OFFSET_CAPTURE,
+        ) !== 1) {
             return '';
         }
 
@@ -315,8 +316,8 @@ class PhoneParser
                 number: substr(
                     string: $number,
                     offset: 0,
-                    length: (int)$matches[0][1]
-                )
+                    length: (int) $matches[0][1],
+                ),
             )
         ) {
             // The numbers are captured into groups in the regular expression.
@@ -328,7 +329,7 @@ class PhoneParser
                     $number = substr(
                         string: $number,
                         offset: 0,
-                        length: (int)$matches[0][1]
+                        length: (int) $matches[0][1],
                     );
 
                     return $extension;
@@ -342,65 +343,64 @@ class PhoneParser
     private function maybeExtractCountryCode(
         string         $fullNumber,
         ?PhoneMetaData $defaultRegionMetaData,
-        string         &$normalizedNationalNumber
-    ): int
-    {
+        string         &$normalizedNationalNumber,
+    ): int {
         if (mb_strlen(string: $fullNumber) === 0) {
             return 0;
         }
         // Set the default prefix to be something that will never match.
         $possibleCountryIddPrefix = 'NonMatch';
-        if (!is_null(value: $defaultRegionMetaData)) {
+        if ($defaultRegionMetaData !== null) {
             $possibleCountryIddPrefix = $defaultRegionMetaData->internationalPrefix;
         }
         $countryCodeSource = $this->maybeStripInternationalPrefixAndNormalize(
             number: $fullNumber,
-            possibleIddPrefix: $possibleCountryIddPrefix
+            possibleIddPrefix: $possibleCountryIddPrefix,
         );
 
         if ($countryCodeSource !== PhoneConstants::FROM_DEFAULT_COUNTRY) {
             if (mb_strlen(string: $fullNumber) <= PhoneConstants::MIN_LENGTH_FOR_NSN) {
                 throw new PhoneParseException(
                     message: 'Phone number had an IDD, but after this was not long enough to be a viable phone number.',
-                    code: PhoneParseException::TOO_SHORT_AFTER_IDD
+                    code: PhoneParseException::TOO_SHORT_AFTER_IDD,
                 );
             }
             $potentialCountryCode = $this->extractCountryCode(
                 fullNumber: $fullNumber,
-                nationalNumber: $normalizedNationalNumber
+                nationalNumber: $normalizedNationalNumber,
             );
 
             if ($potentialCountryCode === 0) {
                 throw new PhoneParseException(
                     message: 'Country calling code supplied was not recognised.',
-                    code: PhoneParseException::INVALID_COUNTRY_CODE
+                    code: PhoneParseException::INVALID_COUNTRY_CODE,
                 );
             }
 
             return $potentialCountryCode;
         }
 
-        if (is_null(value: $defaultRegionMetaData)) {
+        if ($defaultRegionMetaData === null) {
             return 0;
         }
         // Check to see if the number starts with the country calling code for the default region.
         // If so, we remove the country calling code, and do some checks on the validity of the number before and after.
         $defaultCountryCode = $defaultRegionMetaData->countryCode;
-        $defaultCountryCodeString = (string)$defaultCountryCode;
+        $defaultCountryCodeString = (string) $defaultCountryCode;
         $normalizedNumber = $fullNumber;
         if (str_starts_with(haystack: $normalizedNumber, needle: $defaultCountryCodeString)) {
             $potentialNationalNumber = substr(
                 string: $normalizedNumber,
                 offset: mb_strlen(
-                    string: $defaultCountryCodeString
-                )
+                    string: $defaultCountryCodeString,
+                ),
             );
             $generalDesc = $defaultRegionMetaData->generalDesc;
             $carrierCode = null;
             $this->maybeStripNationalPrefixAndCarrierCode(
                 number: $potentialNationalNumber,
                 phoneMetaData: $defaultRegionMetaData,
-                carrierCode: $carrierCode
+                carrierCode: $carrierCode,
             );
             // If the number was not valid before but is valid now, or if it was too long before,
             // we consider the number with the country calling code stripped to be a better result and keep that instead.
@@ -411,7 +411,7 @@ class PhoneParser
                 )
                 || PhoneValidator::testNumberLength(
                     number: $fullNumber,
-                    phoneMetaData: $defaultRegionMetaData
+                    phoneMetaData: $defaultRegionMetaData,
                 ) === PhoneValidator::TOO_LONG
             ) {
                 $normalizedNationalNumber .= $potentialNationalNumber;
@@ -430,11 +430,11 @@ class PhoneParser
         }
         $matches = [];
         if (preg_match(
-                pattern: '/^' . PhonePatterns::PLUS_CHARS_PATTERN . '/' . PhoneConstants::REGEX_FLAGS,
-                subject: $number,
-                matches: $matches,
-                flags: PREG_OFFSET_CAPTURE
-            ) === 1
+            pattern: '/^' . PhonePatterns::PLUS_CHARS_PATTERN . '/' . PhoneConstants::REGEX_FLAGS,
+            subject: $number,
+            matches: $matches,
+            flags: PREG_OFFSET_CAPTURE,
+        ) === 1
         ) {
             $number = mb_substr(string: $number, start: $matches[0][1] + mb_strlen(string: $matches[0][0]));
             $number = $this->normalize(number: $number);
@@ -446,16 +446,16 @@ class PhoneParser
 
         return $this->parsePrefixAsIdd(
             iddPattern: $possibleIddPrefix,
-            number: $number
+            number: $number,
         ) ? PhoneConstants::FROM_NUMBER_WITH_IDD : PhoneConstants::FROM_DEFAULT_COUNTRY;
     }
 
     private function normalize(string $number): string
     {
         if (preg_match(
-                pattern: '/^' . PhonePatterns::VALID_ALPHA_PHONE_PATTERN . '$/ui',
-                subject: $number
-            ) === 1
+            pattern: '/^' . PhonePatterns::VALID_ALPHA_PHONE_PATTERN . '$/ui',
+            subject: $number,
+        ) === 1
         ) {
             return $this->normalizeHelper(number: $number);
         }
@@ -472,7 +472,7 @@ class PhoneParser
             $character = mb_substr(string: $number, start: $i, length: 1, encoding: 'UTF-8');
             if (array_key_exists(
                 key: mb_strtoupper(string: $character, encoding: 'UTF-8'),
-                array: $normalizationReplacements
+                array: $normalizationReplacements,
             )) {
                 $normalizedNumber .= $normalizationReplacements[mb_strtoupper(string: $character, encoding: 'UTF-8')];
             }
@@ -504,7 +504,7 @@ class PhoneParser
             $matchEnd = $matcher->end();
             $digitMatcher = new PhoneMatcher(
                 pattern: PhonePatterns::CAPTURING_DIGIT_PATTERN,
-                subject: substr(string: $number, offset: $matchEnd)
+                subject: substr(string: $number, offset: $matchEnd),
             );
             if ($digitMatcher->find()) {
                 $normalizedGroup = $this->normalizeDigits(number: $digitMatcher->group(group: 1));
@@ -528,7 +528,7 @@ class PhoneParser
             return 0;
         }
         for ($i = 1; $i <= PhoneConstants::MAX_LENGTH_COUNTRY_CODE && $i <= $numberLength; $i++) {
-            $potentialCountryCode = (int)substr(string: $fullNumber, offset: 0, length: $i);
+            $potentialCountryCode = (int) substr(string: $fullNumber, offset: 0, length: $i);
             if (PhoneRegionCountryCodeMap::countryCodeExists(countryCodeToCheck: $potentialCountryCode)) {
                 $nationalNumber .= substr($fullNumber, $i);
 
@@ -542,14 +542,13 @@ class PhoneParser
     private function maybeStripNationalPrefixAndCarrierCode(
         string        &$number,
         PhoneMetaData $phoneMetaData,
-        ?string       &$carrierCode
-    ): void
-    {
+        ?string       &$carrierCode,
+    ): void {
         $numberLength = mb_strlen(string: $number);
         $possibleNationalPrefix = $phoneMetaData->nationalPrefixForParsing;
-        if ($numberLength === 0 || is_null(value: $possibleNationalPrefix) || mb_strlen(
-                string: $possibleNationalPrefix
-            ) === 0) {
+        if ($numberLength === 0 || $possibleNationalPrefix === null || mb_strlen(
+            string: $possibleNationalPrefix,
+        ) === 0) {
             // Early return for numbers of zero length.
             return;
         }
@@ -568,21 +567,21 @@ class PhoneParser
         // remove the national prefix
         $numOfGroups = $prefixMatcher->groupCount();
         $transformRule = $phoneMetaData->nationalPrefixTransformRule;
-        if (is_null(value: $transformRule)
+        if ($transformRule === null
             || mb_strlen(string: $transformRule) === 0
-            || is_null($prefixMatcher->group(group: $numOfGroups - 1))
+            || $prefixMatcher->group(group: $numOfGroups - 1) === null
         ) {
             // If the original number was viable, and the resultant number is not, we return.
             if (
                 $isViableOriginalNumber
                 && !$this->matchNationalNumber(
                     number: substr(string: $number, offset: $prefixMatcher->end()),
-                    numberDesc: $generalDesc
+                    numberDesc: $generalDesc,
                 )
             ) {
                 return;
             }
-            if (!is_null($carrierCode) && $numOfGroups > 0 && !is_null($prefixMatcher->group(group: $numOfGroups))) {
+            if ($carrierCode !== null && $numOfGroups > 0 && $prefixMatcher->group(group: $numOfGroups) !== null) {
                 $carrierCode .= $prefixMatcher->group(group: 1);
             }
 
@@ -598,7 +597,7 @@ class PhoneParser
             string: $transformedNumber,
             replace: $prefixMatcher->replaceFirst($transformRule),
             offset: 0,
-            length: $numberLength
+            length: $numberLength,
         );
         if (
             $isViableOriginalNumber
@@ -606,14 +605,14 @@ class PhoneParser
         ) {
             return;
         }
-        if (!is_null($carrierCode) && $numOfGroups > 1) {
+        if ($carrierCode !== null && $numOfGroups > 1) {
             $carrierCode .= $prefixMatcher->group(group: 1);
         }
         $number = substr_replace(
             string: $number,
             replace: $transformedNumber,
             offset: 0,
-            length: mb_strlen(string: $number)
+            length: mb_strlen(string: $number),
         );
     }
 

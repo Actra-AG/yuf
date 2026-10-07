@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -49,7 +50,7 @@ class MailMimeBody
         string $boundary1,
         string $boundary2,
         string $boundary3,
-        MailerAttachmentCollection $mailerAttachmentCollection
+        MailerAttachmentCollection $mailerAttachmentCollection,
     ) {
         $this->defaultCharSet = $charSet;
         $this->defaultContentType = $contentType;
@@ -59,7 +60,7 @@ class MailMimeBody
         $bodyCharSet = $charSet;
 
         // Can we do a 7-bit downgrade?
-        if (MailerConstants::ENCODING_8BIT === $bodyEncoding && !MailerFunctions::has8bitChars(text: $rawBody)) {
+        if ($bodyEncoding === MailerConstants::ENCODING_8BIT && !MailerFunctions::has8bitChars(text: $rawBody)) {
             $bodyEncoding = MailerConstants::ENCODING_7BIT;
 
             // All ISO 8859, Windows codepage and UTF-8 charsets are ascii compatible up to 7-bit
@@ -67,7 +68,7 @@ class MailMimeBody
         }
 
         // If lines are too long, and we're not already using an encoding that will shorten them, change to quoted-printable transfer encoding for the body part only
-        if (MailerConstants::ENCODING_BASE64 !== $encoding && $this->hasLineLongerThanMax(str: $rawBody)) {
+        if ($encoding !== MailerConstants::ENCODING_BASE64 && $this->hasLineLongerThanMax(str: $rawBody)) {
             $bodyEncoding = MailerConstants::ENCODING_QUOTED_PRINTABLE;
         }
 
@@ -75,9 +76,9 @@ class MailMimeBody
         $altBodyCharSet = $charSet;
 
         // Can we do a 7-bit downgrade?
-        if (MailerConstants::ENCODING_8BIT === $altBodyEncoding && !MailerFunctions::has8bitChars(
-                text: $alternativeBody
-            )) {
+        if ($altBodyEncoding === MailerConstants::ENCODING_8BIT && !MailerFunctions::has8bitChars(
+            text: $alternativeBody,
+        )) {
             $altBodyEncoding = MailerConstants::ENCODING_7BIT;
 
             // All ISO 8859, Windows codepage and UTF-8 charsets are ascii compatible up to 7-bit
@@ -85,9 +86,9 @@ class MailMimeBody
         }
 
         // If lines are too long, and we're not already using an encoding that will shorten them, change to quoted-printable transfer encoding for the alt body part only
-        if (MailerConstants::ENCODING_BASE64 !== $altBodyEncoding && $this->hasLineLongerThanMax(
-                str: $alternativeBody
-            )) {
+        if ($altBodyEncoding !== MailerConstants::ENCODING_BASE64 && $this->hasLineLongerThanMax(
+            str: $alternativeBody,
+        )) {
             $altBodyEncoding = MailerConstants::ENCODING_QUOTED_PRINTABLE;
         }
 
@@ -103,13 +104,13 @@ class MailMimeBody
                     charSet: $bodyCharSet,
                     contentType: '',
                     encoding: $bodyEncoding,
-                    stringToEncode: $rawBody
+                    stringToEncode: $rawBody,
                 );
                 $body .= $this->attachAll(
                     mailerAttachmentCollection: $mailerAttachmentCollection,
                     maxLineLength: $maxLineLength,
                     dispositionInline: true,
-                    boundary: $boundary1
+                    boundary: $boundary1,
                 );
                 break;
             case 'attach':
@@ -119,13 +120,13 @@ class MailMimeBody
                     charSet: $bodyCharSet,
                     contentType: '',
                     encoding: $bodyEncoding,
-                    stringToEncode: $rawBody
+                    stringToEncode: $rawBody,
                 );
                 $body .= $this->attachAll(
                     mailerAttachmentCollection: $mailerAttachmentCollection,
                     maxLineLength: $maxLineLength,
                     dispositionInline: false,
-                    boundary: $boundary1
+                    boundary: $boundary1,
                 );
                 break;
             case 'inline_attach':
@@ -133,7 +134,7 @@ class MailMimeBody
                 $body .= MailerFunctions::textLine(value: '--' . $boundary1);
                 $body .= MailerHeader::createRaw(
                     name: 'Content-Type',
-                    value: MailerConstants::CONTENT_TYPE_MULTIPART_RELATED . ';'
+                    value: MailerConstants::CONTENT_TYPE_MULTIPART_RELATED . ';',
                 );
                 $body .= MailerFunctions::textLine(value: ' boundary="' . $boundary2 . '";');
                 $body .= MailerFunctions::textLine(value: ' type="' . MailerConstants::CONTENT_TYPE_TEXT_HTML . '"');
@@ -143,20 +144,20 @@ class MailMimeBody
                     charSet: $bodyCharSet,
                     contentType: '',
                     encoding: $bodyEncoding,
-                    stringToEncode: $rawBody
+                    stringToEncode: $rawBody,
                 );
                 $body .= $this->attachAll(
                     mailerAttachmentCollection: $mailerAttachmentCollection,
                     maxLineLength: $maxLineLength,
                     dispositionInline: true,
-                    boundary: $boundary2
+                    boundary: $boundary2,
                 );
                 $body .= MailerConstants::CRLF;
                 $body .= $this->attachAll(
                     mailerAttachmentCollection: $mailerAttachmentCollection,
                     maxLineLength: $maxLineLength,
                     dispositionInline: false,
-                    boundary: $boundary1
+                    boundary: $boundary1,
                 );
                 break;
             case 'alt':
@@ -166,14 +167,14 @@ class MailMimeBody
                     charSet: $altBodyCharSet,
                     contentType: MailerConstants::CONTENT_TYPE_PLAINTEXT,
                     encoding: $altBodyEncoding,
-                    stringToEncode: $alternativeBody
+                    stringToEncode: $alternativeBody,
                 );
                 $body .= $this->getBoundary(
                     boundary: $boundary1,
                     charSet: $bodyCharSet,
                     contentType: MailerConstants::CONTENT_TYPE_TEXT_HTML,
                     encoding: $bodyEncoding,
-                    stringToEncode: $rawBody
+                    stringToEncode: $rawBody,
                 );
                 $body .= $this->endBoundary($boundary1);
                 break;
@@ -189,7 +190,7 @@ class MailMimeBody
                     bodyCharSet: $bodyCharSet,
                     bodyEncoding: $bodyEncoding,
                     rawBody: $rawBody,
-                    mailerAttachmentCollection: $mailerAttachmentCollection
+                    mailerAttachmentCollection: $mailerAttachmentCollection,
                 );
                 break;
             case 'alt_attach':
@@ -197,7 +198,7 @@ class MailMimeBody
                 $body .= MailerFunctions::textLine(value: '--' . $boundary1);
                 $body .= MailerHeader::createRaw(
                     name: 'Content-Type',
-                    value: MailerConstants::CONTENT_TYPE_MULTIPART_ALTERNATIVE . ';'
+                    value: MailerConstants::CONTENT_TYPE_MULTIPART_ALTERNATIVE . ';',
                 );
                 $body .= MailerFunctions::textLine(value: ' boundary="' . $boundary2 . '"');
                 $body .= MailerConstants::CRLF;
@@ -206,14 +207,14 @@ class MailMimeBody
                     charSet: $altBodyCharSet,
                     contentType: MailerConstants::CONTENT_TYPE_PLAINTEXT,
                     encoding: $altBodyEncoding,
-                    stringToEncode: $alternativeBody
+                    stringToEncode: $alternativeBody,
                 );
                 $body .= $this->getBoundary(
                     boundary: $boundary2,
                     charSet: $bodyCharSet,
                     contentType: MailerConstants::CONTENT_TYPE_TEXT_HTML,
                     encoding: $bodyEncoding,
-                    stringToEncode: $rawBody
+                    stringToEncode: $rawBody,
                 );
                 $body .= $this->endBoundary(boundary: $boundary2);
                 $body .= MailerConstants::CRLF;
@@ -221,7 +222,7 @@ class MailMimeBody
                     mailerAttachmentCollection: $mailerAttachmentCollection,
                     maxLineLength: $maxLineLength,
                     dispositionInline: false,
-                    boundary: $boundary1
+                    boundary: $boundary1,
                 );
                 break;
             case 'alt_inline_attach':
@@ -229,7 +230,7 @@ class MailMimeBody
                 $body .= MailerFunctions::textLine(value: '--' . $boundary1);
                 $body .= MailerHeader::createRaw(
                     name: 'Content-Type',
-                    value: MailerConstants::CONTENT_TYPE_MULTIPART_ALTERNATIVE . ';'
+                    value: MailerConstants::CONTENT_TYPE_MULTIPART_ALTERNATIVE . ';',
                 );
                 $body .= MailerFunctions::textLine(value: ' boundary="' . $boundary2 . '"');
                 $body .= MailerConstants::CRLF;
@@ -243,14 +244,14 @@ class MailMimeBody
                     bodyCharSet: $bodyCharSet,
                     bodyEncoding: $bodyEncoding,
                     rawBody: $rawBody,
-                    mailerAttachmentCollection: $mailerAttachmentCollection
+                    mailerAttachmentCollection: $mailerAttachmentCollection,
                 );
                 $body .= MailerConstants::CRLF;
                 $body .= $this->attachAll(
                     mailerAttachmentCollection: $mailerAttachmentCollection,
                     maxLineLength: $maxLineLength,
                     dispositionInline: false,
-                    boundary: $boundary1
+                    boundary: $boundary1,
                 );
                 break;
             default:
@@ -265,9 +266,9 @@ class MailMimeBody
     private function hasLineLongerThanMax(string $str): bool
     {
         return (preg_match(
-                pattern: '/^(.{' . (MailerConstants::MAX_LINE_LENGTH + strlen(MailerConstants::CRLF)) . ',})/m',
-                subject: $str
-            ) === 1
+            pattern: '/^(.{' . (MailerConstants::MAX_LINE_LENGTH + strlen(MailerConstants::CRLF)) . ',})/m',
+            subject: $str,
+        ) === 1
         );
     }
 
@@ -276,7 +277,7 @@ class MailMimeBody
         string $charSet,
         string $contentType,
         string $encoding,
-        string $stringToEncode
+        string $stringToEncode,
     ): string {
         $result = '';
         if ($charSet === '') {
@@ -293,7 +294,7 @@ class MailMimeBody
         $result .= MailerConstants::CRLF;
 
         // RFC1341 part 5 says 7bit is assumed if not specified
-        if (MailerConstants::ENCODING_7BIT !== $encoding) {
+        if ($encoding !== MailerConstants::ENCODING_7BIT) {
             $result .= MailerHeader::createRaw(name: 'Content-Transfer-Encoding', value: $encoding);
         }
         $result .= MailerConstants::CRLF;
@@ -307,7 +308,7 @@ class MailMimeBody
         MailerAttachmentCollection $mailerAttachmentCollection,
         int $maxLineLength,
         bool $dispositionInline,
-        string $boundary
+        string $boundary,
     ): string {
         $mime = [];
         foreach ($mailerAttachmentCollection->list() as $attachment) {
@@ -332,35 +333,35 @@ class MailMimeBody
 
             $mime[] = '--' . $boundary . MailerConstants::CRLF;
             $mime[] = 'Content-Type: ' . $type . '; name=' . $this->quotedString(
-                    string: MailerFunctions::encodeHeaderText(
-                        string: MailerFunctions::secureHeader(string: $fileName),
-                        maxLineLength: $maxLineLength,
-                        defaultCharSet: $this->defaultCharSet
-                    )
-                ) . MailerConstants::CRLF;
+                string: MailerFunctions::encodeHeaderText(
+                    string: MailerFunctions::secureHeader(string: $fileName),
+                    maxLineLength: $maxLineLength,
+                    defaultCharSet: $this->defaultCharSet,
+                ),
+            ) . MailerConstants::CRLF;
             // RFC1341 part 5 says 7bit is assumed if not specified
-            if (MailerConstants::ENCODING_7BIT !== $encoding) {
+            if ($encoding !== MailerConstants::ENCODING_7BIT) {
                 $mime[] = 'Content-Transfer-Encoding: ' . $encoding . MailerConstants::CRLF;
             }
 
             // Only set Content-IDs on inline attachments
             if ($dispositionInline) {
                 $mime[] = 'Content-ID: <' . MailerFunctions::encodeHeaderText(
-                        string: MailerFunctions::secureHeader(string: $fileName),
-                        maxLineLength: $maxLineLength,
-                        defaultCharSet: $this->defaultCharSet
-                    ) . '>' . MailerConstants::CRLF;
+                    string: MailerFunctions::secureHeader(string: $fileName),
+                    maxLineLength: $maxLineLength,
+                    defaultCharSet: $this->defaultCharSet,
+                ) . '>' . MailerConstants::CRLF;
             }
 
             $encodedName = MailerFunctions::encodeHeaderText(
                 string: MailerFunctions::secureHeader(string: $fileName),
                 maxLineLength: $maxLineLength,
-                defaultCharSet: $this->defaultCharSet
+                defaultCharSet: $this->defaultCharSet,
             );
             $disposition = $dispositionInline ? 'inline' : 'attachment';
             $mime[] = 'Content-Disposition: ' . $disposition . '; filename=' . $this->quotedString(
-                    $encodedName
-                ) . MailerConstants::CRLF . MailerConstants::CRLF;
+                $encodedName,
+            ) . MailerConstants::CRLF . MailerConstants::CRLF;
 
             if ($isStringAttachment) {
                 $mime[] = MailerFunctions::encodeString(string: $string, encoding: $encoding);
@@ -392,7 +393,7 @@ class MailMimeBody
             throw new MailerException(message: 'File Error: Could not open file: ' . $path);
         }
         $file_buffer = file_get_contents(filename: $path);
-        if (false === $file_buffer) {
+        if ($file_buffer === false) {
             throw new MailerException(message: 'File Error: Could not open file: ' . $path);
         }
 
@@ -414,19 +415,19 @@ class MailMimeBody
         string $bodyCharSet,
         string $bodyEncoding,
         string $rawBody,
-        MailerAttachmentCollection $mailerAttachmentCollection
+        MailerAttachmentCollection $mailerAttachmentCollection,
     ): string {
         $string = $this->getBoundary(
             boundary: $firstBoundary,
             charSet: $alternativeBodyCharSet,
             contentType: MailerConstants::CONTENT_TYPE_PLAINTEXT,
             encoding: $alternativeBodyEncoding,
-            stringToEncode: $alternativeBody
+            stringToEncode: $alternativeBody,
         );
         $string .= MailerFunctions::textLine(value: '--' . $firstBoundary);
         $string .= MailerHeader::createRaw(
             name: 'Content-Type',
-            value: MailerConstants::CONTENT_TYPE_MULTIPART_RELATED . ';'
+            value: MailerConstants::CONTENT_TYPE_MULTIPART_RELATED . ';',
         );
         $string .= MailerFunctions::textLine(value: ' boundary="' . $secondBoundary . '";');
         $string .= MailerFunctions::textLine(value: ' type="' . MailerConstants::CONTENT_TYPE_TEXT_HTML . '"');
@@ -436,13 +437,13 @@ class MailMimeBody
             charSet: $bodyCharSet,
             contentType: MailerConstants::CONTENT_TYPE_TEXT_HTML,
             encoding: $bodyEncoding,
-            stringToEncode: $rawBody
+            stringToEncode: $rawBody,
         );
         $string .= $this->attachAll(
             mailerAttachmentCollection: $mailerAttachmentCollection,
             maxLineLength: $maxLineLength,
             dispositionInline: true,
-            boundary: $secondBoundary
+            boundary: $secondBoundary,
         );
         $string .= MailerConstants::CRLF;
         $string .= $this->endBoundary(boundary: $firstBoundary);

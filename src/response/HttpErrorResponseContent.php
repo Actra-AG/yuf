@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -23,8 +24,8 @@ class HttpErrorResponseContent extends HttpResponseContent
 
     public static function createJsonResponseContent(
         string $errorMessage,
-        null|int|string $errorCode = null,
-        null|stdClass|ArrayObject $data = null
+        int|string|null $errorCode = null,
+        stdClass|ArrayObject|null $data = null,
     ): HttpResponseContent {
         $value = [
             'success' => false,
@@ -41,34 +42,34 @@ class HttpErrorResponseContent extends HttpResponseContent
         }
         return new HttpErrorResponseContent(
             content: JsonUtils::convertToJsonString(
-                valueToConvert: $value
-            )
+                valueToConvert: $value,
+            ),
         );
     }
 
     public static function createTextResponseContent(
         string $errorMessage,
-        null|int|string $errorCode = null,
-        null|ArrayObject $additionalInfo = null
+        int|string|null $errorCode = null,
+        ?ArrayObject $additionalInfo = null,
     ): HttpResponseContent {
         $content = [
-            HttpErrorResponseContent::ERROR_STATUS . ': ' . $errorMessage . ' (' . $errorCode . ')'
+            HttpErrorResponseContent::ERROR_STATUS . ': ' . $errorMessage . ' (' . $errorCode . ')',
         ];
         if (
-            !is_null(value: $additionalInfo)
+            $additionalInfo !== null
             && $additionalInfo->count() > 0
         ) {
             $content[] = '';
             $content[] = print_r(
                 value: $additionalInfo,
-                return: true
+                return: true,
             );
         }
         return new HttpErrorResponseContent(
             content: implode(
                 separator: PHP_EOL,
-                array: $content
-            )
+                array: $content,
+            ),
         );
     }
 }

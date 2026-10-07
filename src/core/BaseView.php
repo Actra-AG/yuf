@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -32,12 +33,12 @@ abstract class BaseView
         ?AuthUser $authUser,
         AccessRightCollection $requiredAccessRights,
         private readonly InputParameterCollection $inputParameterCollection,
-        public readonly int $maxAllowedPathVars = 0
+        public readonly int $maxAllowedPathVars = 0,
     ) {
         $viewGroup = RequestHandler::get()->route->viewGroup;
         if ($viewGroup !== $requiredViewGroupName) {
             throw new LogicException(
-                message: 'View group needs to be ' . $requiredViewGroupName . ' instead of ' . $viewGroup
+                message: 'View group needs to be ' . $requiredViewGroupName . ' instead of ' . $viewGroup,
             );
         }
         $ipAddress = HttpRequest::getRemoteAddress();
@@ -45,7 +46,7 @@ abstract class BaseView
             count(value: $ipWhitelist) > 0
             && !IpValidator::isInWhitelist(
                 whiteList: $ipWhitelist,
-                ipAddressToCheck: $ipAddress
+                ipAddressToCheck: $ipAddress,
             )
         ) {
             throw new UnauthorizedIpAddressException(message: 'Invalid IP address ' . $ipAddress);
@@ -53,7 +54,7 @@ abstract class BaseView
         if (
             !$requiredAccessRights->isEmpty()
             && (
-                is_null(value: $authUser)
+                $authUser === null
                 || !$authUser->hasOneOfRights(accessRightCollection: $requiredAccessRights)
             )
         ) {
@@ -63,7 +64,7 @@ abstract class BaseView
             $name = $inputParameter->name;
             $paramValue = HttpRequest::getInputValue(keyName: $name);
             if (
-                is_null(value: $paramValue)
+                $paramValue === null
                 || (!is_array(value: $paramValue) && trim(string: $paramValue) === '')
                 || $paramValue === []
             ) {
@@ -88,7 +89,7 @@ abstract class BaseView
     {
         $this->onlyDefinedInputParametersAllowed($keyName);
         $value = $this->getInputString(keyName: $keyName);
-        if (is_null(value: $value)) {
+        if ($value === null) {
             return null;
         }
 
@@ -181,16 +182,16 @@ abstract class BaseView
 
     protected function setSuccessResponseContent(
         stdClass $data = new stdClass(),
-        bool $sendAndExit = false
+        bool $sendAndExit = false,
     ): void {
         $contentType = ContentHandler::get()->getContentType();
         if ($contentType->isJson()) {
             $httpSuccessResponseContent = HttpSuccessResponseContent::createJsonResponseContent(
-                data: $data
+                data: $data,
             );
         } elseif ($contentType->isTxt() || $contentType->isCsv()) {
             $httpSuccessResponseContent = HttpSuccessResponseContent::createTextResponseContent(
-                data: $data
+                data: $data,
             );
         } else {
             throw new LogicException(message: 'Invalid contentType: ' . $contentType->type);
@@ -202,16 +203,16 @@ abstract class BaseView
         HttpResponse::createResponseFromString(
             httpStatusCode: HttpStatusCode::HTTP_OK,
             contentString: $httpSuccessResponseContent->content,
-            contentType: $contentType
+            contentType: $contentType,
         )->sendAndExit();
     }
 
     protected function setErrorResponseContent(
         string $errorMessage,
         HttpStatusCode $httpStatusCode = HttpStatusCode::HTTP_BAD_REQUEST,
-        null|int|string $errorCode = null,
+        int|string|null $errorCode = null,
         ?stdClass $data = null,
-        bool $sendAndExit = false
+        bool $sendAndExit = false,
     ): void {
         $contentHandler = ContentHandler::get();
         $contentType = $contentHandler->getContentType();
@@ -219,12 +220,12 @@ abstract class BaseView
             $httpErrorResponseContent = HttpErrorResponseContent::createJsonResponseContent(
                 errorMessage: $errorMessage,
                 errorCode: $errorCode,
-                data: $data
+                data: $data,
             );
         } elseif ($contentType->isTxt() || $contentType->isCsv()) {
             $httpErrorResponseContent = HttpErrorResponseContent::createTextResponseContent(
                 errorMessage: $errorMessage,
-                errorCode: $errorCode
+                errorCode: $errorCode,
             );
         } else {
             throw new LogicException(message: 'Invalid contentType: ' . $contentType->type);
@@ -237,7 +238,7 @@ abstract class BaseView
         HttpResponse::createResponseFromString(
             httpStatusCode: $httpStatusCode,
             contentString: $httpErrorResponseContent->content,
-            contentType: $contentType
+            contentType: $contentType,
         )->sendAndExit();
     }
 
@@ -249,7 +250,7 @@ abstract class BaseView
             $this->setErrorResponseContent(
                 errorMessage: $throwable->getMessage(),
                 errorCode: $throwable->getCode(),
-                sendAndExit: true
+                sendAndExit: true,
             );
             exit;
         }

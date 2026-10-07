@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -37,7 +38,7 @@ class CheckboxOptionsTag extends TemplateTag implements TagNode
             fieldName: $fldName,
             optionsSelector: $optionsSelector,
             checkedSelector: $checkedSelector,
-            multiple: true
+            multiple: true,
         );
     }
 

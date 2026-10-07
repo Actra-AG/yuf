@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -31,9 +32,7 @@ final readonly class DbRow
     /**
      * @param array<string, mixed> $values Column name => value, fetched with `PDO::FETCH_ASSOC`.
      */
-    public function __construct(private array $values)
-    {
-    }
+    public function __construct(private array $values) {}
 
     public function has(string $column): bool
     {
@@ -44,7 +43,7 @@ final readonly class DbRow
     {
         return $this->getNullableString(column: $column) ?? throw DbRowValueException::unexpectedNull(
             column: $column,
-            expectedType: 'string'
+            expectedType: 'string',
         );
     }
 
@@ -58,7 +57,7 @@ final readonly class DbRow
         return is_string(value: $value) ? $value : throw DbRowValueException::wrongType(
             column: $column,
             expectedType: 'string',
-            actualType: get_debug_type(value: $value)
+            actualType: get_debug_type(value: $value),
         );
     }
 
@@ -66,7 +65,7 @@ final readonly class DbRow
     {
         return $this->getNullableInt(column: $column) ?? throw DbRowValueException::unexpectedNull(
             column: $column,
-            expectedType: 'int'
+            expectedType: 'int',
         );
     }
 
@@ -87,7 +86,7 @@ final readonly class DbRow
     {
         return $this->getNullableFloat(column: $column) ?? throw DbRowValueException::unexpectedNull(
             column: $column,
-            expectedType: 'float'
+            expectedType: 'float',
         );
     }
 
@@ -101,11 +100,11 @@ final readonly class DbRow
             return is_finite(num: $value) ? $value : throw DbRowValueException::invalidValue(
                 column: $column,
                 expectedType: 'float',
-                reason: 'the value is not finite'
+                reason: 'the value is not finite',
             );
         }
         if (is_int(value: $value)) {
-            return (float)$value;
+            return (float) $value;
         }
         $this->assertString(column: $column, value: $value, expectedType: 'float');
         $float = AmountParser::toFloat(value: $value);
@@ -113,7 +112,7 @@ final readonly class DbRow
             throw DbRowValueException::invalidValue(
                 column: $column,
                 expectedType: 'float',
-                reason: 'not a plain decimal number'
+                reason: 'not a plain decimal number',
             );
         }
 
@@ -129,7 +128,7 @@ final readonly class DbRow
     {
         return $this->getNullableDecimal(column: $column) ?? throw DbRowValueException::unexpectedNull(
             column: $column,
-            expectedType: 'decimal'
+            expectedType: 'decimal',
         );
     }
 
@@ -140,14 +139,14 @@ final readonly class DbRow
             return null;
         }
         if (is_int(value: $value)) {
-            return (string)$value;
+            return (string) $value;
         }
         $this->assertString(column: $column, value: $value, expectedType: 'decimal string');
         if (preg_match(pattern: '/^-?\d+(\.\d+)?$/', subject: $value) !== 1) {
             throw DbRowValueException::invalidValue(
                 column: $column,
                 expectedType: 'decimal',
-                reason: 'not a plain decimal number like "12.50"'
+                reason: 'not a plain decimal number like "12.50"',
             );
         }
 
@@ -170,7 +169,7 @@ final readonly class DbRow
             throw DbRowValueException::wrongType(
                 column: $column,
                 expectedType: 'bool (0 or 1)',
-                actualType: get_debug_type(value: $value)
+                actualType: get_debug_type(value: $value),
             );
         }
 
@@ -180,7 +179,7 @@ final readonly class DbRow
             default => throw DbRowValueException::invalidValue(
                 column: $column,
                 expectedType: 'bool',
-                reason: 'only 0 and 1 are allowed'
+                reason: 'only 0 and 1 are allowed',
             ),
         };
     }
@@ -192,7 +191,7 @@ final readonly class DbRow
     {
         return $this->getNullableDateTimeImmutable(column: $column) ?? throw DbRowValueException::unexpectedNull(
             column: $column,
-            expectedType: 'DateTimeImmutable'
+            expectedType: 'DateTimeImmutable',
         );
     }
 
@@ -210,7 +209,7 @@ final readonly class DbRow
             default => throw DbRowValueException::invalidValue(
                 column: $column,
                 expectedType: 'date/time',
-                reason: 'expected "Y-m-d", "Y-m-d H:i:s" or "Y-m-d H:i:s.u"'
+                reason: 'expected "Y-m-d", "Y-m-d H:i:s" or "Y-m-d H:i:s.u"',
             ),
         };
         $dateTime = DateTimeImmutable::createFromFormat(format: $format, datetime: $value);
@@ -219,7 +218,7 @@ final readonly class DbRow
             throw DbRowValueException::invalidValue(
                 column: $column,
                 expectedType: 'date/time',
-                reason: 'not an existing date or time'
+                reason: 'not an existing date or time',
             );
         }
 
@@ -236,7 +235,7 @@ final readonly class DbRow
     {
         return $this->getNullableEnum(column: $column, enumClass: $enumClass) ?? throw DbRowValueException::unexpectedNull(
             column: $column,
-            expectedType: $enumClass
+            expectedType: $enumClass,
         );
     }
 
@@ -252,14 +251,14 @@ final readonly class DbRow
         if ($value === null) {
             return null;
         }
-        $backingValue = (string)(new ReflectionEnum(objectOrClass: $enumClass))->getBackingType() === 'int'
+        $backingValue = (string) new ReflectionEnum(objectOrClass: $enumClass)->getBackingType() === 'int'
             ? $this->getInt(column: $column)
             : $this->getString(column: $column);
 
         return $enumClass::tryFrom($backingValue) ?? throw DbRowValueException::invalidValue(
             column: $column,
             expectedType: $enumClass,
-            reason: 'unknown value "' . $backingValue . '"'
+            reason: 'unknown value "' . $backingValue . '"',
         );
     }
 
@@ -280,7 +279,7 @@ final readonly class DbRow
         return $int ?? throw DbRowValueException::invalidValue(
             column: $column,
             expectedType: 'int',
-            reason: 'not an integer or out of the integer range'
+            reason: 'not an integer or out of the integer range',
         );
     }
 
@@ -293,7 +292,7 @@ final readonly class DbRow
             throw DbRowValueException::wrongType(
                 column: $column,
                 expectedType: $expectedType,
-                actualType: get_debug_type(value: $value)
+                actualType: get_debug_type(value: $value),
             );
         }
     }

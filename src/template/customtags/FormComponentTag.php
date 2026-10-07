@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -46,8 +47,8 @@ class FormComponentTag extends TemplateTag implements TagNode
         // DATA
         $newNode = new TextNode();
         $newNode->content = '<?= ' . FormComponentTag::class . '::render(\'' . $elementNode->getAttribute(
-                'form'
-            )->value . '\', \'' . $elementNode->getAttribute('name')->value . '\', $this); ?>';
+            'form',
+        )->value . '\', \'' . $elementNode->getAttribute('name')->value . '\', $this); ?>';
 
         $elementNode->parentNode->insertBefore($newNode, $elementNode);
         $elementNode->parentNode->removeNode($elementNode);

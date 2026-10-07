@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -26,24 +27,24 @@ class MailerAddressCollection
     public function getHeaderString(
         MailerAddressKindEnum $mailerAddressKindEnum,
         int $maxLineLength,
-        string $defaultCharSet
+        string $defaultCharSet,
     ): string {
         $listAsCommaSeparatedString = $this->listAsCommaSeparatedString(
             mailerAddressKindEnum: $mailerAddressKindEnum,
             maxLineLength: $maxLineLength,
-            defaultCharSet: $defaultCharSet
+            defaultCharSet: $defaultCharSet,
         );
 
         return ($listAsCommaSeparatedString === '') ? '' : MailerHeader::createRaw(
             name: $mailerAddressKindEnum->value,
-            value: $listAsCommaSeparatedString
+            value: $listAsCommaSeparatedString,
         );
     }
 
     public function listAsCommaSeparatedString(
         MailerAddressKindEnum $mailerAddressKindEnum,
         int $maxLineLength,
-        string $defaultCharSet
+        string $defaultCharSet,
     ): string {
         if (!$this->has(mailerAddressKindEnum: $mailerAddressKindEnum)) {
             return '';
@@ -52,7 +53,7 @@ class MailerAddressCollection
         foreach ($this->list(mailerAddressKindEnum: $mailerAddressKindEnum) as $mailerAddress) {
             $array[] = $mailerAddress->getFormattedAddressForMailer(
                 maxLineLength: $maxLineLength,
-                defaultCharSet: $defaultCharSet
+                defaultCharSet: $defaultCharSet,
             );
         }
 

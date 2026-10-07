@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -70,7 +71,7 @@ class SortableTableHeadRenderer extends TableHeadRenderer
             ];
             if ($isActiveSortColumn) {
                 $lowerCaseSortDirection = strtolower(
-                    string: TableHelper::OPPOSITE_SORT_DIRECTION[$columnSortDirection]
+                    string: TableHelper::OPPOSITE_SORT_DIRECTION[$columnSortDirection],
                 );
 
                 if (($lowerCaseSortDirection === 'asc') && $this->sortLinkClassActiveAsc !== '') {
@@ -88,9 +89,9 @@ class SortableTableHeadRenderer extends TableHeadRenderer
             }
 
             $labelHtml = '<' . implode(
-                    separator: ' ',
-                    array: $sortLinkAttributes
-                ) . '>' . $columnLabel . $labelAddition . '</a>';
+                separator: ' ',
+                array: $sortLinkAttributes,
+            ) . '>' . $columnLabel . $labelAddition . '</a>';
         }
 
         $attributesArr = ['th'];

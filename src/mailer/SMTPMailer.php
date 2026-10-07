@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -8,15 +9,15 @@ declare(strict_types=1);
 
 namespace actra\yuf\mailer;
 
-use Exception;
 use actra\yuf\common\StringUtils;
+use Exception;
 use RuntimeException;
 use Throwable;
 
 class SMTPMailer extends AbstractMailer
 {
-    private(set) string $lastReply = '';
-    private(set) array $log = [];
+    public private(set) string $lastReply = '';
+    public private(set) array $log = [];
     /** @var resource $stream */
     private $stream;
 
@@ -25,9 +26,8 @@ class SMTPMailer extends AbstractMailer
         private readonly string $smtpUserName,
         private readonly string $smtpPassword,
         private readonly int $port = 587,
-        private readonly bool $useTls = true
-    ) {
-    }
+        private readonly bool $useTls = true,
+    ) {}
 
     public function headerHasTo(): bool
     {
@@ -47,21 +47,21 @@ class SMTPMailer extends AbstractMailer
     public function sendMail(
         AbstractMail $abstractMail,
         MailMimeHeader $mailMimeHeader,
-        MailMimeBody $mailMimeBody
+        MailMimeBody $mailMimeBody,
     ): void {
         $this->stream = fsockopen(
             hostname: $this->hostName,
             port: $this->port,
             error_code: $enum,
             error_message: $estr,
-            timeout: 30
+            timeout: 30,
         );
         if ($this->stream === false) {
             throw new RuntimeException(message: 'Socket connection error: ' . $this->hostName);
         }
         $this->checkResponse(
             expectedCode: 220,
-            commandTimeout: 300
+            commandTimeout: 300,
         );
         $serverName = $this->getServerName();
         $this->sendCommandEHLO(serverName: $serverName);
@@ -70,7 +70,7 @@ class SMTPMailer extends AbstractMailer
             stream_socket_enable_crypto(
                 stream: $this->stream,
                 enable: true,
-                crypto_method: STREAM_CRYPTO_METHOD_TLS_CLIENT
+                crypto_method: STREAM_CRYPTO_METHOD_TLS_CLIENT,
             );
             $this->sendCommandEHLO(serverName: $serverName);
         }
@@ -82,21 +82,21 @@ class SMTPMailer extends AbstractMailer
         $this->sendCommandMailFrom(sender: $abstractMail->sender);
         foreach (
             $abstractMail->mailerAddressCollection->list(
-                mailerAddressKindEnum: MailerAddressKindEnum::KIND_TO
+                mailerAddressKindEnum: MailerAddressKindEnum::KIND_TO,
             ) as $mailerAddress
         ) {
             $this->sendCommandRecipient(recipient: $mailerAddress);
         }
         foreach (
             $abstractMail->mailerAddressCollection->list(
-                mailerAddressKindEnum: MailerAddressKindEnum::KIND_CC
+                mailerAddressKindEnum: MailerAddressKindEnum::KIND_CC,
             ) as $mailerAddress
         ) {
             $this->sendCommandRecipient(recipient: $mailerAddress);
         }
         foreach (
             $abstractMail->mailerAddressCollection->list(
-                mailerAddressKindEnum: MailerAddressKindEnum::KIND_BCC
+                mailerAddressKindEnum: MailerAddressKindEnum::KIND_BCC,
             ) as $mailerAddress
         ) {
             $this->sendCommandRecipient(recipient: $mailerAddress);
@@ -109,8 +109,8 @@ class SMTPMailer extends AbstractMailer
                     MailerConstants::CRLF,
                     MailerConstants::CRLF,
                     $mailMimeBody->getMimeBody(),
-                ]
-            )
+                ],
+            ),
         );
         $this->sendCommandQuit();
         $this->close();
@@ -118,12 +118,11 @@ class SMTPMailer extends AbstractMailer
 
     private function checkResponse(
         int $expectedCode,
-        int $commandTimeout // https://www.rfc-editor.org/rfc/rfc2821#section-4.5.3.2
-    ): void
-    {
+        int $commandTimeout, // https://www.rfc-editor.org/rfc/rfc2821#section-4.5.3.2
+    ): void {
         stream_set_timeout(
             stream: $this->stream,
-            seconds: $commandTimeout
+            seconds: $commandTimeout,
         );
         $this->lastReply = $this->getLines(commandTimeout: $commandTimeout);
         if ($this->lastReply === '') {
@@ -134,15 +133,15 @@ class SMTPMailer extends AbstractMailer
             preg_match(
                 pattern: '/^(\d{3})[ -](?:(\d\.\d\.\d{1,2}) )?/',
                 subject: $this->lastReply,
-                matches: $matches
+                matches: $matches,
             ) === 1
         ) {
-            $responseCode = (int)$matches[1];
+            $responseCode = (int) $matches[1];
         } else {
-            $responseCode = (int)substr(
+            $responseCode = (int) substr(
                 string: $this->lastReply,
                 offset: 0,
-                length: 3
+                length: 3,
             );
         }
         if ($responseCode === $expectedCode) {
@@ -167,7 +166,7 @@ class SMTPMailer extends AbstractMailer
                     read: $selectRead,
                     write: $selectWrite,
                     except: $selectWrite,
-                    seconds: $commandTimeout
+                    seconds: $commandTimeout,
                 );
             } catch (Throwable $throwable) {
                 if (str_contains(haystack: $throwable->getMessage(), needle: 'interrupted system call')) {
@@ -177,7 +176,7 @@ class SMTPMailer extends AbstractMailer
             }
             $str = fgets(
                 stream: $this->stream,
-                length: 512 // https://www.rfc-editor.org/rfc/rfc5321#section-4.5.3.1.5
+                length: 512, // https://www.rfc-editor.org/rfc/rfc5321#section-4.5.3.1.5
             );
             $this->log[] = $str;
             $data .= $str;
@@ -190,7 +189,8 @@ class SMTPMailer extends AbstractMailer
                     ' ',
                     "\r",
                     "\n",
-                ]
+                ],
+                strict: true,
             )) {
                 break;
             }
@@ -211,14 +211,14 @@ class SMTPMailer extends AbstractMailer
         $this->sendCommand(
             command: 'EHLO ' . $serverName,
             expectedResponseCode: 250,
-            commandTimeout: 10
+            commandTimeout: 10,
         );
     }
 
     private function sendCommand(
         string $command,
         int $expectedResponseCode,
-        int $commandTimeout
+        int $commandTimeout,
     ): void {
         if (!$this->isConnected()) {
             throw new Exception(message: 'Tried to send command without being connected');
@@ -232,7 +232,7 @@ class SMTPMailer extends AbstractMailer
         $this->sendRawDataToServer(data: $command);
         $this->checkResponse(
             expectedCode: $expectedResponseCode,
-            commandTimeout: $commandTimeout
+            commandTimeout: $commandTimeout,
         );
     }
 
@@ -260,7 +260,7 @@ class SMTPMailer extends AbstractMailer
         $this->sendCommand(
             command: 'STARTTLS',
             expectedResponseCode: 220,
-            commandTimeout: 10
+            commandTimeout: 10,
         );
     }
 
@@ -269,7 +269,7 @@ class SMTPMailer extends AbstractMailer
         $this->sendCommand(
             command: 'AUTH LOGIN',
             expectedResponseCode: 334,
-            commandTimeout: 10
+            commandTimeout: 10,
         );
     }
 
@@ -278,7 +278,7 @@ class SMTPMailer extends AbstractMailer
         $this->sendCommand(
             command: base64_encode(string: $this->smtpUserName),
             expectedResponseCode: 334,
-            commandTimeout: 10
+            commandTimeout: 10,
         );
     }
 
@@ -287,7 +287,7 @@ class SMTPMailer extends AbstractMailer
         $this->sendCommand(
             command: base64_encode(string: $this->smtpPassword),
             expectedResponseCode: 235,
-            commandTimeout: 10
+            commandTimeout: 10,
         );
     }
 
@@ -296,7 +296,7 @@ class SMTPMailer extends AbstractMailer
         $this->sendCommand(
             command: 'MAIL FROM: <' . $sender->getPunyEncodedEmail() . '>',
             expectedResponseCode: 250,
-            commandTimeout: 300
+            commandTimeout: 300,
         );
     }
 
@@ -305,7 +305,7 @@ class SMTPMailer extends AbstractMailer
         $this->sendCommand(
             command: 'RCPT TO: <' . $recipient->getPunyEncodedEmail() . '>',
             expectedResponseCode: 250,
-            commandTimeout: 300
+            commandTimeout: 300,
         );
     }
 
@@ -341,8 +341,8 @@ class SMTPMailer extends AbstractMailer
                     "\r",
                 ],
                 replace: "\n",
-                subject: $data
-            )
+                subject: $data,
+            ),
         );
 
         /**
@@ -355,12 +355,12 @@ class SMTPMailer extends AbstractMailer
             offset: 0,
             length: strpos(
                 haystack: $lines[0],
-                needle: ':'
-            )
+                needle: ':',
+            ),
         );
         $in_headers = false;
         if (
-            $field != ''
+            $field !== ''
             && !str_contains(haystack: $field, needle: ' ')
         ) {
             $in_headers = true;
@@ -378,9 +378,9 @@ class SMTPMailer extends AbstractMailer
                     haystack: substr(
                         string: $line,
                         offset: 0,
-                        length: MailerConstants::MAX_LINE_LENGTH
+                        length: MailerConstants::MAX_LINE_LENGTH,
                     ),
-                    needle: ' '
+                    needle: ' ',
                 );
                 if ($pos === false || $pos === 0) {
                     // No nice break found, add a hard break
@@ -418,7 +418,7 @@ class SMTPMailer extends AbstractMailer
         $this->sendCommand(
             command: 'DATA',
             expectedResponseCode: 354,
-            commandTimeout: 120
+            commandTimeout: 120,
         );
     }
 
@@ -427,7 +427,7 @@ class SMTPMailer extends AbstractMailer
         $this->sendCommand(
             command: '.',
             expectedResponseCode: 250,
-            commandTimeout: 600
+            commandTimeout: 600,
         );
     }
 
@@ -436,7 +436,7 @@ class SMTPMailer extends AbstractMailer
         $this->sendCommand(
             command: 'QUIT',
             expectedResponseCode: 221,
-            commandTimeout: 60
+            commandTimeout: 60,
         );
     }
 

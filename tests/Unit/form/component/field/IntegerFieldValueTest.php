@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -30,7 +31,7 @@ final class IntegerFieldValueTest extends TestCase
             name: 'amount',
             label: HtmlText::encoded(textContent: 'Amount'),
             initialValue: $initialValue,
-            requiredError: $requiredError
+            requiredError: $requiredError,
         );
     }
 
@@ -79,8 +80,8 @@ final class IntegerFieldValueTest extends TestCase
         yield 'zero-width space' => ["1\u{200B}2", 12];
         yield 'empty string' => ['', null];
         yield 'only whitespace' => ["  \t", null];
-        yield 'int max' => [(string)PHP_INT_MAX, PHP_INT_MAX];
-        yield 'int min' => [(string)PHP_INT_MIN, PHP_INT_MIN];
+        yield 'int max' => [(string) PHP_INT_MAX, PHP_INT_MAX];
+        yield 'int min' => [(string) PHP_INT_MIN, PHP_INT_MIN];
     }
 
     #[DataProvider('validInputProvider')]
@@ -123,7 +124,7 @@ final class IntegerFieldValueTest extends TestCase
         $this->assertSame('The given value is invalid.', $field->errorCollection->getFirstError()->render());
         $this->assertStringContainsString(
             'value="' . htmlspecialchars(string: $input, flags: ENT_QUOTES) . '"',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -153,7 +154,7 @@ final class IntegerFieldValueTest extends TestCase
         $field = new IntegerField(
             name: 'amount',
             label: HtmlText::encoded(textContent: 'Amount'),
-            individualInvalidError: HtmlText::encoded(textContent: 'Not a whole number')
+            individualInvalidError: HtmlText::encoded(textContent: 'Not a whole number'),
         );
 
         $field->validate(input: FormInput::fromArray(data: ['amount' => '1.5']));

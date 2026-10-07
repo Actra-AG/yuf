@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -15,9 +16,7 @@ abstract class HtmlElement
      *
      * @param string $name : Name to be set by the constructor
      */
-    protected function __construct(private(set) readonly string $name)
-    {
-    }
+    protected function __construct(public private(set) readonly string $name) {}
 
     /**
      * Abstract render-method to make sure that every child does implement it

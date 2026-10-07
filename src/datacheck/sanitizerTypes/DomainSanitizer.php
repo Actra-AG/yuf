@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -29,7 +30,7 @@ final class DomainSanitizer
                 '/\/$/',
             ],
             replacement: '',
-            subject: $domain
+            subject: $domain,
         );
         if (
             str_contains(haystack: $domain, needle: 'www.')
@@ -37,7 +38,7 @@ final class DomainSanitizer
         ) {
             $sanitizedDomain = 'www.' . $sanitizedDomain;
         }
-        if (is_null(value: $sanitizedDomain)) {
+        if ($sanitizedDomain === null) {
             throw new RuntimeException(message: 'Domain value is not valid: "' . $domain . '"');
         }
 

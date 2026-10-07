@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -56,7 +57,7 @@ final class FormMessagesHandoverTest extends TestCase
 
         $this->assertSame(
             'Die ungültige Eingabe wurde ignoriert.',
-            $field->errorCollection->getFirstError()->render()
+            $field->errorCollection->getFirstError()->render(),
         );
     }
 

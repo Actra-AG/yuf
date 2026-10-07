@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -30,7 +31,7 @@ final class RadioOptionsFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'Radio'),
             formOptions: $formOptions,
             initialValue: $initialValue,
-            requiredError: $requiredError
+            requiredError: $requiredError,
         );
     }
 
@@ -136,7 +137,7 @@ final class RadioOptionsFieldValueTest extends TestCase
 
         $this->assertSame(
             'Bitte wählen Sie eine der Optionen aus.',
-            $field->errorCollection->getFirstError()->render()
+            $field->errorCollection->getFirstError()->render(),
         );
     }
 
@@ -158,7 +159,7 @@ final class RadioOptionsFieldValueTest extends TestCase
     {
         $form = new Form(
             name: 'radioCustomForm',
-            messages: new FormMessages(invalidOption: 'Bad option in [field]!')
+            messages: new FormMessages(invalidOption: 'Bad option in [field]!'),
         );
         $field = $this->createField();
         $form->addField(formField: $field);

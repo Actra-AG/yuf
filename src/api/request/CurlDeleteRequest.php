@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -16,7 +17,7 @@ class CurlDeleteRequest extends AbstractCurlRequest
     {
         parent::__construct(
             requestTargetUrl: $requestTargetUrl,
-            requestTypeSpecificCurlOptions: [CURLOPT_CUSTOMREQUEST => 'DELETE']
+            requestTypeSpecificCurlOptions: [CURLOPT_CUSTOMREQUEST => 'DELETE'],
         );
     }
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -36,7 +37,7 @@ class SmartTable
     public string $totalAmountMessage_oneResult = 'Es wurde <strong>1</strong> Resultat gefunden.';
     public string $totalAmountMessage_numResults = 'Es wurden <strong>' . SmartTable::amount . '</strong> Resultate gefunden.';
     /** @var AbstractTableColumn[] */
-    private(set) array $columns = [];
+    public private(set) array $columns = [];
     private array $cssClasses = ['table'];
 
     public function __construct(
@@ -60,10 +61,10 @@ class SmartTable
         $columnIdentifier = $abstractTableColumn->identifier;
         if (array_key_exists(
             key: $columnIdentifier,
-            array: $this->columns
+            array: $this->columns,
         )) {
             throw new LogicException(
-                message: 'There is already a column with the same identifier ' . $columnIdentifier
+                message: 'There is already a column with the same identifier ' . $columnIdentifier,
             );
         }
         $abstractTableColumn->tableIdentifier = $this->identifier;
@@ -84,7 +85,7 @@ class SmartTable
             $totalAmountMessage = str_replace(
                 search: SmartTable::amount,
                 replace: number_format(num: $totalAmountOfItems, thousands_separator: '\''),
-                subject: $this->totalAmountMessage_numResults
+                subject: $this->totalAmountMessage_numResults,
             );
         }
         $bodyArr = [];
@@ -99,7 +100,7 @@ class SmartTable
             $bodyArr[] = str_replace(
                 search: SmartTable::cells,
                 replace: implode(separator: PHP_EOL, array: $cells),
-                subject: $rowHtml
+                subject: $rowHtml,
             );
         }
         $tableAttributes = ['table'];
@@ -115,25 +116,25 @@ class SmartTable
                 $this->tableHeadRenderer->render(smartTable: $this),
                 implode(separator: PHP_EOL, array: $bodyArr),
             ],
-            subject: $this->tableHtml
+            subject: $this->tableHtml,
         );
 
         $placeholders = [
             SmartTable::totalAmount => str_replace(
                 search: SmartTable::totalAmountMessagePlaceholder,
                 replace: $totalAmountMessage,
-                subject: $this->totalAmountHtml
+                subject: $this->totalAmountHtml,
             ),
             SmartTable::table => implode(
                 separator: PHP_EOL,
                 array: [
                     '<' . implode(
                         separator: ' ',
-                        array: $tableAttributes
+                        array: $tableAttributes,
                     ) . '>',
                     $tableHtml,
                     '</table>',
-                ]
+                ],
             ),
         ];
 
@@ -143,11 +144,11 @@ class SmartTable
         return ($totalAmountOfItems === 0) ? str_replace(
             search: $srcArr,
             replace: $rplArr,
-            subject: $this->noDataHtml
+            subject: $this->noDataHtml,
         ) : str_replace(
             search: $srcArr,
             replace: $rplArr,
-            subject: $this->fullHtml
+            subject: $this->fullHtml,
         );
     }
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -15,9 +16,7 @@ use DateTimeImmutable;
  */
 final readonly class FixedClock implements Clock
 {
-    public function __construct(private DateTimeImmutable $now)
-    {
-    }
+    public function __construct(private DateTimeImmutable $now) {}
 
     public function now(): DateTimeImmutable
     {

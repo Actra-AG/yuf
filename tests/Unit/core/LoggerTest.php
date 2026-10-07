@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -42,8 +43,8 @@ final class LoggerTest extends TestCase
             logEmailRecipient: '',
             logDirectory: $this->logDirectory,
             clock: new FixedClock(
-                now: new DateTimeImmutable(datetime: '@' . (LoggerTest::TICKET_MODIFIED + $secondsAfterFirstModification))
-            )
+                now: new DateTimeImmutable(datetime: '@' . (LoggerTest::TICKET_MODIFIED + $secondsAfterFirstModification)),
+            ),
         );
         $logger->logMessage(message: $message);
 
@@ -65,7 +66,7 @@ final class LoggerTest extends TestCase
         $logger = new Logger(
             logEmailRecipient: '',
             logDirectory: $this->logDirectory,
-            clock: new FixedClock(now: new DateTimeImmutable(datetime: '@' . LoggerTest::TICKET_MODIFIED))
+            clock: new FixedClock(now: new DateTimeImmutable(datetime: '@' . LoggerTest::TICKET_MODIFIED)),
         );
         $logger->logMessage(message: 'first time');
 
@@ -77,11 +78,11 @@ final class LoggerTest extends TestCase
         $logger = new Logger(
             logEmailRecipient: '',
             logDirectory: $this->logDirectory,
-            clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-03-04 05:06:07.123456'))
+            clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-03-04 05:06:07.123456')),
         );
         $logger->logMessage(message: 'stamped');
 
         $ticket = $this->logDirectory . 'ticket_' . hash(algo: 'sha256', data: 'stamped') . '.txt';
-        $this->assertStringStartsWith('2026-03-04 05:06:07,12345600' . PHP_EOL . 'stamped', (string)file_get_contents(filename: $ticket));
+        $this->assertStringStartsWith('2026-03-04 05:06:07,12345600' . PHP_EOL . 'stamped', (string) file_get_contents(filename: $ticket));
     }
 }

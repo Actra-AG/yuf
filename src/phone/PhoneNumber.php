@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,15 +20,14 @@ readonly class PhoneNumber
         public int $countryCode,
         public ?bool $italianLeadingZero,
         public int $numberOfLeadingZeros,
-        public string $nationalNumber
-    ) {
-    }
+        public string $nationalNumber,
+    ) {}
 
     public static function createFromString(string $input, ?string $defaultCountryCode): PhoneNumber
     {
         $phoneNumber = (PhoneParser::getInstance())->parse(
             numberToParse: $input,
-            defaultCountryCode: $defaultCountryCode
+            defaultCountryCode: $defaultCountryCode,
         );
         if (!PhoneValidator::isPossibleNumber(phoneNumber: $phoneNumber)) {
             throw new PhoneParseException(message: 'The supplied phone number is not possible.', code: -1);

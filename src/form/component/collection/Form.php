@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -8,15 +9,14 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\collection;
 
-use Exception;
 use actra\yuf\form\component\field\CsrfTokenField;
 use actra\yuf\form\component\FormControl;
 use actra\yuf\form\component\FormField;
 use actra\yuf\form\FormCollection;
+use actra\yuf\form\FormComponent;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\form\FormNameRegistry;
-use actra\yuf\form\FormComponent;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\DefaultFormRenderer;
 use actra\yuf\form\renderer\DefinitionListRenderer;
@@ -24,12 +24,13 @@ use actra\yuf\html\HtmlText;
 use actra\yuf\security\CsrfToken;
 use actra\yuf\security\CsrfTokenSource;
 use actra\yuf\security\SessionCsrfTokenSource;
+use Exception;
 
 class Form extends FormCollection
 {
     public readonly string $sentIndicator;
     /** @var list<string> */
-    private(set) array $cssClasses = [];
+    public private(set) array $cssClasses = [];
     private bool $renderRequiredAbbr = true;
 
     public function __construct(
@@ -40,14 +41,14 @@ class Form extends FormCollection
         ?string $individualSentIndicator = null,
         public readonly bool $disableClientValidation = false,
         public readonly FormMessages $messages = new FormMessages(),
-        ?CsrfTokenSource $csrfTokenSource = null
+        ?CsrfTokenSource $csrfTokenSource = null,
     ) {
         FormNameRegistry::register(name: $name);
-        $this->sentIndicator = is_null(value: $individualSentIndicator) ? $name : $individualSentIndicator;
+        $this->sentIndicator = $individualSentIndicator === null ? $name : $individualSentIndicator;
         parent::__construct(name: $name);
 
         $this->addField(
-            formField: new CsrfTokenField(tokenSource: $csrfTokenSource ?? new SessionCsrfTokenSource())
+            formField: new CsrfTokenField(tokenSource: $csrfTokenSource ?? new SessionCsrfTokenSource()),
         );
     }
 
@@ -133,7 +134,7 @@ class Form extends FormCollection
         if (
             $this->hasErrors(withChildElements: true)
             && !$this->hasErrors(withChildElements: false)
-            && !is_null(value: $this->globalErrorMessage)
+            && $this->globalErrorMessage !== null
         ) {
             $this->addError(errorMessage: $this->globalErrorMessage);
         }
@@ -183,9 +184,7 @@ class Form extends FormCollection
         if (
             $this->hasErrors(withChildElements: true)
             && !$this->hasErrors(withChildElements: false)
-            && !is_null(
-                $this->globalErrorMessage
-            )
+            && $this->globalErrorMessage !== null
         ) {
             $this->addError(errorMessage: $this->globalErrorMessage);
         }

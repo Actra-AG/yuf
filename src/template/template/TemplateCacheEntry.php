@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -11,9 +12,8 @@ namespace actra\yuf\template\template;
 readonly class TemplateCacheEntry
 {
     public function __construct(
-        private(set) string $path,
-        private(set) int $changeTime,
-        private(set) int $size
-    ) {
-    }
+        public private(set) string $path,
+        public private(set) int $changeTime,
+        public private(set) int $size,
+    ) {}
 }

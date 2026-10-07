@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -18,8 +19,8 @@ abstract class TemplateTag
         if (($this instanceof TagNode) === false && ($this instanceof TagInline) === false) {
             throw new Exception(
                 'The class "' . get_class(
-                    $this
-                ) . '" does not implement the class "TagNode" or "TagInline" and is so recognized as an illegal class for a custom tag."'
+                    $this,
+                ) . '" does not implement the class "TagNode" or "TagInline" and is so recognized as an illegal class for a custom tag."',
             );
         }
     }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -56,7 +57,7 @@ abstract class AbstractMail
         string $subject,
         public readonly string $charSet = MailerConstants::CHARSET_UTF8,
         private readonly string $encoding = MailerConstants::ENCODING_QUOTED_PRINTABLE,
-        private readonly int $priority = MailerConstants::PRIORITY_NORMAL
+        private readonly int $priority = MailerConstants::PRIORITY_NORMAL,
     ) {
         $this->sender = MailerAddress::createSenderAddress(inputEmail: $senderEmail, inputName: '');
         $this->fromAddress = MailerAddress::createFromAddress(inputEmail: $fromEmail, inputName: $fromName);
@@ -65,19 +66,19 @@ abstract class AbstractMail
         $this->customHeaders = new MailerHeaderCollection();
         $this->addTo(inputEmail: $toEmail, inputName: $toName);
         $this->subject = trim(string: $subject);
-        if (!in_array(needle: $this->charSet, haystack: MailerConstants::CHARSET_LIST)) {
+        if (!in_array(needle: $this->charSet, haystack: MailerConstants::CHARSET_LIST, strict: true)) {
             throw new MailerException(
-                message: 'Invalid charset "' . $this->charSet . '". See MailerConstants::CHARSET_LIST[].'
+                message: 'Invalid charset "' . $this->charSet . '". See MailerConstants::CHARSET_LIST[].',
             );
         }
-        if (!in_array(needle: $this->encoding, haystack: MailerConstants::ENCODING_LIST)) {
+        if (!in_array(needle: $this->encoding, haystack: MailerConstants::ENCODING_LIST, strict: true)) {
             throw new MailerException(
-                message: 'Invalid encoding "' . $this->encoding . '". See MailerConstants::ENCODING_LIST[].'
+                message: 'Invalid encoding "' . $this->encoding . '". See MailerConstants::ENCODING_LIST[].',
             );
         }
-        if (!in_array(needle: $this->priority, haystack: MailerConstants::PRIORITY_LIST)) {
+        if (!in_array(needle: $this->priority, haystack: MailerConstants::PRIORITY_LIST, strict: true)) {
             throw new MailerException(
-                message: 'Invalid priority "' . $this->priority . '". See MailerConstants::PRIORITY_LIST[].'
+                message: 'Invalid priority "' . $this->priority . '". See MailerConstants::PRIORITY_LIST[].',
             );
         }
     }
@@ -87,8 +88,8 @@ abstract class AbstractMail
         $this->mailerAddressCollection->addItem(
             mailerAddress: MailerAddress::createToAddress(
                 inputEmail: $inputEmail,
-                inputName: $inputName
-            )
+                inputName: $inputName,
+            ),
         );
     }
 
@@ -97,8 +98,8 @@ abstract class AbstractMail
         $this->mailerAddressCollection->addItem(
             mailerAddress: MailerAddress::createReplyToAddress(
                 inputEmail: $inputEmail,
-                inputName: $inputName
-            )
+                inputName: $inputName,
+            ),
         );
     }
 
@@ -107,8 +108,8 @@ abstract class AbstractMail
         $this->mailerAddressCollection->addItem(
             mailerAddress: MailerAddress::createCcAddress(
                 inputEmail: $inputEmail,
-                inputName: $inputName
-            )
+                inputName: $inputName,
+            ),
         );
     }
 
@@ -117,8 +118,8 @@ abstract class AbstractMail
         $this->mailerAddressCollection->addItem(
             mailerAddress: MailerAddress::createBccAddress(
                 inputEmail: $inputEmail,
-                inputName: $inputName
-            )
+                inputName: $inputName,
+            ),
         );
     }
 
@@ -126,7 +127,7 @@ abstract class AbstractMail
     {
         $this->confirmReadingToAddress = MailerAddress::createConfirmReadingToAddress(
             inputEmail: $inputEmail,
-            inputName: $inputName
+            inputName: $inputName,
         );
     }
 
@@ -138,15 +139,15 @@ abstract class AbstractMail
     public function addCustomHeader(
         string $name,
         string $value,
-        int $maxLineLength
+        int $maxLineLength,
     ): void {
         $this->customHeaders->addItem(
             mailerHeader: MailerHeader::createEncodedHeaderText(
                 name: $name,
                 value: $value,
                 maxLineLength: $maxLineLength,
-                defaultCharSet: $this->charSet
-            )
+                defaultCharSet: $this->charSet,
+            ),
         );
     }
 
@@ -189,7 +190,7 @@ abstract class AbstractMail
                         message: $alternativeBody,
                         length: $wordWrap,
                         charSet: $charSet,
-                        qp_mode: false
+                        qp_mode: false,
                     );
                     break;
                 default:
@@ -197,7 +198,7 @@ abstract class AbstractMail
                         message: $body,
                         length: $wordWrap,
                         charSet: $charSet,
-                        qp_mode: false
+                        qp_mode: false,
                     );
                     break;
             }
@@ -235,7 +236,7 @@ abstract class AbstractMail
                 contentType: $contentType,
                 charSet: $charSet,
                 encoding: $encoding,
-                boundary1: $boundary1
+                boundary1: $boundary1,
             ),
             mailMimeBody: new MailMimeBody(
                 maxLineLength: $maxLineLength,
@@ -248,8 +249,8 @@ abstract class AbstractMail
                 boundary1: $boundary1,
                 boundary2: $boundary2,
                 boundary3: $boundary3,
-                mailerAttachmentCollection: $mailerAttachmentCollection
-            )
+                mailerAttachmentCollection: $mailerAttachmentCollection,
+            ),
         );
         $this->isSent = true;
     }
@@ -265,19 +266,21 @@ abstract class AbstractMail
         if ($bytes === '') {
             // We failed to produce a proper random string, so make do.
             // Use a hash to force the length to the same as the other methods
-            $bytes = hash(algo: 'sha256', data: uniqid(prefix: (string)mt_rand(), more_entropy: true), binary: true);
+            $bytes = hash(algo: 'sha256', data: uniqid(prefix: (string) mt_rand(), more_entropy: true), binary: true);
         }
 
         // We don't care about messing up base64 format here, just want a random string
-        return str_replace(search: ['=', '+', '/'],
+        return str_replace(
+            search: ['=', '+', '/'],
             replace: '',
             subject: base64_encode(
                 string: hash(
                     algo: 'sha256',
                     data: $bytes,
-                    binary: true
-                )
-            ));
+                    binary: true,
+                ),
+            ),
+        );
     }
 
     public function getSubjectForHeader(int $maxLineLength): string
@@ -285,7 +288,7 @@ abstract class AbstractMail
         return MailerFunctions::encodeHeaderText(
             string: MailerFunctions::secureHeader(string: $this->subject),
             maxLineLength: $maxLineLength,
-            defaultCharSet: $this->charSet
+            defaultCharSet: $this->charSet,
         );
     }
 

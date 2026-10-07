@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -30,15 +31,15 @@ class NumericFieldRenderer extends InputFieldRenderer
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'inputmode',
                 value: 'numeric',
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'pattern',
                 value: '\d{' . $this->getDigitQuantifier() . '}',
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
     }
 
@@ -47,9 +48,9 @@ class NumericFieldRenderer extends InputFieldRenderer
         $minLength = $this->numericField->minLength;
         $maxLength = $this->numericField->maxLength;
         if ($minLength === $maxLength) {
-            return (string)$this->numericField->minLength;
+            return (string) $this->numericField->minLength;
         }
-        if (is_null(value: $maxLength)) {
+        if ($maxLength === null) {
             return $minLength . ',';
         }
         return $minLength . ',' . $maxLength;

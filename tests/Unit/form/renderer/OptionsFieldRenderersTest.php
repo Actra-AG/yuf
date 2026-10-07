@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -47,7 +48,7 @@ final class OptionsFieldRenderersTest extends TestCase
             name: 'r',
             label: $this->label(),
             formOptions: $this->createOptions(),
-            initialValue: 'b'
+            initialValue: 'b',
         );
 
         $html = $field->render();
@@ -63,7 +64,7 @@ final class OptionsFieldRenderersTest extends TestCase
             name: 'r',
             label: $this->label(),
             formOptions: $this->createOptions(),
-            initialValue: null
+            initialValue: null,
         );
 
         $this->assertStringNotContainsString('checked', $field->render());
@@ -75,7 +76,7 @@ final class OptionsFieldRenderersTest extends TestCase
             name: 'r',
             label: $this->label(),
             formOptions: $this->createOptions(),
-            initialValue: '0'
+            initialValue: '0',
         );
 
         $this->assertStringContainsString('id="r_0" value="0" checked>', $field->render());
@@ -87,7 +88,7 @@ final class OptionsFieldRenderersTest extends TestCase
             name: 'r',
             label: $this->label(),
             formOptions: $this->createOptions(),
-            initialValue: 'b'
+            initialValue: 'b',
         );
         $field->validate(input: FormInput::fromArray(data: ['r' => 'a']));
 
@@ -103,7 +104,7 @@ final class OptionsFieldRenderersTest extends TestCase
             name: 'c',
             label: $this->label(),
             formOptions: $this->createOptions(),
-            initialValues: ['a', '0']
+            initialValues: ['a', '0'],
         );
 
         $html = $field->render();
@@ -122,12 +123,12 @@ final class OptionsFieldRenderersTest extends TestCase
             label: $this->label(),
             formOptions: $formOptions,
             initialValues: ['yes'],
-            layout: CheckboxOptionsLayoutEnum::CHECKBOX_ITEM
+            layout: CheckboxOptionsLayoutEnum::CHECKBOX_ITEM,
         );
 
         $this->assertStringContainsString(
             '<input type="checkbox" name="c[]" id="c" value="yes" checked>',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -140,7 +141,7 @@ final class OptionsFieldRenderersTest extends TestCase
             label: $this->label(),
             formOptions: $formOptions,
             initialValues: [],
-            layout: CheckboxOptionsLayoutEnum::CHECKBOX_ITEM
+            layout: CheckboxOptionsLayoutEnum::CHECKBOX_ITEM,
         );
 
         $this->assertStringContainsString('<input type="checkbox" name="c[]" id="c" value="yes">', $field->render());
@@ -153,7 +154,7 @@ final class OptionsFieldRenderersTest extends TestCase
         $this->assertSame(
             '<div class="form-check"><input type="checkbox" name="bo[]" id="bo" value="checked" checked>'
             . '<label for="bo" class="form-check-label">Label</label></div>',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -163,7 +164,7 @@ final class OptionsFieldRenderersTest extends TestCase
 
         $this->assertStringContainsString(
             '<input type="checkbox" name="bo[]" id="bo" value="checked">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -181,7 +182,7 @@ final class OptionsFieldRenderersTest extends TestCase
             name: 'bo',
             label: $this->label(),
             isCheckedByDefault: false,
-            requiredError: HtmlText::encoded(textContent: 'Accept')
+            requiredError: HtmlText::encoded(textContent: 'Accept'),
         );
         $field->validate(input: FormInput::fromArray(data: []));
 
@@ -198,13 +199,13 @@ final class OptionsFieldRenderersTest extends TestCase
             name: 's',
             label: $this->label(),
             formOptions: $this->createOptions(),
-            initialValue: 'b'
+            initialValue: 'b',
         );
 
         $this->assertSame(
             '<select name="s" id="s"><option value=""></option><option value="a">A</option>'
             . '<option value="b" selected>B</option><option value="0">Zero</option></select>',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -214,7 +215,7 @@ final class OptionsFieldRenderersTest extends TestCase
             name: 's',
             label: $this->label(),
             formOptions: $this->createOptions(),
-            initialValue: null
+            initialValue: null,
         );
 
         $this->assertStringContainsString('<option value="" selected></option>', $field->render());
@@ -226,7 +227,7 @@ final class OptionsFieldRenderersTest extends TestCase
             name: 's',
             label: $this->label(),
             formOptions: $this->createOptions(),
-            initialValue: '0'
+            initialValue: '0',
         );
 
         $this->assertStringContainsString('<option value="0" selected>Zero</option>', $field->render());
@@ -238,13 +239,13 @@ final class OptionsFieldRenderersTest extends TestCase
             name: 'm',
             label: $this->label(),
             formOptions: $this->createOptions(),
-            initialValues: ['a', '0']
+            initialValues: ['a', '0'],
         );
 
         $this->assertSame(
             '<select name="m[]" id="m" multiple><option value=""></option><option value="a" selected>A</option>'
             . '<option value="b">B</option><option value="0" selected>Zero</option></select>',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -254,7 +255,7 @@ final class OptionsFieldRenderersTest extends TestCase
             name: 'm',
             label: $this->label(),
             formOptions: $this->createOptions(),
-            initialValues: []
+            initialValues: [],
         );
 
         $this->assertStringNotContainsString('selected', $field->render());
@@ -266,7 +267,7 @@ final class OptionsFieldRenderersTest extends TestCase
             name: 'm',
             label: $this->label(),
             formOptions: $this->createOptions(),
-            initialValues: ['a']
+            initialValues: ['a'],
         );
         $field->validate(input: FormInput::fromArray(data: ['m' => ['b']]));
 
@@ -285,7 +286,7 @@ final class OptionsFieldRenderersTest extends TestCase
             initialValue: null,
             cssClasses: ['wide'],
             renderEmptyValueOption: false,
-            placeholder: 'Pick'
+            placeholder: 'Pick',
         );
         $field->addDataAttribute(name: 'data-x', value: '1');
 
@@ -304,7 +305,7 @@ final class OptionsFieldRenderersTest extends TestCase
             label: $this->label(),
             formOptions: $this->createOptions(),
             initialValue: 'b',
-            displayLegend: false
+            displayLegend: false,
         );
 
         $html = $field->render();
@@ -321,13 +322,13 @@ final class OptionsFieldRenderersTest extends TestCase
             label: $this->label(),
             formOptions: $this->createOptions(),
             initialValue: null,
-            requiredError: HtmlText::encoded(textContent: 'Required')
+            requiredError: HtmlText::encoded(textContent: 'Required'),
         );
 
         $this->assertStringStartsWith(
             '<fieldset class="legend-and-list"><legend>Label<span class="required">*</span></legend>'
             . '<ul class="form-toggle-list">',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -338,18 +339,18 @@ final class OptionsFieldRenderersTest extends TestCase
             label: $this->label(),
             formOptions: $this->createOptions(),
             initialValues: ['a', 'b'],
-            displayLegend: false
+            displayLegend: false,
         );
 
         $html = $field->render();
 
         $this->assertStringContainsString(
             '<input type="checkbox" toggle-id="mt_a" name="mt[]" value="a" checked>',
-            $html
+            $html,
         );
         $this->assertStringContainsString(
             '<input type="checkbox" toggle-id="mt_b" name="mt[]" value="b" checked>',
-            $html
+            $html,
         );
         $this->assertStringContainsString('<input type="checkbox" toggle-id="mt_0" name="mt[]" value="0">', $html);
     }
@@ -362,7 +363,7 @@ final class OptionsFieldRenderersTest extends TestCase
             formOptions: $this->createOptions(),
             initialValue: null,
             requiredError: HtmlText::encoded(textContent: 'Required'),
-            displayLegend: false
+            displayLegend: false,
         );
         $field->validate(input: FormInput::fromArray(data: []));
 

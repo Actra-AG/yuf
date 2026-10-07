@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -15,10 +16,7 @@ use actra\yuf\html\HtmlTagAttribute;
 
 class DefaultCollectionRenderer extends FormRenderer
 {
-
-    public function __construct(private readonly FormCollection $formCollection)
-    {
-    }
+    public function __construct(private readonly FormCollection $formCollection) {}
 
     public function prepare(): void
     {

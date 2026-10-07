@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -17,9 +18,9 @@ use actra\yuf\html\HtmlText;
 trait SelectOptionsSettings
 {
     /** @var list<string> */
-    private(set) array $cssClasses;
-    private(set) bool $renderEmptyValueOption;
-    private(set) ?string $placeholder;
+    public private(set) array $cssClasses;
+    public private(set) bool $renderEmptyValueOption;
+    public private(set) ?string $placeholder;
     private ?HtmlText $individualEmptyValueLabel;
     private bool $hasDefaultEmptyValueText;
     /** @var array<string, string> */
@@ -34,7 +35,7 @@ trait SelectOptionsSettings
      */
     public HtmlText $emptyValueLabel {
         get => $this->individualEmptyValueLabel ?? HtmlText::unencoded(
-            textContent: $this->hasDefaultEmptyValueText ? $this->messages->selectEmptyOption : ''
+            textContent: $this->hasDefaultEmptyValueText ? $this->messages->selectEmptyOption : '',
         );
     }
 
@@ -47,7 +48,7 @@ trait SelectOptionsSettings
         array $cssClasses,
         bool $renderAsChosenEnhancedField,
         bool $renderEmptyValueOption,
-        ?string $placeholder
+        ?string $placeholder,
     ): void {
         $this->hasDefaultEmptyValueText = $isRequired;
         $this->individualEmptyValueLabel = $individualEmptyValueLabel;
@@ -63,7 +64,7 @@ trait SelectOptionsSettings
     {
         if (str_starts_with(
             haystack: $name,
-            needle: 'data-'
+            needle: 'data-',
         )) {
             $name = substr(string: $name, offset: 5);
         }

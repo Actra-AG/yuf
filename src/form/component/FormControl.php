@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -28,9 +29,9 @@ class FormControl extends FormComponent
 
     public function __construct(
         string $name,
-        private(set) readonly HtmlText $submitLabel,
-        private(set) readonly ?string $cancelLink = null,
-        ?HtmlText $cancelLabel = null
+        public private(set) readonly HtmlText $submitLabel,
+        public private(set) readonly ?string $cancelLink = null,
+        ?HtmlText $cancelLabel = null,
     ) {
         $this->messages = new FormMessages();
         $this->individualCancelLabel = $cancelLabel;

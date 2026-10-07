@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -54,7 +55,7 @@ class For2Tag extends TemplateTag implements TagNode
             $stepIncrement = 1;
         }
 
-        if ($stepIncrement == 0) {
+        if (is_numeric(value: $stepIncrement) && (float) $stepIncrement === 0.0) {
             throw new Exception('Use a step value other than 0. This will end up in an endless loop');
         }
 
@@ -68,7 +69,7 @@ class For2Tag extends TemplateTag implements TagNode
 			' . $for_data . ' = $this->getDataFromSelector(\'' . $dataKeyAttr . '\');
 			' . $for_data_count . ' = count(' . $for_data . ');
 			' . $for_i . ' = 0;
-			
+
 			';
 
         if ($tplEngine->isFollowedBy($elementNode, ['else']) === true) {
@@ -77,28 +78,28 @@ class For2Tag extends TemplateTag implements TagNode
         }
 
         $phpCode .= 'for(' . $for_val . ' = current(' . $for_data . '), ' . $for_key . ' = key(' . $for_data . '); ' . $for_val . ';  ' . $for_val . ' = next(' . $for_data . '), ' . $for_key . ' = key(' . $for_data . '), ' . $for_i . ' += ' . $stepIncrement . '):
-			' . (($counterAttr !== null) ? '$this->addData(\'' . $counterAttr . '\', ' . $for_i . ', true);' : null) . '	
+			' . (($counterAttr !== null) ? '$this->addData(\'' . $counterAttr . '\', ' . $for_i . ', true);' : null) . '
 			' . (($keyVarAttr !== null) ? '$this->addData(\'' . $keyVarAttr . '\', ' . $for_key . ', true);' : null);
 
-        if ($grabCount === null || $grabCount == 1) {
+        if ($grabCount === null || (is_numeric(value: $grabCount) && (float) $grabCount === 1.0)) {
             $phpCode .= '$this->addData(\'' . $asVarAttr . '\', ' . $for_val . ', true);';
         } else {
             $phpCode .= '$tmpGrabGroup = array(
 				key(' . $for_data . ') => current(' . $for_data . ')
 			);
-			
+
 			for($i = 2; $i <= ' . $grabCount . '; ++$i) {
 				if(($tmpNextEntry = next(' . $for_data . ')) === false)
 					break;
-					
+
 				$tmpGrabGroup[key(' . $for_data . ')] = $tmpNextEntry;
 			}
-			
+
 			$this->addData(\'' . $asVarAttr . '\', $tmpGrabGroup, true);';
         }
 
-        $phpCode .= (($oddEvenAttr !== null) ? '$this->addData(\'' . $oddEvenAttr . '\', (((' . $for_i . '/' . $stepIncrement . ')%2 === 0)?\'odd\':\'even\'), true);' : null) . '	
-			' . (($firstLastAttr !== null) ? '$this->addData(\'' . $firstLastAttr . '\', ((' . $for_i . ' === 0)?\'first\':(((' . $for_i . '/' . $stepIncrement . ') === ' . $for_data_count . '-1)?\'last\':null)), true);' : null) . '	
+        $phpCode .= (($oddEvenAttr !== null) ? '$this->addData(\'' . $oddEvenAttr . '\', (((' . $for_i . '/' . $stepIncrement . ')%2 === 0)?\'odd\':\'even\'), true);' : null) . '
+			' . (($firstLastAttr !== null) ? '$this->addData(\'' . $firstLastAttr . '\', ((' . $for_i . ' === 0)?\'first\':(((' . $for_i . '/' . $stepIncrement . ') === ' . $for_data_count . '-1)?\'last\':null)), true);' : null) . '
 		?>
 		' . $elementNode->getInnerHtml() . '
 		<?php endfor; ?>';

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -61,32 +62,32 @@ class PhoneValidator
         }
 
         return (preg_match(
-                pattern: PhonePatterns::VALID_PHONE_NUMBER_PATTERN,
-                subject: $number
-            ) === 1
+            pattern: PhonePatterns::VALID_PHONE_NUMBER_PATTERN,
+            subject: $number,
+        ) === 1
         );
     }
 
     public static function isValidRegionCode(?string $regionCode): bool
     {
-        return !is_null($regionCode) && in_array($regionCode, PhoneRegionCountryCodeMap::getSupportedRegions());
+        return $regionCode !== null && in_array($regionCode, PhoneRegionCountryCodeMap::getSupportedRegions(), true);
     }
 
     public static function testNumberLength(string $number, PhoneMetaData $phoneMetaData): int
     {
         $descForType = $phoneMetaData->generalDesc;
         $possibleLengths = (count(
-                $descForType->possibleLength
-            ) === 0) ? $phoneMetaData->generalDesc->possibleLength : $descForType->possibleLength;
+            $descForType->possibleLength,
+        ) === 0) ? $phoneMetaData->generalDesc->possibleLength : $descForType->possibleLength;
         $localLengths = $descForType->possibleLengthLocalOnly;
         if ($possibleLengths[0] === -1) {
             return PhoneValidator::INVALID_LENGTH;
         }
         $actualLength = mb_strlen(string: $number);
-        if (in_array(needle: $actualLength, haystack: $localLengths)) {
+        if (in_array(needle: $actualLength, haystack: $localLengths, strict: true)) {
             return PhoneValidator::IS_POSSIBLE_LOCAL_ONLY;
         }
-        $minimumLength = (int)reset(array: $possibleLengths);
+        $minimumLength = (int) reset(array: $possibleLengths);
         if ($minimumLength === $actualLength) {
             return PhoneValidator::IS_POSSIBLE;
         }
@@ -104,7 +105,8 @@ class PhoneValidator
 
         return in_array(
             needle: $actualLength,
-            haystack: $possibleLengths
+            haystack: $possibleLengths,
+            strict: true,
         ) ? PhoneValidator::IS_POSSIBLE : PhoneValidator::INVALID_LENGTH;
     }
 
@@ -123,12 +125,12 @@ class PhoneValidator
         // Metadata cannot be null because the country calling code is valid.
         $phoneMetaData = PhoneMetaData::getForRegionOrCallingCode(
             countryCallingCode: $countryCode,
-            regionCode: $regionCode
+            regionCode: $regionCode,
         );
 
         return PhoneValidator::testNumberLength(
             number: $nationalNumber,
-            phoneMetaData: $phoneMetaData
+            phoneMetaData: $phoneMetaData,
         );
     }
 }

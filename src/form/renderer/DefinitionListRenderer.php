@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -45,7 +46,7 @@ class DefinitionListRenderer extends FormRenderer
         }
 
         $labelInfoText = $formField->labelInfoText;
-        if (!is_null($labelInfoText)) {
+        if ($labelInfoText !== null) {
             $labelInfoTag = new HtmlTag('i', false, [
                 new HtmlTagAttribute('class', 'label-info', true),
             ]);
@@ -66,7 +67,7 @@ class DefinitionListRenderer extends FormRenderer
             $divTag->addTag($defaultFormFieldRenderer->prepareHtmlTag());
 
             FormRenderer::addErrorsToParentHtmlTag($formField, $divTag);
-            if (!is_null($formField->fieldInfo)) {
+            if ($formField->fieldInfo !== null) {
                 FormRenderer::addFieldInfoToParentHtmlTag($formField, $divTag);
             }
             $this->setHtmlTag($divTag);
@@ -83,7 +84,7 @@ class DefinitionListRenderer extends FormRenderer
 
         $ddClasses = [];
 
-        if (!is_null($additionalColumnContent)) {
+        if ($additionalColumnContent !== null) {
             $ddClasses[] = 'form-cols';
         }
 
@@ -95,8 +96,8 @@ class DefinitionListRenderer extends FormRenderer
             new HtmlTagAttribute(
                 'class',
                 implode(separator: ' ', array: $ddClasses),
-                true
-            )
+                true,
+            ),
         ];
         $ddTag = new HtmlTag('dd', false, $ddAttributes);
 
@@ -107,7 +108,7 @@ class DefinitionListRenderer extends FormRenderer
         $defaultFormFieldRenderer = $formField->getDefaultRenderer();
         $fieldTag = $defaultFormFieldRenderer->prepareHtmlTag();
 
-        if (!is_null($additionalColumnContent)) {
+        if ($additionalColumnContent !== null) {
             $column1 = new HtmlTag('div', false, [new HtmlTagAttribute('class', 'form-col-1', true)]);
             $column1->addTag($fieldTag);
             $ddTag->addTag($column1);
@@ -121,7 +122,7 @@ class DefinitionListRenderer extends FormRenderer
 
         FormRenderer::addErrorsToParentHtmlTag($formField, $ddTag);
 
-        if (!is_null($formField->fieldInfo)) {
+        if ($formField->fieldInfo !== null) {
             FormRenderer::addFieldInfoToParentHtmlTag($formField, $ddTag);
         }
 

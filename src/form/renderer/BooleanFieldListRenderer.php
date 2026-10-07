@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -24,9 +25,8 @@ class BooleanFieldListRenderer extends FormRenderer
 {
     public function __construct(
         private readonly BooleanField $booleanField,
-        private readonly bool $withLegend
-    ) {
-    }
+        private readonly bool $withLegend,
+    ) {}
 
     public function prepare(): void
     {
@@ -47,7 +47,7 @@ class BooleanFieldListRenderer extends FormRenderer
             label: $field->label,
             formOptions: $formOptions,
             initialValues: $field->isChecked() ? [BooleanField::CHECKED_KEY] : [],
-            layout: CheckboxOptionsLayoutEnum::NONE
+            layout: CheckboxOptionsLayoutEnum::NONE,
         );
         $optionsField->id = $field->id;
         $optionsField->fieldInfo = $field->fieldInfo;

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -73,7 +74,7 @@ final class SearchHelperFilterTest extends TestCase
         $this->assertSame(
             "(CONCAT_WS(' ', a.firstName, a.lastName)" . SearchHelperFilterTest::LIKE . ') AND (b.zip'
             . SearchHelperFilterTest::LIKE . ')',
-            $data->query
+            $data->query,
         );
         $this->assertSame(['%haas%', '%80%'], $data->params);
     }
@@ -124,7 +125,7 @@ final class SearchHelperFilterTest extends TestCase
         $pdo->exec(statement: 'CREATE TABLE item (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL)');
         $pdo->exec(
             statement: "INSERT INTO item (id, name, city) VALUES (1, '?Haas Kapelle', 'Bern'), (2, 'Haas', 'zürich'),"
-            . " (3, '50% Rabatt', ''), (4, 'a_b', ''), (5, '500', ''), (6, 'axb', '')"
+            . " (3, '50% Rabatt', ''), (4, 'a_b', ''), (5, '500', ''), (6, 'axb', '')",
         );
         $dbQuery = DbQuery::createFromSqlQuery(query: 'SELECT id FROM item');
         $dbQuery->addOrderPart(column: 'id');
@@ -142,7 +143,7 @@ final class SearchHelperFilterTest extends TestCase
     {
         $result = SearchHelper::getInstance(instanceName: 'test')->createSQLSearch(
             string: 'foo "bar baz" 50%',
-            columns: ['name', 't.city', '`order`']
+            columns: ['name', 't.city', '`order`'],
         );
         $word = '(`name`' . SearchHelperFilterTest::LIKE . ' OR `t`.`city`' . SearchHelperFilterTest::LIKE
             . ' OR `order`' . SearchHelperFilterTest::LIKE . ')';
@@ -153,7 +154,7 @@ final class SearchHelperFilterTest extends TestCase
                 'params' => ['%foo%', '%foo%', '%foo%', '%bar baz%', '%bar baz%', '%bar baz%', '%50!%%', '%50!%%', '%50!%%'],
                 'searchWords' => ['foo', 'bar baz', '50%'],
             ],
-            $result
+            $result,
         );
     }
 
@@ -161,7 +162,7 @@ final class SearchHelperFilterTest extends TestCase
     {
         $this->assertSame(
             ['sql' => '', 'params' => [], 'searchWords' => []],
-            SearchHelper::getInstance(instanceName: 'test')->createSQLSearch(string: ' , ', columns: ['name'])
+            SearchHelper::getInstance(instanceName: 'test')->createSQLSearch(string: ' , ', columns: ['name']),
         );
     }
 

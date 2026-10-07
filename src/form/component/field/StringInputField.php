@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -25,7 +26,7 @@ abstract class StringInputField extends InputField
         ?string $value,
         ?string $placeholder,
         ?AutoCompleteEnum $autoComplete,
-        ?int $maxLength = null
+        ?int $maxLength = null,
     ) {
         parent::__construct(
             inputType: $inputType,
@@ -33,7 +34,7 @@ abstract class StringInputField extends InputField
             label: $label,
             placeholder: $placeholder,
             autoComplete: $autoComplete,
-            maxLength: $maxLength
+            maxLength: $maxLength,
         );
         if ($value !== null) {
             $this->changeInitialText(text: $value);

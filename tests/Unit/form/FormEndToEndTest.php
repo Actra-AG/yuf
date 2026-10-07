@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -10,7 +11,6 @@ namespace actra\yuf\tests\Unit\form;
 
 use actra\yuf\common\TimeOfDay;
 use actra\yuf\form\component\collection\Form;
-use actra\yuf\form\component\FormControl;
 use actra\yuf\form\component\field\BooleanField;
 use actra\yuf\form\component\field\CheckboxOptionsField;
 use actra\yuf\form\component\field\DateField;
@@ -25,6 +25,7 @@ use actra\yuf\form\component\field\TextAreaField;
 use actra\yuf\form\component\field\TextField;
 use actra\yuf\form\component\field\TimeField;
 use actra\yuf\form\component\field\ToggleField;
+use actra\yuf\form\component\FormControl;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\form\FormNameRegistry;
@@ -36,8 +37,8 @@ use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\InMemoryFileUploadStorage;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
 use DateTimeImmutable;
-use UnexpectedValueException;
 use PHPUnit\Framework\TestCase;
+use UnexpectedValueException;
 
 /**
  * One form with every kind of field: built, validated with a `FormInput` (valid and invalid), read through the typed
@@ -72,7 +73,7 @@ final class FormEndToEndTest extends TestCase
             name: 'order',
             acceptUpload: true,
             messages: FormMessages::german(),
-            csrfTokenSource: new InMemoryCsrfTokenSource(token: 'expected-token')
+            csrfTokenSource: new InMemoryCsrfTokenSource(token: 'expected-token'),
         );
         $this->addFields();
     }
@@ -102,13 +103,13 @@ final class FormEndToEndTest extends TestCase
             value: null,
             invalidError: $invalid,
             requiredError: $required,
-            dnsCheck: false
+            dnsCheck: false,
         );
         $this->password = new PasswordField(
             name: 'secret',
             label: $this->text('Password'),
             requiredError: $required,
-            purpose: PasswordPurposeEnum::NEW
+            purpose: PasswordPurposeEnum::NEW,
         );
         $this->quantity = new IntegerField(name: 'quantity', label: $this->text('Quantity'), requiredError: $required);
         $this->quantity->addValueRule(formRule: new IntegerMinRule(min: 1, errorMessage: $this->text('At least 1')));
@@ -117,49 +118,49 @@ final class FormEndToEndTest extends TestCase
             name: 'birthday',
             label: $this->text('Birthday'),
             value: null,
-            invalidError: $invalid
+            invalidError: $invalid,
         );
         $this->pickupTime = new TimeField(
             name: 'pickupTime',
             label: $this->text('Time'),
             value: null,
-            invalidError: $invalid
+            invalidError: $invalid,
         );
         $this->country = new SelectOptionsField(
             name: 'country',
             label: $this->text('Country'),
             formOptions: $countries,
             initialValue: null,
-            requiredError: $required
+            requiredError: $required,
         );
         $this->languages = new MultiSelectOptionsField(
             name: 'languages',
             label: $this->text('Languages'),
             formOptions: $countries,
-            initialValues: []
+            initialValues: [],
         );
         $this->interests = new CheckboxOptionsField(
             name: 'interests',
             label: $this->text('Interests'),
             formOptions: $countries,
-            initialValues: ['AT']
+            initialValues: ['AT'],
         );
         $this->newsletter = new BooleanField(
             name: 'newsletter',
             label: $this->text('Newsletter'),
-            isCheckedByDefault: false
+            isCheckedByDefault: false,
         );
         $this->terms = new BooleanField(
             name: 'terms',
             label: $this->text('Terms'),
             isCheckedByDefault: false,
-            requiredError: $this->text('Accept the terms')
+            requiredError: $this->text('Accept the terms'),
         );
         $this->delivery = new ToggleField(
             name: 'delivery',
             label: $this->text('Delivery'),
             formOptions: $deliveries,
-            initialValue: 'pickup'
+            initialValue: 'pickup',
         );
         $this->street = new TextField(name: 'street', label: $this->text('Street'), requiredError: $required);
         $this->delivery->addChildField(mainOption: 'post', childField: $this->street);
@@ -168,7 +169,7 @@ final class FormEndToEndTest extends TestCase
             name: 'attachment',
             label: $this->text('Attachment'),
             maxFileUploadCount: 2,
-            storage: $this->storage
+            storage: $this->storage,
         );
 
         foreach (
@@ -196,8 +197,8 @@ final class FormEndToEndTest extends TestCase
             formComponent: new FormControl(
                 name: 'submit',
                 submitLabel: $this->text('Send'),
-                cancelLink: '/orders'
-            )
+                cancelLink: '/orders',
+            ),
         );
     }
 
@@ -242,7 +243,7 @@ final class FormEndToEndTest extends TestCase
         ] : [];
 
         return $this->form->validate(
-            input: FormInput::fromArray(data: $post, files: $files, query: ['order' => ''])
+            input: FormInput::fromArray(data: $post, files: $files, query: ['order' => '']),
         );
     }
 
@@ -338,7 +339,7 @@ final class FormEndToEndTest extends TestCase
         $this->assertFalse($this->send(post: $post));
         $this->assertSame(
             FormMessages::german()->invalidCsrfToken,
-            $this->form->errorCollection->getFirstError()->render()
+            $this->form->errorCollection->getFirstError()->render(),
         );
     }
 

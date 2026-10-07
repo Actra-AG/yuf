@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,7 +20,7 @@ abstract class AbstractMailer
     abstract public function sendMail(
         AbstractMail $abstractMail,
         MailMimeHeader $mailMimeHeader,
-        MailMimeBody $mailMimeBody
+        MailMimeBody $mailMimeBody,
     ): void;
 
     public function getServerName(): string

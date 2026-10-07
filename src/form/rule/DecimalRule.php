@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -8,8 +9,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\rule;
 
-use actra\yuf\form\FormRule;
 use actra\yuf\form\AmountParser;
+use actra\yuf\form\FormRule;
 use InvalidArgumentException;
 
 /**
@@ -30,14 +31,14 @@ abstract class DecimalRule extends FormRule
     {
         if (!is_numeric(value: $left) || !is_numeric(value: $right)) {
             throw new InvalidArgumentException(
-                message: 'Only decimal strings can be compared, "' . $left . '" and "' . $right . '" given.'
+                message: 'Only decimal strings can be compared, "' . $left . '" and "' . $right . '" given.',
             );
         }
 
         return bccomp(
             num1: $left,
             num2: $right,
-            scale: max(DecimalRule::countDecimals(decimal: $left), DecimalRule::countDecimals(decimal: $right))
+            scale: max(DecimalRule::countDecimals(decimal: $left), DecimalRule::countDecimals(decimal: $right)),
         );
     }
 
@@ -50,11 +51,11 @@ abstract class DecimalRule extends FormRule
     {
         $limit = AmountParser::toDecimal(
             value: $decimal,
-            scale: DecimalRule::countDecimals(decimal: trim(string: $decimal))
+            scale: DecimalRule::countDecimals(decimal: trim(string: $decimal)),
         );
         if ($limit === null) {
             throw new InvalidArgumentException(
-                message: 'The limit of a decimal rule must be a decimal string, "' . $decimal . '" given.'
+                message: 'The limit of a decimal rule must be a decimal string, "' . $decimal . '" given.',
             );
         }
 

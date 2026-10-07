@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -29,7 +30,7 @@ final class TimeFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'Time'),
             value: $value,
             invalidError: HtmlText::encoded(textContent: 'Invalid'),
-            requiredError: $requiredError
+            requiredError: $requiredError,
         );
     }
 
@@ -46,7 +47,7 @@ final class TimeFieldValueTest extends TestCase
         $field = $this->createField(value: new TimeOfDay(hour: 8, minute: 30, second: 15));
 
         $this->assertTrue(
-            $field->getValueAsTimeOfDay()?->equals(other: new TimeOfDay(hour: 8, minute: 30, second: 15)) === true
+            $field->getValueAsTimeOfDay()?->equals(other: new TimeOfDay(hour: 8, minute: 30, second: 15)) === true,
         );
         $this->assertStringContainsString('value="08:30"', $field->render());
         $this->assertFalse($field->valueHasChanged());

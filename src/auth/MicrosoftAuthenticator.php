@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -23,7 +24,7 @@ abstract class MicrosoftAuthenticator extends Authenticator
         string $tenantID,
         string $clientID,
         string $redirectUri,
-        string $ssoNonce
+        string $ssoNonce,
     ): void {
         if (AuthSession::isLoggedIn()) {
             throw new LogicException(message: 'User is already logged in');
@@ -34,7 +35,7 @@ abstract class MicrosoftAuthenticator extends Authenticator
             relativeOrAbsoluteUri: str_replace(
                 search: '{tenantID}',
                 replace: $tenantID,
-                subject: MicrosoftAuthenticator::AUTHORIZE_PATH
+                subject: MicrosoftAuthenticator::AUTHORIZE_PATH,
             ) . '?' . implode(
                 separator: '&',
                 array: [
@@ -44,8 +45,8 @@ abstract class MicrosoftAuthenticator extends Authenticator
                     'response_mode=form_post',
                     'scope=openid',
                     'nonce=' . $ssoNonce,
-                ]
-            )
+                ],
+            ),
         );
     }
 
@@ -53,14 +54,14 @@ abstract class MicrosoftAuthenticator extends Authenticator
         string $tenantID,
         string $clientID,
         string $ssoNonce,
-        string $microsoftIdToken
+        string $microsoftIdToken,
     ): bool {
         try {
             $authWebToken = new MicrosoftIdToken(
                 tenantID: $tenantID,
                 clientID: $clientID,
                 ssoNonce: $ssoNonce,
-                jwtString: $microsoftIdToken
+                jwtString: $microsoftIdToken,
             );
         } catch (Throwable $throwable) {
             $this->logException(throwable: $throwable, ssoNonce: $ssoNonce, inputIdTokenString: $microsoftIdToken);
@@ -71,7 +72,7 @@ abstract class MicrosoftAuthenticator extends Authenticator
 
         return $this->authWebTokenLogin(
             authMethod: AuthMethod::MICROSOFT,
-            authWebToken: $authWebToken
+            authWebToken: $authWebToken,
         );
     }
 
@@ -80,16 +81,17 @@ abstract class MicrosoftAuthenticator extends Authenticator
         $logFile = fopen(filename: Core::get()->logDirectory . 'ssoMicrosoft.log', mode: 'a+');
         fwrite(
             stream: $logFile,
-            data: (implode(
+            data: (
+                implode(
                     separator: PHP_EOL,
                     array: [
                         new DateTimeImmutable()->format(format: 'Y-m-d H:i:s') . ' ' . $throwable->getMessage(),
                         'sso-nonce: ' . $ssoNonce,
                         $inputIdTokenString,
                         '------------------------------------------------------------------',
-                    ]
+                    ],
                 ) . PHP_EOL
-            )
+            ),
         );
         fclose(stream: $logFile);
     }

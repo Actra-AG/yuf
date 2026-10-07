@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,10 +20,8 @@ abstract class DefaultOptionsRenderer extends FormRenderer
     protected function __construct(
         private readonly OptionsField $optionsField,
         private readonly string       $inputFieldType,
-        private readonly bool         $acceptMultipleValues
-    )
-    {
-    }
+        private readonly bool         $acceptMultipleValues,
+    ) {}
 
     public function prepare(): void
     {
@@ -35,75 +34,75 @@ abstract class DefaultOptionsRenderer extends FormRenderer
         foreach ($options as $key => $htmlText) {
             $liTag = new HtmlTag(
                 name: 'li',
-                selfClosing: false
+                selfClosing: false,
             );
             $ulTag->addTag(htmlTag: $liTag);
             $liTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'class',
                     value: 'form-check',
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
             $inputTag = new HtmlTag(
                 name: 'input',
-                selfClosing: true
+                selfClosing: true,
             );
             $inputTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'type',
                     value: $this->inputFieldType,
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
             $inputTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'name',
                     value: ($this->acceptMultipleValues) ? $optionsField->name . '[]' : $optionsField->name,
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
             $inputTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'id',
                     value: $optionsField->id . '_' . $key,
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
             $inputTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'value',
-                    value: (string)$key,
-                    valueIsEncodedForRendering: true
-                )
+                    value: (string) $key,
+                    valueIsEncodedForRendering: true,
+                ),
             );
-            if ($optionsField->isSelected(optionKey: (string)$key)) {
+            if ($optionsField->isSelected(optionKey: (string) $key)) {
                 $inputTag->addHtmlTagAttribute(
                     htmlTagAttribute: new HtmlTagAttribute(
                         name: 'checked',
                         value: null,
-                        valueIsEncodedForRendering: true
-                    )
+                        valueIsEncodedForRendering: true,
+                    ),
                 );
             }
             $liTag->addTag(htmlTag: $inputTag);
             $labelTag = new HtmlTag(
                 name: 'label',
-                selfClosing: false
+                selfClosing: false,
             );
             $labelTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'class',
                     value: 'form-check-label',
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
             $labelTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'for',
                     value: $optionsField->id . '_' . $key,
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
             $labelTag->addText(htmlText: $htmlText);
             $liTag->addTag(htmlTag: $labelTag);
@@ -124,16 +123,16 @@ abstract class DefaultOptionsRenderer extends FormRenderer
                 name: 'class',
                 value: implode(
                     separator: ' ',
-                    array: $listTagClasses
+                    array: $listTagClasses,
                 ),
-                valueIsEncodedForRendering: true
+                valueIsEncodedForRendering: true,
             );
         }
 
         return new HtmlTag(
             name: 'ul',
             selfClosing: false,
-            htmlTagAttributes: $htmlTagAttributes
+            htmlTagAttributes: $htmlTagAttributes,
         );
     }
 }

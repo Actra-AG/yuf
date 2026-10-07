@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -14,8 +15,8 @@ namespace actra\yuf\phone;
 
 class PhoneFormat
 {
-    private(set) ?string $pattern;
-    private(set) ?string $format;
+    public private(set) ?string $pattern;
+    public private(set) ?string $format;
     private array $leadingDigitsPattern = [];
 
     public function __construct(array $input)

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -14,15 +15,15 @@ namespace actra\yuf\phone;
 
 class PhoneDesc
 {
-    private(set) string $nationalNumberPattern = '';
-    private(set) array $possibleLength;
-    private(set) array $possibleLengthLocalOnly;
+    public private(set) string $nationalNumberPattern = '';
+    public private(set) array $possibleLength;
+    public private(set) array $possibleLengthLocalOnly;
 
     public function __construct(array $input)
     {
         if (array_key_exists(key: 'NationalNumberPattern', array: $input) && trim(
-                string: $input['NationalNumberPattern']
-            ) !== '') {
+            string: $input['NationalNumberPattern'],
+        ) !== '') {
             $this->nationalNumberPattern = $input['NationalNumberPattern'];
         }
         $this->possibleLength = $input['PossibleLength'];

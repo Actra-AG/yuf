@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -13,7 +14,7 @@ class RouteCollection
     /**
      * @var Route[]
      */
-    private(set) array $routes = [];
+    public private(set) array $routes = [];
 
     public function __construct(array $routes = [])
     {

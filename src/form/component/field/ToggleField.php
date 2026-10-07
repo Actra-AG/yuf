@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -36,14 +37,14 @@ class ToggleField extends SingleOptionsField
         ?string $initialValue,
         ?HtmlText $requiredError = null,
         private readonly bool $displayLegend = true,
-        ?AutoCompleteEnum $autoComplete = null
+        ?AutoCompleteEnum $autoComplete = null,
     ) {
         parent::__construct(
             name: $name,
             label: $label,
             formOptions: $formOptions,
             initialValue: $initialValue,
-            autoComplete: $autoComplete
+            autoComplete: $autoComplete,
         );
         $this->toggleChildren = new ToggleChildren(toggleField: $this);
         if ($requiredError !== null) {
@@ -87,7 +88,7 @@ class ToggleField extends SingleOptionsField
         return new ToggleFieldRenderer(
             toggleField: $this,
             toggleChildren: $this->toggleChildren,
-            displayLegend: $this->displayLegend
+            displayLegend: $this->displayLegend,
         );
     }
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -13,8 +14,8 @@ use actra\yuf\html\HtmlTagAttribute;
 
 class HtmlDoc
 {
-    private(set) DocumentNode $nodeTree;
-    private(set) int $currentLine = 1;
+    public private(set) DocumentNode $nodeTree;
+    public private(set) int $currentLine = 1;
     private ?string $htmlContent;
     private ?int $contentPos = null;
     private ?HtmlNode $pendingNode;
@@ -32,7 +33,7 @@ class HtmlDoc
 
         $this->namespace = $namespace;
 
-        if (!is_null(value: $namespace)) {
+        if ($namespace !== null) {
             $this->tagPattern = '/<!--.+?-->|<!\[CDATA\[.+?]]>|<(\/)?(' . $this->namespace . ':\w+?)((?:\s+[^=]+="[^"]*")*?)?(\s*\/)?\s*>/ims';
         } else {
             $this->tagPattern = '/<!--.+?-->|<!\[CDATA\[.+?]]>|<(\/)?(\w+?)((?:\s+[^=]+="[^"]*")*?)?(\s*\/)?\s*>/imsx';
@@ -105,7 +106,7 @@ class HtmlDoc
             $newNode = new ElementNode();
 
             // </...> (close only)
-            if (array_key_exists(key: 1, array: $res) && (int)$res[1][1] !== -1) {
+            if (array_key_exists(key: 1, array: $res) && (int) $res[1][1] !== -1) {
                 if ($this->pendingNode instanceof ElementNode) {
                     $this->pendingNode->close();
                 }
@@ -135,9 +136,9 @@ class HtmlDoc
 
             // <img ... /> (open and close)
             if ((array_key_exists(4, $res) && $res[4][0] === '/') || (array_key_exists(
-                        3,
-                        $res
-                    ) && $res[3][0] === '/') || in_array($res[2][0], $this->selfClosingTags)) {
+                3,
+                $res,
+            ) && $res[3][0] === '/') || in_array($res[2][0], $this->selfClosingTags, true)) {
                 $newNode->tagType = ElementNode::TAG_SELF_CLOSING;
             } else {
                 // (open only)
@@ -154,8 +155,8 @@ class HtmlDoc
                         new HtmlTagAttribute(
                             Sanitizer::trimmedString($attr[1]),
                             Sanitizer::trimmedString($attr[2]),
-                            true
-                        )
+                            true,
+                        ),
                     );
                 }
             }

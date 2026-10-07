@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -18,15 +19,14 @@ readonly class HtmlSnippet
 {
     public function __construct(
         private string $htmlSnippetFilePath,
-        public HtmlReplacementCollection $replacements = new HtmlReplacementCollection()
-    ) {
-    }
+        public HtmlReplacementCollection $replacements = new HtmlReplacementCollection(),
+    ) {}
 
     public static function createForCurrentView(string $snippetName): HtmlSnippet
     {
         return new HtmlSnippet(
             htmlSnippetFilePath: RequestHandler::get(
-            )->route->viewDirectory . 'snippets' . DIRECTORY_SEPARATOR . $snippetName . '.html'
+            )->route->viewDirectory . 'snippets' . DIRECTORY_SEPARATOR . $snippetName . '.html',
         );
     }
 
@@ -41,12 +41,12 @@ readonly class HtmlSnippet
         return new TemplateEngine(
             templateCacheInterface: new DirectoryTemplateCache(
                 cachePath: $core->cacheDirectory,
-                templateBaseDirectory: $core->baseDirectory
+                templateBaseDirectory: $core->baseDirectory,
             ),
-            tplNsPrefix: 'tst'
+            tplNsPrefix: 'tst',
         )->getResultAsHtml(
             tplFile: $htmlSnippetFilePath,
-            dataPool: $this->replacements->getArrayObject()
+            dataPool: $this->replacements->getArrayObject(),
         );
     }
 }

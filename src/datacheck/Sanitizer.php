@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -22,9 +23,9 @@ class Sanitizer
         return DomainSanitizer::sanitize(input: $input);
     }
 
-    public static function trimmedString(null|string|float|int|bool $input): string
+    public static function trimmedString(string|float|int|bool|null $input): string
     {
-        if (is_null(value: $input)) {
+        if ($input === null) {
             return '';
         }
 

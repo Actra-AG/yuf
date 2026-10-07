@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -8,8 +9,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\session;
 
-use actra\yuf\security\CsrfToken;
 use actra\yuf\security\CspNonce;
+use actra\yuf\security\CsrfToken;
 use actra\yuf\session\AbstractSessionHandler;
 use PHPUnit\Framework\TestCase;
 

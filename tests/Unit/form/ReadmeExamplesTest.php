@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -44,12 +45,12 @@ final class ReadmeExamplesTest extends TestCase
         $form = new Form(
             name: 'order',
             messages: FormMessages::german(),
-            csrfTokenSource: new InMemoryCsrfTokenSource(token: 'token')
+            csrfTokenSource: new InMemoryCsrfTokenSource(token: 'token'),
         );
         $name = new TextField(
             name: 'customer',
             label: HtmlText::encoded(textContent: 'Name'),
-            requiredError: $requiredError
+            requiredError: $requiredError,
         );
         $quantity = new IntegerField(name: 'quantity', label: HtmlText::encoded(textContent: 'Quantity'));
         $form->addField(formField: $name);
@@ -58,8 +59,8 @@ final class ReadmeExamplesTest extends TestCase
         $isValid = $form->validate(
             input: FormInput::fromArray(
                 data: ['customer' => 'Ann', 'quantity' => '2', 'csrftoken' => 'token'],
-                query: ['order' => '']
-            )
+                query: ['order' => ''],
+            ),
         );
 
         $this->assertTrue($isValid);
@@ -79,18 +80,18 @@ final class ReadmeExamplesTest extends TestCase
             name: 'password',
             label: HtmlText::encoded(textContent: 'Password'),
             requiredError: $requiredError,
-            purpose: PasswordPurposeEnum::NEW
+            purpose: PasswordPurposeEnum::NEW,
         );
         $price = new DecimalField(
             name: 'price',
             label: HtmlText::encoded(textContent: 'Price'),
             scale: 2,
-            initialValue: '12.50'
+            initialValue: '12.50',
         );
         $agree = new BooleanField(
             name: 'agree',
             label: HtmlText::encoded(textContent: 'I agree'),
-            isCheckedByDefault: false
+            isCheckedByDefault: false,
         );
         $tags = new MultiSelectOptionsField(name: 'tags', label: $label, formOptions: $options, initialValues: ['a']);
 
@@ -124,15 +125,15 @@ final class ReadmeExamplesTest extends TestCase
     {
         $form = new Form(name: 'order', csrfTokenSource: new InMemoryCsrfTokenSource(token: 'token'));
         $form->addField(
-            formField: new TextField(name: 'customer', label: HtmlText::encoded(textContent: 'Name'))
+            formField: new TextField(name: 'customer', label: HtmlText::encoded(textContent: 'Name')),
         );
         $form->addField(
-            formField: new IntegerField(name: 'quantity', label: HtmlText::encoded(textContent: 'Quantity'))
+            formField: new IntegerField(name: 'quantity', label: HtmlText::encoded(textContent: 'Quantity')),
         );
 
         $input = FormInput::fromArray(
             data: ['customer' => 'Ann', 'quantity' => '2', 'csrftoken' => 'token'],
-            query: ['order' => '']
+            query: ['order' => ''],
         );
         $isValid = $form->validate(input: $input);
 

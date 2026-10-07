@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -8,9 +9,9 @@ declare(strict_types=1);
 
 namespace actra\yuf\table\column;
 
-use DateTimeImmutable;
 use actra\yuf\html\HtmlText;
 use actra\yuf\table\TableItemModel;
+use DateTimeImmutable;
 
 class DateColumn extends AbstractTableColumn
 {
@@ -24,10 +25,10 @@ class DateColumn extends AbstractTableColumn
 
     protected function renderCellValue(TableItemModel $tableItemModel): string
     {
-        $value = trim(string: (string)$tableItemModel->getRawValue(name: $this->identifier));
+        $value = trim(string: (string) $tableItemModel->getRawValue(name: $this->identifier));
 
         if ($value === '') {
-            return is_null(value: $this->emptyValueText) ? '' : $this->emptyValueText->render();
+            return $this->emptyValueText === null ? '' : $this->emptyValueText->render();
         }
 
         return new DateTimeImmutable(datetime: $value)->format(format: $this->format);

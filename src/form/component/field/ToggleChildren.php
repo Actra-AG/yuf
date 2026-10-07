@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -30,7 +31,7 @@ final class ToggleChildren
     public function __construct(private readonly OptionsField $toggleField)
     {
         $this->childRendererFactory = static fn(FormField $childField): FormRenderer => new DefinitionListRenderer(
-            formField: $childField
+            formField: $childField,
         );
     }
 
@@ -102,7 +103,7 @@ final class ToggleChildren
         if (!$childField instanceof FormField) {
             throw new LogicException(
                 message: 'The childField ' . $fieldName . ' of mainOption ' . $mainOption
-                . ' is not an instance of FormField'
+                . ' is not an instance of FormField',
             );
         }
 
@@ -136,7 +137,7 @@ final class ToggleChildren
     {
         $childFields = [];
         foreach ($this->childrenByMainOption as $mainOption => $children) {
-            if (!$this->toggleField->isSelected(optionKey: (string)$mainOption)) {
+            if (!$this->toggleField->isSelected(optionKey: (string) $mainOption)) {
                 continue;
             }
             foreach ($children as $childComponent) {

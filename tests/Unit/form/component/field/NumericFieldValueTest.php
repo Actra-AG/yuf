@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -25,7 +26,7 @@ final class NumericFieldValueTest extends TestCase
         return new NumericField(
             name: 'number',
             label: HtmlText::encoded(textContent: 'Number'),
-            initialValue: $initialValue
+            initialValue: $initialValue,
         );
     }
 
@@ -82,7 +83,7 @@ final class NumericFieldValueTest extends TestCase
             name: 'number',
             label: HtmlText::encoded(textContent: 'Number'),
             minLength: 2,
-            maxLength: 4
+            maxLength: 4,
         );
 
         $this->assertSame(2, $field->minLength);

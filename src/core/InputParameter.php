@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -13,7 +14,6 @@ readonly class InputParameter
     public function __construct(
         public string $name,
         public bool $isRequired,
-        public string $description = ''
-    ) {
-    }
+        public string $description = '',
+    ) {}
 }

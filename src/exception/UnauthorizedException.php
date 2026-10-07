@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -15,12 +16,11 @@ class UnauthorizedException extends Exception
 {
     public function __construct(
         $message = 'Unauthorized',
-        HttpStatusCode $code = HttpStatusCode::HTTP_UNAUTHORIZED
-    )
-    {
+        HttpStatusCode $code = HttpStatusCode::HTTP_UNAUTHORIZED,
+    ) {
         parent::__construct(
             message: $message,
-            code: $code->value
+            code: $code->value,
         );
     }
 }

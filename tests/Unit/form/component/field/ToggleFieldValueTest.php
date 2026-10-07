@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -27,7 +28,7 @@ final class ToggleFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'Toggle'),
             formOptions: $formOptions,
             initialValue: $initialValue,
-            requiredError: $requiredError
+            requiredError: $requiredError,
         );
     }
 

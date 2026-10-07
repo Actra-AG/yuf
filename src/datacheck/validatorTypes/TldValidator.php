@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -1463,6 +1464,6 @@ class TldValidator
 
     public static function validate(string $input): bool
     {
-        return (in_array(needle: mb_strtoupper(string: $input), haystack: TldValidator::TLD_LIST));
+        return (in_array(needle: mb_strtoupper(string: $input), haystack: TldValidator::TLD_LIST, strict: true));
     }
 }

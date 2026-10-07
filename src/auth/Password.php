@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -16,9 +17,8 @@ class Password
 
     public function __construct(
         public readonly string $salt,
-        public readonly string $hash
-    ) {
-    }
+        public readonly string $hash,
+    ) {}
 
     public static function generateNew(string $rawPassword): Password
     {

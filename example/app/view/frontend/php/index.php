@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -24,7 +25,7 @@ final class index extends BaseView
             ipWhitelist: [],
             authUser: null,
             requiredAccessRights: AccessRightCollection::createEmpty(),
-            inputParameterCollection: new InputParameterCollection()
+            inputParameterCollection: new InputParameterCollection(),
         );
     }
 

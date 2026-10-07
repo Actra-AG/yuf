@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -11,7 +12,7 @@ namespace actra\yuf\html;
 class HtmlTextCollection
 {
     /** @var HtmlText[] */
-    private(set) array $items = [];
+    public private(set) array $items = [];
 
     /**
      * @param HtmlText[] $items

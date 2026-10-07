@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -9,9 +10,9 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\field;
 
 use actra\yuf\form\FormInput;
+use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\InitialValueTextAreaField;
 use actra\yuf\tests\Double\form\InitialValueTextField;
-use actra\yuf\html\HtmlText;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 

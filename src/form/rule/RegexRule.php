@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -14,7 +15,7 @@ class RegexRule extends StringRule
 {
     public function __construct(
         protected string $pattern,
-        HtmlText $errorMessage
+        HtmlText $errorMessage,
     ) {
         parent::__construct(defaultErrorMessage: $errorMessage);
     }

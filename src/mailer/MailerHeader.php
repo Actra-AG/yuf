@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -34,7 +35,7 @@ readonly class MailerHeader
 
     private function __construct(
         string $name,
-        string $value
+        string $value,
     ) {
         $name = trim(string: $name);
         $value = trim(string: $value);
@@ -49,11 +50,11 @@ readonly class MailerHeader
 
     public static function createRaw(
         string $name,
-        string $value
+        string $value,
     ): string {
         return new MailerHeader(
             name: $name,
-            value: $value
+            value: $value,
         )->get();
     }
 
@@ -66,15 +67,15 @@ readonly class MailerHeader
         string $name,
         string $value,
         int $maxLineLength,
-        string $defaultCharSet
+        string $defaultCharSet,
     ): MailerHeader {
         return (new MailerHeader(
             name: $name,
             value: MailerFunctions::encodeHeaderText(
                 string: $value,
                 maxLineLength: $maxLineLength,
-                defaultCharSet: $defaultCharSet
-            )
+                defaultCharSet: $defaultCharSet,
+            ),
         ));
     }
 }

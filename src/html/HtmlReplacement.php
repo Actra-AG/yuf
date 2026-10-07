@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -13,9 +14,8 @@ use stdClass;
 readonly class HtmlReplacement
 {
     private function __construct(
-        public null|HtmlText|bool|stdClass|HtmlTextCollection|HtmlDataObjectCollection|int|float $content
-    ) {
-    }
+        public HtmlText|bool|stdClass|HtmlTextCollection|HtmlDataObjectCollection|int|float|null $content,
+    ) {}
 
     public static function htmlText(?HtmlText $htmlText): HtmlReplacement
     {
@@ -62,7 +62,7 @@ readonly class HtmlReplacement
         return new HtmlReplacement(content: $collection);
     }
 
-    public function getDataForRenderer(): null|string|bool|stdClass|array|float
+    public function getDataForRenderer(): string|bool|stdClass|array|float|null
     {
         if ($this->content instanceof HtmlText) {
             return $this->content->render();

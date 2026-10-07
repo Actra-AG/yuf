@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -20,7 +21,6 @@ class HtmlTag extends HtmlElement
 
     /**
      * @param string $name : Name of this element, will by used by renderer <{$name}{$attributes}></{$name}>
-     * @param bool $selfClosing
      * @param HtmlTagAttribute[] $htmlTagAttributes
      */
     public function __construct(string $name, bool $selfClosing, array $htmlTagAttributes = [])

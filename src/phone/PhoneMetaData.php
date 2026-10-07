@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -18,12 +19,12 @@ class PhoneMetaData
     private static array $regionToMetaDataMap = [];
     /** @var PhoneMetaData[] */
     private static array $countryCodeToNonGeographicalMetadataMap = [];
-    private(set) string $internationalPrefix;
-    private(set) int $countryCode;
-    private(set) ?PhoneDesc $generalDesc = null;
-    private(set) ?string $nationalPrefixForParsing = null;
-    private(set) ?string $nationalPrefixTransformRule = null;
-    private(set) ?string $preferredExtnPrefix = null;
+    public private(set) string $internationalPrefix;
+    public private(set) int $countryCode;
+    public private(set) ?PhoneDesc $generalDesc = null;
+    public private(set) ?string $nationalPrefixForParsing = null;
+    public private(set) ?string $nationalPrefixTransformRule = null;
+    public private(set) ?string $preferredExtnPrefix = null;
     /** @var PhoneFormat[] */
     private array $intlNumberFormat = [];
     /** @var PhoneFormat[] */
@@ -32,8 +33,8 @@ class PhoneMetaData
     private function __construct(string $fileName)
     {
         $data = include $fileName;
-        $this->internationalPrefix = (string)$data['internationalPrefix'];
-        $this->countryCode = (int)$data['countryCode'];
+        $this->internationalPrefix = (string) $data['internationalPrefix'];
+        $this->countryCode = (int) $data['countryCode'];
         if (array_key_exists(key: 'generalDesc', array: $data)) {
             $this->generalDesc = new PhoneDesc(input: $data['generalDesc']);
         }
@@ -74,10 +75,10 @@ class PhoneMetaData
 
             if (!array_key_exists(
                 key: $countryCallingCode,
-                array: PhoneMetaData::$countryCodeToNonGeographicalMetadataMap
+                array: PhoneMetaData::$countryCodeToNonGeographicalMetadataMap,
             )) {
                 PhoneMetaData::$countryCodeToNonGeographicalMetadataMap[$countryCallingCode] = new PhoneMetaData(
-                    fileName: __DIR__ . '/data/PhoneNumberMetadata_' . $countryCallingCode . '.php'
+                    fileName: __DIR__ . '/data/PhoneNumberMetadata_' . $countryCallingCode . '.php',
                 );
             }
 
@@ -89,13 +90,13 @@ class PhoneMetaData
 
     public static function getForRegion(?string $regionCode): ?PhoneMetaData
     {
-        if (is_null(value: $regionCode) || !PhoneValidator::isValidRegionCode(regionCode: $regionCode)) {
+        if ($regionCode === null || !PhoneValidator::isValidRegionCode(regionCode: $regionCode)) {
             return null;
         }
 
         if (!array_key_exists(key: $regionCode, array: PhoneMetaData::$regionToMetaDataMap)) {
             PhoneMetaData::$regionToMetaDataMap[$regionCode] = new PhoneMetaData(
-                fileName: __DIR__ . '/data/PhoneNumberMetadata_' . $regionCode . '.php'
+                fileName: __DIR__ . '/data/PhoneNumberMetadata_' . $regionCode . '.php',
             );
         }
 
@@ -114,6 +115,6 @@ class PhoneMetaData
 
     public function hasPreferredExtnPrefix(): bool
     {
-        return !is_null($this->preferredExtnPrefix);
+        return $this->preferredExtnPrefix !== null;
     }
 }

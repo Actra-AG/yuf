@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -8,10 +9,10 @@ declare(strict_types=1);
 
 namespace actra\yuf\table\filter;
 
-use DateTimeImmutable;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQueryData;
 use actra\yuf\html\HtmlText;
+use DateTimeImmutable;
 use Throwable;
 
 class DateFilterField extends AbstractTableFilterField
@@ -25,19 +26,19 @@ class DateFilterField extends AbstractTableFilterField
         private readonly string $dataTableColumnReference,
         private readonly bool $dateMustBeSameOrLater,
         private readonly string $renderFormat = 'd.m.Y H:i:s',
-        bool $highlightFieldIfSelected = false
+        bool $highlightFieldIfSelected = false,
     ) {
         parent::__construct(
             parentFilter: $parentFilter,
             filterFieldIdentifier: $filterFieldIdentifier,
             label: $label,
-            highlightFieldIfSelected: $highlightFieldIfSelected
+            highlightFieldIfSelected: $highlightFieldIfSelected,
         );
     }
 
     public function init(): void
     {
-        $valueFromSession = (string)$this->getFromSession(index: $this->identifier);
+        $valueFromSession = (string) $this->getFromSession(index: $this->identifier);
         if ($valueFromSession !== '') {
             $this->value = new DateTimeImmutable(datetime: $valueFromSession);
         }
@@ -45,7 +46,7 @@ class DateFilterField extends AbstractTableFilterField
 
     public function checkInput(): void
     {
-        $inputValue = (string)HttpRequest::getInputString(keyName: $this->identifier);
+        $inputValue = (string) HttpRequest::getInputString(keyName: $this->identifier);
         if ($inputValue === '') {
             $this->reset();
 
@@ -79,7 +80,7 @@ class DateFilterField extends AbstractTableFilterField
     {
         return new DbQueryData(
             query: $this->dataTableColumnReference . ($this->dateMustBeSameOrLater ? '>=' : '<=') . '?',
-            params: [$this->value->format(format: 'Y-m-d H:i:s')]
+            params: [$this->value->format(format: 'Y-m-d H:i:s')],
         );
     }
 
@@ -94,15 +95,13 @@ class DateFilterField extends AbstractTableFilterField
         }
 
         return '<input type="text" class="' . implode(
-                separator: ' ',
-                array: $classes
-            ) . '" name="' . $this->identifier . '" id="filter-' . $this->identifier . '" value="' . (is_null(
-                value: $this->value
-            ) ? '' : $this->value->format(format: $this->renderFormat)) . '">';
+            separator: ' ',
+            array: $classes,
+        ) . '" name="' . $this->identifier . '" id="filter-' . $this->identifier . '" value="' . ($this->value === null ? '' : $this->value->format(format: $this->renderFormat)) . '">';
     }
 
     public function isSelected(): bool
     {
-        return !is_null(value: $this->value);
+        return $this->value !== null;
     }
 }

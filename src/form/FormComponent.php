@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -23,7 +24,7 @@ abstract class FormComponent extends HtmlElement
 
     public function __construct(
         string $name,
-        private ?FormRenderer $renderer = null
+        private ?FormRenderer $renderer = null,
     ) {
         $this->errorCollection = new ErrorCollection();
         parent::__construct(name: $name);
@@ -38,7 +39,7 @@ abstract class FormComponent extends HtmlElement
     final protected function setHasErrorsToTrue(): void
     {
         $this->hasErrors = true;
-        if (!is_null(value: $this->parentFormComponent)) {
+        if ($this->parentFormComponent !== null) {
             $this->parentFormComponent->setHasErrorsToTrue();
         }
     }
@@ -82,7 +83,7 @@ abstract class FormComponent extends HtmlElement
     public function getRenderer(bool $setDefaultIfNull = false): ?FormRenderer
     {
         if (
-            is_null(value: $this->renderer)
+            $this->renderer === null
             && $setDefaultIfNull
         ) {
             $this->setRenderer(renderer: $this->getDefaultRenderer());
@@ -93,7 +94,7 @@ abstract class FormComponent extends HtmlElement
 
     public function setRenderer(FormRenderer $renderer): void
     {
-        if (!is_null(value: $this->renderer)) {
+        if ($this->renderer !== null) {
             throw new LogicException(message: 'You cannot overwrite a renderer which is already set');
         }
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -15,15 +16,14 @@ class NotFoundException extends Exception
 {
     public function __construct(
         string         $message = '',
-        HttpStatusCode $code = HttpStatusCode::HTTP_NOT_FOUND
-    )
-    {
+        HttpStatusCode $code = HttpStatusCode::HTTP_NOT_FOUND,
+    ) {
         if ($message === '') {
             $message = 'Not Found';
         }
         parent::__construct(
             message: $message,
-            code: $code->value
+            code: $code->value,
         );
     }
 }

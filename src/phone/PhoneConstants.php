@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,7 +20,7 @@ class PhoneConstants
     public const int MAX_INPUT_STRING_LENGTH = 250;
     public const string RFC3966_ISDN_SUBADDRESS = ';isub=';
     public const string PLUS_CHARS = '+＋';
-    public const string DIGITS = "\\p{Nd}";
+    public const string DIGITS = '\\p{Nd}';
     public const string RFC3966_PHONE_CONTEXT = ';phone-context=';
     public const string RFC3966_PREFIX = 'tel:';
     public const int MIN_LENGTH_FOR_NSN = 2;

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -36,7 +37,7 @@ final class DirectoryTemplateCacheTest extends TestCase
         return new DirectoryTemplateCache(
             cachePath: $this->cachePath,
             templateBaseDirectory: '/templates/',
-            clock: new FixedClock(now: new DateTimeImmutable(datetime: '@1800000000'))
+            clock: new FixedClock(now: new DateTimeImmutable(datetime: '@1800000000')),
         );
     }
 
@@ -45,7 +46,7 @@ final class DirectoryTemplateCacheTest extends TestCase
         $entry = $this->createCache()->addCachedTplFile(
             tplFile: '/templates/page.html',
             currentCacheEntry: null,
-            compiledTemplateContent: 'compiled'
+            compiledTemplateContent: 'compiled',
         );
 
         $this->assertSame(1_800_000_000, $entry->changeTime);

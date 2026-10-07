@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -37,8 +38,8 @@ class Core
 
     public readonly string $documentRoot;
     public readonly string $frameworkDirectory;
-    private(set) string $baseDirectory = '';
-    private(set) string $appDirectory = '';
+    public private(set) string $baseDirectory = '';
+    public private(set) string $appDirectory = '';
     public readonly string $cacheDirectory;
     public readonly string $errorDocsDirectory;
     public readonly string $logDirectory;
@@ -62,9 +63,9 @@ class Core
         string $logsDirectory = '{APP_DIRECTORY}logs/',
         string $settingsDirectory = '{APP_DIRECTORY}settings/',
         string $snippetsDirectory = '{APP_DIRECTORY}snippets/',
-        string $viewDirectory = '{APP_DIRECTORY}view/'
+        string $viewDirectory = '{APP_DIRECTORY}view/',
     ) {
-        if (!is_null(value: Core::$instance)) {
+        if (Core::$instance !== null) {
             throw new LogicException(message: 'Core is already initialized');
         }
         Core::$instance = $this;
@@ -74,7 +75,7 @@ class Core
         $this->documentRoot = str_replace(
             search: DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR,
             replace: DIRECTORY_SEPARATOR,
-            subject: $_SERVER['DOCUMENT_ROOT'] . DIRECTORY_SEPARATOR
+            subject: $_SERVER['DOCUMENT_ROOT'] . DIRECTORY_SEPARATOR,
         );
         $this->frameworkDirectory = __DIR__ . DIRECTORY_SEPARATOR;
         $this->baseDirectory = $this->createIfNotExists(path: $baseDirectory);
@@ -90,21 +91,21 @@ class Core
         $autoloader->addPath(
             autoloaderPath: new AutoloaderPath(
                 path: __DIR__ . DIRECTORY_SEPARATOR,
-                prefix: 'actra\\yuf\\'
-            )
+                prefix: 'actra\\yuf\\',
+            ),
         );
         $autoloader->addPath(
             autoloaderPath: new AutoloaderPath(
                 path: $this->appDirectory,
-                prefix: Core::APP_CLASS_PREFIX . '\\'
-            )
+                prefix: Core::APP_CLASS_PREFIX . '\\',
+            ),
         );
         ErrorHandler::register();
         if (!HttpRequest::isSSL()) {
             HttpResponse::redirectAndExit(
                 relativeOrAbsoluteUri: HttpRequest::getURL(
-                    protocol: HttpRequest::PROTOCOL_HTTPS
-                )
+                    protocol: HttpRequest::PROTOCOL_HTTPS,
+                ),
             );
         }
         $this->allowedDomains = Core::$config['allowedDomains'];
@@ -128,19 +129,19 @@ class Core
                 $this->appDirectory,
                 DIRECTORY_SEPARATOR,
             ],
-            subject: $path
+            subject: $path,
         );
         $path = $this->getAbsolutePath(path: $path);
         if (!str_ends_with(
             haystack: $path,
-            needle: DIRECTORY_SEPARATOR
+            needle: DIRECTORY_SEPARATOR,
         )) {
             $path .= DIRECTORY_SEPARATOR;
         }
         if (!file_exists(filename: $path)) {
             mkdir(
                 directory: $path,
-                recursive: true
+                recursive: true,
             );
         }
 
@@ -153,7 +154,7 @@ class Core
         foreach (
             explode(
                 separator: '/',
-                string: $path
+                string: $path,
             ) as $part
         ) {
             if ($part === '.' || $part === '') {
@@ -166,9 +167,9 @@ class Core
             }
         }
         return '/' . implode(
-                separator: '/',
-                array: $safe
-            );
+            separator: '/',
+            array: $safe,
+        );
     }
 
     public function prepareHttpResponse(
@@ -177,16 +178,16 @@ class Core
         ?ExceptionHandler $individualExceptionHandler = null,
         ?CspPolicySettingsModel $cspPolicySettingsModel = new CspPolicySettingsModel(),
         false|AbstractSessionHandler $individualSessionHandler = new FileSessionHandler(
-            sessionSettingsModel: new SessionSettingsModel()
-        )
+            sessionSettingsModel: new SessionSettingsModel(),
+        ),
     ): HttpResponse {
-        if (!is_null(value: Core::$httpResponse)) {
+        if (Core::$httpResponse !== null) {
             throw new LogicException(message: 'The HttpResponse is already prepared');
         }
-        if (is_null(value: $logger)) {
+        if ($logger === null) {
             $logger = new Logger(
                 logEmailRecipient: Core::$config['logEmailRecipient'],
-                logDirectory: $this->logDirectory
+                logDirectory: $this->logDirectory,
             );
         }
         $this->cspPolicySettingsModel = $cspPolicySettingsModel;
@@ -210,13 +211,13 @@ class Core
                 httpStatusCode: $httpStatusCode,
                 htmlContent: $content,
                 cspPolicySettingsModel: $contentHandler->suppressCspHeader ? null : $this->cspPolicySettingsModel,
-                nonce: CspNonce::get()
+                nonce: CspNonce::get(),
             );
         }
         return Core::$httpResponse = HttpResponse::createResponseFromString(
             httpStatusCode: $httpStatusCode,
             contentString: $content,
-            contentType: $contentType
+            contentType: $contentType,
         );
     }
 
@@ -233,9 +234,9 @@ class Core
     public function renderCopyrightYear(): string
     {
         $copyrightYear = $this->copyrightYear;
-        if ($copyrightYear < (int)date(format: 'Y')) {
+        if ($copyrightYear < (int) date(format: 'Y')) {
             return $copyrightYear . '-' . date(format: 'Y');
         }
-        return (string)$copyrightYear;
+        return (string) $copyrightYear;
     }
 }

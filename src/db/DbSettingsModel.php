@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -23,16 +24,16 @@ class DbSettingsModel
         public readonly string $password,
         ?string $charset = null,
         public readonly ?string $timeNamesLanguage = 'de_CH',
-        public readonly bool $sqlSafeUpdates = true
+        public readonly bool $sqlSafeUpdates = true,
     ) {
         if (array_key_exists(
             key: $identifier,
-            array: DbSettingsModel::$instances
+            array: DbSettingsModel::$instances,
         )) {
             throw new LogicException(message: 'There is already an instance with the identifier ' . $identifier);
         }
         DbSettingsModel::$instances[$identifier] = $this;
-        $charset = trim(string: (string)$charset);
+        $charset = trim(string: (string) $charset);
         if ($charset === '') {
             $charset = 'utf8mb4';
         }

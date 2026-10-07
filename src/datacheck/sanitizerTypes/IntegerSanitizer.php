@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -26,11 +27,11 @@ final class IntegerSanitizer
             // An INT contains only digits, but might have an - in front of it:
             if (preg_match('/^-?\d*$/', $input) === 1) {
                 // It might be "too big":
-                if (bccomp($input, (string)PHP_INT_MAX) === 1 || bccomp($input, (string)PHP_INT_MIN) === -1) {
+                if (bccomp($input, (string) PHP_INT_MAX) === 1 || bccomp($input, (string) PHP_INT_MIN) === -1) {
                     throw new RuntimeException('Value is out of range as INT.');
                 }
 
-                return intval($input);
+                return (int) $input;
             }
             // Maybe it's a "stringed FLOAT"?
             try {
@@ -48,6 +49,6 @@ final class IntegerSanitizer
             throw new RuntimeException('Value is not a whole number.');
         }
 
-        return intval($input);
+        return (int) $input;
     }
 }

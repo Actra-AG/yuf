@@ -7,12 +7,6 @@ parameters:
 			path: src/Core.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 3
-			path: src/Core.php
-
-		-
 			rawMessage: Class actra\yuf\Core has an uninitialized readonly property $cspPolicySettingsModel. Assign it in the constructor.
 			identifier: property.uninitializedReadonly
 			count: 1
@@ -145,24 +139,6 @@ parameters:
 			path: src/api/AbstractCurlRequest.php
 
 		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 3
-			path: src/api/AbstractCurlRequest.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 3
-			path: src/api/AbstractCurlRequest.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 2
-			path: src/api/AbstractCurlRequest.php
-
-		-
 			rawMessage: Cannot cast mixed to string.
 			identifier: cast.string
 			count: 1
@@ -227,18 +203,6 @@ parameters:
 			identifier: assign.propertyType
 			count: 1
 			path: src/api/AbstractCurlRequest.php
-
-		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/api/CurlResponse.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 1
-			path: src/api/CurlResponse.php
 
 		-
 			rawMessage: 'Cannot access offset ''http_code'' on array{url: string, content_type: string|null, http_code: int, header_size: int, request_size: int, filetime: int, ssl_verify_result: int, redirect_count: int, ...}|false.'
@@ -325,18 +289,6 @@ parameters:
 			path: src/api/request/CurlPutRequest.php
 
 		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/auth/AccessRightCollection.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 1
-			path: src/auth/AccessRightCollection.php
-
-		-
 			rawMessage: 'Method actra\yuf\auth\AccessRightCollection::createFromStringArray() has parameter $input with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
@@ -349,22 +301,10 @@ parameters:
 			path: src/auth/AccessRightCollection.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/auth/AuthUser.php
-
-		-
 			rawMessage: 'Method actra\yuf\auth\AuthUser::__construct() has parameter $ipWhitelist with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/auth/AuthUser.php
-
-		-
-			rawMessage: 'Call to function base64_decode() requires parameter #2 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/auth/AuthWebToken.php
 
 		-
 			rawMessage: 'Method actra\yuf\auth\AuthWebToken::jsonDecode() should return stdClass but returns mixed.'
@@ -381,12 +321,6 @@ parameters:
 		-
 			rawMessage: Property actra\yuf\auth\AuthWebToken::$jwtArray type has no value type specified in iterable type array.
 			identifier: missingType.iterableValue
-			count: 1
-			path: src/auth/AuthWebToken.php
-
-		-
-			rawMessage: 'Strict comparison using === between string and false will always evaluate to false.'
-			identifier: identical.alwaysFalse
 			count: 1
 			path: src/auth/AuthWebToken.php
 
@@ -541,12 +475,6 @@ parameters:
 			path: src/clock/SystemClock.php
 
 		-
-			rawMessage: 'Calling rand() is forbidden, it is not a cryptographically secure generator, use random_int() instead.'
-			identifier: disallowed.function
-			count: 1
-			path: src/common/CSVFile.php
-
-		-
 			rawMessage: 'Method actra\yuf\common\CSVFile::__construct() has parameter $headersList with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
@@ -595,7 +523,7 @@ parameters:
 			path: src/common/CSVFile.php
 
 		-
-			rawMessage: 'Parameter $stream of function fputs expects resource, resource|false given.'
+			rawMessage: 'Parameter $stream of function fwrite expects resource, resource|false given.'
 			identifier: argument.type
 			count: 1
 			path: src/common/CSVFile.php
@@ -622,18 +550,6 @@ parameters:
 			rawMessage: Constant JSON_BIGINT_AS_STRING is not allowed for parameter $flags of function json_encode.
 			identifier: argument.invalidConstant
 			count: 1
-			path: src/common/JsonUtils.php
-
-		-
-			rawMessage: 'Loose comparison via "==" between int<0, 1> and int is not allowed.'
-			identifier: equal.notAllowed
-			count: 1
-			path: src/common/JsonUtils.php
-
-		-
-			rawMessage: 'Loose comparison via "==" between string and string is not allowed.'
-			identifier: equal.notAllowed
-			count: 6
 			path: src/common/JsonUtils.php
 
 		-
@@ -733,24 +649,6 @@ parameters:
 			path: src/common/LogFile.php
 
 		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/common/SearchHelper.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 1
-			path: src/common/SearchHelper.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 12
-			path: src/common/SearchHelper.php
-
-		-
 			rawMessage: 'Calling isset() is forbidden, compare explicitly: array_key_exists(), !== null or a typed property (see standards/php.md).'
 			identifier: disallowed.isset
 			count: 12
@@ -766,30 +664,6 @@ parameters:
 			rawMessage: Cannot access offset string on mixed.
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 35
-			path: src/common/SearchHelper.php
-
-		-
-			rawMessage: 'Loose comparison using == between int<2, max> and 1 will always evaluate to false.'
-			identifier: equal.alwaysFalse
-			count: 2
-			path: src/common/SearchHelper.php
-
-		-
-			rawMessage: 'Loose comparison via "==" between int<0, max> and int is not allowed.'
-			identifier: equal.notAllowed
-			count: 1
-			path: src/common/SearchHelper.php
-
-		-
-			rawMessage: 'Loose comparison via "==" between int<2, max> and int is not allowed.'
-			identifier: equal.notAllowed
-			count: 2
-			path: src/common/SearchHelper.php
-
-		-
-			rawMessage: 'Loose comparison via "==" between string and string is not allowed.'
-			identifier: equal.notAllowed
-			count: 1
 			path: src/common/SearchHelper.php
 
 		-
@@ -927,7 +801,7 @@ parameters:
 		-
 			rawMessage: 'Strict comparison using === between int<2, max> and 1 will always evaluate to false.'
 			identifier: identical.alwaysFalse
-			count: 1
+			count: 3
 			path: src/common/SearchHelper.php
 
 		-
@@ -957,18 +831,6 @@ parameters:
 		-
 			rawMessage: Cannot cast mixed to string.
 			identifier: cast.string
-			count: 1
-			path: src/common/SimpleXMLExtended.php
-
-		-
-			rawMessage: 'Loose comparison via "!=" between int and int is not allowed.'
-			identifier: notEqual.notAllowed
-			count: 1
-			path: src/common/SimpleXMLExtended.php
-
-		-
-			rawMessage: 'Loose comparison via "==" between int<0, max> and int is not allowed.'
-			identifier: equal.notAllowed
 			count: 1
 			path: src/common/SimpleXMLExtended.php
 
@@ -1019,18 +881,6 @@ parameters:
 			identifier: argument.type
 			count: 2
 			path: src/common/SimpleXMLExtended.php
-
-		-
-			rawMessage: 'Calling mt_rand() is forbidden, it is not a cryptographically secure generator, use random_int() instead.'
-			identifier: disallowed.function
-			count: 2
-			path: src/common/StringUtils.php
-
-		-
-			rawMessage: 'Calling rand() is forbidden, it is not a cryptographically secure generator, use random_int() instead.'
-			identifier: disallowed.function
-			count: 1
-			path: src/common/StringUtils.php
 
 		-
 			rawMessage: 'Method actra\yuf\common\StringUtils::explode() has parameter $tokens with no value type specified in iterable type array.'
@@ -1111,12 +961,6 @@ parameters:
 			path: src/common/UrlHelper.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/common/ValidatedEmailAddress.php
-
-		-
 			rawMessage: Cannot access offset 0 on non-empty-list<array>|false.
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
@@ -1189,12 +1033,6 @@ parameters:
 			path: src/common/ValidatedEmailAddress.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 3
-			path: src/core/BaseView.php
-
-		-
 			rawMessage: 'Method actra\yuf\core\BaseView::__construct() has parameter $ipWhitelist with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
@@ -1211,12 +1049,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/core/BaseView.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 2
-			path: src/core/ContentHandler.php
 
 		-
 			rawMessage: 'Method actra\yuf\core\ContentHandler::get() should return actra\yuf\core\ContentHandler but returns actra\yuf\core\ContentHandler|null.'
@@ -1241,36 +1073,6 @@ parameters:
 			identifier: assign.propertyType
 			count: 1
 			path: src/core/ContentHandler.php
-
-		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/core/ContentType.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 1
-			path: src/core/ContentType.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/core/ContentType.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/core/ErrorHandler.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 5
-			path: src/core/HttpRequest.php
 
 		-
 			rawMessage: 'Cannot access offset int<0, max> on mixed.'
@@ -1495,12 +1297,6 @@ parameters:
 			path: src/core/HttpResponse.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 7
-			path: src/core/HttpResponse.php
-
-		-
 			rawMessage: 'Calling isset() is forbidden, compare explicitly: array_key_exists(), !== null or a typed property (see standards/php.md).'
 			identifier: disallowed.isset
 			count: 2
@@ -1561,18 +1357,6 @@ parameters:
 			path: src/core/HttpResponse.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/core/HttpStatusCode.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/core/LanguageCollection.php
-
-		-
 			rawMessage: 'Method actra\yuf\core\LanguageCollection::__construct() has parameter $languages with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
@@ -1589,24 +1373,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/core/LanguageCollection.php
-
-		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/core/LocaleHandler.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 1
-			path: src/core/LocaleHandler.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 3
-			path: src/core/LocaleHandler.php
 
 		-
 			rawMessage: Empty array passed to foreach.
@@ -1693,12 +1459,6 @@ parameters:
 			path: src/core/Logger.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 2
-			path: src/core/Logger.php
-
-		-
 			rawMessage: Cannot use ++ on 0|string.
 			identifier: preInc.type
 			count: 1
@@ -1745,24 +1505,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/core/Logger.php
-
-		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/core/RequestHandler.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 1
-			path: src/core/RequestHandler.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 10
-			path: src/core/RequestHandler.php
 
 		-
 			rawMessage: Cannot access property $code on actra\yuf\core\Language|null.
@@ -1831,12 +1573,6 @@ parameters:
 			path: src/core/RequestHandler.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/core/Route.php
-
-		-
 			rawMessage: Cannot access property $code on actra\yuf\core\Language|null.
 			identifier: property.nonObject
 			count: 1
@@ -1871,12 +1607,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/core/RouteCollection.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/datacheck/Sanitizer.php
 
 		-
 			rawMessage: 'Method actra\yuf\datacheck\Sanitizer::domain() has parameter $input with no type specified.'
@@ -1927,12 +1657,6 @@ parameters:
 			path: src/datacheck/Validator.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/datacheck/sanitizerTypes/DomainSanitizer.php
-
-		-
 			rawMessage: 'Parameter $string of function explode expects string, string|null given.'
 			identifier: argument.type
 			count: 1
@@ -1942,12 +1666,6 @@ parameters:
 			rawMessage: 'Calling isset() is forbidden, compare explicitly: array_key_exists(), !== null or a typed property (see standards/php.md).'
 			identifier: disallowed.isset
 			count: 1
-			path: src/datacheck/sanitizerTypes/FloatSanitizer.php
-
-		-
-			rawMessage: 'Loose comparison via "==" between float and int is not allowed.'
-			identifier: equal.notAllowed
-			count: 2
 			path: src/datacheck/sanitizerTypes/FloatSanitizer.php
 
 		-
@@ -2015,18 +1733,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/datacheck/validatorTypes/IpValidator.php
-
-		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/datacheck/validatorTypes/TldValidator.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 1
-			path: src/datacheck/validatorTypes/TldValidator.php
 
 		-
 			rawMessage: 'Binary operation "-" between (int|string) and 1 results in an error.'
@@ -2269,12 +1975,6 @@ parameters:
 			path: src/db/DbSettingsModel.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 2
-			path: src/db/FrameworkDB.php
-
-		-
 			rawMessage: 'Calling isset() is forbidden, compare explicitly: array_key_exists(), !== null or a typed property (see standards/php.md).'
 			identifier: disallowed.isset
 			count: 3
@@ -2357,12 +2057,6 @@ parameters:
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/db/FrameworkDB.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 3
-			path: src/exception/ExceptionHandler.php
 
 		-
 			rawMessage: 'Calling isset() is forbidden, compare explicitly: array_key_exists(), !== null or a typed property (see standards/php.md).'
@@ -2491,12 +2185,6 @@ parameters:
 			path: src/form/FormCollection.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 3
-			path: src/form/FormComponent.php
-
-		-
 			rawMessage: 'Method actra\yuf\form\FormComponent::render() overrides method actra\yuf\html\HtmlElement::render() but is missing the #[\Override] attribute.'
 			identifier: method.missingOverride
 			count: 1
@@ -2507,12 +2195,6 @@ parameters:
 			identifier: offsetAccess.notFound
 			count: 4
 			path: src/form/FormInput.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 2
-			path: src/form/FormRenderer.php
 
 		-
 			rawMessage: 'Method actra\yuf\form\component\FormControl::getDefaultRenderer() overrides method actra\yuf\form\FormComponent::getDefaultRenderer() but is missing the #[\Override] attribute.'
@@ -2549,12 +2231,6 @@ parameters:
 			identifier: method.missingOverride
 			count: 1
 			path: src/form/component/FormSubHeadline.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 3
-			path: src/form/component/collection/Form.php
 
 		-
 			rawMessage: 'Method actra\yuf\form\component\collection\Form::getDefaultRenderer() overrides method actra\yuf\form\FormCollection::getDefaultRenderer() but is missing the #[\Override] attribute.'
@@ -2597,12 +2273,6 @@ parameters:
 			identifier: method.missingOverride
 			count: 1
 			path: src/form/component/field/BooleanField.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/form/component/field/CheckboxOptionsField.php
 
 		-
 			rawMessage: 'Method actra\yuf\form\component\field\CheckboxOptionsField::getDefaultRenderer() overrides method actra\yuf\form\FormComponent::getDefaultRenderer() but is missing the #[\Override] attribute.'
@@ -2675,12 +2345,6 @@ parameters:
 			identifier: method.missingOverride
 			count: 1
 			path: src/form/component/field/DecimalField.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/form/component/field/EmailField.php
 
 		-
 			rawMessage: 'Method actra\yuf\form\component\field\EmailField::normalize() overrides method actra\yuf\form\component\field\TextualField::normalize() but is missing the #[\Override] attribute.'
@@ -2989,12 +2653,6 @@ parameters:
 			path: src/form/component/field/SingleOptionsField.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/form/component/field/TextAreaField.php
-
-		-
 			rawMessage: 'Method actra\yuf\form\component\field\TextAreaField::checkRules() overrides method actra\yuf\form\component\field\TextualField::checkRules() but is missing the #[\Override] attribute.'
 			identifier: method.missingOverride
 			count: 1
@@ -3011,12 +2669,6 @@ parameters:
 			identifier: method.missingOverride
 			count: 1
 			path: src/form/component/field/TextAreaField.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/form/component/field/TextField.php
 
 		-
 			rawMessage: 'Method actra\yuf\form\component\field\TextualField::checkRules() overrides method actra\yuf\form\component\FormField::checkRules() but is missing the #[\Override] attribute.'
@@ -3115,12 +2767,6 @@ parameters:
 			path: src/form/renderer/BooleanFieldListRenderer.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 2
-			path: src/form/renderer/CheckboxItemRenderer.php
-
-		-
 			rawMessage: 'Method actra\yuf\form\renderer\CheckboxItemRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
 			identifier: method.missingOverride
 			count: 1
@@ -3139,12 +2785,6 @@ parameters:
 			path: src/form/renderer/DefaultComponentRenderer.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/form/renderer/DefaultFormRenderer.php
-
-		-
 			rawMessage: 'Method actra\yuf\form\renderer\DefaultFormRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
 			identifier: method.missingOverride
 			count: 1
@@ -3157,12 +2797,6 @@ parameters:
 			path: src/form/renderer/DefaultOptionsRenderer.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 5
-			path: src/form/renderer/DefinitionListRenderer.php
-
-		-
 			rawMessage: 'Method actra\yuf\form\renderer\DefinitionListRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
 			identifier: method.missingOverride
 			count: 1
@@ -3173,12 +2807,6 @@ parameters:
 			identifier: method.missingOverride
 			count: 1
 			path: src/form/renderer/FileFieldRenderer.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/form/renderer/FormControlRenderer.php
 
 		-
 			rawMessage: 'Method actra\yuf\form\renderer\FormControlRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
@@ -3199,22 +2827,10 @@ parameters:
 			path: src/form/renderer/HiddenFieldRenderer.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 3
-			path: src/form/renderer/InputFieldRenderer.php
-
-		-
 			rawMessage: 'Method actra\yuf\form\renderer\InputFieldRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
 			identifier: method.missingOverride
 			count: 1
 			path: src/form/renderer/InputFieldRenderer.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 4
-			path: src/form/renderer/LegendAndListRenderer.php
 
 		-
 			rawMessage: 'Method actra\yuf\form\renderer\LegendAndListRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
@@ -3223,34 +2839,16 @@ parameters:
 			path: src/form/renderer/LegendAndListRenderer.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/form/renderer/NumericFieldRenderer.php
-
-		-
 			rawMessage: 'Method actra\yuf\form\renderer\NumericFieldRenderer::prepare() overrides method actra\yuf\form\renderer\InputFieldRenderer::prepare() but is missing the #[\Override] attribute.'
 			identifier: method.missingOverride
 			count: 1
 			path: src/form/renderer/NumericFieldRenderer.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 2
-			path: src/form/renderer/SelectOptionsRenderer.php
-
-		-
 			rawMessage: 'Method actra\yuf\form\renderer\SelectOptionsRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
 			identifier: method.missingOverride
 			count: 1
 			path: src/form/renderer/SelectOptionsRenderer.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/form/renderer/TextAreaRenderer.php
 
 		-
 			rawMessage: 'Method actra\yuf\form\renderer\TextAreaRenderer::prepare() overrides method actra\yuf\form\FormRenderer::prepare() but is missing the #[\Override] attribute.'
@@ -3379,12 +2977,6 @@ parameters:
 			path: src/form/upload/SessionFileUploadStorage.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 3
-			path: src/html/HtmlDataObject.php
-
-		-
 			rawMessage: Binary operation "." between mixed and ' ' results in an error.
 			identifier: binaryOp.invalid
 			count: 1
@@ -3393,18 +2985,6 @@ parameters:
 		-
 			rawMessage: 'Binary operation "." between mixed and '' class="'' results in an error.'
 			identifier: binaryOp.invalid
-			count: 1
-			path: src/html/HtmlDocument.php
-
-		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/html/HtmlDocument.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
 			count: 1
 			path: src/html/HtmlDocument.php
 
@@ -3451,7 +3031,7 @@ parameters:
 			path: src/html/HtmlDocument.php
 
 		-
-			rawMessage: Offset 1 might not exist on array.
+			rawMessage: Offset 1 might not exist on non-empty-array.
 			identifier: offsetAccess.notFound
 			count: 1
 			path: src/html/HtmlDocument.php
@@ -3478,12 +3058,6 @@ parameters:
 			rawMessage: 'Calling htmlspecialchars() is forbidden, set the $flags parameter to `ENT_QUOTES` to also convert single quotes to entities to prevent some HTML injection bugs.'
 			identifier: disallowed.function
 			count: 1
-			path: src/html/HtmlEncoder.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 2
 			path: src/html/HtmlEncoder.php
 
 		-
@@ -3571,12 +3145,6 @@ parameters:
 			path: src/html/HtmlTag.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/html/HtmlTagAttribute.php
-
-		-
 			rawMessage: 'Method actra\yuf\html\HtmlTagAttribute::render() overrides method actra\yuf\html\HtmlElement::render() but is missing the #[\Override] attribute.'
 			identifier: method.missingOverride
 			count: 1
@@ -3587,24 +3155,6 @@ parameters:
 			identifier: method.missingOverride
 			count: 1
 			path: src/html/HtmlText.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/layout/NavigationItem.php
-
-		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 3
-			path: src/mailer/AbstractMail.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 3
-			path: src/mailer/AbstractMail.php
 
 		-
 			rawMessage: 'Calling mt_rand() is forbidden, it is not a cryptographically secure generator, use random_int() instead.'
@@ -3685,12 +3235,6 @@ parameters:
 			path: src/mailer/MailMimeBody.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/mailer/MailMimeHeader.php
-
-		-
 			rawMessage: 'Parameter $array of function implode expects array<string>, array given.'
 			identifier: argument.type
 			count: 1
@@ -3729,18 +3273,6 @@ parameters:
 		-
 			rawMessage: 'Call to function array_key_exists() with 3 and array{0: string, 1: string, 2: string, 3: string, 4: string, 5?: non-empty-string} will always evaluate to true.'
 			identifier: function.alreadyNarrowedType
-			count: 1
-			path: src/mailer/MailerFunctions.php
-
-		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/mailer/MailerFunctions.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
 			count: 1
 			path: src/mailer/MailerFunctions.php
 
@@ -3823,24 +3355,6 @@ parameters:
 			path: src/mailer/MailerFunctions.php
 
 		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/mailer/SMTPMailer.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 1
-			path: src/mailer/SMTPMailer.php
-
-		-
-			rawMessage: 'Loose comparison via "!=" between string and string is not allowed.'
-			identifier: notEqual.notAllowed
-			count: 1
-			path: src/mailer/SMTPMailer.php
-
-		-
 			rawMessage: 'Method actra\yuf\mailer\SMTPMailer::getMaxLineLength() overrides method actra\yuf\mailer\AbstractMailer::getMaxLineLength() but is missing the #[\Override] attribute.'
 			identifier: method.missingOverride
 			count: 1
@@ -3901,18 +3415,6 @@ parameters:
 			path: src/mailer/SMTPMailer.php
 
 		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/mailer/attachment/MailerFileAttachment.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 1
-			path: src/mailer/attachment/MailerFileAttachment.php
-
-		-
 			rawMessage: 'Property actra\yuf\mailer\attachment\MailerFileAttachment::$fileName (string) does not accept array|string.'
 			identifier: assign.propertyType
 			count: 1
@@ -3921,12 +3423,6 @@ parameters:
 		-
 			rawMessage: Binary operation "." between non-falsy-string and mixed results in an error.
 			identifier: binaryOp.invalid
-			count: 1
-			path: src/pagination/Pagination.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
 			count: 1
 			path: src/pagination/Pagination.php
 
@@ -4153,12 +3649,6 @@ parameters:
 			path: src/phone/PhoneMetaData.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 2
-			path: src/phone/PhoneMetaData.php
-
-		-
 			rawMessage: Cannot access offset 'countryCode' on mixed.
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 1
@@ -4255,24 +3745,6 @@ parameters:
 			path: src/phone/PhoneParser.php
 
 		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 2
-			path: src/phone/PhoneParser.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 2
-			path: src/phone/PhoneParser.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 11
-			path: src/phone/PhoneParser.php
-
-		-
 			rawMessage: Cannot access property $countryCode on actra\yuf\phone\PhoneMetaData|null.
 			identifier: property.nonObject
 			count: 1
@@ -4282,12 +3754,6 @@ parameters:
 			rawMessage: 'Casting to int something that''s already int<-1, max>.'
 			identifier: cast.useless
 			count: 2
-			path: src/phone/PhoneParser.php
-
-		-
-			rawMessage: 'Loose comparison via "==" between string and string is not allowed.'
-			identifier: equal.notAllowed
-			count: 1
 			path: src/phone/PhoneParser.php
 
 		-
@@ -4369,32 +3835,14 @@ parameters:
 			path: src/phone/PhoneParser.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/phone/PhoneRegionCountryCodeMap.php
-
-		-
 			rawMessage: 'Method actra\yuf\phone\PhoneRegionCountryCodeMap::getSupportedRegions() return type has no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/phone/PhoneRegionCountryCodeMap.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/phone/PhoneRenderer.php
-
-		-
 			rawMessage: 'Cannot call method lookingAt() on actra\yuf\phone\PhoneMatcher|null.'
 			identifier: method.nonObject
-			count: 1
-			path: src/phone/PhoneRenderer.php
-
-		-
-			rawMessage: 'Loose comparison via "==" between int and int is not allowed.'
-			identifier: equal.notAllowed
 			count: 1
 			path: src/phone/PhoneRenderer.php
 
@@ -4427,24 +3875,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/phone/PhoneRenderer.php
-
-		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 3
-			path: src/phone/PhoneValidator.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 3
-			path: src/phone/PhoneValidator.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/phone/PhoneValidator.php
 
 		-
 			rawMessage: Cannot access property $possibleLength on actra\yuf\phone\PhoneDesc|null.
@@ -4507,12 +3937,6 @@ parameters:
 			path: src/request/JsonRequestBody.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/response/HttpErrorResponseContent.php
-
-		-
 			rawMessage: 'Method actra\yuf\response\HttpErrorResponseContent::createJsonResponseContent() has parameter $data with generic class ArrayObject but does not specify its types: TKey, TValue'
 			identifier: missingType.generics
 			count: 1
@@ -4573,12 +3997,6 @@ parameters:
 			path: src/session/AbstractSessionHandler.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 7
-			path: src/session/AbstractSessionHandler.php
-
-		-
 			rawMessage: 'Calling isset() is forbidden, compare explicitly: array_key_exists(), !== null or a typed property (see standards/php.md).'
 			identifier: disallowed.isset
 			count: 2
@@ -4588,12 +4006,6 @@ parameters:
 			rawMessage: 'Construct empty() is not allowed. Use more strict comparison.'
 			identifier: empty.notAllowed
 			count: 1
-			path: src/session/AbstractSessionHandler.php
-
-		-
-			rawMessage: 'Loose comparison via "==" between int and int is not allowed.'
-			identifier: equal.notAllowed
-			count: 3
 			path: src/session/AbstractSessionHandler.php
 
 		-
@@ -4651,18 +4063,6 @@ parameters:
 			path: src/table/TableItemModel.php
 
 		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 2
-			path: src/table/column/AbstractTableColumn.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 2
-			path: src/table/column/AbstractTableColumn.php
-
-		-
 			rawMessage: 'Parameter $array of function implode expects array<string>, array given.'
 			identifier: argument.type
 			count: 1
@@ -4717,12 +4117,6 @@ parameters:
 			path: src/table/column/ActionsColumn.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/table/column/BooleanColumn.php
-
-		-
 			rawMessage: 'Method actra\yuf\table\column\BooleanColumn::renderCellValue() overrides method actra\yuf\table\column\AbstractTableColumn::renderCellValue() but is missing the #[\Override] attribute.'
 			identifier: method.missingOverride
 			count: 1
@@ -4753,12 +4147,6 @@ parameters:
 			path: src/table/column/CallbackColumn.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/table/column/DateColumn.php
-
-		-
 			rawMessage: Cannot cast mixed to string.
 			identifier: cast.string
 			count: 1
@@ -4775,12 +4163,6 @@ parameters:
 			identifier: method.missingOverride
 			count: 1
 			path: src/table/column/DefaultColumn.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/table/column/FileSizeColumn.php
 
 		-
 			rawMessage: 'Method actra\yuf\table\column\FileSizeColumn::renderCellValue() overrides method actra\yuf\table\column\AbstractTableColumn::renderCellValue() but is missing the #[\Override] attribute.'
@@ -4829,12 +4211,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/table/column/StripHtmlTagsColumn.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 2
-			path: src/table/filter/DateFilterField.php
 
 		-
 			rawMessage: 'Cannot call method format() on DateTimeImmutable|null.'
@@ -4930,12 +4306,6 @@ parameters:
 			rawMessage: 'Binary operation "." between ''('' and mixed results in an error.'
 			identifier: binaryOp.invalid
 			count: 1
-			path: src/table/filter/TableFilter.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 3
 			path: src/table/filter/TableFilter.php
 
 		-
@@ -5035,27 +4405,9 @@ parameters:
 			path: src/table/renderer/TableHeadRenderer.php
 
 		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/table/table/DbResultTable.php
-
-		-
 			rawMessage: 'Calling empty() is forbidden, compare explicitly: === '''', === [], === 0 or !== null (see standards/php.md).'
 			identifier: disallowed.empty
 			count: 1
-			path: src/table/table/DbResultTable.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 1
-			path: src/table/table/DbResultTable.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 9
 			path: src/table/table/DbResultTable.php
 
 		-
@@ -5245,18 +4597,6 @@ parameters:
 			path: src/template/customtags/CustomTagsHelper.php
 
 		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/template/customtags/CustomTagsHelper.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 1
-			path: src/template/customtags/CustomTagsHelper.php
-
-		-
 			rawMessage: 'Cannot call method insertBefore() on actra\yuf\template\htmlparser\HtmlNode|null.'
 			identifier: method.nonObject
 			count: 1
@@ -5269,7 +4609,19 @@ parameters:
 			path: src/template/customtags/CustomTagsHelper.php
 
 		-
+			rawMessage: 'Method actra\yuf\template\customtags\CustomTagsHelper::isSelected() has parameter $selection with no value type specified in iterable type array.'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/template/customtags/CustomTagsHelper.php
+
+		-
 			rawMessage: 'Parameter #1 $textContent of static method actra\yuf\html\HtmlText::encoded() expects string, mixed given.'
+			identifier: argument.type
+			count: 1
+			path: src/template/customtags/CustomTagsHelper.php
+
+		-
+			rawMessage: 'Parameter $key of static method actra\yuf\template\customtags\CustomTagsHelper::isSelected() expects int|string, mixed given.'
 			identifier: argument.type
 			count: 1
 			path: src/template/customtags/CustomTagsHelper.php
@@ -5386,12 +4738,6 @@ parameters:
 			rawMessage: 'Cannot call method replaceNode() on actra\yuf\template\htmlparser\HtmlNode|null.'
 			identifier: method.nonObject
 			count: 1
-			path: src/template/customtags/For2Tag.php
-
-		-
-			rawMessage: 'Loose comparison via "==" between int|string and int is not allowed.'
-			identifier: equal.notAllowed
-			count: 2
 			path: src/template/customtags/For2Tag.php
 
 		-
@@ -5863,18 +5209,6 @@ parameters:
 			path: src/template/customtags/FormComponentTag.php
 
 		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/template/customtags/IfTag.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 1
-			path: src/template/customtags/IfTag.php
-
-		-
 			rawMessage: 'Cannot call method removeNode() on actra\yuf\template\htmlparser\HtmlNode|null.'
 			identifier: method.nonObject
 			count: 1
@@ -5925,12 +5259,6 @@ parameters:
 		-
 			rawMessage: Binary operation "." between '<?php echo actra…' and mixed results in an error.
 			identifier: binaryOp.invalid
-			count: 1
-			path: src/template/customtags/LangTag.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
 			count: 1
 			path: src/template/customtags/LangTag.php
 
@@ -6049,12 +5377,6 @@ parameters:
 			path: src/template/customtags/LoadSubTplTag.php
 
 		-
-			rawMessage: 'Method actra\yuf\template\customtags\LoadSubTplTag::replaceInline() has no return type specified.'
-			identifier: missingType.return
-			count: 1
-			path: src/template/customtags/LoadSubTplTag.php
-
-		-
 			rawMessage: 'Method actra\yuf\template\customtags\LoadSubTplTag::replaceNode() overrides method actra\yuf\template\template\TemplateTag::replaceNode() but is missing the #[\Override] attribute.'
 			identifier: method.missingOverride
 			count: 1
@@ -6093,18 +5415,6 @@ parameters:
 		-
 			rawMessage: Binary operation "." between non-falsy-string and mixed results in an error.
 			identifier: binaryOp.invalid
-			count: 1
-			path: src/template/customtags/OptionsTag.php
-
-		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/template/customtags/OptionsTag.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
 			count: 1
 			path: src/template/customtags/OptionsTag.php
 
@@ -6451,12 +5761,6 @@ parameters:
 			path: src/template/htmlparser/ElementNode.php
 
 		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
-			count: 1
-			path: src/template/htmlparser/ElementNode.php
-
-		-
 			rawMessage: Instanceof between actra\yuf\template\htmlparser\ElementNode and actra\yuf\template\htmlparser\ElementNode will always evaluate to true.
 			identifier: instanceof.alwaysTrue
 			count: 1
@@ -6477,24 +5781,6 @@ parameters:
 		-
 			rawMessage: 'Binary operation ".=" between string and mixed results in an error.'
 			identifier: assignOp.invalid
-			count: 1
-			path: src/template/htmlparser/HtmlDoc.php
-
-		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 1
-			path: src/template/htmlparser/HtmlDoc.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 1
-			path: src/template/htmlparser/HtmlDoc.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
 			count: 1
 			path: src/template/htmlparser/HtmlDoc.php
 
@@ -6777,24 +6063,6 @@ parameters:
 		-
 			rawMessage: 'Call to function class_exists() with actra\yuf\template\template\TagInline|actra\yuf\template\template\TagNode will always evaluate to false.'
 			identifier: function.impossibleType
-			count: 1
-			path: src/template/template/TemplateEngine.php
-
-		-
-			rawMessage: 'Call to function in_array() requires parameter #3 to be set.'
-			identifier: function.strict
-			count: 2
-			path: src/template/template/TemplateEngine.php
-
-		-
-			rawMessage: 'Calling in_array() is forbidden, set the third parameter $strict to `true` to also check the types to prevent type juggling bugs.'
-			identifier: disallowed.function
-			count: 2
-			path: src/template/template/TemplateEngine.php
-
-		-
-			rawMessage: 'Calling is_null() is forbidden, use === null or !== null.'
-			identifier: disallowed.function
 			count: 1
 			path: src/template/template/TemplateEngine.php
 

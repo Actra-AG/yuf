@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -24,18 +25,17 @@ class ToggleFieldRenderer extends FormRenderer
     public function __construct(
         private readonly OptionsField $toggleField,
         private readonly ToggleChildren $toggleChildren,
-        private readonly bool $displayLegend
-    ) {
-    }
+        private readonly bool $displayLegend,
+    ) {}
 
     public function prepare(): void
     {
         $ulTag = $this->createListTag();
         foreach ($this->toggleField->formOptions->data as $key => $htmlText) {
-            $ulTag->addTag(htmlTag: $this->createOptionTag(key: (string)$key, htmlText: $htmlText));
+            $ulTag->addTag(htmlTag: $this->createOptionTag(key: (string) $key, htmlText: $htmlText));
         }
         $this->setHtmlTag(
-            htmlTag: $this->displayLegend ? $this->wrapInFieldset(ulTag: $ulTag) : $this->wrapInDiv(ulTag: $ulTag)
+            htmlTag: $this->displayLegend ? $this->wrapInFieldset(ulTag: $ulTag) : $this->wrapInDiv(ulTag: $ulTag),
         );
     }
 
@@ -53,9 +53,9 @@ class ToggleFieldRenderer extends FormRenderer
                 new HtmlTagAttribute(
                     name: 'class',
                     value: implode(separator: ' ', array: $ulTagClasses),
-                    valueIsEncodedForRendering: true
+                    valueIsEncodedForRendering: true,
                 ),
-            ]
+            ],
         );
     }
 
@@ -67,7 +67,7 @@ class ToggleFieldRenderer extends FormRenderer
             selfClosing: false,
             htmlTagAttributes: [
                 new HtmlTagAttribute(name: 'class', value: 'label-text', valueIsEncodedForRendering: true),
-            ]
+            ],
         );
         $spanLabelTag->addText(htmlText: $htmlText);
         $labelTag = new HtmlTag(name: 'label', selfClosing: false);
@@ -89,13 +89,13 @@ class ToggleFieldRenderer extends FormRenderer
             new HtmlTagAttribute(
                 name: 'type',
                 value: $isMultiple ? 'checkbox' : 'radio',
-                valueIsEncodedForRendering: true
+                valueIsEncodedForRendering: true,
             ),
             new HtmlTagAttribute(name: 'toggle-id', value: $combinedSpecifier, valueIsEncodedForRendering: true),
             new HtmlTagAttribute(
                 name: 'name',
                 value: $isMultiple ? $this->toggleField->name . '[]' : $this->toggleField->name,
-                valueIsEncodedForRendering: true
+                valueIsEncodedForRendering: true,
             ),
             new HtmlTagAttribute(name: 'value', value: $key, valueIsEncodedForRendering: true),
         ];
@@ -103,7 +103,7 @@ class ToggleFieldRenderer extends FormRenderer
             $inputAttributes[] = new HtmlTagAttribute(
                 name: 'aria-describedby',
                 value: $combinedSpecifier,
-                valueIsEncodedForRendering: true
+                valueIsEncodedForRendering: true,
             );
         }
         if ($this->toggleField->isSelected(optionKey: $key)) {
@@ -121,12 +121,12 @@ class ToggleFieldRenderer extends FormRenderer
             htmlTagAttributes: [
                 new HtmlTagAttribute(name: 'class', value: 'form-toggle-content', valueIsEncodedForRendering: true),
                 new HtmlTagAttribute(name: 'id', value: $combinedSpecifier, valueIsEncodedForRendering: true),
-            ]
+            ],
         );
         foreach ($this->toggleChildren->getForMainOption(mainOption: $key) as $childComponent) {
             if ($childComponent->getRenderer() === null) {
                 $childComponent->setRenderer(
-                    renderer: $this->toggleChildren->createDefaultChildRenderer(childComponent: $childComponent)
+                    renderer: $this->toggleChildren->createDefaultChildRenderer(childComponent: $childComponent),
                 );
             }
             $divTag->addTag(htmlTag: $childComponent->getHtmlTag());
@@ -151,9 +151,9 @@ class ToggleFieldRenderer extends FormRenderer
                 new HtmlTagAttribute(
                     name: 'class',
                     value: implode(separator: ' ', array: $divClasses),
-                    valueIsEncodedForRendering: true
+                    valueIsEncodedForRendering: true,
                 ),
-            ]
+            ],
         );
         $divTag->addTag(htmlTag: $ulTag);
         FormRenderer::addErrorsToParentHtmlTag(formComponentWithErrors: $this->toggleField, parentHtmlTag: $divTag);
@@ -169,14 +169,14 @@ class ToggleFieldRenderer extends FormRenderer
         if ($listDescription !== null) {
             $fieldsetTag->addText(
                 htmlText: HtmlText::encoded(
-                    textContent: '<div class="fieldset-info">' . $listDescription->render() . '</div>'
-                )
+                    textContent: '<div class="fieldset-info">' . $listDescription->render() . '</div>',
+                ),
             );
         }
         $fieldsetTag->addTag(htmlTag: $ulTag);
         FormRenderer::addErrorsToParentHtmlTag(
             formComponentWithErrors: $this->toggleField,
-            parentHtmlTag: $fieldsetTag
+            parentHtmlTag: $fieldsetTag,
         );
 
         return $fieldsetTag;
@@ -193,7 +193,7 @@ class ToggleFieldRenderer extends FormRenderer
             selfClosing: false,
             htmlTagAttributes: $this->toggleField->renderLabel ? [] : [
                 new HtmlTagAttribute(name: 'class', value: 'visuallyhidden', valueIsEncodedForRendering: true),
-            ]
+            ],
         );
         $legendTag->addText(htmlText: $this->toggleField->label);
         if ($this->toggleField->isRequired() && $this->toggleField->renderRequiredAbbr) {
@@ -202,7 +202,7 @@ class ToggleFieldRenderer extends FormRenderer
                 selfClosing: false,
                 htmlTagAttributes: [
                     new HtmlTagAttribute(name: 'class', value: 'required', valueIsEncodedForRendering: true),
-                ]
+                ],
             );
             $requiredTag->addText(htmlText: HtmlText::encoded(textContent: '*'));
             $legendTag->addTag(htmlTag: $requiredTag);
@@ -214,7 +214,7 @@ class ToggleFieldRenderer extends FormRenderer
                 selfClosing: false,
                 htmlTagAttributes: [
                     new HtmlTagAttribute(name: 'class', value: 'legend-info', valueIsEncodedForRendering: true),
-                ]
+                ],
             );
             $labelInfoTag->addText(htmlText: $labelInfoText);
             $legendTag->addTag(htmlTag: $labelInfoTag);

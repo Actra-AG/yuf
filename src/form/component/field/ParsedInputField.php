@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -29,7 +30,7 @@ abstract class ParsedInputField extends InputField
         ?HtmlText $requiredError,
         ?string $placeholder,
         ?AutoCompleteEnum $autoComplete,
-        ?int $maxLength = null
+        ?int $maxLength = null,
     ) {
         parent::__construct(
             inputType: $inputType,
@@ -37,7 +38,7 @@ abstract class ParsedInputField extends InputField
             label: $label,
             placeholder: $placeholder,
             autoComplete: $autoComplete,
-            maxLength: $maxLength
+            maxLength: $maxLength,
         );
         if ($requiredError !== null) {
             $this->addRequiredRule(errorMessage: $requiredError);
@@ -69,7 +70,7 @@ abstract class ParsedInputField extends InputField
         $text = $this->getText();
         throw new UnexpectedValueException(
             message: 'The value of field ' . $this->name . ' cannot be read as ' . $type . ', it is not valid: "'
-            . (strlen(string: $text) > 40 ? substr(string: $text, offset: 0, length: 40) . '...' : $text) . '"'
+            . (strlen(string: $text) > 40 ? substr(string: $text, offset: 0, length: 40) . '...' : $text) . '"',
         );
     }
 
@@ -81,7 +82,7 @@ abstract class ParsedInputField extends InputField
         return FormFieldValueMissingException::forField(
             fieldName: $this->name,
             isRequired: $this->isRequired(),
-            nullableGetter: $nullableGetter
+            nullableGetter: $nullableGetter,
         );
     }
 

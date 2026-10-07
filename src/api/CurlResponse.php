@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -24,17 +25,16 @@ class CurlResponse
         public readonly HttpStatusCode $responseHttpCode,
         public readonly float $totalRequestTime,
         public readonly int $errorCode,
-        public readonly string $errorMessage
-    ) {
-    }
+        public readonly string $errorMessage,
+    ) {}
 
     public static function createFromPreparedCurlHandle(
         CurlHandle $preparedCurlHandle,
-        bool $acceptRedirectionResponseCode
+        bool $acceptRedirectionResponseCode,
     ): CurlResponse {
         $rawResponseBody = curl_exec(handle: $preparedCurlHandle);
         $curlInfo = curl_getinfo(handle: $preparedCurlHandle);
-        $responseHttpCode = HttpStatusCode::tryFrom(value: (int)$curlInfo['http_code']);
+        $responseHttpCode = HttpStatusCode::tryFrom(value: (int) $curlInfo['http_code']);
         if ($responseHttpCode === null) {
             $responseHttpCode = HttpStatusCode::HTTP_UNKNOWN;
         }
@@ -52,7 +52,7 @@ class CurlResponse
                 CURLE_SSL_CERTPROBLEM => '; Hint: Problem with certificate on ssl connection.',
                 CURLE_SSL_PEER_CERTIFICATE => '; Hint: Problem with CA certificate on ssl connection. Maybe OS update missing on server?',
                 67 => '; Hint: Login denied.',
-                default => ''
+                default => '',
             };
         } elseif (
             $responseHttpCode->value >= 300
@@ -64,7 +64,8 @@ class CurlResponse
                     haystack: [
                         HttpStatusCode::HTTP_MOVED_PERMANENTLY,
                         HttpStatusCode::HTTP_SEE_OTHER,
-                    ]
+                    ],
+                    strict: true,
                 )
             )
         ) {
@@ -78,7 +79,7 @@ class CurlResponse
                 HttpStatusCode::HTTP_METHOD_NOT_ALLOWED => ' ("method not allowed". Check URL or request format/data.)',
                 HttpStatusCode::HTTP_NOT_ACCEPTABLE => ' ("not acceptable" on server. Check request format/data.)',
                 HttpStatusCode::HTTP_INTERNAL_SERVER_ERROR => ' (remote "Server error")',
-                default => ''
+                default => '',
             };
         }
 
@@ -86,9 +87,9 @@ class CurlResponse
             rawResponseBody: $rawResponseBody,
             curlInfo: $curlInfo,
             responseHttpCode: $responseHttpCode,
-            totalRequestTime: (float)$curlInfo['total_time'],
+            totalRequestTime: (float) $curlInfo['total_time'],
             errorCode: $errorCode,
-            errorMessage: $errorMessage
+            errorMessage: $errorMessage,
         );
     }
 
@@ -101,7 +102,7 @@ class CurlResponse
     {
         return JsonUtils::decodeJsonString(
             jsonString: $this->rawResponseBody,
-            returnAssociativeArray: false
+            returnAssociativeArray: false,
         );
     }
 
@@ -109,7 +110,7 @@ class CurlResponse
     {
         return new SimpleXMLExtended(
             data: $this->rawResponseBody,
-            options: LIBXML_NOCDATA
+            options: LIBXML_NOCDATA,
         );
     }
 }

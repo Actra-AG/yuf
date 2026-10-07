@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -15,9 +16,7 @@ class AccessRightCollection
     /** @var string[] */
     private array $accessRights = [];
 
-    protected function __construct()
-    {
-    }
+    protected function __construct() {}
 
     public static function createEmpty(): AccessRightCollection
     {
@@ -43,7 +42,7 @@ class AccessRightCollection
     {
         return array_any(
             $accessRightCollection->listAccessRights(),
-            fn($accessRight) => $this->hasAccessRight(accessRight: $accessRight)
+            fn($accessRight) => $this->hasAccessRight(accessRight: $accessRight),
         );
     }
 
@@ -57,7 +56,7 @@ class AccessRightCollection
 
     public function hasAccessRight(string $accessRight): bool
     {
-        return in_array(needle: $accessRight, haystack: $this->accessRights);
+        return in_array(needle: $accessRight, haystack: $this->accessRights, strict: true);
     }
 
     public function isEmpty(): bool

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -30,7 +31,7 @@ final class SelectOptionsFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'Select'),
             formOptions: $formOptions,
             initialValue: $initialValue,
-            requiredError: $requiredError
+            requiredError: $requiredError,
         );
     }
 
@@ -176,7 +177,7 @@ final class SelectOptionsFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'Select'),
             formOptions: new FormOptions(),
             initialValue: null,
-            individualEmptyValueLabel: HtmlText::encoded(textContent: 'None')
+            individualEmptyValueLabel: HtmlText::encoded(textContent: 'None'),
         );
 
         $this->assertSame('None', $field->emptyValueLabel->render());
@@ -190,7 +191,7 @@ final class SelectOptionsFieldValueTest extends TestCase
             formOptions: new FormOptions(),
             initialValue: null,
             cssClasses: ['wide'],
-            renderAsChosenEnhancedField: true
+            renderAsChosenEnhancedField: true,
         );
 
         $this->assertSame(['wide', 'chosen'], $field->cssClasses);

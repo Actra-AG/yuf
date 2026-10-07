@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -26,12 +27,12 @@ abstract class AbstractTableFilterField
         TableFilter $parentFilter,
         string $filterFieldIdentifier,
         private readonly HtmlText $label,
-        protected readonly bool $highlightFieldIfSelected
+        protected readonly bool $highlightFieldIfSelected,
     ) {
         $uniqueIdentifier = $parentFilter->identifier . '_' . $filterFieldIdentifier;
         if (array_key_exists(key: $uniqueIdentifier, array: AbstractTableFilterField::$instances)) {
             throw new LogicException(
-                message: 'There is already a column filter with the same identifier ' . $uniqueIdentifier
+                message: 'There is already a column filter with the same identifier ' . $uniqueIdentifier,
             );
         }
         $this->identifier = $uniqueIdentifier;
@@ -44,7 +45,7 @@ abstract class AbstractTableFilterField
         $field->addTextElement(propertyName: 'identifier', content: $this->identifier, isEncodedForRendering: true);
         $field->addBooleanValue(
             propertyName: 'highlight',
-            booleanValue: $this->isSelected() && !$this->highlightFieldIfSelected
+            booleanValue: $this->isSelected() && !$this->highlightFieldIfSelected,
         );
         $field->addTextElement(propertyName: 'label', content: $this->label->render(), isEncodedForRendering: true);
         $field->addTextElement(propertyName: 'html', content: $this->renderField(), isEncodedForRendering: true);
@@ -69,7 +70,7 @@ abstract class AbstractTableFilterField
         return DbResultTable::getFromSession(
             dataType: AbstractTableFilterField::sessionDataType,
             identifier: $this->identifier,
-            index: $index
+            index: $index,
         );
     }
 
@@ -79,7 +80,7 @@ abstract class AbstractTableFilterField
             dataType: AbstractTableFilterField::sessionDataType,
             identifier: $this->identifier,
             index: $index,
-            value: $value
+            value: $value,
         );
     }
 }

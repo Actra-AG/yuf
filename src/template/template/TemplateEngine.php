@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -40,7 +41,7 @@ use Throwable;
 class TemplateEngine
 {
     public const int ERR_MISSING_TEMPLATE_VARIABLE = 1;
-    protected(set) ?TemplateTag $lastTplTag = null;
+    public protected(set) ?TemplateTag $lastTplTag = null;
     protected ?HtmlDoc $htmlDoc = null;
     protected ArrayObject $dataPool;
     protected ArrayObject $dataTable;
@@ -58,7 +59,7 @@ class TemplateEngine
     public function __construct(
         protected TemplateCacheStrategy $templateCacheInterface,
         protected string $tplNsPrefix,
-        array $customTags = []
+        array $customTags = [],
     ) {
         $this->customTags = array_merge(TemplateEngine::getDefaultCustomTags(), $customTags);
         $this->dataPool = new ArrayObject();
@@ -128,7 +129,6 @@ class TemplateEngine
      *
      * @param string $filePath Path to the template file that should be checked
      *
-     * @return ?TemplateCacheEntry
      * @throws Exception
      */
     private function getTemplateCacheEntry(string $filePath): ?TemplateCacheEntry
@@ -145,8 +145,8 @@ class TemplateEngine
             $changeTime = @filectime($filePath);
         }
         if (($tplCacheEntry->size >= 0 && $tplCacheEntry->size !== @filesize(
-                    $filePath
-                )) || $tplCacheEntry->changeTime < $changeTime) {
+            $filePath,
+        )) || $tplCacheEntry->changeTime < $changeTime) {
             return null;
         }
 
@@ -166,7 +166,8 @@ class TemplateEngine
             if (
                 !in_array(
                     needle: TagNode::class,
-                    haystack: class_implements(object_or_class: $customTag)
+                    haystack: class_implements(object_or_class: $customTag),
+                    strict: true,
                 )
                 || !$customTag::isSelfClosing()
             ) {
@@ -195,7 +196,7 @@ class TemplateEngine
             $this->copyNodes($nodeList);
         } catch (Throwable $e) {
             throw new Exception(
-                'Error while processing the template file ' . $this->currentTemplateFile . ': ' . $e->getMessage()
+                'Error while processing the template file ' . $this->currentTemplateFile . ': ' . $e->getMessage(),
             );
         }
     }
@@ -210,8 +211,8 @@ class TemplateEngine
                     $node->updateAttribute($name, $htmlTagAttribute);
                 }
             } else {
-                if ($node instanceof TextNode || /*$node instanceof CommentNode ||*/
-                    $node instanceof CDataSectionNode) {
+                if ($node instanceof TextNode /*$node instanceof CommentNode ||*/
+                    || $node instanceof CDataSectionNode) {
                     $node->content = $this->replaceInlineTag($node->content);
                 }
 
@@ -228,7 +229,7 @@ class TemplateEngine
 
             if (isset($this->customTags[$node->tagName]) === false) {
                 throw new Exception(
-                    'The custom tag "' . $node->tagName . '" is not registered in this template engine instance'
+                    'The custom tag "' . $node->tagName . '" is not registered in this template engine instance',
                 );
             }
 
@@ -242,7 +243,7 @@ class TemplateEngine
             if (($tagInstance instanceof TemplateTag) === false) {
                 $this->templateCacheInterface->saveOnDestruct = false;
                 throw new Exception(
-                    message: 'The class "' . $tagClassName . '" does not extend the abstract class "TemplateTag" and is so recognized as an illegal class for a custom tag."'
+                    message: 'The class "' . $tagClassName . '" does not extend the abstract class "TemplateTag" and is so recognized as an illegal class for a custom tag."',
                 );
             }
             try {
@@ -262,7 +263,7 @@ class TemplateEngine
             pattern: '@{' . $this->tplNsPrefix . ':(.+?)(?:\\s+(\\w+=\'.+?\'))?\\s*}@',
             subject: $value,
             matches: $inlineTags,
-            flags: PREG_SET_ORDER
+            flags: PREG_SET_ORDER,
         );
         $amountOfInlineTags = count(value: $inlineTags);
         if ($amountOfInlineTags === 0) {
@@ -273,7 +274,7 @@ class TemplateEngine
 
             if (isset($this->customTags[$tagName]) === false) {
                 throw new Exception(
-                    'The custom tag "' . $tagName . '" is not registered in this template engine instance'
+                    'The custom tag "' . $tagName . '" is not registered in this template engine instance',
                 );
             }
 
@@ -285,7 +286,7 @@ class TemplateEngine
             if ($tagInstance instanceof TemplateTag === false) {
                 $this->templateCacheInterface->saveOnDestruct = false;
                 throw new Exception(
-                    'The class "' . $tagClassName . '" does not extend the abstract class "TemplateTag" and is so not recognized as an illegal class for a custom tag."'
+                    'The class "' . $tagClassName . '" does not extend the abstract class "TemplateTag" and is so not recognized as an illegal class for a custom tag."',
                 );
             }
 
@@ -327,25 +328,21 @@ class TemplateEngine
      *
      * @param ElementNode $elementNode The template tag
      * @param array $tagNames Array with tagName(s) of the following template tag(s)
-     *
-     * @return bool
      */
     public function isFollowedBy(ElementNode $elementNode, array $tagNames): bool
     {
         $nextSibling = $elementNode->getNextSibling();
 
         return !($nextSibling === null || $nextSibling->namespace !== $this->tplNsPrefix || in_array(
-                $nextSibling->tagName,
-                $tagNames
-            ) === false);
+            $nextSibling->tagName,
+            $tagNames,
+            true,
+        ) === false);
     }
 
     /**
      * Register a value to make it accessible for the engine
      *
-     * @param string $key
-     * @param mixed $value
-     * @param bool $overwrite
      *
      * @throws Exception
      */
@@ -389,10 +386,6 @@ class TemplateEngine
     }
 
     /**
-     * @param string $selectorStr
-     * @param bool $returnNull
-     *
-     * @return mixed
      * @throws Exception
      */
     protected function getSelectorValue(string $selectorStr, bool $returnNull = false): mixed
@@ -405,7 +398,7 @@ class TemplateEngine
             if ($returnNull === false) {
                 throw new Exception(
                     message: 'The data with offset "' . $currentSel . '" does not exist for template file ' . $this->currentTemplateFile . '. Check, if the correct BaseView class has been found/executed and set the correct replacements.',
-                    code: TemplateEngine::ERR_MISSING_TEMPLATE_VARIABLE
+                    code: TemplateEngine::ERR_MISSING_TEMPLATE_VARIABLE,
                 );
             }
 
@@ -419,7 +412,7 @@ class TemplateEngine
             if ($varData instanceof ArrayObject === true) {
                 if ($varData->offsetExists($part) === false) {
                     throw new Exception(
-                        'Array key "' . $part . '" does not exist in ArrayObject "' . $currentSel . '"'
+                        'Array key "' . $part . '" does not exist in ArrayObject "' . $currentSel . '"',
                     );
                 }
                 $varData = $varData->offsetGet($part);
@@ -431,9 +424,9 @@ class TemplateEngine
                     $part = substr($part, 0, $argPos);
                     foreach (preg_split('/,/x', $argStr) as $no => $arg) {
                         if (!str_starts_with(haystack: $argStr, needle: '\'') || !str_ends_with(
-                                haystack: $argStr,
-                                needle: '\''
-                            )) {
+                            haystack: $argStr,
+                            needle: '\'',
+                        )) {
                             $args[$no] = $this->getSelectorValue($argStr, $returnNull);
                         } else {
                             $args[$no] = substr($arg, 1, -1);
@@ -461,7 +454,7 @@ class TemplateEngine
 
                         if ($getterMethodName === null) {
                             throw new Exception(
-                                'Could not access protected/private property "' . $part . '". Please provide a getter method'
+                                'Could not access protected/private property "' . $part . '". Please provide a getter method',
                             );
                         }
 
@@ -502,21 +495,17 @@ class TemplateEngine
     }
 
     /**
-     * @param ElementNode $contextTag
-     * @param array $attributes
-     *
-     * @return bool
      * @throws Exception
      */
     public function checkRequiredAttributes(ElementNode $contextTag, array $attributes): bool
     {
         foreach ($attributes as $attribute) {
             $val = $contextTag->getAttribute(name: $attribute)->value;
-            if (!is_null(value: $val)) {
+            if ($val !== null) {
                 continue;
             }
             throw new Exception(
-                message: 'Could not parse the template: Missing attribute \'' . $attribute . '\' for custom tag \'' . $contextTag->tagName . '\' in ' . $this->currentTemplateFile . ' on line ' . $contextTag->line
+                message: 'Could not parse the template: Missing attribute \'' . $attribute . '\' for custom tag \'' . $contextTag->tagName . '\' in ' . $this->currentTemplateFile . ' on line ' . $contextTag->line,
             );
         }
 

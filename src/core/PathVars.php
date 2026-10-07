@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -20,9 +21,7 @@ final readonly class PathVars
     /**
      * @param array<int, string> $values Path variable number => raw value, as in `RequestHandler::$pathVars`.
      */
-    public function __construct(private array $values)
-    {
-    }
+    public function __construct(private array $values) {}
 
     /**
      * Same as `RequestHandler::getPathVar()`: the trimmed value, `null` if missing.
@@ -49,7 +48,7 @@ final readonly class PathVars
     public function getRequiredAsInt(int $nr): int
     {
         return $this->getAsInt(nr: $nr) ?? throw new NotFoundException(
-            message: 'Path variable ' . $nr . ' is missing or not an integer'
+            message: 'Path variable ' . $nr . ' is missing or not an integer',
         );
     }
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -13,18 +14,18 @@ class DetailDataObject extends HtmlDataObject
     public function __construct(
         string $name,
         string $value,
-        bool $isEncodedForRendering
+        bool $isEncodedForRendering,
     ) {
         parent::__construct();
         $this->addTextElement(
             propertyName: 'name',
             content: $name,
-            isEncodedForRendering: true
+            isEncodedForRendering: true,
         );
         $this->addTextElement(
             propertyName: 'value',
             content: $value,
-            isEncodedForRendering: $isEncodedForRendering
+            isEncodedForRendering: $isEncodedForRendering,
         );
     }
 }

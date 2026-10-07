@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -32,13 +33,13 @@ abstract class AuthWebToken
         $this->base64Secret = $this->jwtArray[2];
         $this->header = AuthWebToken::jsonDecode(
             input: AuthWebToken::urlSafeBase64Decode(
-                base64EncodedString: $this->base64Header
-            )
+                base64EncodedString: $this->base64Header,
+            ),
         );
         $this->payload = AuthWebToken::jsonDecode(
             input: AuthWebToken::urlSafeBase64Decode(
-                base64EncodedString: $this->base64Payload
-            )
+                base64EncodedString: $this->base64Payload,
+            ),
         );
         $this->secret = AuthWebToken::urlSafeBase64Decode(base64EncodedString: $this->base64Secret);
         if (!$this->verify()) {
@@ -57,7 +58,7 @@ abstract class AuthWebToken
         if ($remainder) {
             $base64EncodedString .= str_repeat(string: '=', times: 4 - $remainder);
         }
-        $decodedString = base64_decode(string: strtr(string: $base64EncodedString, from: '-_', to: '+/'));
+        $decodedString = base64_decode(string: strtr(string: $base64EncodedString, from: '-_', to: '+/'), strict: true);
         if ($decodedString === false) {
             throw new UnauthorizedException(message: 'Failed to decode string: ' . $base64EncodedString);
         }

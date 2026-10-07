@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -17,7 +18,7 @@ final class FormOptionsTest extends TestCase
 {
     public function testIsFinal(): void
     {
-        $this->assertTrue((new ReflectionClass(objectOrClass: FormOptions::class))->isFinal());
+        $this->assertTrue(new ReflectionClass(objectOrClass: FormOptions::class)->isFinal());
     }
 
     public function testExistsFindsAddedKeysOnly(): void

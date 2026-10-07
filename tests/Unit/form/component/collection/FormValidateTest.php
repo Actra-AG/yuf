@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -55,14 +56,14 @@ final class FormValidateTest extends TestCase
             name: 'contact',
             methodPost: $methodPost,
             individualSentIndicator: $individualSentIndicator,
-            csrfTokenSource: new InMemoryCsrfTokenSource(token: 'tok')
+            csrfTokenSource: new InMemoryCsrfTokenSource(token: 'tok'),
         );
         $form->addField(
             formField: new TextField(
                 name: 'name',
                 label: HtmlText::encoded(textContent: 'Name'),
-                requiredError: HtmlText::encoded(textContent: 'Required')
-            )
+                requiredError: HtmlText::encoded(textContent: 'Required'),
+            ),
         );
 
         return $form;
@@ -109,7 +110,7 @@ final class FormValidateTest extends TestCase
         $form = $this->createForm();
 
         $isValid = $form->validate(
-            input: FormInput::fromArray(data: ['name' => 'Ann', 'csrftoken' => 'tok'], query: ['contact' => ''])
+            input: FormInput::fromArray(data: ['name' => 'Ann', 'csrftoken' => 'tok'], query: ['contact' => '']),
         );
 
         $this->assertTrue($isValid);
@@ -123,7 +124,7 @@ final class FormValidateTest extends TestCase
         $form = $this->createForm();
 
         $isValid = $form->validate(
-            input: FormInput::fromArray(data: ['name' => ' ', 'csrftoken' => 'tok'], query: ['contact' => ''])
+            input: FormInput::fromArray(data: ['name' => ' ', 'csrftoken' => 'tok'], query: ['contact' => '']),
         );
 
         $this->assertFalse($isValid);

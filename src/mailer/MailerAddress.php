@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -36,13 +37,13 @@ class MailerAddress
     private function __construct(
         public readonly MailerAddressKindEnum $mailerAddressKindEnum,
         string $inputEmail,
-        string $inputName
+        string $inputName,
     ) {
         $inputEmail = mb_strtolower(string: trim(string: $inputEmail));
         $atPos = strrpos(haystack: $inputEmail, needle: '@');
         if ($atPos === false) {
             throw new MailerException(
-                message: 'Missing @-sign (' . $mailerAddressKindEnum->value . '): ' . $inputEmail
+                message: 'Missing @-sign (' . $mailerAddressKindEnum->value . '): ' . $inputEmail,
             );
         }
         $domain = substr(string: $inputEmail, offset: ++$atPos);
@@ -52,16 +53,16 @@ class MailerAddress
 
         if (!MailerFunctions::validateAddress(address: $this->getPunyEncodedEmail())) {
             throw new MailerException(
-                message: 'Invalid address (' . $mailerAddressKindEnum->value . '): ' . $this->getPunyEncodedEmail()
+                message: 'Invalid address (' . $mailerAddressKindEnum->value . '): ' . $this->getPunyEncodedEmail(),
             );
         }
 
         $this->addressName = trim(
             string: preg_replace(
-            pattern: '/[\r\n]+/',
-            replacement: '',
-            subject: $inputName
-        )
+                pattern: '/[\r\n]+/',
+                replacement: '',
+                subject: $inputName,
+            ),
         ); // Strip breaks and trim
     }
 
@@ -75,7 +76,7 @@ class MailerAddress
         return new MailerAddress(
             mailerAddressKindEnum: MailerAddressKindEnum::KIND_SENDER,
             inputEmail: $inputEmail,
-            inputName: $inputName
+            inputName: $inputName,
         );
     }
 
@@ -84,7 +85,7 @@ class MailerAddress
         return new MailerAddress(
             mailerAddressKindEnum: MailerAddressKindEnum::KIND_FROM,
             inputEmail: $inputEmail,
-            inputName: $inputName
+            inputName: $inputName,
         );
     }
 
@@ -93,7 +94,7 @@ class MailerAddress
         return new MailerAddress(
             mailerAddressKindEnum: MailerAddressKindEnum::KIND_CONFIRM_READING_TO,
             inputEmail: $inputEmail,
-            inputName: $inputName
+            inputName: $inputName,
         );
     }
 
@@ -102,7 +103,7 @@ class MailerAddress
         return new MailerAddress(
             mailerAddressKindEnum: MailerAddressKindEnum::KIND_TO,
             inputEmail: $inputEmail,
-            inputName: $inputName
+            inputName: $inputName,
         );
     }
 
@@ -111,7 +112,7 @@ class MailerAddress
         return new MailerAddress(
             mailerAddressKindEnum: MailerAddressKindEnum::KIND_CC,
             inputEmail: $inputEmail,
-            inputName: $inputName
+            inputName: $inputName,
         );
     }
 
@@ -120,7 +121,7 @@ class MailerAddress
         return new MailerAddress(
             mailerAddressKindEnum: MailerAddressKindEnum::KIND_BCC,
             inputEmail: $inputEmail,
-            inputName: $inputName
+            inputName: $inputName,
         );
     }
 
@@ -129,7 +130,7 @@ class MailerAddress
         return new MailerAddress(
             mailerAddressKindEnum: MailerAddressKindEnum::KIND_REPLY_TO,
             inputEmail: $inputEmail,
-            inputName: $inputName
+            inputName: $inputName,
         );
     }
 
@@ -140,7 +141,7 @@ class MailerAddress
 
     public function getFormattedAddressForMailer(
         int $maxLineLength,
-        string $defaultCharSet
+        string $defaultCharSet,
     ): string {
         $preparedEmailAddress = MailerFunctions::secureHeader(string: $this->getPunyEncodedEmail());
         if ($this->addressName === '') {
@@ -153,10 +154,10 @@ class MailerAddress
                 MailerFunctions::encodeHeaderPhrase(
                     string: MailerFunctions::secureHeader(string: $this->addressName),
                     maxLineLength: $maxLineLength,
-                    defaultCharSet: $defaultCharSet
+                    defaultCharSet: $defaultCharSet,
                 ),
                 '<' . $preparedEmailAddress . '>',
-            ]
+            ],
         );
     }
 }

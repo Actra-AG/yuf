@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,20 +20,20 @@ class RequestHandler
 
     public readonly array $pathParts;
     public readonly int $countPathParts;
-    private(set) ?RouteCollection $defaultRoutesByLanguage = null;
+    public private(set) ?RouteCollection $defaultRoutesByLanguage = null;
     public readonly Route $route;
     public ?Language $language = null;
     public readonly string $fileTitle;
     public readonly string $fileExtension;
-    private(set) ?string $fileName = null;
-    private(set) ?string $fileGroup = null;
-    private(set) array $routeVariables = [];
+    public private(set) ?string $fileName = null;
+    public private(set) ?string $fileGroup = null;
+    public private(set) array $routeVariables = [];
     /** @var list<string> */
     public readonly array $pathVars;
 
     private function __construct(RouteCollection $allRoutes)
     {
-        if (!is_null(value: RequestHandler::$instance)) {
+        if (RequestHandler::$instance !== null) {
             throw new LogicException(message: 'RequestHandler is already registered');
         }
         RequestHandler::$instance = $this;
@@ -45,33 +46,33 @@ class RequestHandler
         $this->countPathParts = count(value: $this->pathParts);
         $this->fileName = trim(string: $this->pathParts[$this->countPathParts - 1]);
         $this->defaultRoutesByLanguage = $this->initDefaultRoutes(
-            allRoutes: $allRoutes
+            allRoutes: $allRoutes,
         );
         if (str_contains(
             haystack: HttpRequest::getPath(),
-            needle: '//'
+            needle: '//',
         )) {
             throw new NotFoundException();
         }
         $this->route = $this->initRoute(countPathParts: $this->countPathParts, allRoutes: $allRoutes);
         $forceFileGroup = $this->route->forceFileGroup;
-        if (!is_null(value: $forceFileGroup) && $forceFileGroup !== '') {
+        if ($forceFileGroup !== null && $forceFileGroup !== '') {
             $this->fileGroup = $forceFileGroup;
         }
         $forceFileName = $this->route->forceFileName;
-        if (!is_null(value: $forceFileName) && $forceFileName !== '') {
+        if ($forceFileName !== null && $forceFileName !== '') {
             $this->fileName = $forceFileName;
         }
-        if (!is_null(value: $this->route->language)) {
+        if ($this->route->language !== null) {
             $this->language = $this->route->language;
         }
         if (AbstractSessionHandler::enabled()) {
             $sessionHandler = AbstractSessionHandler::getSessionHandler();
             $preferredLanguageCode = $sessionHandler->getPreferredLanguageCode();
             if (
-                !is_null(value: $this->language)
+                $this->language !== null
                 && (
-                    is_null(value: $preferredLanguageCode)
+                    $preferredLanguageCode === null
                     || $preferredLanguageCode !== $this->language->code
                 )
             ) {
@@ -95,7 +96,7 @@ class RequestHandler
         $this->pathVars = $fnArr;
         $this->fileExtension = $fileExtension;
         if (
-            !is_null(value: $this->route->acceptedExtension)
+            $this->route->acceptedExtension !== null
             && $this->fileExtension !== $this->route->acceptedExtension
         ) {
             throw new NotFoundException();
@@ -114,30 +115,31 @@ class RequestHandler
         if (
             !in_array(
                 needle: $host,
-                haystack: $allowedDomains
+                haystack: $allowedDomains,
+                strict: true,
             )
         ) {
             throw new NotFoundException(
-                message: $host . ' is not set as allowed domain in your environment settings.'
+                message: $host . ' is not set as allowed domain in your environment settings.',
             );
         }
     }
 
     private function initDefaultRoutes(
-        RouteCollection $allRoutes
+        RouteCollection $allRoutes,
     ): RouteCollection {
         $defaultRoutes = new RouteCollection();
         $usedLanguages = new LanguageCollection();
         foreach ($allRoutes->routes as $route) {
             if (
                 !$route->isDefaultForLanguage
-                || is_null(value: $route->language)
+                || $route->language === null
             ) {
                 continue;
             }
             if ($usedLanguages->hasLanguage(languageCode: $route->language->code)) {
                 throw new LogicException(
-                    message: 'Default route for language ' . $route->language->code . ' is already set'
+                    message: 'Default route for language ' . $route->language->code . ' is already set',
                 );
             }
             if (Core::get()->availableLanguages->hasLanguage(languageCode: $route->language->code)) {
@@ -164,18 +166,18 @@ class RequestHandler
                 return $route;
             }
             if (preg_match_all(
-                    pattern: '#\${(.*?)}#',
-                    subject: $routePath,
-                    matches: $matches1
-                ) === 0) {
+                pattern: '#\${(.*?)}#',
+                subject: $routePath,
+                matches: $matches1,
+            ) === 0) {
                 continue;
             }
             $pattern = '#^' . str_replace(search: $matches1[0], replace: '(.*)', subject: $routePath) . '$#';
             if (preg_match(
-                    pattern: $pattern,
-                    subject: $requestedPath,
-                    matches: $matches2
-                ) === 0) {
+                pattern: $pattern,
+                subject: $requestedPath,
+                matches: $matches2,
+            ) === 0) {
                 continue;
             }
             foreach ($matches1[1] as $nr => $variableName) {
@@ -196,7 +198,7 @@ class RequestHandler
             $defaultRoutesByLanguage = $this->defaultRoutesByLanguage;
             if (AbstractSessionHandler::enabled()) {
                 $preferredLanguageCode = AbstractSessionHandler::getSessionHandler()->getPreferredLanguageCode();
-                if (!is_null(value: $preferredLanguageCode)) {
+                if ($preferredLanguageCode !== null) {
                     foreach ($defaultRoutesByLanguage->routes as $route) {
                         if ($route->language->code === $preferredLanguageCode) {
                             HttpResponse::redirectAndExit(relativeOrAbsoluteUri: $route->path);
@@ -206,7 +208,7 @@ class RequestHandler
             }
             foreach (Httprequest::listBrowserLanguagesByQuality() as $languageCode) {
                 $routeForLanguage = $defaultRoutesByLanguage->getRouteForLanguage(languageCode: $languageCode);
-                if (!is_null(value: $routeForLanguage)) {
+                if ($routeForLanguage !== null) {
                     HttpResponse::redirectAndExit(relativeOrAbsoluteUri: $routeForLanguage->path);
                 }
             }

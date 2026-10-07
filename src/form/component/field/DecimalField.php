@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -47,11 +48,11 @@ final class DecimalField extends ParsedInputField
         ?HtmlText $requiredError = null,
         ?string $placeholder = null,
         ?AutoCompleteEnum $autoComplete = null,
-        ?int $maxLength = null
+        ?int $maxLength = null,
     ) {
         if ($scale < 0) {
             throw new InvalidArgumentException(
-                message: 'The scale of field ' . $name . ' must not be negative, ' . $scale . ' given.'
+                message: 'The scale of field ' . $name . ' must not be negative, ' . $scale . ' given.',
             );
         }
         parent::__construct(
@@ -62,7 +63,7 @@ final class DecimalField extends ParsedInputField
             requiredError: $requiredError,
             placeholder: $placeholder,
             autoComplete: $autoComplete,
-            maxLength: $maxLength
+            maxLength: $maxLength,
         );
         if ($initialValue !== null) {
             $this->changeInitialText(text: $this->validDecimal(value: $initialValue));
@@ -142,7 +143,7 @@ final class DecimalField extends ParsedInputField
         if ($decimal === null) {
             throw new InvalidArgumentException(
                 message: 'The value of field ' . $this->name . ' must be a decimal number with at most ' . $this->scale
-                . ' decimals, "' . $value . '" given.'
+                . ' decimals, "' . $value . '" given.',
             );
         }
 

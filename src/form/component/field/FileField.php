@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -26,7 +27,7 @@ use actra\yuf\html\HtmlText;
  */
 final class FileField extends FormField
 {
-    private(set) string $uniqueSessFileStorePointer;
+    public private(set) string $uniqueSessFileStorePointer;
     private readonly FileUploadStorage $storage;
     /** @var array<string, UploadedFile> */
     private array $files = [];
@@ -49,10 +50,10 @@ final class FileField extends FormField
         string $name,
         HtmlText $label,
         ?HtmlText $requiredError = null,
-        private(set) int $maxFileUploadCount = 1,
+        public private(set) int $maxFileUploadCount = 1,
         private readonly ?HtmlText $tooManyFilesErrMsg = null,
         private readonly ?HtmlText $alreadyExistsErrorMessage = null,
-        ?FileUploadStorage $storage = null
+        ?FileUploadStorage $storage = null,
     ) {
         if ($this->maxFileUploadCount < 1) {
             $this->maxFileUploadCount = 1; // Silent correction
@@ -61,15 +62,15 @@ final class FileField extends FormField
         $this->uniqueSessFileStorePointer = $this->sanitizePointer(
             pointer: uniqid(
                 prefix: $name . '__',
-                more_entropy: true
-            )
+                more_entropy: true,
+            ),
         );
         parent::__construct(
             name: $name,
             label: $label,
             labelInfoText: $this->maxFileUploadCount === 1 ? null : HtmlText::encoded(
-                textContent: '(max. ' . $this->maxFileUploadCount . ')'
-            )
+                textContent: '(max. ' . $this->maxFileUploadCount . ')',
+            ),
         );
         if ($requiredError !== null) {
             $this->addRequiredRule(errorMessage: $requiredError);
@@ -103,11 +104,11 @@ final class FileField extends FormField
      * user asked to remove and adds the new uploads. Manipulated upload data adds one error and the rules do not run;
      * the files uploaded before stay. Texts, lists and invalid values posted under the name of the field are ignored.
      */
-    final protected function readInput(FormInput $input): void
+    protected function readInput(FormInput $input): void
     {
         $this->storage->removeExpired();
         $files = $this->removeRequestedFile(
-            files: $this->storage->load(pointer: $this->uniqueSessFileStorePointer)
+            files: $this->storage->load(pointer: $this->uniqueSessFileStorePointer),
         );
         if ($input->hasMalformedUpload(name: $this->name)) {
             $this->rejectInput(errorMessage: $this->messages->invalidInput);
@@ -175,7 +176,7 @@ final class FileField extends FormField
         // An entry without a file represents "no file selected"
         $newUploads = array_filter(
             array: $uploads,
-            callback: static fn(UploadInput $upload): bool => $upload->error !== UPLOAD_ERR_NO_FILE
+            callback: static fn(UploadInput $upload): bool => $upload->error !== UPLOAD_ERR_NO_FILE,
         );
         if (count(value: $files) + count(value: $newUploads) > $this->maxFileUploadCount) {
             $this->addError(
@@ -183,8 +184,8 @@ final class FileField extends FormField
                     individualMessage: $this->tooManyFilesErrMsg,
                     defaultMessage: $this->messages->tooManyFiles,
                     placeholder: '[max]',
-                    replacement: (string)$this->maxFileUploadCount
-                )
+                    replacement: (string) $this->maxFileUploadCount,
+                ),
             );
 
             return $files;
@@ -216,8 +217,8 @@ final class FileField extends FormField
                     individualMessage: $this->alreadyExistsErrorMessage,
                     defaultMessage: $this->messages->duplicateFile,
                     placeholder: '[fileName]',
-                    replacement: HtmlEncoder::encode(value: $upload->name)
-                )
+                    replacement: HtmlEncoder::encode(value: $upload->name),
+                ),
             );
 
             return null;
@@ -250,9 +251,9 @@ final class FileField extends FormField
         $this->addError(
             errorMessage: HtmlText::encoded(
                 textContent: HtmlEncoder::encodeKeepQuotes(value: $message) . ' ' . HtmlEncoder::encode(
-                    value: $fileName
-                )
-            )
+                    value: $fileName,
+                ),
+            ),
         );
     }
 
@@ -264,12 +265,12 @@ final class FileField extends FormField
         ?HtmlText $individualMessage,
         string $defaultMessage,
         string $placeholder,
-        string $replacement
+        string $replacement,
     ): HtmlText {
         $template = $individualMessage?->render() ?? HtmlEncoder::encodeKeepQuotes(value: $defaultMessage);
 
         return HtmlText::encoded(
-            textContent: str_replace(search: $placeholder, replace: $replacement, subject: $template)
+            textContent: str_replace(search: $placeholder, replace: $replacement, subject: $template),
         );
     }
 

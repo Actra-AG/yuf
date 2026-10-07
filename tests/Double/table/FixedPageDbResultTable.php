@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,7 +20,7 @@ final class FixedPageDbResultTable extends DbResultTable
         FrameworkDB $db,
         DbQuery $dbQuery,
         private readonly int $totalAmount,
-        private readonly int $currentPage
+        private readonly int $currentPage,
     ) {
         parent::__construct(identifier: $identifier, db: $db, dbQuery: $dbQuery);
     }

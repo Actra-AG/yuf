@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -26,7 +27,7 @@ final class NumericField extends IntegerField
         ?HtmlText $requiredError = null,
         ?string $placeholder = null,
         public readonly int $minLength = 0,
-        ?int $maxLength = null
+        ?int $maxLength = null,
     ) {
         parent::__construct(
             name: $name,
@@ -35,7 +36,7 @@ final class NumericField extends IntegerField
             individualInvalidError: $individualInvalidError,
             requiredError: $requiredError,
             placeholder: $placeholder,
-            maxLength: $maxLength
+            maxLength: $maxLength,
         );
     }
 

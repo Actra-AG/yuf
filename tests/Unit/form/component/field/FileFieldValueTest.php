@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -35,14 +36,14 @@ final class FileFieldValueTest extends TestCase
     private function createField(
         int $maxFileUploadCount = 3,
         ?HtmlText $requiredError = null,
-        ?FormMessages $messages = null
+        ?FormMessages $messages = null,
     ): FileField {
         $field = new FileField(
             name: 'file',
             label: HtmlText::encoded(textContent: 'File'),
             requiredError: $requiredError,
             maxFileUploadCount: $maxFileUploadCount,
-            storage: $this->storage
+            storage: $this->storage,
         );
         if ($messages !== null) {
             $field->messages = $messages;
@@ -74,7 +75,7 @@ final class FileFieldValueTest extends TestCase
                 'type' => array_fill(start_index: 0, count: $count, value: 'text/plain'),
                 'tmp_name' => array_map(
                     callback: static fn(int $index): string => '/tmp/php' . $index,
-                    array: array_keys(array: $names)
+                    array: array_keys(array: $names),
                 ),
                 'error' => $errors === [] ? array_fill(start_index: 0, count: $count, value: UPLOAD_ERR_OK) : $errors,
                 'size' => $sizes === [] ? array_fill(start_index: 0, count: $count, value: 10) : $sizes,
@@ -92,7 +93,7 @@ final class FileFieldValueTest extends TestCase
 
         return array_map(
             callback: static fn(HtmlText $error): string => $error->render(),
-            array: $field->errorCollection->listErrors()
+            array: $field->errorCollection->listErrors(),
         );
     }
 
@@ -103,7 +104,7 @@ final class FileFieldValueTest extends TestCase
     {
         return array_values(array: array_map(
             callback: static fn(UploadedFile $file): string => $file->name,
-            array: $field->getFiles()
+            array: $field->getFiles(),
         ));
     }
 
@@ -130,7 +131,7 @@ final class FileFieldValueTest extends TestCase
         $field = new FileField(
             name: 'my[file]-x',
             label: HtmlText::encoded(textContent: 'File'),
-            storage: $this->storage
+            storage: $this->storage,
         );
 
         $this->assertMatchesRegularExpression('/^[a-zA-Z\d_]+$/', $field->uniqueSessFileStorePointer);
@@ -159,7 +160,7 @@ final class FileFieldValueTest extends TestCase
         $this->assertCount(2, $this->storage->getStoredUploads());
         $this->assertSame(
             $field->getFiles(),
-            $this->storage->getSavedFiles(pointer: $field->uniqueSessFileStorePointer)
+            $this->storage->getSavedFiles(pointer: $field->uniqueSessFileStorePointer),
         );
     }
 
@@ -168,14 +169,14 @@ final class FileFieldValueTest extends TestCase
         $field = $this->createField();
 
         $field->validate(input: $this->request([
-                'file' => [
-                    'name' => ' single.txt ',
-                    'type' => 'text/plain',
-                    'tmp_name' => '/tmp/php1',
-                    'error' => UPLOAD_ERR_OK,
-                    'size' => 4,
-                ],
-            ]));
+            'file' => [
+                'name' => ' single.txt ',
+                'type' => 'text/plain',
+                'tmp_name' => '/tmp/php1',
+                'error' => UPLOAD_ERR_OK,
+                'size' => 4,
+            ],
+        ]));
 
         $files = array_values(array: $field->getFiles());
         $this->assertCount(1, $files);
@@ -222,10 +223,10 @@ final class FileFieldValueTest extends TestCase
         $field = $this->createField(maxFileUploadCount: 1);
 
         $field->validate(input: $this->request($this->uploads(
-                names: ['', 'a.txt'],
-                errors: [UPLOAD_ERR_NO_FILE, UPLOAD_ERR_OK],
-                sizes: [0, 5]
-            )));
+            names: ['', 'a.txt'],
+            errors: [UPLOAD_ERR_NO_FILE, UPLOAD_ERR_OK],
+            sizes: [0, 5],
+        )));
 
         $this->assertSame(['a.txt'], $this->fileNames($field));
     }
@@ -263,7 +264,7 @@ final class FileFieldValueTest extends TestCase
 
         $errors = $this->errorsOf(
             field: $field,
-            inputData: $this->uploads(names: ['a.txt'], errors: [$error], sizes: [5])
+            inputData: $this->uploads(names: ['a.txt'], errors: [$error], sizes: [5]),
         );
 
         $this->assertSame([$expectedMessage], $errors);
@@ -277,7 +278,7 @@ final class FileFieldValueTest extends TestCase
 
         $errors = $this->errorsOf(
             field: $field,
-            inputData: $this->uploads(names: ['a.txt'], errors: [UPLOAD_ERR_INI_SIZE], sizes: [5])
+            inputData: $this->uploads(names: ['a.txt'], errors: [UPLOAD_ERR_INI_SIZE], sizes: [5]),
         );
 
         $this->assertSame(['The file was too big: a.txt'], $errors);
@@ -289,7 +290,7 @@ final class FileFieldValueTest extends TestCase
 
         $errors = $this->errorsOf(
             field: $field,
-            inputData: $this->uploads(names: ['<b>"x".txt'], errors: [UPLOAD_ERR_PARTIAL], sizes: [5])
+            inputData: $this->uploads(names: ['<b>"x".txt'], errors: [UPLOAD_ERR_PARTIAL], sizes: [5]),
         );
 
         $this->assertSame(['Die Datei wurde unvollständig hochgeladen: &lt;b&gt;&quot;x&quot;.txt'], $errors);
@@ -310,10 +311,10 @@ final class FileFieldValueTest extends TestCase
         $field = $this->createField();
 
         $valid = $field->validate(input: $this->request($this->uploads(
-                names: ['big.txt', 'good.txt'],
-                errors: [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_OK],
-                sizes: [0, 5]
-            )));
+            names: ['big.txt', 'good.txt'],
+            errors: [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_OK],
+            sizes: [0, 5],
+        )));
 
         $this->assertFalse($valid);
         $this->assertSame(['good.txt'], $this->fileNames($field));
@@ -328,7 +329,7 @@ final class FileFieldValueTest extends TestCase
 
         $this->assertSame(
             ['Es ist ein technischer Fehler beim Hochladen der Datei aufgetreten: a.txt'],
-            $errors
+            $errors,
         );
         $this->assertSame([], $field->getFiles());
     }
@@ -352,7 +353,7 @@ final class FileFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'File'),
             maxFileUploadCount: 1,
             tooManyFilesErrMsg: HtmlText::encoded(textContent: 'At most <b>[max]</b>'),
-            storage: $this->storage
+            storage: $this->storage,
         );
 
         $errors = $this->errorsOf(field: $field, inputData: $this->uploads(names: ['a.txt', 'b.txt']));
@@ -369,7 +370,7 @@ final class FileFieldValueTest extends TestCase
 
         $this->assertSame(
             ['Es wurde bereits eine Datei mit dem Dateinamen "a.txt" hochgeladen.'],
-            $errors
+            $errors,
         );
         $this->assertSame([], $this->storage->getStoredUploads());
     }
@@ -391,7 +392,7 @@ final class FileFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'File'),
             maxFileUploadCount: 3,
             alreadyExistsErrorMessage: HtmlText::encoded(textContent: 'Twice <i>[fileName]</i>'),
-            storage: $this->storage
+            storage: $this->storage,
         );
         $this->storage->preload($field->uniqueSessFileStorePointer, $this->storedFile(name: '<x>.txt'));
 
@@ -495,7 +496,7 @@ final class FileFieldValueTest extends TestCase
         $this->assertSame([$first->getHash()], $field->getRemovedValues());
         $this->assertSame(['second.txt'], array_map(
             callback: static fn(UploadedFile $file): string => $file->name,
-            array: array_values(array: $this->storage->getSavedFiles(pointer: 'ptr'))
+            array: array_values(array: $this->storage->getSavedFiles(pointer: 'ptr')),
         ));
     }
 
@@ -527,9 +528,9 @@ final class FileFieldValueTest extends TestCase
         $this->storage->preload('ptr', $file);
 
         $field->validate(input: $this->request($this->uploads(names: ['new.txt']) + [
-                'file_UID' => 'ptr',
-                'file_removeAttachment' => $file->getHash(),
-            ]));
+            'file_UID' => 'ptr',
+            'file_removeAttachment' => $file->getHash(),
+        ]));
 
         $this->assertSame(['new.txt'], $this->fileNames($field));
     }
@@ -556,7 +557,7 @@ final class FileFieldValueTest extends TestCase
 
         $errors = $this->errorsOf(
             field: $field,
-            inputData: ['file_UID' => 'ptr', 'file_removeAttachment' => $file->getHash()]
+            inputData: ['file_UID' => 'ptr', 'file_removeAttachment' => $file->getHash()],
         );
 
         $this->assertSame(['Required'], $errors);

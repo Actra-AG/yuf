@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -33,7 +34,7 @@ final class DateField extends ParsedInputField
         HtmlText $invalidError,
         ?HtmlText $requiredError = null,
         ?string $placeholder = null,
-        ?AutoCompleteEnum $autoComplete = null
+        ?AutoCompleteEnum $autoComplete = null,
     ) {
         parent::__construct(
             inputType: InputTypeEnum::DATE,
@@ -42,7 +43,7 @@ final class DateField extends ParsedInputField
             invalidError: $invalidError,
             requiredError: $requiredError,
             placeholder: $placeholder,
-            autoComplete: $autoComplete
+            autoComplete: $autoComplete,
         );
         if ($value !== null) {
             $this->changeInitialText(text: $value->format(format: DateField::FORMAT));
@@ -64,11 +65,11 @@ final class DateField extends ParsedInputField
         } else {
             return null;
         }
-        if (!checkdate(month: (int)$month, day: (int)$day, year: (int)$year)) {
+        if (!checkdate(month: (int) $month, day: (int) $day, year: (int) $year)) {
             return null;
         }
 
-        return new DateTimeImmutable(datetime: sprintf('%04d-%02d-%02d', (int)$year, (int)$month, (int)$day));
+        return new DateTimeImmutable(datetime: sprintf('%04d-%02d-%02d', (int) $year, (int) $month, (int) $day));
     }
 
     protected function hasParsedValue(): bool
@@ -104,7 +105,6 @@ final class DateField extends ParsedInputField
 
     /**
      * Changes the current value only, the initial value stays (so `valueHasChanged()` compares with it).
-     *
      */
     public function setValue(?DateTimeImmutable $value): void
     {

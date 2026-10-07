@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -31,7 +32,7 @@ final class ZipCodeFieldValueTest extends TestCase
             name: 'zip',
             label: HtmlText::encoded(textContent: 'Zip'),
             value: $value,
-            individualInvalidError: $individualInvalidError
+            individualInvalidError: $individualInvalidError,
         );
     }
 
@@ -80,7 +81,7 @@ final class ZipCodeFieldValueTest extends TestCase
     {
         $form = new Form(
             name: 'zipGermanForm' . ZipCodeFieldValueTest::$formCounter++,
-            messages: FormMessages::german()
+            messages: FormMessages::german(),
         );
         $field = $this->createField();
         $form->addField(formField: $field);
@@ -105,7 +106,7 @@ final class ZipCodeFieldValueTest extends TestCase
         $field = new ZipCodeField(
             name: 'zip',
             label: HtmlText::encoded(textContent: 'Zip'),
-            requiredError: HtmlText::encoded(textContent: 'Required')
+            requiredError: HtmlText::encoded(textContent: 'Required'),
         );
 
         $isValid = $field->validate(input: FormInput::fromArray(data: ['zip' => ' ']));
@@ -152,7 +153,7 @@ final class ZipCodeFieldValueTest extends TestCase
         $field = new ZipCodeField(
             name: 'zip',
             label: HtmlText::encoded(textContent: 'Zip'),
-            countryCodeFieldName: 'country'
+            countryCodeFieldName: 'country',
         );
 
         $field->validate(input: FormInput::fromArray(data: ['zip' => '12345', 'country' => 'DE', 'countryCode' => 'AT']));

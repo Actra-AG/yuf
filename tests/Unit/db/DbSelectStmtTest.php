@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -27,7 +28,7 @@ final class DbSelectStmtTest extends TestCase
         $this->pdo = new PDO(dsn: 'sqlite::memory:', options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         $this->pdo->exec(statement: 'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL, age INTEGER NULL)');
         $this->pdo->exec(
-            statement: "INSERT INTO users (id, name, age) VALUES (1, 'Anna', 30), (2, 'Ben', NULL)"
+            statement: "INSERT INTO users (id, name, age) VALUES (1, 'Anna', 30), (2, 'Ben', NULL)",
         );
     }
 
@@ -59,7 +60,7 @@ final class DbSelectStmtTest extends TestCase
     {
         $this->assertSame(
             [],
-            $this->stmt(sql: 'SELECT id FROM users WHERE id = 99')->executeAndFetchRows(parameters: [])
+            $this->stmt(sql: 'SELECT id FROM users WHERE id = 99')->executeAndFetchRows(parameters: []),
         );
     }
 

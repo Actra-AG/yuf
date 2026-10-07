@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -28,14 +29,14 @@ class FrameworkDB extends PDO
         $identifier = $dbSettingsModel->identifier;
         if (array_key_exists($identifier, FrameworkDB::$instances)) {
             throw new LogicException(
-                'It is not allowed to instantiate this class multiple times with the same identifier ' . $identifier
+                'It is not allowed to instantiate this class multiple times with the same identifier ' . $identifier,
             );
         }
         FrameworkDB::$instances[$identifier] = $this;
 
         $initSetCommands = [];
         $timeNamesLanguage = $dbSettingsModel->timeNamesLanguage;
-        if (!is_null($timeNamesLanguage)) {
+        if ($timeNamesLanguage !== null) {
             $initSetCommands[] = 'lc_time_names=' . $timeNamesLanguage;
         }
 
@@ -50,7 +51,7 @@ class FrameworkDB extends PDO
                 'mysql:host=' . $dbSettingsModel->hostName,
                 'dbname=' . $dbSettingsModel->databaseName,
                 'charset=' . $dbSettingsModel->charset,
-            ]
+            ],
         );
 
         // For the following values, please see http://php.net/manual/de/ref.pdo-mysql.php
@@ -61,9 +62,9 @@ class FrameworkDB extends PDO
         ];
         if (count($initSetCommands) > 0) {
             $attributeOptions[Mysql::ATTR_INIT_COMMAND] = 'SET ' . implode(
-                    separator: ', ',
-                    array: $initSetCommands
-                );
+                separator: ', ',
+                array: $initSetCommands,
+            );
         }
         try {
             parent::__construct($dsn, $dbSettingsModel->userName, $dbSettingsModel->password, $attributeOptions);
@@ -71,7 +72,7 @@ class FrameworkDB extends PDO
             // We do not want to leak the database password in the StackTrace of the caught (PDO)Exception.
             throw new PDOException(
                 $throwable->getMessage(),
-                (int)$throwable->getCode()
+                (int) $throwable->getCode(),
             );
         }
     }
@@ -91,9 +92,7 @@ class FrameworkDB extends PDO
      *
      * @param string $query : Valid SQL statement
      * @param null $options : One or more key=>value pairs to set attribute values for the returned PDOStatement
-     * @param bool $logQuery
      *
-     * @return DbSelectStmt
      * @throws DbRuntimeException
      */
     public function prepareSelect(string $query, $options = null, bool $logQuery = true): DbSelectStmt
@@ -106,12 +105,10 @@ class FrameworkDB extends PDO
      *
      * @param string $query Valid SQL statement
      * @param array|null $options One or more key=>value pairs to set attribute values for the returned PDOStatement
-     *
-     * @return PDOStatement
      */
     public function prepare(string $query, $options = null): PDOStatement
     {
-        if (is_null($options)) {
+        if ($options === null) {
             $options = []; // Necessary circumventing of the above-mentioned library bug
         }
         try {
@@ -133,7 +130,6 @@ class FrameworkDB extends PDO
      *
      * @param string $sql valid SQL statement
      * @param array $parameters list of parameter values to bind to the prepared sql statement in correct order
-     * @param bool $logQuery
      *
      * @return stdClass[] Array with each row as an object of type stdClass
      * @throws RuntimeException
@@ -192,7 +188,6 @@ class FrameworkDB extends PDO
      *
      * @param string $sql : valid SQL statement
      * @param array $parameters : list of parameter values to bind to the prepared sql statement in correct order
-     * @param bool $logQuery
      *
      * @return PDOStatement : The prepared statement after execution
      */
@@ -242,7 +237,7 @@ class FrameworkDB extends PDO
         $r = parent::beginTransaction();
         if (!$r || !$this->inTransaction()) {
             throw new RuntimeException(
-                'Could not start transaction. Either error in the underlying driver, or check table engine declaration.'
+                'Could not start transaction. Either error in the underlying driver, or check table engine declaration.',
             );
         }
         $this->usedTransactions = true;
@@ -290,10 +285,6 @@ class FrameworkDB extends PDO
 
     /**
      * Creates a string like "?,?,?,..." for the number of array entries given
-     *
-     * @param array $paramArr
-     *
-     * @return string
      */
     public function createInQuery(array $paramArr): string
     {
@@ -311,6 +302,6 @@ class FrameworkDB extends PDO
     #[ReturnTypeWillChange]
     public function lastInsertId($name = null): int
     {
-        return (int)parent::lastInsertId($name);
+        return (int) parent::lastInsertId($name);
     }
 }

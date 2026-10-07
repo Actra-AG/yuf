@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -38,7 +39,7 @@ final class CsrfTokenField extends InputField
             name: CsrfToken::getFieldName(),
             label: HtmlText::encoded(textContent: ''),
             placeholder: null,
-            autoComplete: null
+            autoComplete: null,
         );
         $this->setRenderer(renderer: new HiddenFieldRenderer(hiddenField: $this));
     }

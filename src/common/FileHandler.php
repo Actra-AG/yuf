@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -15,9 +16,8 @@ readonly class FileHandler
     public function __construct(
         private string $path,
         private ?string $individualFileName = null,
-        private int $maxAge = 0
-    ) {
-    }
+        private int $maxAge = 0,
+    ) {}
 
     public static function removeFile(string $directory, string $token, string $filename): void
     {
@@ -47,7 +47,7 @@ readonly class FileHandler
             absolutePathToFile: $this->path,
             forceDownload: $forceDownload,
             individualFileName: $this->individualFileName,
-            maxAge: $this->maxAge
+            maxAge: $this->maxAge,
         )->sendAndExit();
     }
 }

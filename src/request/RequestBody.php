@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -10,12 +11,12 @@ namespace actra\yuf\request;
 
 abstract class RequestBody
 {
-    private static null|string $data = null;
+    private static ?string $data = null;
 
     public static function getData(): string
     {
         if (RequestBody::$data === null) {
-            RequestBody::$data = (string)file_get_contents(filename: 'php://input');
+            RequestBody::$data = (string) file_get_contents(filename: 'php://input');
         }
         return RequestBody::$data;
     }

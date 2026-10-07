@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -21,13 +22,13 @@ final class FormFieldValueMissingException extends LogicException
         if (!$isRequired) {
             return new self(
                 message: 'Field ' . $fieldName . ' is not required and has no value: add a required rule or use '
-                . $nullableGetter . '() for an optional field.'
+                . $nullableGetter . '() for an optional field.',
             );
         }
 
         return new self(
             message: 'Field ' . $fieldName . ' has no value: the getter for a required value is only valid after a '
-            . 'successful validation.'
+            . 'successful validation.',
         );
     }
 }

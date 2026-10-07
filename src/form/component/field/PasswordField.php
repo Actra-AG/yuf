@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -24,7 +25,7 @@ final class PasswordField extends StringInputField
         HtmlText $requiredError,
         PasswordPurposeEnum $purpose,
         ?string $placeholder = null,
-        ?int $maxLength = null
+        ?int $maxLength = null,
     ) {
         parent::__construct(
             inputType: InputTypeEnum::PASSWORD,
@@ -33,7 +34,7 @@ final class PasswordField extends StringInputField
             value: null,
             placeholder: $placeholder,
             autoComplete: $purpose->autoComplete(),
-            maxLength: $maxLength
+            maxLength: $maxLength,
         );
         $this->addRequiredRule(errorMessage: $requiredError);
     }

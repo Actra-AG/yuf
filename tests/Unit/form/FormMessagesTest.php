@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -25,7 +26,7 @@ final class FormMessagesTest extends TestCase
         $this->assertSame('Selected invalid value in field [field]', $messages->invalidOption);
         $this->assertSame(
             'The form could not be submitted because of a technical problem (invalid CSRF token). Please try again.',
-            $messages->invalidCsrfToken
+            $messages->invalidCsrfToken,
         );
         $this->assertSame('Cancel', $messages->cancel);
         $this->assertSame('remove', $messages->removeFile);
@@ -50,7 +51,7 @@ final class FormMessagesTest extends TestCase
         $this->assertSame(
             'Das Formular konnte wegen eines technischen Problems (ungültiges CSRF-Token) nicht übermittelt werden.'
             . ' Bitte versuchen Sie es erneut.',
-            $messages->invalidCsrfToken
+            $messages->invalidCsrfToken,
         );
         $this->assertSame('Abbrechen', $messages->cancel);
         $this->assertSame('löschen', $messages->removeFile);
@@ -59,12 +60,12 @@ final class FormMessagesTest extends TestCase
         $this->assertSame('Die Datei war zu gross:', $messages->fileTooBig);
         $this->assertSame(
             'Es ist ein technischer Fehler beim Hochladen der Datei aufgetreten:',
-            $messages->fileTechnicalError
+            $messages->fileTechnicalError,
         );
         $this->assertSame('Nur [max] Datei(en) möglich.', $messages->tooManyFiles);
         $this->assertSame(
             'Es wurde bereits eine Datei mit dem Dateinamen "[fileName]" hochgeladen.',
-            $messages->duplicateFile
+            $messages->duplicateFile,
         );
     }
 
@@ -88,7 +89,7 @@ final class FormMessagesTest extends TestCase
             $this->assertSame(
                 $this->placeholdersOf(text: $englishText),
                 $this->placeholdersOf(text: $germanTexts[$name]),
-                'Placeholders in ' . $name
+                'Placeholders in ' . $name,
             );
         }
     }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -36,14 +37,14 @@ class MultiSelectOptionsField extends MultiOptionsField
         bool $renderAsChosenEnhancedField = false,
         bool $renderEmptyValueOption = true,
         ?string $placeholder = null,
-        ?AutoCompleteEnum $autoComplete = null
+        ?AutoCompleteEnum $autoComplete = null,
     ) {
         parent::__construct(
             name: $name,
             label: $label,
             formOptions: $formOptions,
             initialValues: $initialValues,
-            autoComplete: $autoComplete
+            autoComplete: $autoComplete,
         );
         if ($requiredError !== null) {
             $this->addRequiredRule(errorMessage: $requiredError);
@@ -54,7 +55,7 @@ class MultiSelectOptionsField extends MultiOptionsField
             cssClasses: $cssClasses,
             renderAsChosenEnhancedField: $renderAsChosenEnhancedField,
             renderEmptyValueOption: $renderEmptyValueOption,
-            placeholder: $placeholder
+            placeholder: $placeholder,
         );
     }
 

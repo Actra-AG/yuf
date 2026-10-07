@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -22,11 +23,11 @@ abstract class InputField extends TextualField
         HtmlText $label,
         public readonly ?string $placeholder,
         public readonly ?AutoCompleteEnum $autoComplete,
-        public readonly ?int $maxLength = null
+        public readonly ?int $maxLength = null,
     ) {
         parent::__construct(
             name: $name,
-            label: $label
+            label: $label,
         );
     }
 

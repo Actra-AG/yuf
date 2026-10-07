@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -27,11 +28,11 @@ class PhoneMatcher
     public function find(): bool
     {
         if (preg_match(
-                pattern: '/' . $this->pattern . '/ui',
-                subject: $this->subject,
-                matches: $groups,
-                flags: PREG_OFFSET_CAPTURE
-            ) !== 1
+            pattern: '/' . $this->pattern . '/ui',
+            subject: $this->subject,
+            matches: $groups,
+            flags: PREG_OFFSET_CAPTURE,
+        ) !== 1
         ) {
             return false;
         }
@@ -48,11 +49,11 @@ class PhoneMatcher
     public function lookingAt(): bool
     {
         if (preg_match(
-                pattern: '/' . $this->pattern . '/uAi',
-                subject: $this->subject,
-                matches: $groups,
-                flags: PREG_OFFSET_CAPTURE
-            ) !== 1
+            pattern: '/' . $this->pattern . '/uAi',
+            subject: $this->subject,
+            matches: $groups,
+            flags: PREG_OFFSET_CAPTURE,
+        ) !== 1
         ) {
             return false;
         }
@@ -69,11 +70,11 @@ class PhoneMatcher
     public function matches(): bool
     {
         if (preg_match(
-                pattern: '/' . $this->pattern . '/uAi',
-                subject: $this->subject,
-                matches: $groups,
-                flags: PREG_OFFSET_CAPTURE
-            ) !== 1
+            pattern: '/' . $this->pattern . '/uAi',
+            subject: $this->subject,
+            matches: $groups,
+            flags: PREG_OFFSET_CAPTURE,
+        ) !== 1
             || $groups[0][0] !== $this->subject
         ) {
             return false;
@@ -117,7 +118,7 @@ class PhoneMatcher
             pattern: '/' . $this->pattern . '/x',
             replacement: $replacement,
             subject: $this->subject,
-            limit: 1
+            limit: 1,
         );
     }
 
@@ -126,7 +127,7 @@ class PhoneMatcher
         return preg_replace(
             pattern: '/' . $this->pattern . '/x',
             replacement: $replacement,
-            subject: $this->subject
+            subject: $this->subject,
         );
     }
 }

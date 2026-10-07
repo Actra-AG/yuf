@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -178,7 +179,7 @@ final class FormInputTest extends TestCase
 
         $this->assertEquals(
             [new UploadInput(name: 'a.txt', tmpName: '/tmp/php1', type: 'text/plain', error: 0, size: 5)],
-            $input->getUploads(name: 'file')
+            $input->getUploads(name: 'file'),
         );
         $this->assertFalse($input->hasMalformedUpload(name: 'file'));
     }
@@ -195,7 +196,7 @@ final class FormInputTest extends TestCase
                     'error' => [0, UPLOAD_ERR_PARTIAL],
                     'size' => [5, 6],
                 ],
-            ]
+            ],
         );
 
         $this->assertEquals(
@@ -203,7 +204,7 @@ final class FormInputTest extends TestCase
                 new UploadInput(name: 'a.txt', tmpName: '/tmp/php1', type: 'text/plain', error: 0, size: 5),
                 new UploadInput(name: 'b.txt', tmpName: '/tmp/php2', type: 'image/png', error: 3, size: 6),
             ],
-            $input->getUploads(name: 'file')
+            $input->getUploads(name: 'file'),
         );
     }
 
@@ -219,7 +220,7 @@ final class FormInputTest extends TestCase
                     'error' => ['x' => 0],
                     'size' => ['x' => 5],
                 ],
-            ]
+            ],
         );
 
         $this->assertCount(1, $input->getUploads(name: 'file'));
@@ -229,7 +230,7 @@ final class FormInputTest extends TestCase
     {
         $input = FormInput::fromArray(
             data: [],
-            files: ['file' => ['name' => [], 'type' => [], 'tmp_name' => [], 'error' => [], 'size' => []]]
+            files: ['file' => ['name' => [], 'type' => [], 'tmp_name' => [], 'error' => [], 'size' => []]],
         );
 
         $this->assertSame([], $input->getUploads(name: 'file'));
@@ -240,7 +241,7 @@ final class FormInputTest extends TestCase
     {
         $input = FormInput::fromArray(
             data: [],
-            files: ['file' => ['name' => " a.txt\n", 'type' => ' text/plain '] + FormInputTest::singleFile()]
+            files: ['file' => ['name' => " a.txt\n", 'type' => ' text/plain '] + FormInputTest::singleFile()],
         );
 
         $upload = $input->getUploads(name: 'file')[0];
@@ -377,7 +378,7 @@ final class FormInputTest extends TestCase
                 $this->assertSame(['a', 'b'], $input->getList(name: 'tags'));
                 $this->assertTrue($input->hasQueryKey(key: 'contact'));
                 $this->assertSame('fallback', $input->getQueryText(key: 'csrftoken'));
-            }
+            },
         );
     }
 
@@ -392,7 +393,7 @@ final class FormInputTest extends TestCase
 
                 $this->assertSame('from get', $input->getText(name: 'name'));
                 $this->assertTrue($input->hasQueryKey(key: 'contact'));
-            }
+            },
         );
     }
 
@@ -408,7 +409,7 @@ final class FormInputTest extends TestCase
                 $this->assertSame(InputShapeEnum::INVALID, $input->getShape(name: 'nested'));
                 $this->assertSame(InputShapeEnum::INVALID, $input->getShape(name: 'number'));
                 $this->assertCount(1, $input->getUploads(name: 'file'));
-            }
+            },
         );
     }
 }

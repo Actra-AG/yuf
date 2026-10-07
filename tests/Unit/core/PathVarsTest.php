@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -25,8 +26,8 @@ final class PathVarsTest extends TestCase
             'zero' => ['0', 0],
             'negative' => ['-1', -1],
             'leading zeros' => ['007', 7],
-            'max' => [(string)PHP_INT_MAX, PHP_INT_MAX],
-            'min' => [(string)PHP_INT_MIN, PHP_INT_MIN],
+            'max' => [(string) PHP_INT_MAX, PHP_INT_MAX],
+            'min' => [(string) PHP_INT_MIN, PHP_INT_MIN],
         ];
     }
 

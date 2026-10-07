@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -30,7 +31,7 @@ final class DbRowTest extends TestCase
     {
         $this->expectException(DbRowValueException::class);
         $this->expectExceptionMessage('Column "nope" does not exist');
-        (new DbRow(values: []))->getString(column: 'nope');
+        new DbRow(values: [])->getString(column: 'nope');
     }
 
     public function testNullInNonNullableGetterThrows(): void
@@ -79,7 +80,7 @@ final class DbRowTest extends TestCase
     {
         $this->expectException(DbRowValueException::class);
         $this->expectExceptionMessage('Column "i" has the type int, but expected string');
-        (new DbRow(values: ['i' => 5]))->getString(column: 'i');
+        new DbRow(values: ['i' => 5])->getString(column: 'i');
     }
 
     /**
@@ -129,7 +130,7 @@ final class DbRowTest extends TestCase
     public function testIntGetterRejectsEverythingElse(mixed $value): void
     {
         $this->expectException(DbRowValueException::class);
-        (new DbRow(values: ['n' => $value]))->getInt(column: 'n');
+        new DbRow(values: ['n' => $value])->getInt(column: 'n');
     }
 
     /**
@@ -149,7 +150,7 @@ final class DbRowTest extends TestCase
     #[DataProvider('validFloats')]
     public function testFloatGetter(mixed $value, float $expected): void
     {
-        $this->assertSame($expected, (new DbRow(values: ['f' => $value]))->getFloat(column: 'f'));
+        $this->assertSame($expected, new DbRow(values: ['f' => $value])->getFloat(column: 'f'));
     }
 
     /**
@@ -171,7 +172,7 @@ final class DbRowTest extends TestCase
     public function testFloatGetterRejectsEverythingElse(mixed $value): void
     {
         $this->expectException(DbRowValueException::class);
-        (new DbRow(values: ['f' => $value]))->getFloat(column: 'f');
+        new DbRow(values: ['f' => $value])->getFloat(column: 'f');
     }
 
     public function testDecimalGetterKeepsTheCanonicalString(): void
@@ -188,7 +189,7 @@ final class DbRowTest extends TestCase
     public function testDecimalGetterRejectsEverythingElse(mixed $value): void
     {
         $this->expectException(DbRowValueException::class);
-        (new DbRow(values: ['d' => $value]))->getDecimal(column: 'd');
+        new DbRow(values: ['d' => $value])->getDecimal(column: 'd');
     }
 
     /**
@@ -208,7 +209,7 @@ final class DbRowTest extends TestCase
     #[DataProvider('validBools')]
     public function testBoolGetter(mixed $value, bool $expected): void
     {
-        $this->assertSame($expected, (new DbRow(values: ['b' => $value]))->getBool(column: 'b'));
+        $this->assertSame($expected, new DbRow(values: ['b' => $value])->getBool(column: 'b'));
     }
 
     /**
@@ -245,7 +246,7 @@ final class DbRowTest extends TestCase
     public function testBoolGetterRejectsEverythingElse(mixed $value): void
     {
         $this->expectException(DbRowValueException::class);
-        (new DbRow(values: ['b' => $value]))->getBool(column: 'b');
+        new DbRow(values: ['b' => $value])->getBool(column: 'b');
     }
 
     /**
@@ -265,7 +266,7 @@ final class DbRowTest extends TestCase
     #[DataProvider('validDateTimes')]
     public function testDateTimeGetterParsesInTheDefaultTimeZone(string $value, string $expected): void
     {
-        $dateTime = (new DbRow(values: ['d' => $value]))->getDateTimeImmutable(column: 'd');
+        $dateTime = new DbRow(values: ['d' => $value])->getDateTimeImmutable(column: 'd');
 
         $this->assertInstanceOf(DateTimeImmutable::class, $dateTime);
         $this->assertSame($expected, $dateTime->format(format: 'Y-m-d H:i:s.u'));
@@ -296,7 +297,7 @@ final class DbRowTest extends TestCase
     public function testDateTimeGetterRejectsEverythingElse(mixed $value): void
     {
         $this->expectException(DbRowValueException::class);
-        (new DbRow(values: ['d' => $value]))->getDateTimeImmutable(column: 'd');
+        new DbRow(values: ['d' => $value])->getDateTimeImmutable(column: 'd');
     }
 
     public function testEnumGetterFindsStringAndIntBackedCases(): void
@@ -312,18 +313,18 @@ final class DbRowTest extends TestCase
     {
         $this->expectException(DbRowValueException::class);
         $this->expectExceptionMessage('unknown value "deleted"');
-        (new DbRow(values: ['s' => 'deleted']))->getEnum(column: 's', enumClass: StatusEnum::class);
+        new DbRow(values: ['s' => 'deleted'])->getEnum(column: 's', enumClass: StatusEnum::class);
     }
 
     public function testEnumGetterThrowsOnWrongType(): void
     {
         $this->expectException(DbRowValueException::class);
-        (new DbRow(values: ['s' => 1]))->getEnum(column: 's', enumClass: StatusEnum::class);
+        new DbRow(values: ['s' => 1])->getEnum(column: 's', enumClass: StatusEnum::class);
     }
 
     public function testIntBackedEnumGetterThrowsOnUnknownValue(): void
     {
         $this->expectException(DbRowValueException::class);
-        (new DbRow(values: ['i' => 3]))->getEnum(column: 'i', enumClass: LevelEnum::class);
+        new DbRow(values: ['i' => 3])->getEnum(column: 'i', enumClass: LevelEnum::class);
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -24,7 +25,7 @@ final class TextAreaFieldValueTest extends TestCase
         return new TextAreaField(
             name: 'text',
             label: HtmlText::encoded(textContent: 'Text'),
-            value: $value
+            value: $value,
         );
     }
 

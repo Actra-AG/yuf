@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -26,20 +27,20 @@ class RadioOptionsField extends SingleOptionsField
         FormOptions $formOptions,
         ?string $initialValue,
         ?HtmlText $requiredError = null,
-        RadioOptionsLayoutEnum $layout = RadioOptionsLayoutEnum::LEGEND_AND_LIST
+        RadioOptionsLayoutEnum $layout = RadioOptionsLayoutEnum::LEGEND_AND_LIST,
     ) {
         parent::__construct(
             name: $name,
             label: $label,
             formOptions: $formOptions,
             initialValue: $initialValue,
-            autoComplete: null
+            autoComplete: null,
         );
         // Mandatory rule: In a field with radio options it is always required to choose one of those options
         if ($requiredError === null) {
             $this->hasDefaultRequiredMessage = true;
             $this->addRequiredRule(
-                errorMessage: HtmlText::unencoded(textContent: $this->messages->selectOneOption)
+                errorMessage: HtmlText::unencoded(textContent: $this->messages->selectOneOption),
             );
         } else {
             $this->addRequiredRule(errorMessage: $requiredError);
@@ -65,7 +66,7 @@ class RadioOptionsField extends SingleOptionsField
     {
         if ($this->hasDefaultRequiredMessage) {
             $this->addRequiredRule(
-                errorMessage: HtmlText::unencoded(textContent: $this->messages->selectOneOption)
+                errorMessage: HtmlText::unencoded(textContent: $this->messages->selectOneOption),
             );
         }
 

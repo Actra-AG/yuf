@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -20,12 +21,12 @@ readonly class SessionSettingsModel
         public int $maxLifeTime = 3600,
         public int $gcProbability = 1,
         public int $gcDivisor = 100000,
-        public bool $isSameSiteStrict = true
+        public bool $isSameSiteStrict = true,
     ) {
         $this->savePath = str_replace(
             search: '{default}',
             replace: Core::get()->cacheDirectory . 'sessions',
-            subject: $savePath
+            subject: $savePath,
         );
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -48,8 +49,8 @@ final class TablePaginationRendererTest extends TestCase
             renderer: new TablePaginationRenderer(
                 individualHtmlSnippetPath: self::snippetPath(),
                 previousTitle: 'Zurück',
-                nextTitle: 'Vor'
-            )
+                nextTitle: 'Vor',
+            ),
         );
 
         $this->assertStringContainsString('<title>Zurück</title>', $html);
@@ -62,8 +63,8 @@ final class TablePaginationRendererTest extends TestCase
         $html = $this->render(
             renderer: new TablePaginationRenderer(
                 individualHtmlSnippetPath: self::snippetPath(),
-                previousTitle: '<b>Back</b>'
-            )
+                previousTitle: '<b>Back</b>',
+            ),
         );
 
         $this->assertStringContainsString('<title>&lt;b&gt;Back&lt;/b&gt;</title>', $html);
@@ -82,7 +83,7 @@ final class TablePaginationRendererTest extends TestCase
             db: $this->createStub(FrameworkDB::class),
             dbQuery: $this->createStub(DbQuery::class),
             totalAmount: 100,
-            currentPage: 2
+            currentPage: 2,
         );
 
         return $renderer->render(dbResultTable: $table);

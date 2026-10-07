@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -25,14 +26,14 @@ final class DecimalFieldValueTest extends TestCase
     private function createField(
         int $scale = 2,
         ?string $initialValue = null,
-        ?HtmlText $requiredError = null
+        ?HtmlText $requiredError = null,
     ): DecimalField {
         return new DecimalField(
             name: 'price',
             label: HtmlText::encoded(textContent: 'Price'),
             scale: $scale,
             initialValue: $initialValue,
-            requiredError: $requiredError
+            requiredError: $requiredError,
         );
     }
 
@@ -121,7 +122,7 @@ final class DecimalFieldValueTest extends TestCase
         $this->assertSame('The given value is invalid.', $field->errorCollection->getFirstError()->render());
         $this->assertStringContainsString(
             'value="' . htmlspecialchars(string: $input, flags: ENT_QUOTES) . '"',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -153,7 +154,7 @@ final class DecimalFieldValueTest extends TestCase
             name: 'price',
             label: HtmlText::encoded(textContent: 'Price'),
             scale: 2,
-            individualInvalidError: HtmlText::encoded(textContent: 'At most 2 decimals')
+            individualInvalidError: HtmlText::encoded(textContent: 'At most 2 decimals'),
         );
 
         $field->validate(input: FormInput::fromArray(data: ['price' => '1.234']));

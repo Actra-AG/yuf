@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -79,7 +80,7 @@ class FormAddRemoveTag extends TemplateTag implements TagNode
 
         $chosenEntriesSelector = $elementNode->getAttribute('chosen')->value;
         $poolEntriesSelector = $elementNode->doesAttributeExist('pool') ? $elementNode->getAttribute(
-            'pool'
+            'pool',
         )->value : null;
         $nameSelector = $elementNode->getAttribute('name')->value;
 

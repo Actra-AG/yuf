@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -26,52 +27,51 @@ class HttpResponse
         ContentType              $contentType,
         private readonly ?string $contentString = null,
         private readonly ?string $contentFilePath = null,
-        int                      $maxAge = 31536000 // one year
-    )
-    {
+        int                      $maxAge = 31536000, // one year
+    ) {
         $this->setHeader(
             key: 'Etag',
-            val: $eTag
+            val: $eTag,
         );
         $this->setHeader(
             key: 'Last-Modified',
-            val: gmdate(format: 'r', timestamp: $lastModifiedTimeStamp)
+            val: gmdate(format: 'r', timestamp: $lastModifiedTimeStamp),
         );
         $this->setHeader(
             key: 'Cache-Control',
-            val: 'private, must-revalidate'
+            val: 'private, must-revalidate',
         );
-        if (!is_null(value: $downloadFileName)) {
+        if ($downloadFileName !== null) {
             $this->setHeader(
                 key: 'Content-Description',
-                val: 'File Transfer'
+                val: 'File Transfer',
             );
             $this->setHeader(
                 key: 'Content-Disposition',
-                val: 'attachment; filename="' . $downloadFileName . '"'
+                val: 'attachment; filename="' . $downloadFileName . '"',
             );
         }
         if ($this->notModifiedCheck(eTag: $eTag, lastModifiedTimeStamp: $lastModifiedTimeStamp)) {
             $this->httpStatusCode = HttpStatusCode::HTTP_NOT_MODIFIED;
             $this->setHeader(
                 key: 'Connection',
-                val: 'Close'
+                val: 'Close',
             ); // Prevent keep-alive
             $this->sendAndExit();
         }
         $this->setHeader(
             key: 'Content-Type',
-            val: $contentType->getHttpHeaderString()
+            val: $contentType->getHttpHeaderString(),
         );
-        if (!is_null(value: $contentType->languageCode)) {
+        if ($contentType->languageCode !== null) {
             $this->setHeader(
                 key: 'Content-Language',
-                val: $contentType->languageCode
+                val: $contentType->languageCode,
             );
         }
         $this->setHeader(
             key: 'Strict-Transport-Security',
-            val: 'max-age=' . $maxAge
+            val: 'max-age=' . $maxAge,
         );
     }
 
@@ -87,8 +87,8 @@ class HttpResponse
         }
 
         if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) && strtotime(
-                $_SERVER['HTTP_IF_MODIFIED_SINCE']
-            ) === $lastModifiedTimeStamp) {
+            $_SERVER['HTTP_IF_MODIFIED_SINCE'],
+        ) === $lastModifiedTimeStamp) {
             return true;
         }
 
@@ -101,17 +101,17 @@ class HttpResponse
         foreach ($this->headers as $key => $val) {
             header(header: $key . ': ' . $val);
         }
-        if (!is_null(value: $this->contentString)) {
+        if ($this->contentString !== null) {
             echo $this->contentString;
             exit;
         }
-        if (!is_null(value: $this->contentFilePath)) {
+        if ($this->contentFilePath !== null) {
             if (ob_get_level()) {
                 ob_end_clean();
             }
             $file = fopen(
                 filename: $this->contentFilePath,
-                mode: 'rb'
+                mode: 'rb',
             );
             if ($file === false) {
                 exit;
@@ -119,7 +119,7 @@ class HttpResponse
             while (!feof(stream: $file)) {
                 echo fread(
                     stream: $file,
-                    length: 8192
+                    length: 8192,
                 );
                 flush();
             }
@@ -131,9 +131,8 @@ class HttpResponse
     public static function redirectAndExit(
         string         $relativeOrAbsoluteUri,
         HttpStatusCode $httpStatusCode = HttpStatusCode::HTTP_SEE_OTHER,
-        bool           $setSameSiteCookieTemporaryToLax = false
-    ): void
-    {
+        bool           $setSameSiteCookieTemporaryToLax = false,
+    ): void {
         if ($setSameSiteCookieTemporaryToLax) {
             AbstractSessionHandler::getSessionHandler()->changeCookieSameSiteToLax();
         }
@@ -146,9 +145,8 @@ class HttpResponse
         HttpStatusCode          $httpStatusCode,
         string                  $htmlContent,
         ?CspPolicySettingsModel $cspPolicySettingsModel,
-        ?string                 $nonce
-    ): HttpResponse
-    {
+        ?string                 $nonce,
+    ): HttpResponse {
         $httpResponse = new HttpResponse(
             eTag: md5($htmlContent),
             lastModifiedTimeStamp: time(),
@@ -156,12 +154,12 @@ class HttpResponse
             downloadFileName: null,
             contentType: ContentType::createHtml(),
             contentString: $htmlContent,
-            contentFilePath: null
+            contentFilePath: null,
         );
-        if (!is_null(value: $cspPolicySettingsModel)) {
+        if ($cspPolicySettingsModel !== null) {
             $httpResponse->setHeader(
                 key: 'Content-Security-Policy',
-                val: $cspPolicySettingsModel->getHttpHeaderDataString(nonce: $nonce)
+                val: $cspPolicySettingsModel->getHttpHeaderDataString(nonce: $nonce),
             );
         }
 
@@ -171,9 +169,8 @@ class HttpResponse
     public static function createResponseFromString(
         HttpStatusCode $httpStatusCode,
         string         $contentString,
-        ContentType    $contentType
-    ): HttpResponse
-    {
+        ContentType    $contentType,
+    ): HttpResponse {
         if ($contentType->isHtml()) {
             throw new LogicException(message: 'Use HttpResponse::createHtmlResponse() instead');
         }
@@ -185,7 +182,7 @@ class HttpResponse
             downloadFileName: null,
             contentType: $contentType,
             contentString: $contentString,
-            contentFilePath: null
+            contentFilePath: null,
         );
     }
 
@@ -193,9 +190,8 @@ class HttpResponse
         string  $absolutePathToFile,
         ?bool   $forceDownload,
         ?string $individualFileName,
-        int     $maxAge
-    ): HttpResponse
-    {
+        int     $maxAge,
+    ): HttpResponse {
         $realPath = realpath(path: $absolutePathToFile);
 
         if (!is_readable(filename: $realPath)) {
@@ -210,12 +206,12 @@ class HttpResponse
             exit;
         }
         $lastModifiedTimeStamp = filemtime(filename: $realPath);
-        $fileName = is_null(value: $individualFileName) ? basename(path: $realPath) : $individualFileName;
+        $fileName = $individualFileName === null ? basename(path: $realPath) : $individualFileName;
 
         $contentType = ContentType::createFromFileExtension(
-            extension: FileHandler::getExtension(filename: $fileName)
+            extension: FileHandler::getExtension(filename: $fileName),
         );
-        if (is_null(value: $forceDownload)) {
+        if ($forceDownload === null) {
             $forceDownload = $contentType->forceDownloadByDefault;
         }
         $httpResponse = new HttpResponse(
@@ -226,15 +222,15 @@ class HttpResponse
             contentType: $contentType,
             contentString: null,
             contentFilePath: $realPath,
-            maxAge: $maxAge
+            maxAge: $maxAge,
         );
         $httpResponse->setHeader(
             key: 'Content-Length',
-            val: (string)filesize(filename: $realPath)
+            val: (string) filesize(filename: $realPath),
         );
         $httpResponse->setHeader(
             key: 'Expires',
-            val: gmdate(format: 'r', timestamp: time() + $maxAge)
+            val: gmdate(format: 'r', timestamp: time() + $maxAge),
         );
 
         return $httpResponse;

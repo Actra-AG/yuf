@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -15,7 +16,7 @@ use LogicException;
 
 class OptionsFilterField extends AbstractTableFilterField
 {
-    private(set) string $selectedValue = '';
+    public private(set) string $selectedValue = '';
     /** @var FilterOption[] */
     private readonly array $filterOptions;
 
@@ -26,13 +27,13 @@ class OptionsFilterField extends AbstractTableFilterField
         array $filterOptions,
         private readonly string $defaultValue = '',
         private readonly bool $chosenEnhancedDropDown = false,
-        bool $highlightFieldIfSelected = false
+        bool $highlightFieldIfSelected = false,
     ) {
         parent::__construct(
             parentFilter: $parentFilter,
             filterFieldIdentifier: $filterFieldIdentifier,
             label: $label,
-            highlightFieldIfSelected: $highlightFieldIfSelected
+            highlightFieldIfSelected: $highlightFieldIfSelected,
         );
         $finalOptions = [];
         foreach ($filterOptions as $filterOption) {
@@ -46,7 +47,7 @@ class OptionsFilterField extends AbstractTableFilterField
 
     public function init(): void
     {
-        $this->selectedValue = (string)$this->getFromSession(index: $this->identifier);
+        $this->selectedValue = (string) $this->getFromSession(index: $this->identifier);
     }
 
     public function reset(): void
@@ -62,7 +63,7 @@ class OptionsFilterField extends AbstractTableFilterField
 
     public function checkInput(): void
     {
-        $inputValue = (string)HttpRequest::getInputString(keyName: $this->identifier);
+        $inputValue = (string) HttpRequest::getInputString(keyName: $this->identifier);
         if (array_key_exists(key: $inputValue, array: $this->filterOptions)) {
             $this->setSelectedValue(selectedValue: $inputValue);
         }
@@ -88,9 +89,9 @@ class OptionsFilterField extends AbstractTableFilterField
             $classes[] = 'chosen';
         }
         $htmlArr[] = '<select name="' . $filterName . '" id="filter-' . $filterName . '" class="' . implode(
-                separator: ' ',
-                array: $classes
-            ) . '">';
+            separator: ' ',
+            array: $classes,
+        ) . '">';
         foreach ($this->filterOptions as $filterOption) {
             $htmlArr[] = $filterOption->render(selectedValue: $this->selectedValue);
         }

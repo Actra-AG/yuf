@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -25,11 +26,11 @@ final class ZipCodeField extends TextField
         ?string $value = null,
         ?HtmlText $requiredError = null,
         private readonly ?HtmlText $individualInvalidError = null,
-        private(set) string $countryCode = 'CH',
+        public private(set) string $countryCode = 'CH',
         private readonly string $countryCodeFieldName = 'countryCode',
         ?string $placeholder = null,
         ?AutoCompleteEnum $autoComplete = null,
-        ?int $maxLength = null
+        ?int $maxLength = null,
     ) {
         parent::__construct(
             name: $name,
@@ -38,7 +39,7 @@ final class ZipCodeField extends TextField
             requiredError: $requiredError,
             placeholder: $placeholder,
             autoComplete: $autoComplete,
-            maxLength: $maxLength
+            maxLength: $maxLength,
         );
     }
 

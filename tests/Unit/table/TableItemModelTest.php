@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -36,7 +37,7 @@ final class TableItemModelTest extends TestCase
         $this->assertTrue($row->getBool(column: 'active'));
         $this->assertEquals(
             new DateTimeImmutable(datetime: '2026-10-05 08:30:00'),
-            $row->getDateTimeImmutable(column: 'created')
+            $row->getDateTimeImmutable(column: 'created'),
         );
         $this->assertSame(StatusEnum::Blocked, $row->getEnum(column: 'status', enumClass: StatusEnum::class));
     }
@@ -79,7 +80,7 @@ final class TableItemModelTest extends TestCase
         $this->assertSame("&lt;b&gt;A &amp; B&lt;/b&gt;\n\"C\"", $tableItemModel->renderValue(name: 'text'));
         $this->assertSame(
             "&lt;b&gt;A &amp; B&lt;/b&gt;<br />\n\"C\"",
-            $tableItemModel->renderValue(name: 'text', renderNewLines: true)
+            $tableItemModel->renderValue(name: 'text', renderNewLines: true),
         );
         $this->assertSame('', $tableItemModel->renderValue(name: 'empty'));
         $this->assertSame(['ID' => 7, 'text' => "<b>A & B</b>\n\"C\"", 'empty' => null], $tableItemModel->data);
@@ -97,6 +98,6 @@ final class TableItemModelTest extends TestCase
      */
     private static function model(array $values): TableItemModel
     {
-        return new TableItemModel(dataObject: (object)$values);
+        return new TableItemModel(dataObject: (object) $values);
     }
 }

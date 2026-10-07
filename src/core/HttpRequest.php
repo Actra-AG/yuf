@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -27,13 +28,13 @@ class HttpRequest
         $inputData = HttpRequest::getInputData();
 
         return (HttpRequest::hasScalarInputValue(keyName: $keyName)) ? trim(
-            string: (string)$inputData[$keyName]
+            string: (string) $inputData[$keyName],
         ) : null;
     }
 
     private static function getInputData(): array
     {
-        if (!is_null(value: HttpRequest::$inputData)) {
+        if (HttpRequest::$inputData !== null) {
             return HttpRequest::$inputData;
         }
 
@@ -51,14 +52,14 @@ class HttpRequest
     {
         $inputData = HttpRequest::getInputData();
 
-        return (HttpRequest::hasScalarInputValue(keyName: $keyName)) ? (int)$inputData[$keyName] : null;
+        return (HttpRequest::hasScalarInputValue(keyName: $keyName)) ? (int) $inputData[$keyName] : null;
     }
 
     public static function getInputFloat(string $keyName): ?float
     {
         $inputData = HttpRequest::getInputData();
 
-        return (HttpRequest::hasScalarInputValue(keyName: $keyName)) ? (float)$inputData[$keyName] : null;
+        return (HttpRequest::hasScalarInputValue(keyName: $keyName)) ? (float) $inputData[$keyName] : null;
     }
 
     public static function getInputArray(string $keyName): ?array
@@ -66,11 +67,11 @@ class HttpRequest
         $inputData = HttpRequest::getInputData();
 
         return (array_key_exists(key: $keyName, array: $inputData) && is_array(
-                value: $inputData[$keyName]
-            )) ? $inputData[$keyName] : null;
+            value: $inputData[$keyName],
+        )) ? $inputData[$keyName] : null;
     }
 
-    public static function getInputValue(string $keyName): null|string|array
+    public static function getInputValue(string $keyName): string|array|null
     {
         $inputData = HttpRequest::getInputData();
 
@@ -99,13 +100,13 @@ class HttpRequest
 
     public static function getProtocol(): string
     {
-        if (!is_null(value: HttpRequest::$protocol)) {
+        if (HttpRequest::$protocol !== null) {
             return HttpRequest::$protocol;
         }
         if (array_key_exists(key: 'HTTPS', array: $_SERVER)) {
             if (
-                (int)$_SERVER['HTTPS'] === 1 // Apache
-                || (string)$_SERVER['HTTPS'] === 'on' // IIS
+                (int) $_SERVER['HTTPS'] === 1 // Apache
+                || (string) $_SERVER['HTTPS'] === 'on' // IIS
             ) {
                 return HttpRequest::$protocol = HttpRequest::PROTOCOL_HTTPS;
             }
@@ -119,7 +120,7 @@ class HttpRequest
 
     public static function getPort(): int
     {
-        return (int)$_SERVER['SERVER_PORT'];
+        return (int) $_SERVER['SERVER_PORT'];
     }
 
     public static function getQuery(): string
@@ -142,14 +143,14 @@ class HttpRequest
      */
     public static function listBrowserLanguagesByQuality(): array
     {
-        if (!is_null(value: HttpRequest::$languages)) {
+        if (HttpRequest::$languages !== null) {
             return HttpRequest::$languages;
         }
         HttpRequest::$languages = [];
         $acceptLanguageString = array_key_exists(
             key: 'HTTP_ACCEPT_LANGUAGE',
-            array: $_SERVER
-        ) ? (string)$_SERVER['HTTP_ACCEPT_LANGUAGE'] : '';
+            array: $_SERVER,
+        ) ? (string) $_SERVER['HTTP_ACCEPT_LANGUAGE'] : '';
         if ($acceptLanguageString === '') {
             return [];
         }
@@ -158,10 +159,10 @@ class HttpRequest
         foreach ($acceptedLanguages as $acceptedLanguageDetails) {
             $languageAndQuality = explode(separator: ';q=', string: $acceptedLanguageDetails);
             $languageCode = trim(string: explode(separator: '-', string: $languageAndQuality[0])[0]);
-            $quality = (int)((array_key_exists(key: 1, array: $languageAndQuality) ? round(
-                    num: (float)$languageAndQuality[1],
-                    precision: 2
-                ) : 1.0) * 100);
+            $quality = (int) ((array_key_exists(key: 1, array: $languageAndQuality) ? round(
+                num: (float) $languageAndQuality[1],
+                precision: 2,
+            ) : 1.0) * 100);
             if (!array_key_exists(key: $quality, array: $listByQuality)) {
                 $listByQuality[$quality] = $languageCode;
             }
@@ -186,7 +187,7 @@ class HttpRequest
 
     public static function getURL(?string $protocol = null): string
     {
-        if (is_null(value: $protocol)) {
+        if ($protocol === null) {
             $protocol = HttpRequest::getProtocol();
         }
 
@@ -195,7 +196,7 @@ class HttpRequest
 
     public static function getHost(): string
     {
-        if (!is_null(value: HttpRequest::$host)) {
+        if (HttpRequest::$host !== null) {
             return HttpRequest::$host;
         }
         if (array_key_exists(key: 'HTTP_HOST', array: $_SERVER)) {
@@ -255,13 +256,13 @@ class HttpRequest
         $allHeaders = getallheaders();
         if (!array_key_exists(
             key: 'Authorization',
-            array: $allHeaders
+            array: $allHeaders,
         )) {
             return false;
         }
         if (!str_starts_with(
             haystack: $allHeaders['Authorization'],
-            needle: 'Bearer '
+            needle: 'Bearer ',
         )) {
             return false;
         }
@@ -269,8 +270,8 @@ class HttpRequest
         return trim(
             string: substr(
                 string: $allHeaders['Authorization'],
-                offset: 7
-            )
+                offset: 7,
+            ),
         );
     }
 }

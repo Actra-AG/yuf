@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -24,8 +25,8 @@ class ValidatedEmailAddress
     {
         $this->sanitizedValue = mb_strtolower(
             string: $this->silentlyReplaceInvalidWhitespaces(
-                emailAddress: $emailAddress
-            )
+                emailAddress: $emailAddress,
+            ),
         );
         $this->isValidSyntax = $this->validateSyntax(input: $this->sanitizedValue);
     }
@@ -42,23 +43,19 @@ class ValidatedEmailAddress
                     "\t",
                     "\n",
                     "\r",
-                    "&#8203;",
+                    '&#8203;',
                     "\xE2\x80\x8C",
                     "\xE2\x80\x8B", // https://stackoverflow.com/questions/22600235/remove-unicode-zero-width-space-php
                 ],
                 replace: '',
-                subject: $emailAddress
-            )
+                subject: $emailAddress,
+            ),
         );
     }
 
     /**
      * We purposely do NOT allow commas/semicolons (preventing "multiple" email address entered, where NOT expected)
      * ':' Will catch "mailto:" copy&paste errors from users, which also result in an invalid email address
-     *
-     * @param string $input
-     *
-     * @return bool
      */
     private function validateSyntax(string $input): bool
     {
@@ -70,7 +67,7 @@ class ValidatedEmailAddress
         }
         $emailParts = explode(
             separator: '@',
-            string: $input
+            string: $input,
         );
         if (count(value: $emailParts) !== 2) {
             $this->lastErrorCode = 'atCharacterError';
@@ -110,7 +107,7 @@ class ValidatedEmailAddress
         return (
             preg_match(
                 pattern: '/^[a-zA-Z0-9.!#$%&\'*+=?^_`{|}~][a-zA-Z0-9.!#$%&\'*+\-=?^_`{|}~]*@(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9]|[a-zA-Z0-9][-a-zA-Z0-9]*[a-zA-Z0-9])\.)+[a-zA-Z0-9][-a-zA-Z0-9]*[a-zA-Z0-9]$/',
-                subject: $input
+                subject: $input,
             ) === 1
         );
     }
@@ -120,7 +117,7 @@ class ValidatedEmailAddress
         if (!$this->isValidSyntax) {
             return false;
         }
-        if (is_null(value: $this->isResolvable)) {
+        if ($this->isResolvable === null) {
             $this->isResolvable = $this->resolve();
         }
         if ($this->isResolvable) {
@@ -165,7 +162,7 @@ class ValidatedEmailAddress
                 port: 25,
                 error_code: $errorCode,
                 error_message: $errorMessage,
-                timeout: 5
+                timeout: 5,
             );
         } catch (Throwable $throwable) {
             $this->lastErrorCode = 'fsockopen';

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -175,7 +176,7 @@ final class FieldRulesTest extends TestCase
         $field = new TextField(
             name: 'field',
             label: $this->text('Field'),
-            requiredError: $this->text('Required')
+            requiredError: $this->text('Required'),
         );
 
         $this->assertTrue($field->isRequired());
@@ -198,7 +199,7 @@ final class FieldRulesTest extends TestCase
             name: 'radio',
             label: $this->text('Radio'),
             formOptions: $this->options(),
-            initialValue: null
+            initialValue: null,
         );
 
         $this->assertTrue($field->isRequired());
@@ -212,7 +213,7 @@ final class FieldRulesTest extends TestCase
         $field->addEachRule(formRule: new RegexRule(pattern: '/^[a-z0-9.-]+$/i', errorMessage: $this->text('Bad line')));
 
         $this->assertTrue(
-            $this->post(field: $field, data: ['lines' => "ns1.example.com\r\n ns2.example.com \n\n"])
+            $this->post(field: $field, data: ['lines' => "ns1.example.com\r\n ns2.example.com \n\n"]),
         );
         $this->assertFalse($this->post(field: $field, data: ['lines' => "ns1.example.com\nns 2"]));
         $this->assertSame(['Bad line'], $this->errorsOf(field: $field));
@@ -279,7 +280,7 @@ final class FieldRulesTest extends TestCase
         $field = new IntegerField(
             name: 'qty',
             label: $this->text('Qty'),
-            individualInvalidError: $this->text('Not a number')
+            individualInvalidError: $this->text('Not a number'),
         );
         $field->addValueRule(formRule: new IntegerMinRule(min: 1, errorMessage: $this->text('Too small')));
 
@@ -333,7 +334,7 @@ final class FieldRulesTest extends TestCase
             name: 'select',
             label: $this->text('Select'),
             formOptions: $this->options(),
-            initialValue: null
+            initialValue: null,
         );
         $field->addRule(formRule: new ValidValueRule(validValues: ['a', 'b'], errorMessage: $this->text('Not allowed')));
 
@@ -349,7 +350,7 @@ final class FieldRulesTest extends TestCase
             name: 'select',
             label: $this->text('Select'),
             formOptions: $this->options(),
-            initialValues: []
+            initialValues: [],
         );
         $field->addRule(formRule: new MinCountRule(minCount: 2, errorMessage: $this->text('Pick two')));
         $field->addRule(formRule: new MaxCountRule(maxCount: 2, errorMessage: $this->text('Pick at most two')));
@@ -364,7 +365,7 @@ final class FieldRulesTest extends TestCase
             name: 'checkbox',
             label: $this->text('Checkbox'),
             formOptions: $this->options(),
-            initialValues: []
+            initialValues: [],
         );
         $field->addRule(formRule: new MaxCountRule(maxCount: 2, errorMessage: $this->text('Pick at most two')));
 
@@ -378,7 +379,7 @@ final class FieldRulesTest extends TestCase
             name: 'checkbox',
             label: $this->text('Checkbox'),
             formOptions: $this->options(),
-            initialValues: []
+            initialValues: [],
         );
         $field->addRule(formRule: new MinCountRule(minCount: 2, errorMessage: $this->text('Pick two')));
 
@@ -391,10 +392,10 @@ final class FieldRulesTest extends TestCase
             name: 'checkbox',
             label: $this->text('Checkbox'),
             formOptions: $this->options(),
-            initialValues: []
+            initialValues: [],
         );
         $field->addEachRule(
-            formRule: new ValidValueRule(validValues: ['a', 'b'], errorMessage: $this->text('Not allowed'))
+            formRule: new ValidValueRule(validValues: ['a', 'b'], errorMessage: $this->text('Not allowed')),
         );
 
         $this->assertTrue($this->post(field: $field, data: ['checkbox' => ['a', 'b']]));

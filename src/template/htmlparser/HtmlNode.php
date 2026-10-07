@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -108,8 +109,6 @@ abstract class HtmlNode
 
     /**
      * Removes a node from the child nodes
-     *
-     * @param HtmlNode $nodeToRemove
      */
     public function removeNode(HtmlNode $nodeToRemove): void
     {
@@ -129,8 +128,6 @@ abstract class HtmlNode
 
     /**
      * Adds a child node to the list
-     *
-     * @param HtmlNode $childNode
      */
     public function addChildNode(HtmlNode $childNode): void
     {
@@ -176,8 +173,6 @@ abstract class HtmlNode
     }
 
     /**
-     * @param string $filter
-     *
      * @return HtmlNode[]
      */
     public function findChildNodes(string $filter): array
@@ -198,8 +193,6 @@ abstract class HtmlNode
 
     /**
      * Checks if the node has child nodes or not
-     *
-     * @return bool
      */
     public function hasChildren(): bool
     {

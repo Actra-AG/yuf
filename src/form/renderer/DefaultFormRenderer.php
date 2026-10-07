@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -16,9 +17,7 @@ use actra\yuf\html\HtmlTagAttribute;
 
 class DefaultFormRenderer extends FormRenderer
 {
-    public function __construct(private readonly Form $form)
-    {
-    }
+    public function __construct(private readonly Form $form) {}
 
     public function prepare(): void
     {
@@ -27,12 +26,12 @@ class DefaultFormRenderer extends FormRenderer
             new HtmlTagAttribute(
                 name: 'method',
                 value: ($form->methodPost ? 'post' : 'get'),
-                valueIsEncodedForRendering: true
+                valueIsEncodedForRendering: true,
             ),
             new HtmlTagAttribute(
                 name: 'action',
                 value: '?' . $form->sentIndicator,
-                valueIsEncodedForRendering: true
+                valueIsEncodedForRendering: true,
             ),
         ];
         $cssClasses = $form->cssClasses;
@@ -40,28 +39,28 @@ class DefaultFormRenderer extends FormRenderer
             $attributes[] = new HtmlTagAttribute(
                 name: 'class',
                 value: implode(separator: ' ', array: $cssClasses),
-                valueIsEncodedForRendering: true
+                valueIsEncodedForRendering: true,
             );
         }
         if ($form->acceptUpload) {
             $attributes[] = new HtmlTagAttribute(
                 name: 'enctype',
                 value: 'multipart/form-data',
-                valueIsEncodedForRendering: true
+                valueIsEncodedForRendering: true,
             );
         }
         if ($form->disableClientValidation) {
             $attributes[] = new HtmlTagAttribute(
                 name: 'novalidate',
                 value: null,
-                valueIsEncodedForRendering: true
+                valueIsEncodedForRendering: true,
             );
         }
         $htmlTag = new HtmlTag(name: 'form', selfClosing: false, htmlTagAttributes: $attributes);
         $this->renderErrors(parentTag: $htmlTag);
         foreach ($form->childComponents as $childComponent) {
             $componentRenderer = $childComponent->getRenderer();
-            if (is_null(value: $componentRenderer)) {
+            if ($componentRenderer === null) {
                 if ($childComponent instanceof FormField) {
                     $childComponentRenderer = $form->getDefaultFormFieldRenderer(formField: $childComponent);
                 } else {
@@ -88,28 +87,28 @@ class DefaultFormRenderer extends FormRenderer
             new HtmlTagAttribute(
                 name: 'class',
                 value: 'form-error',
-                valueIsEncodedForRendering: true
+                valueIsEncodedForRendering: true,
             ),
             new HtmlTagAttribute(
                 name: 'role',
                 value: 'alert',
-                valueIsEncodedForRendering: true
+                valueIsEncodedForRendering: true,
             ),
             new HtmlTagAttribute(
                 name: 'aria-live',
                 value: 'assertive',
-                valueIsEncodedForRendering: true
+                valueIsEncodedForRendering: true,
             ),
         ];
         if ($errorCollection->count() === 1) {
             $pTag = new HtmlTag(
                 name: 'p',
                 selfClosing: false,
-                htmlTagAttributes: $mainAttributes
+                htmlTagAttributes: $mainAttributes,
             );
             $strongTag = new HtmlTag(
                 name: 'strong',
-                selfClosing: false
+                selfClosing: false,
             );
             $strongTag->addText(htmlText: $errorCollection->getFirstError());
             $pTag->addTag(htmlTag: $strongTag);
@@ -121,17 +120,17 @@ class DefaultFormRenderer extends FormRenderer
             htmlTag: $divTag = new HtmlTag(
                 name: 'div',
                 selfClosing: false,
-                htmlTagAttributes: $mainAttributes
-            )
+                htmlTagAttributes: $mainAttributes,
+            ),
         );
         $ulTag = new HtmlTag(
             name: 'ul',
-            selfClosing: false
+            selfClosing: false,
         );
         foreach ($errorCollection->listErrors() as $htmlText) {
             $liTag = new HtmlTag(
                 name: 'li',
-                selfClosing: false
+                selfClosing: false,
             );
             $liTag->addText(htmlText: $htmlText);
             $ulTag->addTag(htmlTag: $liTag);

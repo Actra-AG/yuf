@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -25,7 +26,7 @@ class FormInfo extends FormComponent
         public readonly HtmlText $content,
         public readonly array $dlClasses = [],
         public readonly array $dtClasses = [],
-        public readonly array $ddClasses = []
+        public readonly array $ddClasses = [],
     ) {
         parent::__construct(uniqid());
     }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -51,7 +52,7 @@ final class HiddenIntegerFieldValueTest extends TestCase
         yield 'surrounding whitespace' => [' +7 ', 7];
         yield 'empty' => ['', null];
         yield 'only whitespace' => [' ', null];
-        yield 'int max' => [(string)PHP_INT_MAX, PHP_INT_MAX];
+        yield 'int max' => [(string) PHP_INT_MAX, PHP_INT_MAX];
     }
 
     #[DataProvider('validInputProvider')]

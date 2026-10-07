@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -22,15 +23,15 @@ class DbRuntimeException extends RuntimeException
         $realCode = $throwable->getCode();
         if ($throwable instanceof PDOException) {
             $realCode = (property_exists(object_or_class: $throwable, property: 'errorInfo') && is_array(
-                    $throwable->errorInfo
-                ) && isset($throwable->errorInfo[1])) ? $throwable->errorInfo[1] : 0;
+                $throwable->errorInfo,
+            ) && isset($throwable->errorInfo[1])) ? $throwable->errorInfo[1] : 0;
         }
 
         $message = $throwable->getMessage() . ';' . PHP_EOL;
         $message .= 'SQL-Parameters: ' . ((count($parameters) !== 0) ? ' "' . implode(
-                    separator: '", "',
-                    array: $parameters
-                ) . '"' : '-none-') . PHP_EOL;
+            separator: '", "',
+            array: $parameters,
+        ) . '"' : '-none-') . PHP_EOL;
         $message .= 'SQL-String: "' . $sql . '"' . PHP_EOL;
 
         parent::__construct(message: $message, code: $realCode, previous: $throwable);

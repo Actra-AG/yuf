@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -79,7 +80,7 @@ final class CsrfTokenFieldValueTest extends TestCase
         $this->assertSame(1, $field->errorCollection->count());
         $this->assertSame(
             'The form could not be submitted because of a technical problem (invalid CSRF token). Please try again.',
-            $field->errorCollection->getFirstError()->render()
+            $field->errorCollection->getFirstError()->render(),
         );
     }
 
@@ -92,7 +93,7 @@ final class CsrfTokenFieldValueTest extends TestCase
 
         $this->assertStringStartsWith(
             'Das Formular konnte wegen eines technischen Problems',
-            $field->errorCollection->getFirstError()->render()
+            $field->errorCollection->getFirstError()->render(),
         );
     }
 
@@ -144,7 +145,7 @@ final class CsrfTokenFieldValueTest extends TestCase
         $isValid = $this->validate(
             field: $field,
             data: ['csrftoken' => 'abc'],
-            query: ['csrftoken' => 'expected-token']
+            query: ['csrftoken' => 'expected-token'],
         );
 
         $this->assertFalse($isValid);
@@ -155,7 +156,7 @@ final class CsrfTokenFieldValueTest extends TestCase
         $isValid = $this->validate(
             field: $this->createField(),
             data: ['csrftoken' => ''],
-            query: ['csrftoken' => 'expected-token']
+            query: ['csrftoken' => 'expected-token'],
         );
 
         $this->assertFalse($isValid);
@@ -184,7 +185,7 @@ final class CsrfTokenFieldValueTest extends TestCase
         $isValid = $this->validate(
             field: $this->createField(),
             data: ['csrftoken' => ['x']],
-            query: ['csrftoken' => 'expected-token']
+            query: ['csrftoken' => 'expected-token'],
         );
 
         $this->assertFalse($isValid);
@@ -212,7 +213,7 @@ final class CsrfTokenFieldValueTest extends TestCase
     {
         $this->assertSame(
             '<input type="hidden" name="csrftoken" value="expected-token">',
-            $this->createField()->render()
+            $this->createField()->render(),
         );
     }
 
@@ -220,7 +221,7 @@ final class CsrfTokenFieldValueTest extends TestCase
     {
         $this->assertSame(
             '<input type="hidden" name="csrftoken" value="a&quot;&lt;b+/=">',
-            $this->createField(token: 'a"<b+/=')->render()
+            $this->createField(token: 'a"<b+/=')->render(),
         );
     }
 

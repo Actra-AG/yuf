@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -42,11 +43,11 @@ readonly class MailerFileAttachment
         string $fileName = '',
         public string $encoding = MailerConstants::ENCODING_BASE64,
         string $type = '',
-        public bool $dispositionInline = false
+        public bool $dispositionInline = false,
     ) {
-        if (!in_array(needle: $this->encoding, haystack: MailerConstants::ENCODING_LIST)) {
+        if (!in_array(needle: $this->encoding, haystack: MailerConstants::ENCODING_LIST, strict: true)) {
             throw new MailerException(
-                message: 'Invalid encoding "' . $this->encoding . '". See MailerConstants::ENCODING_LIST[].'
+                message: 'Invalid encoding "' . $this->encoding . '". See MailerConstants::ENCODING_LIST[].',
             );
         }
         $path = trim(string: $path);

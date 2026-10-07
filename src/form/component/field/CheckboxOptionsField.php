@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -28,16 +29,16 @@ class CheckboxOptionsField extends MultiOptionsField
         FormOptions $formOptions,
         array $initialValues,
         ?HtmlText $requiredError = null,
-        CheckboxOptionsLayoutEnum $layout = CheckboxOptionsLayoutEnum::LEGEND_AND_LIST
+        CheckboxOptionsLayoutEnum $layout = CheckboxOptionsLayoutEnum::LEGEND_AND_LIST,
     ) {
         parent::__construct(
             name: $name,
             label: $label,
             formOptions: $formOptions,
             initialValues: $initialValues,
-            autoComplete: null
+            autoComplete: null,
         );
-        if (!is_null(value: $requiredError)) {
+        if ($requiredError !== null) {
             $this->addRequiredRule(errorMessage: $requiredError);
         }
         switch ($layout) {

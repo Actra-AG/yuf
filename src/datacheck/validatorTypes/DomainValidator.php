@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -23,7 +24,7 @@ class DomainValidator
         }
         $pieces = explode(
             separator: '.',
-            string: $input
+            string: $input,
         );
         if ($pieces < 2) {
             return false;

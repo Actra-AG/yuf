@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -20,7 +21,7 @@ class ElementNode extends HtmlNode
     public ?string $tagName = null;
     public ?string $namespace = null;
     /** @var HtmlTagAttribute[] */
-    private(set) array $attributes = [];
+    public private(set) array $attributes = [];
     public ?string $tagExtension = null;
     public bool $closed = false;
 
@@ -69,7 +70,7 @@ class ElementNode extends HtmlNode
     {
         $html = '';
 
-        $nodeList = is_null($entryNode) ? $this->childNodes : $entryNode->childNodes;
+        $nodeList = $entryNode === null ? $this->childNodes : $entryNode->childNodes;
 
         /** @var ElementNode $node */
         foreach ($nodeList as $node) {

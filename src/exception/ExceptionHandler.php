@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -31,16 +32,15 @@ class ExceptionHandler
     protected ContentType $contentType;
 
     public function __construct(
-        protected readonly HtmlReplacementCollection $htmlReplacementCollection = new HtmlReplacementCollection()
-    ) {
-    }
+        protected readonly HtmlReplacementCollection $htmlReplacementCollection = new HtmlReplacementCollection(),
+    ) {}
 
     public static function register(?ExceptionHandler $individualExceptionHandler): void
     {
-        if (!is_null(value: ExceptionHandler::$registeredInstance)) {
+        if (ExceptionHandler::$registeredInstance !== null) {
             throw new LogicException(message: 'ExceptionHandler is already registered.');
         }
-        ExceptionHandler::$registeredInstance = is_null(value: $individualExceptionHandler) ? new ExceptionHandler(
+        ExceptionHandler::$registeredInstance = $individualExceptionHandler === null ? new ExceptionHandler(
         ) : $individualExceptionHandler;
         set_exception_handler(callback: [
             ExceptionHandler::$registeredInstance,
@@ -67,7 +67,7 @@ class ExceptionHandler
 
     protected function sendDebugHttpResponseAndExit(Throwable $throwable): void
     {
-        $realException = is_null(value: $throwable->getPrevious()) ? $throwable : $throwable->getPrevious();
+        $realException = $throwable->getPrevious() === null ? $throwable : $throwable->getPrevious();
         $errorCode = $realException->getCode();
         $errorMessage = $realException->getMessage();
 
@@ -83,62 +83,62 @@ class ExceptionHandler
         }
         $this->htmlReplacementCollection->addEncodedText(
             identifier: 'title',
-            content: $title
+            content: $title,
         );
         $this->htmlReplacementCollection->addEncodedText(
             identifier: 'errorType',
-            content: get_class(object: $throwable)
+            content: get_class(object: $throwable),
         );
         $this->htmlReplacementCollection->addEncodedText(
             identifier: 'errorMessage',
-            content: $errorMessage
+            content: $errorMessage,
         );
         $this->htmlReplacementCollection->addEncodedText(
             identifier: 'errorFile',
-            content: $realException->getFile()
+            content: $realException->getFile(),
         );
         $this->htmlReplacementCollection->addEncodedText(
             identifier: 'errorLine',
-            content: (string)$realException->getLine()
+            content: (string) $realException->getLine(),
         );
         $this->htmlReplacementCollection->addEncodedText(
             identifier: 'errorCode',
-            content: (string)$realException->getCode()
+            content: (string) $realException->getCode(),
         );
         $this->htmlReplacementCollection->addEncodedText(
             identifier: 'backtrace',
-            content: $realException->getTraceAsString()
+            content: $realException->getTraceAsString(),
         );
         $this->htmlReplacementCollection->addEncodedText(
             identifier: 'vardump_get',
-            content: isset($_GET) ? htmlentities(string: var_export(value: $_GET, return: true)) : ''
+            content: isset($_GET) ? htmlentities(string: var_export(value: $_GET, return: true)) : '',
         );
         $this->htmlReplacementCollection->addEncodedText(
             identifier: 'vardump_post',
             content: isset($_POST) ? htmlentities(
-                string: var_export(value: $_POST, return: true)
-            ) : ''
+                string: var_export(value: $_POST, return: true),
+            ) : '',
         );
         $this->htmlReplacementCollection->addEncodedText(
             identifier: 'vardump_file',
             content: isset($_FILE) ? htmlentities(
-                string: var_export(value: $_FILE, return: true)
-            ) : ''
+                string: var_export(value: $_FILE, return: true),
+            ) : '',
         );
         $this->htmlReplacementCollection->addEncodedText(
             identifier: 'vardump_sess',
             content: isset($_SESSION) ? htmlentities(
                 string: var_export(
                     value: $_SESSION,
-                    return: true
-                )
-            ) : ''
+                    return: true,
+                ),
+            ) : '',
         );
         $this->sendHttpResponseAndExit(
             httpStatusCode: $httpStatusCode,
             errorMessage: $errorMessage,
             errorCode: $errorCode,
-            htmlFileName: 'debug.html'
+            htmlFileName: 'debug.html',
         );
     }
 
@@ -146,7 +146,7 @@ class ExceptionHandler
         HttpStatusCode $httpStatusCode,
         string $errorMessage,
         string|int $errorCode,
-        string $htmlFileName
+        string $htmlFileName,
     ): void {
         $contentType = $this->contentType;
         if ($contentType->isJson()) {
@@ -155,9 +155,9 @@ class ExceptionHandler
                 contentString: HttpErrorResponseContent::createJsonResponseContent(
                     errorMessage: $errorMessage,
                     errorCode: $errorCode,
-                    data: $this->htmlReplacementCollection->getArrayObject()
+                    data: $this->htmlReplacementCollection->getArrayObject(),
                 )->content,
-                contentType: $contentType
+                contentType: $contentType,
             );
             $httpResponse->sendAndExit();
         }
@@ -170,19 +170,19 @@ class ExceptionHandler
                 contentString: HttpErrorResponseContent::createTextResponseContent(
                     errorMessage: $errorMessage,
                     errorCode: $errorCode,
-                    additionalInfo: $this->htmlReplacementCollection->getArrayObject()
+                    additionalInfo: $this->htmlReplacementCollection->getArrayObject(),
                 )->content,
-                contentType: $contentType
+                contentType: $contentType,
             );
             $httpResponse->sendAndExit();
         }
         $httpResponse = HttpResponse::createHtmlResponse(
             httpStatusCode: $httpStatusCode,
             htmlContent: $this->getHtmlContent(
-                htmlFileName: $htmlFileName
+                htmlFileName: $htmlFileName,
             ),
             cspPolicySettingsModel: Core::get()->cspPolicySettingsModel,
-            nonce: CspNonce::get()
+            nonce: CspNonce::get(),
         );
         $httpResponse->sendAndExit();
     }
@@ -198,45 +198,45 @@ class ExceptionHandler
         $requestHandler = RequestHandler::get();
         $htmlReplacementCollection->addEncodedText(
             identifier: 'copyright',
-            content: $core->renderCopyrightYear()
+            content: $core->renderCopyrightYear(),
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'language',
-            content: $requestHandler->language === null ? 'en' : $requestHandler->language->code
+            content: $requestHandler->language === null ? 'en' : $requestHandler->language->code,
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'langRoot',
-            content: $requestHandler->getLanguageRoot()
+            content: $requestHandler->getLanguageRoot(),
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'charset',
-            content: 'UTF-8'
+            content: 'UTF-8',
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'cspNonce',
-            content: CspNonce::get()
+            content: CspNonce::get(),
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'csrfField',
-            content: CsrfToken::renderAsHiddenPostField()
+            content: CsrfToken::renderAsHiddenPostField(),
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'robots',
-            content: 'noindex,nofollow'
+            content: 'noindex,nofollow',
         );
         $htmlReplacementCollection->set(
             identifier: 'pageTitle',
             htmlReplacement: $htmlReplacementCollection->has(identifier: 'title') ? $htmlReplacementCollection->get(
-                identifier: 'title'
-            ) : HtmlReplacement::encodedText(content: 'Error')
+                identifier: 'title',
+            ) : HtmlReplacement::encodedText(content: 'Error'),
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'bodyClassName',
-            content: 'body-' . pathinfo(path: $htmlFileName)['filename']
+            content: 'body-' . pathinfo(path: $htmlFileName)['filename'],
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'requestedFileName',
-            content: $requestHandler->fileName === null ? null : $requestHandler->fileName
+            content: $requestHandler->fileName === null ? null : $requestHandler->fileName,
         );
         if (
             $core->availableLanguages->isMultiLang()
@@ -247,16 +247,16 @@ class ExceptionHandler
 
         return new HtmlSnippet(
             htmlSnippetFilePath: $contentPath,
-            replacements: $htmlReplacementCollection
+            replacements: $htmlReplacementCollection,
         )->render();
     }
 
     private function loadLocalizedText(
-        RequestHandler $requestHandler
+        RequestHandler $requestHandler,
     ): void {
         LocaleHandler::register();
         $defaultRouteForLanguage = $requestHandler->defaultRoutesByLanguage->getRouteForLanguage(
-            languageCode: $requestHandler->language->code
+            languageCode: $requestHandler->language->code,
         );
         $defaultRouteForLanguage->loadLocalizedText(fileTitle: '');
     }
@@ -267,7 +267,7 @@ class ExceptionHandler
             httpStatusCode: HttpStatusCode::HTTP_NOT_FOUND,
             errorMessage: $throwable->getMessage(),
             errorCode: $throwable->getCode(),
-            htmlFileName: 'notFound.html'
+            htmlFileName: 'notFound.html',
         );
     }
 
@@ -277,7 +277,7 @@ class ExceptionHandler
             httpStatusCode: HttpStatusCode::HTTP_UNAUTHORIZED,
             errorMessage: $throwable->getMessage(),
             errorCode: $throwable->getCode(),
-            htmlFileName: 'unauthorized.html'
+            htmlFileName: 'unauthorized.html',
         );
     }
 
@@ -287,7 +287,7 @@ class ExceptionHandler
             httpStatusCode: HttpStatusCode::HTTP_INTERNAL_SERVER_ERROR,
             errorMessage: 'Internal Server Error',
             errorCode: $throwable->getCode(),
-            htmlFileName: 'default.html'
+            htmlFileName: 'default.html',
         );
     }
 }

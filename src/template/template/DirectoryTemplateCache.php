@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -20,9 +21,8 @@ class DirectoryTemplateCache extends TemplateCacheStrategy
     public function __construct(
         string $cachePath,
         string $templateBaseDirectory,
-        protected readonly Clock $clock = new SystemClock()
-    )
-    {
+        protected readonly Clock $clock = new SystemClock(),
+    ) {
         parent::__construct($cachePath);
         $this->templateBaseDirectory = $templateBaseDirectory;
         $this->baseDirLength = strlen($templateBaseDirectory);
@@ -47,7 +47,7 @@ class DirectoryTemplateCache extends TemplateCacheStrategy
     public function addCachedTplFile(
         string $tplFile,
         ?TemplateCacheEntry $currentCacheEntry,
-        string $compiledTemplateContent
+        string $compiledTemplateContent,
     ): TemplateCacheEntry {
         $cacheFileName = $this->getCacheFileName($tplFile);
         $cacheFilePath = $this->cachePath . $cacheFileName;
@@ -60,7 +60,7 @@ class DirectoryTemplateCache extends TemplateCacheStrategy
         $fileLocation = pathinfo($cacheFilePath, PATHINFO_DIRNAME);
 
         if (is_dir($fileLocation) === false) {
-            mkdir($fileLocation, 0777, true);
+            mkdir($fileLocation, 0o777, true);
         }
 
         file_put_contents($cacheFilePath, $compiledTemplateContent);
@@ -75,7 +75,7 @@ class DirectoryTemplateCache extends TemplateCacheStrategy
         return preg_replace(
             pattern: '/\.\w+$/',
             replacement: DirectoryTemplateCache::CACHE_SUFFIX,
-            subject: substr($tplFile, $offset)
+            subject: substr($tplFile, $offset),
         );
     }
 }

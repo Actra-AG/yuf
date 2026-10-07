@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -41,13 +42,13 @@ abstract class MultiOptionsField extends OptionsField
         HtmlText $label,
         FormOptions $formOptions,
         array $initialValues,
-        ?AutoCompleteEnum $autoComplete
+        ?AutoCompleteEnum $autoComplete,
     ) {
         parent::__construct(
             name: $name,
             label: $label,
             formOptions: $formOptions,
-            autoComplete: $autoComplete
+            autoComplete: $autoComplete,
         );
         $this->setInitialValues(values: $initialValues);
     }
@@ -100,7 +101,7 @@ abstract class MultiOptionsField extends OptionsField
             if (!is_string(value: $value)) {
                 throw new TypeError(
                     message: 'The values of field ' . $this->name . ' must be strings, ' . get_debug_type(value: $value)
-                    . ' given.'
+                    . ' given.',
                 );
             }
             if ($value !== '') {
@@ -121,8 +122,8 @@ abstract class MultiOptionsField extends OptionsField
         return array_values(
             array: array_filter(
                 array: $this->values,
-                callback: fn(string $key): bool => !in_array(needle: $key, haystack: $this->initialValues, strict: true)
-            )
+                callback: fn(string $key): bool => !in_array(needle: $key, haystack: $this->initialValues, strict: true),
+            ),
         );
     }
 
@@ -136,8 +137,8 @@ abstract class MultiOptionsField extends OptionsField
         return array_values(
             array: array_filter(
                 array: $this->initialValues,
-                callback: fn(string $key): bool => !in_array(needle: $key, haystack: $this->values, strict: true)
-            )
+                callback: fn(string $key): bool => !in_array(needle: $key, haystack: $this->values, strict: true),
+            ),
         );
     }
 
@@ -171,7 +172,7 @@ abstract class MultiOptionsField extends OptionsField
         foreach ($this->keyRules as $rule) {
             $allKeysValid = array_all(
                 array: $this->values,
-                callback: static fn(string $key): bool => $rule->validate(value: $key)
+                callback: static fn(string $key): bool => $rule->validate(value: $key),
             );
             if (!$allKeysValid) {
                 $this->addError(errorMessage: $rule->getErrorMessage());

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -61,7 +62,7 @@ final class FileFieldMarkupTest extends TestCase
         if ($withFirstFile) {
             $storage->preload(
                 FileFieldMarkupTest::POINTER,
-                new UploadedFile(name: 'first.txt', type: 'text/plain', size: 1, path: FileFieldMarkupTest::FIRST_PATH)
+                new UploadedFile(name: 'first.txt', type: 'text/plain', size: 1, path: FileFieldMarkupTest::FIRST_PATH),
             );
         }
 
@@ -78,7 +79,7 @@ final class FileFieldMarkupTest extends TestCase
         bool $withFirstFile,
         ?HtmlText $tooManyFilesErrMsg,
         ?HtmlText $alreadyExistsErrorMessage,
-        string $expectedHtml
+        string $expectedHtml,
     ): void {
         $formName = 'fileForm' . FileFieldMarkupTest::$formCounter++;
         $form = new Form(name: $formName, acceptUpload: true, messages: FormMessages::german());
@@ -90,7 +91,7 @@ final class FileFieldMarkupTest extends TestCase
             maxFileUploadCount: $maxFileUploadCount,
             tooManyFilesErrMsg: $tooManyFilesErrMsg,
             alreadyExistsErrorMessage: $alreadyExistsErrorMessage,
-            storage: $this->createStorage(withFirstFile: $withFirstFile)
+            storage: $this->createStorage(withFirstFile: $withFirstFile),
         );
         $form->addField(formField: $field);
 
@@ -379,7 +380,7 @@ final class FileFieldMarkupTest extends TestCase
             FileFieldMarkupTest::upload(
                 names: ['big.txt', 'ok-empty.txt', 'x.txt'],
                 errors: [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_OK, UPLOAD_ERR_NO_FILE],
-                sizes: [0, 0, 0]
+                sizes: [0, 0, 0],
             ),
             5,
             false,
@@ -406,21 +407,21 @@ final class FileFieldMarkupTest extends TestCase
                 name: 'first "file".txt',
                 type: 'text/plain',
                 size: 1,
-                path: FileFieldMarkupTest::FIRST_PATH
+                path: FileFieldMarkupTest::FIRST_PATH,
             ),
             new UploadedFile(
                 name: '<b>second</b>.pdf',
                 type: 'application/pdf',
                 size: 1,
-                path: FileFieldMarkupTest::SECOND_PATH
-            )
+                path: FileFieldMarkupTest::SECOND_PATH,
+            ),
         );
         $field = new FileField(
             name: 'file',
             label: HtmlText::encoded(textContent: 'File'),
             requiredError: HtmlText::encoded(textContent: 'Req'),
             maxFileUploadCount: $maxFileUploadCount,
-            storage: $storage
+            storage: $storage,
         );
         $field->messages = FormMessages::german();
         $field->validate(input: $this->request(['file_UID' => FileFieldMarkupTest::POINTER]));
@@ -439,7 +440,7 @@ final class FileFieldMarkupTest extends TestCase
             . 'value="f50dd1d7180e89a360be1c2912862904aebf506f">löschen</button>'
             . '</li></ul><input type="file" name="file[]" id="file">'
             . '<input type="hidden" name="file_UID" value="ptr1"></div>',
-            $this->createFieldWithTwoFiles(maxFileUploadCount: 3)->render()
+            $this->createFieldWithTwoFiles(maxFileUploadCount: 3)->render(),
         );
     }
 
@@ -454,7 +455,7 @@ final class FileFieldMarkupTest extends TestCase
             . 'value="f50dd1d7180e89a360be1c2912862904aebf506f">löschen</button>'
             . '</li></ul><input type="file" name="file[]" id="file">'
             . '<input type="hidden" name="file_UID" value="ptr1"></div>',
-            $this->createFieldWithTwoFiles(maxFileUploadCount: 2)->render()
+            $this->createFieldWithTwoFiles(maxFileUploadCount: 2)->render(),
         );
     }
 
@@ -473,7 +474,7 @@ final class FileFieldMarkupTest extends TestCase
             . '</li></ul>'
             . '<input type="file" name="file[]" id="file" aria-invalid="true" aria-describedby="file-error">'
             . '<input type="hidden" name="file_UID" value="ptr1"></div>',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -483,7 +484,7 @@ final class FileFieldMarkupTest extends TestCase
             name: 'file',
             label: HtmlText::encoded(textContent: 'File'),
             maxFileUploadCount: $maxFileUploadCount,
-            storage: new InMemoryFileUploadStorage()
+            storage: new InMemoryFileUploadStorage(),
         );
     }
 
@@ -494,7 +495,7 @@ final class FileFieldMarkupTest extends TestCase
         $this->assertSame(
             '<div class="fileupload" data-max-files="1"><input type="file" name="file[]" id="file">'
             . '<input type="hidden" name="file_UID" value="' . $field->uniqueSessFileStorePointer . '"></div>',
-            $field->render()
+            $field->render(),
         );
     }
 
@@ -505,7 +506,7 @@ final class FileFieldMarkupTest extends TestCase
         $this->assertSame(
             '<div class="fileupload-enhanced" data-max-files="3"><input type="file" name="file[]" id="file" multiple>'
             . '<input type="hidden" name="file_UID" value="' . $field->uniqueSessFileStorePointer . '"></div>',
-            $field->render()
+            $field->render(),
         );
     }
 

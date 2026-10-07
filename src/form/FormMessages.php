@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -32,9 +33,8 @@ final readonly class FormMessages
         public string $fileTooBig = 'The file was too big:',
         public string $fileTechnicalError = 'A technical error occurred while uploading the file:',
         public string $tooManyFiles = 'Only [max] file(s) allowed.',
-        public string $duplicateFile = 'A file named "[fileName]" has already been uploaded.'
-    ) {
-    }
+        public string $duplicateFile = 'A file named "[fileName]" has already been uploaded.',
+    ) {}
 
     public static function german(): FormMessages
     {
@@ -54,7 +54,7 @@ final readonly class FormMessages
             fileTooBig: 'Die Datei war zu gross:',
             fileTechnicalError: 'Es ist ein technischer Fehler beim Hochladen der Datei aufgetreten:',
             tooManyFiles: 'Nur [max] Datei(en) möglich.',
-            duplicateFile: 'Es wurde bereits eine Datei mit dem Dateinamen "[fileName]" hochgeladen.'
+            duplicateFile: 'Es wurde bereits eine Datei mit dem Dateinamen "[fileName]" hochgeladen.',
         );
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -68,7 +69,7 @@ class SearchHelper
         foreach ($filterArr as $dataTableReference => $value) {
             $columnFilter = SearchHelper::createColumnFilter(
                 column: SearchHelper::checkColumnExpression(column: trim(string: $dataTableReference)),
-                value: trim(string: (string)$value)
+                value: trim(string: (string) $value),
             );
             if ($columnFilter === null) {
                 continue;
@@ -88,7 +89,7 @@ class SearchHelper
         if ($column === '' || str_contains(haystack: $column, needle: '?')) {
             throw new InvalidArgumentException(
                 message: 'Invalid column reference "' . $column . '" for the filter. It must not be empty and must not'
-                . ' contain a "?", because it is not bound as a parameter.'
+                . ' contain a "?", because it is not bound as a parameter.',
             );
         }
 
@@ -112,7 +113,7 @@ class SearchHelper
         if (SearchHelper::isEnclosedIn(value: $value, character: '*')) {
             return new DbQueryData(
                 query: $column . SearchHelper::LIKE_PLACEHOLDER,
-                params: [SearchHelper::createLikePattern(searchText: $value)]
+                params: [SearchHelper::createLikePattern(searchText: $value)],
             );
         }
 
@@ -163,7 +164,7 @@ class SearchHelper
             ? null
             : new DbQueryData(
                 query: implode(separator: ' AND ', array: $conditions),
-                params: [...$params, ...$optionalParams]
+                params: [...$params, ...$optionalParams],
             );
     }
 
@@ -178,7 +179,7 @@ class SearchHelper
         $words = preg_split(
             pattern: '/(?<=^|[\s,])([-!+]?(?:"[^"]*"|\'[^\']*\'))(?=[\s,]|$)|[\s,]+/',
             subject: $value,
-            flags: PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY
+            flags: PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY,
         );
 
         return $words === false ? [] : $words;
@@ -246,7 +247,7 @@ class SearchHelper
             $conditions .= ($index === 0 ? '' : $term['operator']->sqlConnector());
             $conditions .= SearchHelper::createWordCondition(
                 fieldNames: $fieldNames,
-                negated: $term['operator']->isNegated()
+                negated: $term['operator']->isNegated(),
             );
             $likePattern = '%' . strtr(string: $term['word'], from: SearchHelper::LIKE_ESCAPE_MAP) . '%';
             $parameters = [
@@ -266,7 +267,7 @@ class SearchHelper
         $fieldNames = preg_split(
             pattern: '/\s+/',
             subject: trim(string: $spaceSeparatedFieldNames),
-            flags: PREG_SPLIT_NO_EMPTY
+            flags: PREG_SPLIT_NO_EMPTY,
         );
         if ($fieldNames === false || $fieldNames === []) {
             throw new InvalidArgumentException(message: 'At least one field name is required for the boolean search.');
@@ -275,7 +276,7 @@ class SearchHelper
             if (preg_match(pattern: SearchHelper::FIELD_NAME_PATTERN, subject: $fieldName) !== 1) {
                 throw new InvalidArgumentException(
                     message: 'Invalid field name "' . $fieldName . '" for the boolean search. Use column names like'
-                    . ' "name", "table.name" or "`table`.`name`".'
+                    . ' "name", "table.name" or "`table`.`name`".',
                 );
             }
         }
@@ -358,7 +359,7 @@ class SearchHelper
     {
         $likeConditions = array_map(
             callback: static fn(string $fieldName): string => $fieldName . SearchHelper::LIKE_PLACEHOLDER,
-            array: $fieldNames
+            array: $fieldNames,
         );
         $condition = '(' . implode(separator: ' OR ', array: $likeConditions) . ')';
 
@@ -374,11 +375,11 @@ class SearchHelper
     {
         $clean_query_text = $this->cleanQuery(string: $query_text);
 
-        return "(" . $this->createQuery(
-                text: $clean_query_text,
-                splitFields: $splitFields,
-                spaceSeparatedFieldNames: $spaceSeparatedFieldNames
-            ) . ")";
+        return '(' . $this->createQuery(
+            text: $clean_query_text,
+            splitFields: $splitFields,
+            spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
+        ) . ')';
     }
 
     private function cleanQuery(string $string): string
@@ -390,12 +391,6 @@ class SearchHelper
      * Generates the "WHERE" portion of a query, iterating over every key phrase in the
      * given search string.  Is safe to link (e.g. with AND) with the output of repeated
      * calls
-     *
-     * @param string $text
-     * @param bool $splitFields
-     * @param string $spaceSeparatedFieldNames
-     *
-     * @return string
      */
     private function createQuery(string $text, bool $splitFields, string $spaceSeparatedFieldNames): string
     {
@@ -415,8 +410,8 @@ class SearchHelper
         #
         $wordArray = $this->explodeRespectQuotes(line: $text);
 
-        $buffer = "";
-        $output = "";
+        $buffer = '';
+        $output = '';
 
         #
         # work through each word (or "quoted phrase") in the text and build the
@@ -441,65 +436,65 @@ class SearchHelper
                             word: $wordArray[$i],
                             mode: 'not',
                             splitFields: $splitFields,
-                            spaceSeparatedFieldNames: $spaceSeparatedFieldNames
+                            spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
                         );
                     } else {
                         $buffer = ' AND ' . $this->createSubquery(
-                                word: $wordArray[$i],
-                                mode: 'not',
-                                splitFields: $splitFields,
-                                spaceSeparatedFieldNames: $spaceSeparatedFieldNames
-                            );
+                            word: $wordArray[$i],
+                            mode: 'not',
+                            splitFields: $splitFields,
+                            spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
+                        );
                     }
                 } elseif ($word === 'or') {
                     $i++;
-                    if ($i == 1) {
+                    if ($i === 1) {
                         $buffer = $this->createSubquery(
                             word: $wordArray[$i],
                             mode: '',
                             splitFields: $splitFields,
-                            spaceSeparatedFieldNames: $spaceSeparatedFieldNames
+                            spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
                         );
                     } else {
                         $buffer = ' OR ' . $this->createSubquery(
-                                word: $wordArray[$i],
-                                mode: '',
-                                splitFields: $splitFields,
-                                spaceSeparatedFieldNames: $spaceSeparatedFieldNames
-                            );
+                            word: $wordArray[$i],
+                            mode: '',
+                            splitFields: $splitFields,
+                            spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
+                        );
                     }
                 } elseif ($word === 'and') {
                     $i++;
-                    if ($i == 1) {
+                    if ($i === 1) {
                         $buffer = $this->createSubquery(
                             word: $wordArray[$i],
                             mode: '',
                             splitFields: $splitFields,
-                            spaceSeparatedFieldNames: $spaceSeparatedFieldNames
+                            spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
                         );
                     } else {
                         $buffer = ' AND ' . $this->createSubquery(
-                                word: $wordArray[$i],
-                                mode: '',
-                                splitFields: $splitFields,
-                                spaceSeparatedFieldNames: $spaceSeparatedFieldNames
-                            );
+                            word: $wordArray[$i],
+                            mode: '',
+                            splitFields: $splitFields,
+                            spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
+                        );
                     }
                 }
-            } elseif ($i == 0) { # 0 instead of 1 here because there was no conditional word to skip and no $i++;
+            } elseif ($i === 0) { # 0 instead of 1 here because there was no conditional word to skip and no $i++;
                 $buffer = $this->createSubquery(
                     word: $wordArray[$i],
                     mode: '',
                     splitFields: $splitFields,
-                    spaceSeparatedFieldNames: $spaceSeparatedFieldNames
+                    spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
                 );
             } else {
                 $buffer = ' OR ' . $this->createSubquery(
-                        word: $wordArray[$i],
-                        mode: '',
-                        splitFields: $splitFields,
-                        spaceSeparatedFieldNames: $spaceSeparatedFieldNames
-                    );
+                    word: $wordArray[$i],
+                    mode: '',
+                    splitFields: $splitFields,
+                    spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
+                );
             }
             $output = $output . $buffer;
         }
@@ -512,13 +507,13 @@ class SearchHelper
         $text = preg_replace(
             pattern: '/ \+/',
             replacement: ' and ',
-            subject: $text
+            subject: $text,
         );
 
         return preg_replace(
             pattern: '/ -/',
             replacement: ' not ',
-            subject: $text
+            subject: $text,
         );
     }
 
@@ -529,7 +524,6 @@ class SearchHelper
      * a set of quotes, in which case " " is retained.  The string is then
      * split on "~~~~~" with the surviving spaces intact.
      *
-     * @param string $line
      *
      * @return string[]
      */
@@ -539,18 +533,18 @@ class SearchHelper
         $buffer = '';
 
         for ($a = 0; $a < strlen(string: $line); $a++) {
-            if ($line[$a] == "\"") {
+            if ($line[$a] === '"') {
                 $quote_level++;
                 if ($quote_level === 2) {
                     $quote_level = 0;
                 }
             } elseif ($line[$a] === ' ' && $quote_level === 0) {
-                $buffer = $buffer . "~~~~"; #Hackish magic key
+                $buffer = $buffer . '~~~~'; #Hackish magic key
             } else {
                 $buffer = $buffer . $line[$a];
             }
         }
-        $buffer = str_replace(search: "\\", replace: '', subject: $buffer);
+        $buffer = str_replace(search: '\\', replace: '', subject: $buffer);
 
         return explode(separator: '~~~~', string: $buffer);
     }
@@ -559,19 +553,12 @@ class SearchHelper
      * Internal function, used to apply a single keyword against an
      * arbitrary number of fields in the database in the same fashion.
      * Works via replacing whitespace rather than iteration
-     *
-     * @param string $word
-     * @param string $mode
-     * @param bool $splitFields
-     * @param string $spaceSeparatedFieldNames
-     *
-     * @return string
      */
     private function createSubquery(
         string $word,
         string $mode,
         bool $splitFields,
-        string $spaceSeparatedFieldNames
+        string $spaceSeparatedFieldNames,
     ): string {
         $word = str_replace(search: "'", replace: "\'", subject: $word);
 
@@ -588,7 +575,7 @@ class SearchHelper
         $text = ($splitFields) ? str_replace(
             search: ' ',
             replace: $glue,
-            subject: $spaceSeparatedFieldNames
+            subject: $spaceSeparatedFieldNames,
         ) : $spaceSeparatedFieldNames;
 
         return $front . $text . $back;
@@ -606,7 +593,7 @@ class SearchHelper
         $this->resetField(fieldName: $fieldName, default: $default);
 
         $userInput = HttpRequest::getInputString(keyName: $fieldName);
-        if (!is_null($userInput)) {
+        if ($userInput !== null) {
             $_SESSION[$sessionRootName][$instanceName][$fieldName] = $userInput;
         }
 
@@ -619,8 +606,8 @@ class SearchHelper
         $instanceName = $this->instanceName;
         if (
             !isset($_SESSION[$sessionRootName][$instanceName][$fieldName])
-            || !is_null(HttpRequest::getInputString(keyName: SearchHelper::PARAM_RESET))
-            || !is_null(HttpRequest::getInputString(keyName: SearchHelper::PARAM_FIND))
+            || HttpRequest::getInputString(keyName: SearchHelper::PARAM_RESET) !== null
+            || HttpRequest::getInputString(keyName: SearchHelper::PARAM_FIND) !== null
         ) {
             $_SESSION[$sessionRootName][$instanceName][$fieldName] = $default;
         }
@@ -633,7 +620,7 @@ class SearchHelper
         $this->resetField(fieldName: $fieldName, default: $default);
 
         $userInput = HttpRequest::getInputString(keyName: $fieldName);
-        if (!is_null($userInput) && array_key_exists($userInput, $array)) {
+        if ($userInput !== null && array_key_exists($userInput, $array)) {
             $_SESSION[$sessionRootName][$instanceName][$fieldName] = $userInput;
         }
 
@@ -650,13 +637,13 @@ class SearchHelper
         if (isset($_GET[SearchHelper::PARAM_RESET]) || isset($_GET[SearchHelper::PARAM_FIND])) {
             foreach ($array as $key => $val) {
                 $userInput = HttpRequest::getInputArray(keyName: $fieldName);
-                if (!is_null($userInput) && in_array(needle: $key, haystack: $userInput)) {
+                if ($userInput !== null && in_array(needle: (string) $key, haystack: $userInput, strict: true)) {
                     $_SESSION[$this->sessionRootName][$instanceName][$fieldName][] = $key;
                 }
             }
             $requestedValue = HttpRequest::getInputString(keyName: $fieldName . 'ID');
 
-            if (!is_null(value: $requestedValue)) {
+            if ($requestedValue !== null) {
                 $_SESSION[$this->sessionRootName][$instanceName][$fieldName][] = $requestedValue;
             }
         }
@@ -669,7 +656,7 @@ class SearchHelper
         string $fromField,
         string $toField,
         ?string $defaultFrom = null,
-        ?string $defaultTo = null
+        ?string $defaultTo = null,
     ): array {
         $instanceName = $this->instanceName;
 
@@ -684,8 +671,8 @@ class SearchHelper
         $inputFrom = HttpRequest::getInputString(keyName: $fromField);
         $inputTo = HttpRequest::getInputString(keyName: $toField);
 
-        $dateFromStr = is_null($inputFrom) ? $_SESSION[$this->sessionRootName][$instanceName][$fromField] : $inputFrom;
-        $dateToStr = is_null($inputTo) ? $_SESSION[$this->sessionRootName][$instanceName][$toField] : $inputTo;
+        $dateFromStr = $inputFrom === null ? $_SESSION[$this->sessionRootName][$instanceName][$fromField] : $inputFrom;
+        $dateToStr = $inputTo === null ? $_SESSION[$this->sessionRootName][$instanceName][$toField] : $inputTo;
 
         $dateFromObj = $this->checkDate(date: $dateFromStr);
         $dateToObj = $this->checkDate(date: $dateToStr);
@@ -694,18 +681,18 @@ class SearchHelper
         $maxDateObj = new DateTime(datetime: $dateRange['maxDate']);
 
         // if to ist earlier then from, set it to from
-        if (!is_null(value: $dateFromObj) && !is_null(value: $dateToObj) && $dateFromObj->getTimestamp(
-            ) > $dateToObj->getTimestamp()) {
+        if ($dateFromObj !== null && $dateToObj !== null && $dateFromObj->getTimestamp(
+        ) > $dateToObj->getTimestamp()) {
             $dateToObj = $dateFromObj;
         }
 
         // if from is empty or earlier than minDate, set it to minDate
-        if (is_null(value: $dateFromObj) || $dateFromObj->getTimestamp() < $minDateObj->getTimestamp()) {
+        if ($dateFromObj === null || $dateFromObj->getTimestamp() < $minDateObj->getTimestamp()) {
             $dateFromObj = $minDateObj;
         }
 
         // if to is empty or later than maxDate, set it to maxDate
-        if (is_null(value: $dateToObj) || $dateToObj->getTimestamp() > $maxDateObj->getTimestamp()) {
+        if ($dateToObj === null || $dateToObj->getTimestamp() > $maxDateObj->getTimestamp()) {
             $dateToObj = $maxDateObj;
         }
 
@@ -751,12 +738,12 @@ class SearchHelper
         $likeConditions = array_map(
             callback: static fn(string $column): string => SearchHelper::quoteColumnName(column: $column)
                 . SearchHelper::LIKE_PLACEHOLDER,
-            array: $columns
+            array: $columns,
         );
         $searchWords = preg_split(
             pattern: "/[\s,]*\"([^\"]+)\"[\s,]*|" . "[\s,]*'([^']+)'[\s,]*|" . "[\s,]+/",
             subject: $string,
-            flags: PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY
+            flags: PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY,
         );
         $searchWords = $searchWords === false ? [] : $searchWords;
         $conditions = [];
@@ -779,7 +766,7 @@ class SearchHelper
         if (preg_match(pattern: SearchHelper::FIELD_NAME_PATTERN, subject: $column) !== 1) {
             throw new InvalidArgumentException(
                 message: 'Invalid column name "' . $column . '" for the search. Use column names like "name",'
-                . ' "table.name" or "`table`.`name`".'
+                . ' "table.name" or "`table`.`name`".',
             );
         }
 
@@ -789,8 +776,8 @@ class SearchHelper
                 callback: static fn(string $part): string => str_starts_with(haystack: $part, needle: '`')
                     ? $part
                     : '`' . $part . '`',
-                array: explode(separator: '.', string: $column)
-            )
+                array: explode(separator: '.', string: $column),
+            ),
         );
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -17,10 +18,10 @@ use UnexpectedValueException;
 
 class TextAreaField extends TextualField
 {
-    private(set) int $rows;
-    private(set) int $cols;
+    public private(set) int $rows;
+    public private(set) int $cols;
     /** @var list<string> */
-    private(set) array $cssClassesForRenderer = [];
+    public private(set) array $cssClassesForRenderer = [];
     private ?string $placeholder = null;
     /** @var list<StringRule> */
     private array $lineRules = [];
@@ -31,7 +32,7 @@ class TextAreaField extends TextualField
         ?string $value = null,
         ?HtmlText $requiredError = null,
         int $rows = 4,
-        int $cols = 50
+        int $cols = 50,
     ) {
         $this->rows = $rows;
         $this->cols = $cols;
@@ -41,7 +42,7 @@ class TextAreaField extends TextualField
             $this->changeInitialText(text: $value);
         }
 
-        if (!is_null($requiredError)) {
+        if ($requiredError !== null) {
             $this->addRequiredRule(errorMessage: $requiredError);
         }
     }
@@ -135,7 +136,7 @@ class TextAreaField extends TextualField
         $lines = preg_split(pattern: '/\r\n|\n|\r/', subject: $this->getValueAsString());
         if ($lines === false) {
             throw new UnexpectedValueException(
-                message: 'The value of field ' . $this->name . ' cannot be split into lines.'
+                message: 'The value of field ' . $this->name . ' cannot be split into lines.',
             );
         }
 

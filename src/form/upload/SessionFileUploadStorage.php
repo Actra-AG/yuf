@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -8,12 +9,12 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\upload;
 
-use DirectoryIterator;
-use InvalidArgumentException;
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\form\model\UploadInput;
+use DirectoryIterator;
+use InvalidArgumentException;
 
 /**
  * Keeps the uploaded files in a directory below the temp directory (one directory per pointer) and the list of the
@@ -30,9 +31,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
      * @param string $rootDirectory The directory that contains one subdirectory per pointer (created when needed)
      * @param Clock $clock Decides which directories are expired
      */
-    public function __construct(private string $rootDirectory, private Clock $clock = new SystemClock())
-    {
-    }
+    public function __construct(private string $rootDirectory, private Clock $clock = new SystemClock()) {}
 
     /**
      * The storage below `<temp directory>/<SERVER_NAME>`, as in yuf v3. Characters of the server name that are not
@@ -50,7 +49,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
 
         return new SessionFileUploadStorage(
             rootDirectory: sys_get_temp_dir() . DIRECTORY_SEPARATOR . $directoryName,
-            clock: $clock
+            clock: $clock,
         );
     }
 
@@ -150,7 +149,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
         // The pointer becomes part of a file system path
         if (preg_match(pattern: '/^[a-zA-Z\d_]+$/D', subject: $pointer) !== 1) {
             throw new InvalidArgumentException(
-                message: 'The upload pointer "' . $pointer . '" may only contain letters, digits and underscores.'
+                message: 'The upload pointer "' . $pointer . '" may only contain letters, digits and underscores.',
             );
         }
     }

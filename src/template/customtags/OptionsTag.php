@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -37,7 +38,7 @@ class OptionsTag extends TemplateTag implements TagNode
         $selection = [];
 
         if ($selectedSelector !== null) {
-            $selection = (array)$tplEngine->getDataFromSelector($selectedSelector);
+            $selection = (array) $tplEngine->getDataFromSelector($selectedSelector);
         }
 
         return OptionsTag::renderOptions($options, $selection);
@@ -50,15 +51,15 @@ class OptionsTag extends TemplateTag implements TagNode
         foreach ($options as $key => $value) {
             if (is_array($value) === true) {
                 $html .= '<optgroup label="' . $key . '">' . PHP_EOL . OptionsTag::renderOptions(
-                        $value,
-                        $selection
-                    ) . '</optgroup>' . PHP_EOL;
+                    $value,
+                    $selection,
+                ) . '</optgroup>' . PHP_EOL;
             } else {
                 $attributes = [
                     'option',
                     'value="' . $key . '"',
                 ];
-                if (in_array($key, $selection)) {
+                if (CustomTagsHelper::isSelected(key: $key, selection: $selection)) {
                     $attributes[] = 'selected';
                 }
                 $html .= '<' . implode(separator: ' ', array: $attributes) . '>' . $value . '</option>' . PHP_EOL;

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -93,7 +94,7 @@ final class TableColumnRenderingTest extends TestCase
                 new CallbackColumn(
                     identifier: 'cb',
                     label: 'Callback',
-                    callbackFunction: fn(TableItemModel $tableItemModel): string => '#' . $tableItemModel->renderValue(name: 'ID')
+                    callbackFunction: fn(TableItemModel $tableItemModel): string => '#' . $tableItemModel->renderValue(name: 'ID'),
                 ),
                 '<td>#42</td>',
             ],
@@ -101,7 +102,7 @@ final class TableColumnRenderingTest extends TestCase
                 new CallbackColumn(
                     identifier: 'cb',
                     label: 'Callback',
-                    callbackFunction: fn(TableItemModel $tableItemModel): string => (string)($tableItemModel->getRow()->getInt(column: 'ID') * 2)
+                    callbackFunction: fn(TableItemModel $tableItemModel): string => (string) ($tableItemModel->getRow()->getInt(column: 'ID') * 2),
                 ),
                 '<td>84</td>',
             ],
@@ -124,7 +125,7 @@ final class TableColumnRenderingTest extends TestCase
             '<td class="td-action"><div class="td-action-group">'
             . '<a href="edit/42/?n=&lt;b&gt;Müller &amp; Co&lt;/b&gt;' . "\n" . '&quot;Zürich&quot;" class="edit">Bearbeiten</a>'
             . "\n" . '<a href="delete/42/" class="delete">Löschen</a></div></td>',
-            $actionsColumn->renderCell(tableItemModel: TableColumnRenderingTest::model())
+            $actionsColumn->renderCell(tableItemModel: TableColumnRenderingTest::model()),
         );
     }
 
@@ -135,12 +136,12 @@ final class TableColumnRenderingTest extends TestCase
 
         $this->assertSame(
             '<td class="td-action"></td>',
-            $actionsColumn->renderCell(tableItemModel: TableColumnRenderingTest::model())
+            $actionsColumn->renderCell(tableItemModel: TableColumnRenderingTest::model()),
         );
     }
 
     private static function model(): TableItemModel
     {
-        return new TableItemModel(dataObject: (object)TableColumnRenderingTest::ROW);
+        return new TableItemModel(dataObject: (object) TableColumnRenderingTest::ROW);
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -15,9 +16,7 @@ use actra\yuf\html\HtmlTagAttribute;
 
 class InputFieldRenderer extends FormRenderer
 {
-    public function __construct(private readonly InputField $formField)
-    {
-    }
+    public function __construct(private readonly InputField $formField) {}
 
     public function prepare(): void
     {
@@ -27,44 +26,46 @@ class InputFieldRenderer extends FormRenderer
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'type',
                 value: $formField->inputType->value,
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
-                name: 'name', value: $formField->name, valueIsEncodedForRendering: true
-            )
+                name: 'name',
+                value: $formField->name,
+                valueIsEncodedForRendering: true,
+            ),
         );
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'id',
                 value: $formField->id,
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'value',
                 value: $formField->renderValue(),
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
-        if (!is_null(value: $formField->placeholder)) {
+        if ($formField->placeholder !== null) {
             $inputTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'placeholder',
                     value: $formField->placeholder,
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
         }
-        if (!is_null(value: $formField->autoComplete)) {
+        if ($formField->autoComplete !== null) {
             $inputTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'autocomplete',
                     value: $formField->autoComplete->value,
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
         }
         if ($formField->autoFocus) {
@@ -72,22 +73,22 @@ class InputFieldRenderer extends FormRenderer
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'autofocus',
                     value: null,
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
         }
-        if (!is_null(value: $formField->maxLength)) {
+        if ($formField->maxLength !== null) {
             $inputTag->addHtmlTagAttribute(
                 htmlTagAttribute: new HtmlTagAttribute(
                     name: 'maxlength',
                     value: $formField->maxLength,
-                    valueIsEncodedForRendering: true
-                )
+                    valueIsEncodedForRendering: true,
+                ),
             );
         }
         FormRenderer::addAriaAttributesToHtmlTag(
             formField: $formField,
-            parentHtmlTag: $inputTag
+            parentHtmlTag: $inputTag,
         );
         $this->setHtmlTag(htmlTag: $inputTag);
     }

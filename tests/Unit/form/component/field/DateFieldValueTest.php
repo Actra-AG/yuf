@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -29,7 +30,7 @@ final class DateFieldValueTest extends TestCase
             label: HtmlText::encoded(textContent: 'Date'),
             value: $value,
             invalidError: HtmlText::encoded(textContent: 'Invalid'),
-            requiredError: $requiredError
+            requiredError: $requiredError,
         );
     }
 
@@ -72,7 +73,7 @@ final class DateFieldValueTest extends TestCase
         $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['date' => $input])));
         $this->assertSame(
             $expected . ' 00:00:00',
-            $field->getValueAsDateTimeImmutable()?->format(format: 'Y-m-d H:i:s')
+            $field->getValueAsDateTimeImmutable()?->format(format: 'Y-m-d H:i:s'),
         );
         $this->assertStringContainsString('value="' . $expected . '"', $field->render());
     }

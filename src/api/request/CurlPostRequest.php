@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,15 +20,14 @@ class CurlPostRequest extends AbstractCurlRequest
     {
         parent::__construct(
             requestTargetUrl: $requestTargetUrl,
-            requestTypeSpecificCurlOptions: [CURLOPT_POST => true]
+            requestTypeSpecificCurlOptions: [CURLOPT_POST => true],
         );
     }
 
     public static function prepareWithPostBody(
         string $requestTargetUrl,
-        array  $postData
-    ): CurlPostRequest
-    {
+        array  $postData,
+    ): CurlPostRequest {
         $curlPostRequest = new CurlPostRequest(requestTargetUrl: $requestTargetUrl);
         $curlPostRequest->setPostBody(postData: $postData);
 
@@ -36,9 +36,8 @@ class CurlPostRequest extends AbstractCurlRequest
 
     public static function prepareWithXmlBody(
         string $requestTargetUrl,
-        string $xmlString
-    ): CurlPostRequest
-    {
+        string $xmlString,
+    ): CurlPostRequest {
         $curlPostRequest = new CurlPostRequest(requestTargetUrl: $requestTargetUrl);
         $curlPostRequest->setXmlBody(xmlString: $xmlString);
 
@@ -47,9 +46,8 @@ class CurlPostRequest extends AbstractCurlRequest
 
     public static function prepareWithJsonBody(
         string $requestTargetUrl,
-        string $jsonString
-    ): CurlPostRequest
-    {
+        string $jsonString,
+    ): CurlPostRequest {
         $curlPostRequest = new CurlPostRequest(requestTargetUrl: $requestTargetUrl);
         $curlPostRequest->setJsonBody(jsonString: $jsonString);
 
@@ -58,9 +56,8 @@ class CurlPostRequest extends AbstractCurlRequest
 
     public static function prepareJsonApiRequest(
         string $requestTargetUrl,
-        string $jsonString
-    ): CurlPostRequest
-    {
+        string $jsonString,
+    ): CurlPostRequest {
         $curlPostRequest = new CurlPostRequest(requestTargetUrl: $requestTargetUrl);
         $curlPostRequest->setJsonApiBody(jsonString: $jsonString);
 
@@ -69,9 +66,8 @@ class CurlPostRequest extends AbstractCurlRequest
 
     public static function prepareWithPlainTextBody(
         string $requestTargetUrl,
-        string $plainText
-    ): CurlPostRequest
-    {
+        string $plainText,
+    ): CurlPostRequest {
         $curlPostRequest = new CurlPostRequest(requestTargetUrl: $requestTargetUrl);
         $curlPostRequest->setPlainTextBody(plainText: $plainText);
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -27,8 +28,8 @@ final class AmountParserTest extends TestCase
         yield 'leading zeros' => ['007', 7];
         yield 'only zeros' => ['000', 0];
         yield 'surrounding whitespace' => [" \t\n\r\v\f12 \t\n\r\v\f", 12];
-        yield 'int max' => [(string)PHP_INT_MAX, PHP_INT_MAX];
-        yield 'int min' => [(string)PHP_INT_MIN, PHP_INT_MIN];
+        yield 'int max' => [(string) PHP_INT_MAX, PHP_INT_MAX];
+        yield 'int min' => [(string) PHP_INT_MIN, PHP_INT_MIN];
         yield 'int max with leading zeros' => ['+00' . PHP_INT_MAX, PHP_INT_MAX];
         yield 'int max plus one' => ['9223372036854775808', null];
         yield 'int min minus one' => ['-9223372036854775809', null];

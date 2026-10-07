@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -26,7 +27,7 @@ final class EmailField extends SettableStringInputField
         bool $trueOnDnsError = true,
         ?string $placeholder = null,
         ?AutoCompleteEnum $autoComplete = null,
-        ?int $maxLength = null
+        ?int $maxLength = null,
     ) {
         parent::__construct(
             inputType: InputTypeEnum::EMAIL,
@@ -35,17 +36,17 @@ final class EmailField extends SettableStringInputField
             value: $value,
             placeholder: $placeholder,
             autoComplete: $autoComplete,
-            maxLength: $maxLength
+            maxLength: $maxLength,
         );
-        if (!is_null(value: $requiredError)) {
+        if ($requiredError !== null) {
             $this->addRequiredRule(errorMessage: $requiredError);
         }
         $this->addRule(
             formRule: new ValidEmailAddressRule(
                 errorMessage: $invalidError,
                 dnsCheck: $dnsCheck,
-                trueOnDnsError: $trueOnDnsError
-            )
+                trueOnDnsError: $trueOnDnsError,
+            ),
         );
     }
 

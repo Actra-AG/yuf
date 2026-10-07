@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -32,9 +33,8 @@ final readonly class FormInput
         private array $queryTexts,
         private array $queryKeys,
         private array $uploads,
-        private array $malformedUploads
-    ) {
-    }
+        private array $malformedUploads,
+    ) {}
 
     /**
      * @param array<array-key, mixed> $data Posted (or GET) values; they win over `$files` with the same name
@@ -48,7 +48,7 @@ final readonly class FormInput
         $maps = [];
         $invalid = [];
         foreach ($data + $files as $key => $value) {
-            $name = (string)$key;
+            $name = (string) $key;
             if (is_string(value: $value)) {
                 $texts[$name] = $value;
                 continue;
@@ -68,17 +68,17 @@ final readonly class FormInput
             }
             $upload = FormInput::toUploadList(value: $entry);
             if ($upload === null) {
-                $malformedUploads[(string)$key] = true;
+                $malformedUploads[(string) $key] = true;
                 continue;
             }
-            $uploads[(string)$key] = $upload;
+            $uploads[(string) $key] = $upload;
         }
         $queryTexts = [];
         $queryKeys = [];
         foreach ($query as $key => $value) {
-            $queryKeys[(string)$key] = true;
+            $queryKeys[(string) $key] = true;
             if (is_string(value: $value)) {
-                $queryTexts[(string)$key] = $value;
+                $queryTexts[(string) $key] = $value;
             }
         }
 
@@ -89,7 +89,7 @@ final readonly class FormInput
             queryTexts: $queryTexts,
             queryKeys: $queryKeys,
             uploads: $uploads,
-            malformedUploads: $malformedUploads
+            malformedUploads: $malformedUploads,
         );
     }
 
@@ -115,7 +115,7 @@ final readonly class FormInput
 
         return array_any(
             array: ['name', 'type', 'tmp_name', 'error', 'size'],
-            callback: fn(string $key): bool => array_key_exists(key: $key, array: $value)
+            callback: fn(string $key): bool => array_key_exists(key: $key, array: $value),
         );
     }
 
@@ -137,7 +137,7 @@ final readonly class FormInput
                 tmpName: $value['tmp_name'] ?? null,
                 type: $value['type'] ?? null,
                 error: $value['error'] ?? null,
-                size: $value['size'] ?? null
+                size: $value['size'] ?? null,
             );
 
             return $upload === null ? null : [$upload];
@@ -163,7 +163,7 @@ final readonly class FormInput
                 tmpName: $tmpNames[$key],
                 type: $types[$key],
                 error: $errors[$key],
-                size: $sizes[$key]
+                size: $sizes[$key],
             );
             if ($upload === null) {
                 return null;
@@ -188,7 +188,7 @@ final readonly class FormInput
             tmpName: $tmpName,
             type: trim(string: $type),
             error: $error,
-            size: $size
+            size: $size,
         );
     }
 

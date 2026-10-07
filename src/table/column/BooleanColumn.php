@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -19,7 +20,7 @@ class BooleanColumn extends AbstractTableColumn
     {
         $value = $tableItemModel->getRawValue(name: $this->identifier);
 
-        if (is_null(value: $value)) {
+        if ($value === null) {
             return '';
         }
 

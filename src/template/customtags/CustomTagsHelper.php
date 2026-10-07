@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -17,10 +18,26 @@ use actra\yuf\template\template\TemplateEngine;
 
 class CustomTagsHelper
 {
+    /**
+     * Compares like the value attribute of the rendered option: the key 1 matches the selected value '1' and vice versa.
+     *
+     * @internal
+     */
+    public static function isSelected(int|string $key, array $selection): bool
+    {
+        foreach ($selection as $selectedValue) {
+            if (is_scalar(value: $selectedValue) && (string) $selectedValue === (string) $key) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static function replaceOptionsNode(
         TemplateEngine $templateEngine,
         ElementNode $elementNode,
-        bool $multiple
+        bool $multiple,
     ): void {
         $templateEngine->checkRequiredAttributes($elementNode, ['options', 'checked']);
 
@@ -46,10 +63,10 @@ class CustomTagsHelper
         string $fieldName,
         string $optionsSelector,
         string $checkedSelector,
-        bool $multiple
+        bool $multiple,
     ): string {
         $options = $templateEngine->getDataFromSelector($optionsSelector);
-        $selection = (array)$templateEngine->getDataFromSelector($checkedSelector);
+        $selection = (array) $templateEngine->getDataFromSelector($checkedSelector);
 
         $html = '<ul>';
 
@@ -61,14 +78,14 @@ class CustomTagsHelper
                 'value="' . $key . '"',
                 'name="' . $fieldName . '"',
             ];
-            if (in_array($key, $selection)) {
+            if (CustomTagsHelper::isSelected(key: $key, selection: $selection)) {
                 $inputAttributes[] = 'checked';
             }
             // Create inner "span-label":
             $spanLabelTag = new HtmlTag('span', false, [new HtmlTagAttribute('class', 'label-text', true)]);
             $spanLabelTag->addText(HtmlText::encoded($val));
             $html .= '<li><label><' . implode(separator: ' ', array: $inputAttributes) . '> ' . $spanLabelTag->render(
-                ) . '</label></li>' . PHP_EOL;
+            ) . '</label></li>' . PHP_EOL;
         }
 
         $html .= '</ul>';
@@ -92,8 +109,8 @@ class CustomTagsHelper
             htmlTagAttribute: new HtmlTagAttribute(
                 name: 'type',
                 value: $isRadio ? 'radio' : 'checkbox',
-                valueIsEncodedForRendering: true
-            )
+                valueIsEncodedForRendering: true,
+            ),
         );
     }
 }

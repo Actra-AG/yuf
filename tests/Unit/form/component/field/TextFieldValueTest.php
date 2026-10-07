@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -25,7 +26,7 @@ final class TextFieldValueTest extends TestCase
         return new TextField(
             name: 'field',
             label: HtmlText::encoded(textContent: 'Label'),
-            value: $value
+            value: $value,
         );
     }
 
@@ -103,7 +104,7 @@ final class TextFieldValueTest extends TestCase
         $field = new TextField(
             name: 'field',
             label: HtmlText::encoded(textContent: 'Label'),
-            requiredError: HtmlText::encoded(textContent: 'Required')
+            requiredError: HtmlText::encoded(textContent: 'Required'),
         );
 
         $field->validate(input: FormInput::fromArray(data: ['field' => ['x']]));
@@ -116,7 +117,7 @@ final class TextFieldValueTest extends TestCase
         $field = new TextField(
             name: 'field',
             label: HtmlText::encoded(textContent: 'Label'),
-            requiredError: HtmlText::encoded(textContent: 'Required')
+            requiredError: HtmlText::encoded(textContent: 'Required'),
         );
 
         $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['field' => '  '])));
@@ -128,7 +129,7 @@ final class TextFieldValueTest extends TestCase
         $field = new TextField(
             name: 'field',
             label: HtmlText::encoded(textContent: 'Label'),
-            requiredError: HtmlText::encoded(textContent: 'Required')
+            requiredError: HtmlText::encoded(textContent: 'Required'),
         );
         $field->validate(input: FormInput::fromArray(data: ['field' => ['x']]));
 
@@ -146,7 +147,7 @@ final class TextFieldValueTest extends TestCase
 
         $this->assertSame(
             'Die ungültige Eingabe wurde ignoriert.',
-            $field->errorCollection->getFirstError()->render()
+            $field->errorCollection->getFirstError()->render(),
         );
     }
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -52,7 +53,7 @@ class ForgroupTag extends TemplateTag implements TagNode
         $replNode->content .= ' if($tmpGrpVal !== null) {' . PHP_EOL;
         $replNode->content .= '$this->addData(\'' . $this->var . '\', $tmpGrpVal, true); ?>';
         $replNode->content .= ForgroupTag::prepareHtml($elementNode->getInnerHtml());
-        $replNode->content .= "<?php } ?>";
+        $replNode->content .= '<?php } ?>';
 
         $elementNode->parentNode->replaceNode($elementNode, $replNode);
     }
@@ -62,7 +63,7 @@ class ForgroupTag extends TemplateTag implements TagNode
         $newHtml = preg_replace_callback(
             pattern: '/{' . $this->var . '\.(.*?)}/',
             callback: [$this, 'replace'],
-            subject: $html
+            subject: $html,
         );
 
         return preg_replace_callback('/{(\w+?)(?:\.([\w|.]+))?}/', [$this, 'replaceForeign'], $newHtml);

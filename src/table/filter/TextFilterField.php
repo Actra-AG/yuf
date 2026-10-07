@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -23,19 +24,19 @@ class TextFilterField extends AbstractTableFilterField
         string $filterFieldIdentifier,
         HtmlText $label,
         private readonly string $dataTableColumnReference,
-        bool $highlightFieldIfSelected = false
+        bool $highlightFieldIfSelected = false,
     ) {
         parent::__construct(
             parentFilter: $parentFilter,
             filterFieldIdentifier: $filterFieldIdentifier,
             label: $label,
-            highlightFieldIfSelected: $highlightFieldIfSelected
+            highlightFieldIfSelected: $highlightFieldIfSelected,
         );
     }
 
     public function init(): void
     {
-        $this->value = (string)$this->getFromSession(index: $this->identifier);
+        $this->value = (string) $this->getFromSession(index: $this->identifier);
     }
 
     public function reset(): void
@@ -45,7 +46,7 @@ class TextFilterField extends AbstractTableFilterField
 
     public function checkInput(): void
     {
-        $this->setValue(value: (string)HttpRequest::getInputString(keyName: $this->identifier));
+        $this->setValue(value: (string) HttpRequest::getInputString(keyName: $this->identifier));
     }
 
     public function getWhereCondition(): DbQueryData
@@ -54,7 +55,7 @@ class TextFilterField extends AbstractTableFilterField
             preg_replace(
                 pattern: '!\s+!',
                 replacement: ' ',
-                subject: $this->dataTableColumnReference
+                subject: $this->dataTableColumnReference,
             ) => $this->value,
         ]);
     }
@@ -81,11 +82,11 @@ class TextFilterField extends AbstractTableFilterField
         }
 
         return '<input type="text" class="' . implode(
-                separator: ' ',
-                array: $classes
-            ) . '" name="' . $this->identifier . '" id="filter-' . $this->identifier . '" value="' . HtmlEncoder::encode(
-                value: $this->value
-            ) . '">';
+            separator: ' ',
+            array: $classes,
+        ) . '" name="' . $this->identifier . '" id="filter-' . $this->identifier . '" value="' . HtmlEncoder::encode(
+            value: $this->value,
+        ) . '">';
     }
 
     public function isSelected(): bool

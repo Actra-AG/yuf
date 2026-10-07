@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -17,9 +18,9 @@ class DbQueryLogItem
     private ?float $end = null;
 
     public function __construct(
-        private(set) readonly string $sqlQuery,
-        private(set) readonly array $params,
-        private readonly Clock $clock = new SystemClock()
+        public private(set) readonly string $sqlQuery,
+        public private(set) readonly array $params,
+        private readonly Clock $clock = new SystemClock(),
     ) {
         $this->start = $this->nowAsFloat();
     }
@@ -36,6 +37,6 @@ class DbQueryLogItem
 
     private function nowAsFloat(): float
     {
-        return (float)$this->clock->now()->format(format: 'U.u');
+        return (float) $this->clock->now()->format(format: 'U.u');
     }
 }

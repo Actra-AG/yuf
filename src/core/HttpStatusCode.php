@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -80,7 +81,7 @@ enum HttpStatusCode: int
     {
         $statusHeader = 'HTTP/1.1 ' . $this->value;
         $statusCodeDescription = $this->getStatusCodeDescription();
-        if (!is_null(value: $statusCodeDescription)) {
+        if ($statusCodeDescription !== null) {
             $statusHeader .= ' ' . $statusCodeDescription;
         }
 
@@ -114,7 +115,7 @@ enum HttpStatusCode: int
             HttpStatusCode::HTTP_SERVICE_UNAVAILABLE => 'Service Unavailable',
             HttpStatusCode::HTTP_GATEWAY_TIME_OUT => 'Gateway Time-out',
             HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED => 'HTTP Version not supported',
-            default => null
+            default => null,
         };
     }
 }

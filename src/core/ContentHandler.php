@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -18,20 +19,20 @@ class ContentHandler
     private static ?ContentHandler $registeredInstance = null;
 
     public HttpStatusCode $httpStatusCode = HttpStatusCode::HTTP_OK;
-    private(set) bool $suppressCspHeader = false;
+    public private(set) bool $suppressCspHeader = false;
     private string $content = '';
     private ContentType $contentType;
 
     private function __construct()
     {
-        if (!is_null(value: ContentHandler::$registeredInstance)) {
+        if (ContentHandler::$registeredInstance !== null) {
             throw new LogicException(message: 'ContentHandler is already registered.');
         }
         ContentHandler::$registeredInstance = $this;
         $requestHandler = RequestHandler::get();
         $route = $requestHandler->route;
         $this->contentType = $route->defaultContentType;
-        if (!is_null(value: $route->viewCallback)) {
+        if ($route->viewCallback !== null) {
             $this->setContent(contentString: call_user_func(callback: $route->viewCallback));
             return;
         }
@@ -76,10 +77,10 @@ class ContentHandler
         }
         if (!is_subclass_of(
             object_or_class: $phpClassName,
-            class: BaseView::class
+            class: BaseView::class,
         )) {
             throw new Exception(
-                message: 'The class ' . $phpClassName . ' must extend ' . BaseView::class . '.'
+                message: 'The class ' . $phpClassName . ' must extend ' . BaseView::class . '.',
             );
         }
 

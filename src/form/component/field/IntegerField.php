@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -40,7 +41,7 @@ class IntegerField extends ParsedInputField
         ?HtmlText $requiredError = null,
         ?string $placeholder = null,
         ?AutoCompleteEnum $autoComplete = null,
-        ?int $maxLength = null
+        ?int $maxLength = null,
     ) {
         parent::__construct(
             inputType: InputTypeEnum::TEXT,
@@ -50,17 +51,17 @@ class IntegerField extends ParsedInputField
             requiredError: $requiredError,
             placeholder: $placeholder,
             autoComplete: $autoComplete,
-            maxLength: $maxLength
+            maxLength: $maxLength,
         );
         if ($initialValue !== null) {
-            $this->changeInitialText(text: (string)$initialValue);
+            $this->changeInitialText(text: (string) $initialValue);
         }
     }
 
     protected function accept(string $text): void
     {
         $this->value = AmountParser::toInt(value: $text);
-        parent::accept(text: $this->value === null ? $text : (string)$this->value);
+        parent::accept(text: $this->value === null ? $text : (string) $this->value);
     }
 
     protected function hasParsedValue(): bool
@@ -116,11 +117,10 @@ class IntegerField extends ParsedInputField
 
     /**
      * Changes the current value only, the initial value stays (so `valueHasChanged()` compares with it).
-     *
      */
     public function setValue(?int $value): void
     {
-        $this->changeText(text: $value === null ? '' : (string)$value);
+        $this->changeText(text: $value === null ? '' : (string) $value);
     }
 
     /**
@@ -130,6 +130,6 @@ class IntegerField extends ParsedInputField
      */
     protected function setInitialValue(?int $value): void
     {
-        $this->changeInitialText(text: $value === null ? '' : (string)$value);
+        $this->changeInitialText(text: $value === null ? '' : (string) $value);
     }
 }

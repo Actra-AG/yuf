@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -28,7 +29,7 @@ final class SearchHelperBooleanQueryTest extends TestCase
         string $expectedQuery,
         array $expectedParameters,
         string $queryText,
-        string $fieldNames = 'name'
+        string $fieldNames = 'name',
     ): void {
         $data = SearchHelper::createBooleanQuery(spaceSeparatedFieldNames: $fieldNames, queryText: $queryText);
 
@@ -47,7 +48,7 @@ final class SearchHelperBooleanQueryTest extends TestCase
             '((a.name' . SearchHelperBooleanQueryTest::LIKE . ' OR b.city' . SearchHelperBooleanQueryTest::LIKE . '))',
             ['%haas%', '%haas%'],
             'haas',
-            'a.name b.city'
+            'a.name b.city',
         );
     }
 
@@ -56,7 +57,7 @@ final class SearchHelperBooleanQueryTest extends TestCase
         $this->assertBooleanQuery(
             '((name' . SearchHelperBooleanQueryTest::LIKE . ') OR (name' . SearchHelperBooleanQueryTest::LIKE . '))',
             ['%haas%', '%kap%'],
-            'haas  kap'
+            'haas  kap',
         );
     }
 
@@ -101,7 +102,7 @@ final class SearchHelperBooleanQueryTest extends TestCase
         $this->assertBooleanQuery(
             '(' . $word . ' OR ' . $word . ' OR ' . $word . ' OR ' . $word . ')',
             ['%foo%', '%haas kap%', '%and%', '%a -b%'],
-            'foo "Haas Kap" "and" "a -b"'
+            'foo "Haas Kap" "and" "a -b"',
         );
     }
 
@@ -179,13 +180,13 @@ final class SearchHelperBooleanQueryTest extends TestCase
     {
         $data = SearchHelper::createBooleanQuery(
             spaceSeparatedFieldNames: '2011_module.titel `order` db.t.c $col',
-            queryText: 'haas'
+            queryText: 'haas',
         );
 
         $this->assertSame(
             "((2011_module.titel LIKE ? ESCAPE '!' OR `order` LIKE ? ESCAPE '!' OR db.t.c LIKE ? ESCAPE '!'"
             . " OR \$col LIKE ? ESCAPE '!'))",
-            $data->query
+            $data->query,
         );
     }
 
@@ -222,15 +223,15 @@ final class SearchHelperBooleanQueryTest extends TestCase
 
                 return " LIKE '" . $parameter . "'";
             },
-            subject: $data->query
+            subject: $data->query,
         );
 
         $this->assertSame(
             SearchHelper::getInstance(instanceName: 'test')->getBooleanQuery(
                 spaceSeparatedFieldNames: 'a.name b.city',
-                query_text: $queryText
+                query_text: $queryText,
             ),
-            $inlinedQuery
+            $inlinedQuery,
         );
     }
 
@@ -244,9 +245,9 @@ final class SearchHelperBooleanQueryTest extends TestCase
         $this->assertEquals(
             new DbQueryData(
                 query: "SELECT id FROM item WHERE((name LIKE ? ESCAPE '!') OR(name LIKE ? ESCAPE '!')) LIMIT ?, ?",
-                params: ['%?haas%', '%kap%', 0, 10]
+                params: ['%?haas%', '%kap%', 0, 10],
             ),
-            $dbQuery->getDbQueryData(offset: 0, rowCount: 10)
+            $dbQuery->getDbQueryData(offset: 0, rowCount: 10),
         );
     }
 
@@ -280,7 +281,7 @@ final class SearchHelperBooleanQueryTest extends TestCase
         $pdo->exec(statement: 'CREATE TABLE item (id INTEGER PRIMARY KEY, name TEXT NOT NULL)');
         $pdo->exec(
             statement: "INSERT INTO item (id, name) VALUES (1, '?Haas Kapelle'), (2, 'Haas'), (3, '50% Rabatt'),"
-            . " (4, 'a_b'), (5, '500'), (6, 'wow!'), (7, 'C:\\Temp'), (8, 'axb'), (9, 'c:temp')"
+            . " (4, 'a_b'), (5, '500'), (6, 'wow!'), (7, 'C:\\Temp'), (8, 'axb'), (9, 'c:temp')",
         );
         $dbQuery = DbQuery::createFromSqlQuery(query: 'SELECT id FROM item');
         $dbQuery->addOrderPart(column: 'id');

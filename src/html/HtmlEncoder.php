@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -54,19 +55,19 @@ class HtmlEncoder
         return $object;
     }
 
-    public static function encodeKeepQuotes(null|string|float|int|bool $value): string
+    public static function encodeKeepQuotes(string|float|int|bool|null $value): string
     {
-        return is_null(value: $value) ? '' : htmlspecialchars(
-            string: (string)$value,
-            flags: ENT_NOQUOTES
+        return $value === null ? '' : htmlspecialchars(
+            string: (string) $value,
+            flags: ENT_NOQUOTES,
         );
     }
 
-    public static function encode(null|string|float|int|bool $value): string
+    public static function encode(string|float|int|bool|null $value): string
     {
-        return is_null(value: $value) ? '' : htmlspecialchars(
-            string: (string)$value,
-            flags: ENT_QUOTES
+        return $value === null ? '' : htmlspecialchars(
+            string: (string) $value,
+            flags: ENT_QUOTES,
         );
     }
 }

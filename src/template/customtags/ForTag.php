@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -43,7 +44,7 @@ class ForTag extends TemplateTag implements TagNode
 
         $dataKey = $dataKeyAttr;
         $asVar = $asVarAttr;
-        $step = ($stepAttr->value === null) ? 1 : intval($stepAttr->value);
+        $step = ($stepAttr->value === null) ? 1 : (int) ($stepAttr->value);
 
         $firstClassAttr = $elementNode->getAttribute('classfirst');
         $firstClass = $firstClassAttr->value;
@@ -152,12 +153,12 @@ class ForTag extends TemplateTag implements TagNode
             $t1 = preg_replace_callback(
                 pattern: $pattern1,
                 callback: [$this, 'replaceVar'],
-                subject: $node->content
+                subject: $node->content,
             );
             $node->content = preg_replace_callback(
                 pattern: $pattern2,
                 callback: [$this, 'replaceEcho'],
-                subject: $t1
+                subject: $t1,
             );
 
             if ($node->nodeType !== HtmlNode::ELEMENT_NODE) {
@@ -168,7 +169,7 @@ class ForTag extends TemplateTag implements TagNode
                 $attr->value = preg_replace_callback(
                     pattern: $pattern2,
                     callback: [$this, 'replaceEcho'],
-                    subject: $attr->value
+                    subject: $attr->value,
                 );
             }
 
@@ -176,7 +177,7 @@ class ForTag extends TemplateTag implements TagNode
                 $node->tagExtension = preg_replace_callback(
                     pattern: $pattern1,
                     callback: [$this, 'replaceVar'],
-                    subject: $node->tagExtension
+                    subject: $node->tagExtension,
                 );
             }
 
