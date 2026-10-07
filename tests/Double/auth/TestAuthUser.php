@@ -25,7 +25,7 @@ final class TestAuthUser extends AuthUser
     public static function create(array $accessRights, bool $isActive = true): TestAuthUser
     {
         return new TestAuthUser(
-            ID: 1,
+            id: 1,
             isActive: $isActive,
             wrongPasswordAttempts: 0,
             accessRightCollection: AccessRightCollection::createFromStringArray(input: $accessRights),

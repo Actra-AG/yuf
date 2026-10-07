@@ -15,18 +15,18 @@ use UnexpectedValueException;
 class AuthSession
 {
     private const string SESSION_KEY = 'auth_userSession';
-    private const string isLoggedInIndicator = 'isLoggedIn';
-    private const string authSessionIdIndicator = 'authSessionID';
+    private const string IS_LOGGED_IN_INDICATOR = 'isLoggedIn';
+    private const string AUTH_SESSION_ID_INDICATOR = 'authSessionId';
 
-    final public static function logIn(int $authSessionID): void
+    final public static function logIn(int $authSessionId): void
     {
         AuthSession::setIsLoggedIn(isLoggedIn: true);
-        AuthSession::setAuthSessionID(authSessionID: $authSessionID);
+        AuthSession::setAuthSessionId(authSessionId: $authSessionId);
     }
 
     private static function setIsLoggedIn(bool $isLoggedIn): void
     {
-        AuthSession::saveToSession(key: AuthSession::isLoggedInIndicator, value: $isLoggedIn);
+        AuthSession::saveToSession(key: AuthSession::IS_LOGGED_IN_INDICATOR, value: $isLoggedIn);
     }
 
     private static function saveToSession(string $key, bool|int $value): void
@@ -46,9 +46,9 @@ class AuthSession
         return is_array(value: $authSessionData) ? $authSessionData : [];
     }
 
-    private static function setAuthSessionID(int $authSessionID): void
+    private static function setAuthSessionId(int $authSessionId): void
     {
-        AuthSession::saveToSession(key: AuthSession::authSessionIdIndicator, value: $authSessionID);
+        AuthSession::saveToSession(key: AuthSession::AUTH_SESSION_ID_INDICATOR, value: $authSessionId);
     }
 
     /**
@@ -65,31 +65,40 @@ class AuthSession
 
     final public static function isLoggedIn(): bool
     {
-        $isLoggedIn = AuthSession::readSessionData()[AuthSession::isLoggedInIndicator] ?? null;
+        $isLoggedIn = AuthSession::readSessionData()[AuthSession::IS_LOGGED_IN_INDICATOR] ?? null;
         if (!is_bool(value: $isLoggedIn)) {
             AuthSession::setIsLoggedIn(isLoggedIn: false);
 
             return false;
         }
+        if (!$isLoggedIn) {
+            return false;
+        }
+        // A session of yuf before v4.16.0 stored the ID under "authSessionID": such a user has to log in again
+        if (!is_int(value: AuthSession::readSessionData()[AuthSession::AUTH_SESSION_ID_INDICATOR] ?? null)) {
+            AuthSession::resetSession();
 
-        return $isLoggedIn;
+            return false;
+        }
+
+        return true;
     }
 
     private static function resetSession(): void
     {
         AbstractSessionHandler::clearUserData();
         AuthSession::setIsLoggedIn(isLoggedIn: false);
-        AuthSession::setAuthSessionID(authSessionID: 0);
-        AbstractSessionHandler::getSessionHandler()->regenerateID();
+        AuthSession::setAuthSessionId(authSessionId: 0);
+        AbstractSessionHandler::getSessionHandler()->regenerateId();
     }
 
-    final public static function getAuthSessionID(): int
+    final public static function getAuthSessionId(): int
     {
-        $authSessionID = AuthSession::readSessionData()[AuthSession::authSessionIdIndicator] ?? null;
-        if (!is_int(value: $authSessionID)) {
+        $authSessionId = AuthSession::readSessionData()[AuthSession::AUTH_SESSION_ID_INDICATOR] ?? null;
+        if (!is_int(value: $authSessionId)) {
             throw new UnexpectedValueException(message: 'The session contains no auth session ID.');
         }
 
-        return $authSessionID;
+        return $authSessionId;
     }
 }

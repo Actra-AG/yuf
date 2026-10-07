@@ -17,7 +17,7 @@ use LogicException;
 abstract class Authenticator
 {
     private static ?Authenticator $instance = null;
-    public protected(set) AuthResult $authResult = AuthResult::UNDEFINED;
+    public protected(set) AuthResultEnum $authResult = AuthResultEnum::UNDEFINED;
 
     protected function __construct(private readonly int $maxAllowedWrongPasswordAttempts)
     {
@@ -30,31 +30,31 @@ abstract class Authenticator
     public function passwordLogin(string $userName, string $inputPassword): bool
     {
         return $this->doLogin(
-            authMethod: AuthMethod::PASSWORD,
+            authMethod: AuthMethodEnum::PASSWORD,
             userName: $userName,
             passwordToCheck: $inputPassword,
         );
     }
 
     protected function doLogin(
-        AuthMethod $authMethod,
+        AuthMethodEnum $authMethod,
         string $userName,
         ?string $passwordToCheck,
     ): bool {
-        if ($this->authResult !== AuthResult::UNDEFINED) {
+        if ($this->authResult !== AuthResultEnum::UNDEFINED) {
             throw new LogicException(message: 'It is not allowed to execute this method multiple times.');
         }
         if (AuthSession::isLoggedIn()) {
             throw new LogicException(message: 'It is not allowed to log in, if user is already logged in.');
         }
-        $sessionID = AbstractSessionHandler::getSessionHandler()->getID();
+        $sessionId = AbstractSessionHandler::getSessionHandler()->getId();
         $ipAddress = HttpRequest::getRemoteAddress();
         $authUser = $this->createAuthUserByUserName(userName: $userName);
         if ($authUser === null) {
-            $this->authResult = AuthResult::ERROR_UNKNOWN_USER_NAME;
+            $this->authResult = AuthResultEnum::ERROR_UNKNOWN_USER_NAME;
             $this->logAuthResult(
-                userID: null,
-                sessionID: $sessionID,
+                userId: null,
+                sessionId: $sessionId,
                 ip: $ipAddress,
                 userName: $userName,
                 authResult: $this->authResult,
@@ -62,17 +62,17 @@ abstract class Authenticator
 
             return false;
         }
-        $userID = $authUser->ID;
+        $userId = $authUser->id;
         if ($authUser->ipWhitelist !== []
             && !IpValidator::isInWhitelist(
                 whiteList: $authUser->ipWhitelist,
                 ipAddressToCheck: $ipAddress,
             )
         ) {
-            $this->authResult = AuthResult::ERROR_IP_NOT_ALLOWED;
+            $this->authResult = AuthResultEnum::ERROR_IP_NOT_ALLOWED;
             $this->logAuthResult(
-                userID: $userID,
-                sessionID: $sessionID,
+                userId: $userId,
+                sessionId: $sessionId,
                 ip: $ipAddress,
                 userName: $userName,
                 authResult: $this->authResult,
@@ -81,12 +81,12 @@ abstract class Authenticator
             return false;
         }
         if (!$this->checkLoginCredentials(authUser: $authUser)) {
-            if ($this->authResult === AuthResult::UNDEFINED) {
+            if ($this->authResult === AuthResultEnum::UNDEFINED) {
                 throw new LogicException(message: 'Undefined authResult');
             }
             $this->logAuthResult(
-                userID: $userID,
-                sessionID: $sessionID,
+                userId: $userId,
+                sessionId: $sessionId,
                 ip: $ipAddress,
                 userName: $userName,
                 authResult: $this->authResult,
@@ -95,10 +95,10 @@ abstract class Authenticator
             return false;
         }
         if (!$authUser->isActive) {
-            $this->authResult = AuthResult::ERROR_INACTIVE;
+            $this->authResult = AuthResultEnum::ERROR_INACTIVE;
             $this->logAuthResult(
-                userID: $userID,
-                sessionID: $sessionID,
+                userId: $userId,
+                sessionId: $sessionId,
                 ip: $ipAddress,
                 userName: $userName,
                 authResult: $this->authResult,
@@ -107,10 +107,10 @@ abstract class Authenticator
             return false;
         }
         if ($authUser->wrongPasswordAttempts >= $this->maxAllowedWrongPasswordAttempts) {
-            $this->authResult = AuthResult::ERROR_OUT_TRIED;
+            $this->authResult = AuthResultEnum::ERROR_OUT_TRIED;
             $this->logAuthResult(
-                userID: $userID,
-                sessionID: $sessionID,
+                userId: $userId,
+                sessionId: $sessionId,
                 ip: $ipAddress,
                 userName: $userName,
                 authResult: $this->authResult,
@@ -125,10 +125,10 @@ abstract class Authenticator
                 ),
             )
             ) {
-                $this->authResult = AuthResult::ERROR_NO_PASSWORD_LOGIN_ACTIVE;
+                $this->authResult = AuthResultEnum::ERROR_NO_PASSWORD_LOGIN_ACTIVE;
                 $this->logAuthResult(
-                    userID: $userID,
-                    sessionID: $sessionID,
+                    userId: $userId,
+                    sessionId: $sessionId,
                     ip: $ipAddress,
                     userName: $userName,
                     authResult: $this->authResult,
@@ -138,10 +138,10 @@ abstract class Authenticator
             }
             if (!$authUser->password->isValid(rawPassword: $passwordToCheck)) {
                 $authUser->increaseWrongPasswordAttempts();
-                $this->authResult = AuthResult::ERROR_WRONG_PASSWORD;
+                $this->authResult = AuthResultEnum::ERROR_WRONG_PASSWORD;
                 $this->logAuthResult(
-                    userID: $userID,
-                    sessionID: $sessionID,
+                    userId: $userId,
+                    sessionId: $sessionId,
                     ip: $ipAddress,
                     userName: $userName,
                     authResult: $this->authResult,
@@ -152,13 +152,13 @@ abstract class Authenticator
         }
         $this->authResult = $authMethod->getSuccessAuthResult();
         $this->logAuthResult(
-            userID: $userID,
-            sessionID: $sessionID,
+            userId: $userId,
+            sessionId: $sessionId,
             ip: $ipAddress,
             userName: $userName,
             authResult: $this->authResult,
         );
-        AuthSession::logIn(authSessionID: $authUser->confirmSuccessfulLogin());
+        AuthSession::logIn(authSessionId: $authUser->confirmSuccessfulLogin());
 
         return true;
     }
@@ -166,17 +166,17 @@ abstract class Authenticator
     abstract protected function createAuthUserByUserName(string $userName): ?AuthUser;
 
     abstract protected function logAuthResult(
-        ?int $userID,
-        string $sessionID,
+        ?int $userId,
+        string $sessionId,
         string $ip,
         string $userName,
-        AuthResult $authResult,
+        AuthResultEnum $authResult,
     ): void;
 
     abstract protected function checkLoginCredentials(AuthUser $authUser): bool;
 
     protected function authWebTokenLogin(
-        AuthMethod $authMethod,
+        AuthMethodEnum $authMethod,
         AuthWebToken $authWebToken,
     ): bool {
         return $this->doLogin(

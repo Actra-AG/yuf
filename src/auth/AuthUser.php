@@ -20,7 +20,7 @@ abstract class AuthUser
      *     `IpValidator::isInWhitelist()`), empty for all
      */
     public function __construct(
-        public readonly int $ID,
+        public readonly int $id,
         public readonly bool $isActive,
         public private(set) int $wrongPasswordAttempts,
         private readonly AccessRightCollection $accessRightCollection,

@@ -4,6 +4,60 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.16.0] – 2026-10-08
+
+### ⚠️ Auth and session names follow the coding standard
+
+Acronyms are written like words (`Id`, not `ID`) and enums end with `Enum`. The old names are removed.
+
+| Before                                                       | After                                                        |
+|:-------------------------------------------------------------|:-------------------------------------------------------------|
+| `actra\yuf\auth\AuthMethod`                                  | `actra\yuf\auth\AuthMethodEnum`                              |
+| `actra\yuf\auth\AuthResult`                                  | `actra\yuf\auth\AuthResultEnum`                              |
+| `AuthUser::__construct(ID: …)`, `AuthUser::$ID`               | `AuthUser::__construct(id: …)`, `AuthUser::$id`               |
+| `Authenticator::logAuthResult(userID: …, sessionID: …)`       | `Authenticator::logAuthResult(userId: …, sessionId: …)`       |
+| `AuthSession::getAuthSessionID()`                            | `AuthSession::getAuthSessionId()`                            |
+| `AuthSession::logIn(authSessionID: …)`                       | `AuthSession::logIn(authSessionId: …)`                       |
+| `AbstractSessionHandler::getID()`, `regenerateID()`          | `AbstractSessionHandler::getId()`, `regenerateId()`          |
+| `MicrosoftAuthenticator`, `MicrosoftIdToken`: `tenantID:`, `clientID:` | `tenantId:`, `clientId:`                           |
+
+The enum cases are unchanged. `AuthSession` stores the auth session ID under the session key `authSessionId` (was
+`authSessionID`). Users who are logged in when you deploy this version are logged out once
+(`AuthSession::isLoggedIn()` returns `false` for a session without auth session ID) and have to log in again.
+
+yuf calls `logAuthResult()` with named arguments, so an override with the old argument names fails with "Unknown named
+parameter". Rename the arguments of the override:
+
+```php
+// Before
+public function __construct(int $userId, …)
+{
+    parent::__construct(ID: $userId, …);
+}
+
+protected function logAuthResult(?int $userID, string $sessionID, string $ip, string $userName, AuthResult $authResult): void
+
+$userId = $authUser->ID;
+$authSessionId = AuthSession::getAuthSessionID();
+AuthSession::logIn(authSessionID: $authSessionId);
+$sessionId = AbstractSessionHandler::getSessionHandler()->getID();
+
+// After
+public function __construct(int $userId, …)
+{
+    parent::__construct(id: $userId, …);
+}
+
+protected function logAuthResult(?int $userId, string $sessionId, string $ip, string $userName, AuthResultEnum $authResult): void
+
+$userId = $authUser->id;
+$authSessionId = AuthSession::getAuthSessionId();
+AuthSession::logIn(authSessionId: $authSessionId);
+$sessionId = AbstractSessionHandler::getSessionHandler()->getId();
+```
+
+---
+
 ## [v4.15.0] – 2026-10-08
 
 ### ⚠️ Views get a `ViewContext`

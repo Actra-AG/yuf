@@ -18,11 +18,11 @@ use Throwable;
 
 abstract class MicrosoftAuthenticator extends Authenticator
 {
-    private const string AUTHORIZE_PATH = 'https://login.microsoftonline.com/{tenantID}/oauth2/v2.0/' . 'authorize';
+    private const string AUTHORIZE_PATH = 'https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/' . 'authorize';
 
     protected function redirectToMicrosoftLogin(
-        string $tenantID,
-        string $clientID,
+        string $tenantId,
+        string $clientId,
         string $redirectUri,
         string $ssoNonce,
     ): void {
@@ -33,13 +33,13 @@ abstract class MicrosoftAuthenticator extends Authenticator
         // See https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-protocols-oidc
         HttpResponse::redirectAndExit(
             relativeOrAbsoluteUri: str_replace(
-                search: '{tenantID}',
-                replace: $tenantID,
+                search: '{tenantId}',
+                replace: $tenantId,
                 subject: MicrosoftAuthenticator::AUTHORIZE_PATH,
             ) . '?' . implode(
                 separator: '&',
                 array: [
-                    'client_id=' . $clientID,
+                    'client_id=' . $clientId,
                     'response_type=id_token',
                     'redirect_uri=' . $redirectUri,
                     'response_mode=form_post',
@@ -51,27 +51,27 @@ abstract class MicrosoftAuthenticator extends Authenticator
     }
 
     protected function microsoftIdTokenLogin(
-        string $tenantID,
-        string $clientID,
+        string $tenantId,
+        string $clientId,
         string $ssoNonce,
         string $microsoftIdToken,
     ): bool {
         try {
             $authWebToken = new MicrosoftIdToken(
-                tenantID: $tenantID,
-                clientID: $clientID,
+                tenantId: $tenantId,
+                clientId: $clientId,
                 ssoNonce: $ssoNonce,
                 jwtString: $microsoftIdToken,
             );
         } catch (Throwable $throwable) {
             $this->logException(throwable: $throwable, ssoNonce: $ssoNonce, inputIdTokenString: $microsoftIdToken);
-            $this->authResult = AuthResult::FAILED_SSO_LOGIN;
+            $this->authResult = AuthResultEnum::FAILED_SSO_LOGIN;
 
             return false;
         }
 
         return $this->authWebTokenLogin(
-            authMethod: AuthMethod::MICROSOFT,
+            authMethod: AuthMethodEnum::MICROSOFT,
             authWebToken: $authWebToken,
         );
     }

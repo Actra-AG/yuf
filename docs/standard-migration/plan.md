@@ -100,7 +100,7 @@ What stays static for now, and why:
 Not API, renamed in the step of their area: private methods and variables (`readSessionID()`, `$requestedSessionID`,
 `setCSSActive()`, `getMailMIME()`, `encodeQP()`, `base64EncodeWrapMB()`, `sendCommandEHLO()`, `sendCommandSTARTTLS()`,
 `$errorsHTML`, `$linkHTML`, `$tagNParts`) and the private constant `AuthSession::authSessionIdIndicator`. The session
-key `'authSessionID'` is stored data: keep its value (renaming it logs out every user).
+key `'authSessionID'` becomes `'authSessionId'` in step 5 (logged-in users have to log in again).
 
 ### 1.3 Other names that break `naming.md`
 
@@ -408,15 +408,15 @@ Changes (all ⚠️):
 
 - `AuthUser::$ID` → `$id` (constructor argument and property).
 - `Authenticator::logAuthResult(?int $userId, string $sessionId, string $ip, …)`.
-- `AuthSession::getAuthSessionId()`, `AuthSession::logIn(authSessionId:)`; the session key `'authSessionID'` keeps its
-  value.
+- `AuthSession::getAuthSessionId()`, `AuthSession::logIn(authSessionId:)`; the session key `'authSessionID'` becomes
+  `'authSessionId'`, and a logged-in session without it is logged out.
 - `AbstractSessionHandler::getId()`, `regenerateId()`.
 - `MicrosoftAuthenticator` and `MicrosoftIdToken`: `tenantId:`, `clientId:`.
 - Enums `AuthMethod` → `AuthMethodEnum`, `AuthResult` → `AuthResultEnum` (cases unchanged).
 - Private names of the area (`readSessionId()`, `$requestedSessionId`, `authSessionIdIndicator` →
   `AUTH_SESSION_ID_INDICATOR`).
 - Tests: existing `AuthSessionTest`, `AbstractSessionHandlerTest`, `AuthWebToken`/`MicrosoftIdToken` tests adapted; a
-  test that the session key is still `'authSessionID'` (characterization first).
+  characterization test of the stored session data first, then a test that an old session is logged out.
 - `UPGRADE.md`: a table of the renames plus a before/after example for the `logAuthResult()` override and the
   `AuthUser` constructor (an override with the old argument names fails, because yuf calls it with named arguments).
 - `example/`: no change.
@@ -534,3 +534,15 @@ Smaller releases, each for one area:
   `RequestHandler::get()`), `BaseView::getHtmlDocument()` / `getJsonRequestBody()`, present required input parameters
   (`HttpRequest` caches `$_GET`/`$_POST` statically). `example/` checked in the browser (`/`, `/index.html` 200,
   `nope.html` 404).
+
+### Step 5 (v4.16.0) – done
+
+- `AuthMethodEnum`, `AuthResultEnum`, `AuthUser::$id`, `logAuthResult(userId:, sessionId:)`, `getAuthSessionId()`,
+  `logIn(authSessionId:)`, `getId()`, `regenerateId()`, `tenantId:`/`clientId:`; private constants of `AuthSession` in
+  UPPER_SNAKE_CASE. The session key is renamed to `'authSessionId'` (decided by the user); a logged-in session without
+  it (stored by an older version) is logged out by `AuthSession::isLoggedIn()` instead of failing in
+  `getAuthSessionId()`.
+- Characterization test of the session key first (`AuthSessionTest`); new `AuthenticatorTest` with the double
+  `RecordingAuthenticator` checks the named-argument call of `logAuthResult()`. Like `AuthSessionTest`, it resets the
+  `Authenticator` and session handler singletons with reflection, until the session plan removes them.
+- Baseline unchanged (766 entries, one message renamed). README and `example/` needed no change.

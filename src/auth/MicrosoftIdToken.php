@@ -19,11 +19,11 @@ use stdClass;
 
 class MicrosoftIdToken extends AuthWebToken
 {
-    private const string PUBLIC_KEYS_PATH = 'https://login.microsoftonline.com/{tenantID}/discovery/keys';
+    private const string PUBLIC_KEYS_PATH = 'https://login.microsoftonline.com/{tenantId}/discovery/keys';
 
     public function __construct(
-        private readonly string $tenantID,
-        private readonly string $clientID,
+        private readonly string $tenantId,
+        private readonly string $clientId,
         private readonly string $ssoNonce,
         string $jwtString,
         private readonly Clock $clock = new SystemClock(),
@@ -49,8 +49,8 @@ class MicrosoftIdToken extends AuthWebToken
         }
         $cachePath = Core::get()->cacheDirectory . 'ssoMicrosoftKeys.json';
         $publicKeysPath = str_replace(
-            search: '{tenantID}',
-            replace: $this->tenantID,
+            search: '{tenantId}',
+            replace: $this->tenantId,
             subject: MicrosoftIdToken::PUBLIC_KEYS_PATH,
         );
         if (!file_exists(filename: $cachePath)) {
@@ -72,10 +72,10 @@ class MicrosoftIdToken extends AuthWebToken
         }
         $payload = $this->payload;
         new IdTokenTimeClaimsValidator(clock: $this->clock)->assertValid(payload: $payload);
-        if (!property_exists(object_or_class: $payload, property: 'aud') || $payload->aud !== $this->clientID) {
+        if (!property_exists(object_or_class: $payload, property: 'aud') || $payload->aud !== $this->clientId) {
             throw new UnauthorizedException(message: 'Missing or invalid aud');
         }
-        if (!property_exists(object_or_class: $payload, property: 'tid') || $payload->tid !== $this->tenantID) {
+        if (!property_exists(object_or_class: $payload, property: 'tid') || $payload->tid !== $this->tenantId) {
             throw new UnauthorizedException(message: 'Missing or invalid tid');
         }
         if (!property_exists(object_or_class: $payload, property: 'nonce') || $payload->nonce !== $this->ssoNonce) {

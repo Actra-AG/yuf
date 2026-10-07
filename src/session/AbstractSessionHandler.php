@@ -54,7 +54,7 @@ abstract class AbstractSessionHandler extends SessionHandler
             if ($this->fingerprint === null) {
                 $this->fingerprint = hash(
                     algo: 'sha256',
-                    data: $this->getID() . $this->clientUserAgent,
+                    data: $this->getId() . $this->clientUserAgent,
                 );
             }
 
@@ -62,7 +62,7 @@ abstract class AbstractSessionHandler extends SessionHandler
         }
     }
     private int $currentTime;
-    private ?string $ID = null;
+    private ?string $id = null;
     private string $clientRemoteAddress;
     private string $clientUserAgent;
 
@@ -112,7 +112,7 @@ abstract class AbstractSessionHandler extends SessionHandler
             // See: http://stackoverflow.com/questions/520237/how-do-i-expire-a-php-session-after-30-minutes/1270960#1270960
             $this->initDefaultSessionData(destroyCurrentSessionData: true);
         } elseif ($this->isSessionOlderThan30Minutes()) {
-            $this->regenerateID();
+            $this->regenerateId();
         }
 
         $this->setLastAction();
@@ -164,9 +164,9 @@ abstract class AbstractSessionHandler extends SessionHandler
         if (!array_key_exists(key: $sessionName, array: $_COOKIE)) {
             return;
         }
-        $sessionID = $_COOKIE[$sessionName];
-        if (!is_string(value: $sessionID) || !$this->checkSessionIdAgainstSidBitsPerChar(
-            sessionId: $sessionID,
+        $sessionId = $_COOKIE[$sessionName];
+        if (!is_string(value: $sessionId) || !$this->checkSessionIdAgainstSidBitsPerChar(
+            sessionId: $sessionId,
             sidBitsPerChar: (int) ini_get(option: 'session.sid_bits_per_character'),
         )) {
             unset($_COOKIE[$sessionName]);
@@ -227,7 +227,7 @@ abstract class AbstractSessionHandler extends SessionHandler
                     'use_strict_mode' => true,
                 ]);
                 session_regenerate_id(delete_old_session: true);
-                $this->ID = AbstractSessionHandler::readSessionID();
+                $this->id = AbstractSessionHandler::readSessionId();
             } catch (Throwable $throwable) {
                 if (!str_contains(haystack: $throwable->getMessage(), needle: 'Session object destruction failed')) {
                     throw $throwable;
@@ -299,10 +299,10 @@ abstract class AbstractSessionHandler extends SessionHandler
         return $sessionCreated;
     }
 
-    public function regenerateID(): void
+    public function regenerateId(): void
     {
         session_regenerate_id(delete_old_session: true);
-        $this->ID = AbstractSessionHandler::readSessionID();
+        $this->id = AbstractSessionHandler::readSessionId();
         $this->setSessionCreated();
     }
 
@@ -355,23 +355,23 @@ abstract class AbstractSessionHandler extends SessionHandler
         );
     }
 
-    public function getID(): string
+    public function getId(): string
     {
-        if ($this->ID === null) {
-            $this->ID = AbstractSessionHandler::readSessionID();
+        if ($this->id === null) {
+            $this->id = AbstractSessionHandler::readSessionId();
         }
 
-        return $this->ID;
+        return $this->id;
     }
 
-    private static function readSessionID(): string
+    private static function readSessionId(): string
     {
-        $sessionID = session_id();
-        if ($sessionID === false) {
+        $sessionId = session_id();
+        if ($sessionId === false) {
             throw new LogicException(message: 'The session ID could not be read.');
         }
 
-        return $sessionID;
+        return $sessionId;
     }
 
     private static function readSessionName(): string

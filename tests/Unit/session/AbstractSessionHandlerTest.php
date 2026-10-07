@@ -40,7 +40,7 @@ final class AbstractSessionHandlerTest extends TestCase
     public function testClearUserDataRemovesUserData(): void
     {
         $_SESSION = AbstractSessionHandlerTest::DATA_WITHOUT_USER_DATA;
-        $_SESSION['auth_userSession'] = ['isLoggedIn' => true, 'authSessionID' => 5];
+        $_SESSION['auth_userSession'] = ['isLoggedIn' => true, 'authSessionId' => 5];
         $_SESSION[CsrfToken::CSRFTOKENSTORAGE] = 'token';
         $_SESSION['sess_breadcrumb'] = ['home' => ['title' => 'Home', 'link' => 'home']];
 
@@ -84,13 +84,13 @@ final class AbstractSessionHandlerTest extends TestCase
                 savePath: $savePath,
                 individualName: AbstractSessionHandlerTest::SESSION_NAME,
             ));
-            $sessionID = $sessionHandler->getID();
+            $sessionId = $sessionHandler->getId();
             session_write_close();
         } finally {
             $this->removeSessionSavePath(savePath: $savePath);
         }
 
-        $this->assertSame(AbstractSessionHandlerTest::COOKIE_SESSION_ID, $sessionID);
+        $this->assertSame(AbstractSessionHandlerTest::COOKIE_SESSION_ID, $sessionId);
         $this->assertSame(
             [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
             $_COOKIE,
@@ -106,8 +106,8 @@ final class AbstractSessionHandlerTest extends TestCase
         $savePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-session-test-' . bin2hex(string: random_bytes(length: 8));
         mkdir(directory: $savePath);
         CoreTestInstance::register(cacheDirectory: $savePath . DIRECTORY_SEPARATOR);
-        foreach ([AbstractSessionHandlerTest::COOKIE_SESSION_ID, AbstractSessionHandlerTest::REQUESTED_SESSION_ID] as $sessionID) {
-            file_put_contents(filename: $savePath . DIRECTORY_SEPARATOR . 'sess_' . $sessionID, data: '');
+        foreach ([AbstractSessionHandlerTest::COOKIE_SESSION_ID, AbstractSessionHandlerTest::REQUESTED_SESSION_ID] as $sessionId) {
+            file_put_contents(filename: $savePath . DIRECTORY_SEPARATOR . 'sess_' . $sessionId, data: '');
         }
 
         return $savePath;

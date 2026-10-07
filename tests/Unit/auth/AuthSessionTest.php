@@ -42,12 +42,19 @@ final class AuthSessionTest extends TestCase
         unset($_SESSION);
     }
 
-    public function testLogInStoresTheAuthSessionID(): void
+    public function testLogInStoresTheAuthSessionId(): void
     {
-        AuthSession::logIn(authSessionID: 5);
+        AuthSession::logIn(authSessionId: 5);
 
         $this->assertTrue(AuthSession::isLoggedIn());
-        $this->assertSame(5, AuthSession::getAuthSessionID());
+        $this->assertSame(5, AuthSession::getAuthSessionId());
+    }
+
+    public function testLogInStoresTheAuthSessionIdInTheSession(): void
+    {
+        AuthSession::logIn(authSessionId: 5);
+
+        $this->assertSame(['auth_userSession' => ['isLoggedIn' => true, 'authSessionId' => 5]], $_SESSION);
     }
 
     public function testIsNotLoggedInWithoutLogIn(): void
@@ -59,13 +66,13 @@ final class AuthSessionTest extends TestCase
     {
         $this->expectException(UnexpectedValueException::class);
 
-        AuthSession::getAuthSessionID();
+        AuthSession::getAuthSessionId();
     }
 
-    public function testLogOutClearsUserDataAndRegeneratesTheSessionID(): void
+    public function testLogOutClearsUserDataAndRegeneratesTheSessionId(): void
     {
         $sessionHandler = $this->registerSessionHandler();
-        AuthSession::logIn(authSessionID: 5);
+        AuthSession::logIn(authSessionId: 5);
         $_SESSION['sessionCreated'] = 1_790_000_000;
         $_SESSION['preferredLanguage'] = 'de';
         $_SESSION[CsrfToken::CSRFTOKENSTORAGE] = 'token';
@@ -77,12 +84,12 @@ final class AuthSessionTest extends TestCase
             [
                 'sessionCreated' => 1_790_000_000,
                 'preferredLanguage' => 'de',
-                'auth_userSession' => ['isLoggedIn' => false, 'authSessionID' => 0],
+                'auth_userSession' => ['isLoggedIn' => false, 'authSessionId' => 0],
             ],
             $_SESSION,
         );
         $this->assertFalse(AuthSession::isLoggedIn());
-        $this->assertSame(0, AuthSession::getAuthSessionID());
+        $this->assertSame(0, AuthSession::getAuthSessionId());
         $this->assertSame(1, $sessionHandler->regenerations);
     }
 
@@ -101,6 +108,16 @@ final class AuthSessionTest extends TestCase
             $_SESSION,
         );
         $this->assertSame(0, $sessionHandler->regenerations);
+    }
+
+    public function testSessionWithoutAuthSessionIdIsLoggedOut(): void
+    {
+        $sessionHandler = $this->registerSessionHandler();
+        $_SESSION['auth_userSession'] = ['isLoggedIn' => true, 'authSessionID' => 5];
+
+        $this->assertFalse(AuthSession::isLoggedIn());
+        $this->assertSame(['auth_userSession' => ['isLoggedIn' => false, 'authSessionId' => 0]], $_SESSION);
+        $this->assertSame(1, $sessionHandler->regenerations);
     }
 
     private function registerSessionHandler(): AuthSessionTestSessionHandler
@@ -125,7 +142,7 @@ final class AuthSessionTestSessionHandler extends AbstractSessionHandler
     protected function executePreStartActions(): void {}
 
     #[Override]
-    public function regenerateID(): void
+    public function regenerateId(): void
     {
         $this->regenerations++;
     }

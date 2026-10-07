@@ -319,7 +319,7 @@ parameters:
 			path: src/auth/AuthWebToken.php
 
 		-
-			rawMessage: 'Strict comparison using === between actra\yuf\auth\AuthResult::UNDEFINED and actra\yuf\auth\AuthResult::UNDEFINED will always evaluate to true.'
+			rawMessage: 'Strict comparison using === between actra\yuf\auth\AuthResultEnum::UNDEFINED and actra\yuf\auth\AuthResultEnum::UNDEFINED will always evaluate to true.'
 			identifier: identical.alwaysTrue
 			count: 1
 			path: src/auth/Authenticator.php
