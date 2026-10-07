@@ -9,16 +9,23 @@ declare(strict_types=1);
 
 namespace actra\yuf\security;
 
-/**
- * The nonce of the Content Security Policy: a new random value for every request, the same for all calls within the
- * request (header and inline scripts and styles of the response).
- */
-class CspNonce
-{
-    private static ?string $nonce = null;
+use InvalidArgumentException;
 
-    public static function get(): string
+/**
+ * The nonce of the Content Security Policy: a new random value for every request. `Core` creates one object per
+ * request and passes it on (header, inline scripts and styles of the response).
+ */
+final readonly class CspNonce
+{
+    public function __construct(public string $value)
     {
-        return CspNonce::$nonce ??= base64_encode(string: random_bytes(length: 16));
+        if ($value === '') {
+            throw new InvalidArgumentException(message: 'The CSP nonce must not be empty.');
+        }
+    }
+
+    public static function create(): CspNonce
+    {
+        return new CspNonce(value: base64_encode(string: random_bytes(length: 16)));
     }
 }

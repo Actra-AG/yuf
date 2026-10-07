@@ -12,6 +12,7 @@ namespace actra\yuf\tests\Unit\core;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpStatusCodeEnum;
+use actra\yuf\security\CspNonce;
 use Exception;
 use LogicException;
 use PHPUnit\Framework\TestCase;
@@ -26,7 +27,7 @@ final class ContentHandlerTest extends TestCase
     {
         $contentType = ContentType::createJson();
 
-        $handler = new ContentHandler(contentType: $contentType);
+        $handler = new ContentHandler(contentType: $contentType, cspNonce: CspNonce::create());
 
         $this->assertSame($contentType, $handler->getContentType());
         $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $handler->httpStatusCode);
@@ -35,9 +36,18 @@ final class ContentHandlerTest extends TestCase
         $this->assertFalse($handler->suppressCspHeader);
     }
 
+    public function testConstructorKeepsTheCspNonce(): void
+    {
+        $cspNonce = new CspNonce(value: 'fixed-nonce');
+
+        $handler = new ContentHandler(contentType: ContentType::createHtml(), cspNonce: $cspNonce);
+
+        $this->assertSame($cspNonce, $handler->cspNonce);
+    }
+
     public function testSetContent(): void
     {
-        $handler = new ContentHandler(contentType: ContentType::createTxt());
+        $handler = new ContentHandler(contentType: ContentType::createTxt(), cspNonce: CspNonce::create());
 
         $handler->setContent(contentString: 'abc');
 
@@ -47,7 +57,7 @@ final class ContentHandlerTest extends TestCase
 
     public function testWhitespaceOnlyIsNoContent(): void
     {
-        $handler = new ContentHandler(contentType: ContentType::createTxt());
+        $handler = new ContentHandler(contentType: ContentType::createTxt(), cspNonce: CspNonce::create());
         $handler->setContent(contentString: " \n");
 
         $this->assertFalse($handler->hasContent());
@@ -57,7 +67,7 @@ final class ContentHandlerTest extends TestCase
 
     public function testSetContentTwiceThrows(): void
     {
-        $handler = new ContentHandler(contentType: ContentType::createTxt());
+        $handler = new ContentHandler(contentType: ContentType::createTxt(), cspNonce: CspNonce::create());
         $handler->setContent(contentString: 'a');
 
         $this->expectException(LogicException::class);
@@ -67,7 +77,7 @@ final class ContentHandlerTest extends TestCase
 
     public function testSetContentType(): void
     {
-        $handler = new ContentHandler(contentType: ContentType::createHtml());
+        $handler = new ContentHandler(contentType: ContentType::createHtml(), cspNonce: CspNonce::create());
 
         $handler->setContentType(contentType: ContentType::createXml());
 
@@ -76,7 +86,7 @@ final class ContentHandlerTest extends TestCase
 
     public function testSetContentTypeWithUnknownCharsetThrows(): void
     {
-        $handler = new ContentHandler(contentType: ContentType::createHtml());
+        $handler = new ContentHandler(contentType: ContentType::createHtml(), cspNonce: CspNonce::create());
 
         $this->expectException(Exception::class);
         $handler->setContentType(contentType: ContentType::createFromFileExtension(extension: 'zzz'));
@@ -84,7 +94,7 @@ final class ContentHandlerTest extends TestCase
 
     public function testSuppressCspHeader(): void
     {
-        $handler = new ContentHandler(contentType: ContentType::createHtml());
+        $handler = new ContentHandler(contentType: ContentType::createHtml(), cspNonce: CspNonce::create());
 
         $handler->suppressCspHeader();
 
@@ -93,8 +103,8 @@ final class ContentHandlerTest extends TestCase
 
     public function testInstancesAreIndependent(): void
     {
-        $first = new ContentHandler(contentType: ContentType::createHtml());
-        $second = new ContentHandler(contentType: ContentType::createHtml());
+        $first = new ContentHandler(contentType: ContentType::createHtml(), cspNonce: CspNonce::create());
+        $second = new ContentHandler(contentType: ContentType::createHtml(), cspNonce: CspNonce::create());
         $first->setContent(contentString: 'a');
 
         $this->assertFalse($second->hasContent());

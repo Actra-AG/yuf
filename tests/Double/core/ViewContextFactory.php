@@ -14,6 +14,7 @@ use actra\yuf\core\ContentType;
 use actra\yuf\core\PathVars;
 use actra\yuf\core\Route;
 use actra\yuf\core\ViewContext;
+use actra\yuf\security\CspNonce;
 
 /**
  * Builds a ViewContext without a request: RequestHandler cannot be created in tests.
@@ -41,7 +42,10 @@ final class ViewContextFactory
             fileGroup: $fileGroup,
             fileTitle: $fileTitle,
             pathVars: new PathVars(values: $pathVars),
-            content: new ContentHandler(contentType: $contentType ?? ContentType::createHtml()),
+            content: new ContentHandler(
+                contentType: $contentType ?? ContentType::createHtml(),
+                cspNonce: CspNonce::create(),
+            ),
         );
     }
 }

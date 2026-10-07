@@ -444,11 +444,18 @@ afterwards: `CsvFile`, `SmtpMailer`, `DB extends FrameworkDb`, table constants i
 
 ### Step 8 – v4.19.0: CSP nonce per request as object
 
-- `CspNonce` becomes a `final readonly class` with `CspNonce::create()` (random) and `$value`; `Core` creates one per
-  request and passes it to `HtmlDocument`, `HtmlSnippet`, `ExceptionHandler` and `HttpResponse::createHtmlResponse()`.
-  `CspNonce::get()` is removed (⚠️). Projects that render the nonce themselves get it from `ViewContext`.
-- Tests: `CspNonceTest` (length, randomness, base64) adapted; `HtmlSnippet` test with a fixed nonce.
-- Keep the security feature covered: a test that the HTML response header and the rendered nonce are equal.
+- `CspNonce` becomes a `final readonly class` with `__construct(public string $value)` (empty value throws
+  `InvalidArgumentException`) and `CspNonce::create()` (random). `CspNonce::get()` and the static property are removed
+  (⚠️).
+- `Core::prepareHttpResponse()` creates one `CspNonce` per request and passes it to `ExceptionHandler::register(…,
+  cspNonce:)` (stored in the protected property `$cspNonce` of the handler), `ContentHandler::register(cspNonce:)`
+  (constructor `ContentHandler(contentType, cspNonce)`, public readonly `$cspNonce`; `getHtmlDocument()` creates
+  `new HtmlDocument(cspNonce:)`) and `HttpResponse::createHtmlResponse(nonce: $cspNonce->value)` (string, unchanged).
+  Views get it through `$this->context->content->cspNonce`.
+- `HtmlSnippet` gets an optional `?CspNonce $cspNonce` (also in `createForCurrentView()`) and adds the replacement
+  `cspNonce` only when one is given and the replacement is not set yet (⚠️).
+- Tests: `CspNonceTest` without reflection; `ContentHandlerTest`; new `HtmlSnippetTest` (with fixtures in
+  `tests/Fixture/`); `HttpResponseSecurityHeadersTest` checks the nonce in `script-src` and `style-src`.
 
 ### Step 9 – v4.20.0: logger through the constructor
 
@@ -569,3 +576,19 @@ Smaller releases, each for one area:
 - Pure renames, tests adapted; baseline unchanged (766 entries, messages renamed). Left: `src/template/`, `src/phone/`.
 - The four class files are case-only renames: on a case-insensitive file system, git keeps the old file names unless
   they are renamed with `git mv` (otherwise the autoloader does not find the classes on Linux).
+
+### Step 8 (v4.19.0) – done
+
+- `CspNonce` is a `final readonly class` (`create()`, `$value`); `Core` creates one per request and passes it to
+  `ExceptionHandler::register(cspNonce:)`, `ContentHandler::register(cspNonce:)` (constructor and `HtmlDocument` take
+  it) and `HttpResponse::createHtmlResponse(nonce:)`. `HtmlSnippet` adds `cspNonce` only when given. UPGRADE.md has
+  the four ⚠️ entries.
+- `ExceptionHandler::$cspNonce` is set in `register()` (the handler is created by the project), so it carries a
+  `@phpstan-ignore property.uninitialized`.
+- Tests: new `CspNonceTest`, `HtmlSnippetTest` (via `CoreTestInstance`), nonce in the CSP header of
+  `createHtmlResponse()`, `ContentHandlerTest`. The header test sets `$_SERVER['HTTP_HOST']` temporarily; `HttpRequest`
+  caches host and protocol statically.
+- Not covered by tests: that `Core` passes the same object to all consumers (runs the whole request), and
+  `HtmlDocument` rendering the nonce. `example/` checked: `/` 200 and `nope.html` 404 both send a CSP header with a
+  nonce (different per request); the example templates do not render `{cspNonce}`. No `src/` template uses it.
+- Baseline unchanged (766 entries).

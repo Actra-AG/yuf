@@ -11,6 +11,8 @@ namespace actra\yuf\tests\Unit\core;
 
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
+use actra\yuf\security\CspNonce;
+use actra\yuf\security\CspPolicySettings;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 
@@ -69,5 +71,28 @@ final class HttpResponseSecurityHeadersTest extends TestCase
         $this->assertSame('nosniff', $headers['X-Content-Type-Options']);
         $this->assertArrayHasKey('Referrer-Policy', $headers);
         $this->assertSame('strict-origin-when-cross-origin', $headers['Referrer-Policy']);
+    }
+
+    public function testCspHeaderContainsTheNonceForScriptsAndStyles(): void
+    {
+        $cspNonce = new CspNonce(value: 'fixed+nonce==');
+        // The default policy reads protocol and host of the request
+        $_SERVER['HTTP_HOST'] = 'example.test';
+        $_SERVER['SERVER_PORT'] = '443';
+
+        $httpResponse = HttpResponse::createHtmlResponse(
+            httpStatusCode: HttpStatusCodeEnum::HTTP_OK,
+            htmlContent: '<p>Test</p>',
+            cspPolicySettings: new CspPolicySettings(),
+            nonce: $cspNonce->value,
+        );
+        unset($_SERVER['HTTP_HOST'], $_SERVER['SERVER_PORT']);
+
+        $headers = $this->headersOf(httpResponse: $httpResponse);
+        $this->assertArrayHasKey('Content-Security-Policy', $headers);
+        $policy = $headers['Content-Security-Policy'];
+        $this->assertIsString($policy);
+        $this->assertMatchesRegularExpression("#script-src [^;]*'nonce-fixed\\+nonce=='#", $policy);
+        $this->assertMatchesRegularExpression("#style-src [^;]*'nonce-fixed\\+nonce=='#", $policy);
     }
 }

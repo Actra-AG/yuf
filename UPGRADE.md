@@ -4,6 +4,75 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.19.0] – 2026-10-08
+
+### ⚠️ `CspNonce` is an object per request, `CspNonce::get()` is removed
+
+`CspNonce` is a `final readonly class` with `$value`; `Core` creates one object per request with `CspNonce::create()`
+and passes it on. A view reads it through its `ViewContext`.
+
+Before:
+
+```php
+$nonce = CspNonce::get();
+```
+
+After:
+
+```php
+$nonce = $this->context->content->cspNonce->value; // in a view
+$cspNonce = CspNonce::create(); // elsewhere, e.g. in a test or a script that builds its own response
+```
+
+### ⚠️ `ExceptionHandler::register()` needs `cspNonce:`
+
+Only relevant for projects that call it themselves (`Core` does it). A custom handler that extends `ExceptionHandler`
+can use `$this->cspNonce`.
+
+Before: `ExceptionHandler::register(individualExceptionHandler: $handler);`
+After: `ExceptionHandler::register(individualExceptionHandler: $handler, cspNonce: $cspNonce);`
+
+### ⚠️ `ContentHandler` and `HtmlDocument` constructors
+
+Before:
+
+```php
+new ContentHandler(contentType: $contentType);
+new HtmlDocument();
+ContentHandler::register();
+```
+
+After:
+
+```php
+new ContentHandler(contentType: $contentType, cspNonce: $cspNonce);
+new HtmlDocument(cspNonce: $cspNonce);
+ContentHandler::register(cspNonce: $cspNonce);
+```
+
+### ⚠️ `HtmlSnippet` adds `cspNonce` only when a nonce is passed
+
+Snippets without a nonce no longer get the replacement `cspNonce` automatically. A snippet that renders
+`{tst:text value='cspNonce'}` must get the nonce.
+
+Before:
+
+```php
+HtmlSnippet::createForCurrentView(snippetName: 'inlineScript')->render();
+```
+
+After:
+
+```php
+HtmlSnippet::createForCurrentView(
+    snippetName: 'inlineScript',
+    cspNonce: $this->context->content->cspNonce,
+)->render();
+new HtmlSnippet(htmlSnippetFilePath: $path, replacements: $replacements, cspNonce: $cspNonce);
+```
+
+---
+
 ## [v4.18.0] – 2026-10-08
 
 ### ⚠️ Class, method and constant names follow the coding standard

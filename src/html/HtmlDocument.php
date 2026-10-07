@@ -38,7 +38,7 @@ class HtmlDocument
     }
     private array $activeHtmlIds = [];
 
-    public function __construct()
+    public function __construct(CspNonce $cspNonce)
     {
         $requestHandler = RequestHandler::get();
         $viewDirectory = $requestHandler->route->viewDirectory;
@@ -75,7 +75,7 @@ class HtmlDocument
         );
         $replacements->addEncodedText(
             identifier: 'cspNonce',
-            content: CspNonce::get(),
+            content: $cspNonce->value,
         );
         $replacements->addEncodedText(
             identifier: 'csrfField',

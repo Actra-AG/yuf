@@ -30,18 +30,23 @@ class ExceptionHandler
 {
     private static ?ExceptionHandler $registeredInstance = null;
     protected ContentType $contentType;
+    // Set by register(): the handler instance is created by the project
+    protected CspNonce $cspNonce; // @phpstan-ignore property.uninitialized
 
     public function __construct(
         protected readonly HtmlReplacementCollection $htmlReplacementCollection = new HtmlReplacementCollection(),
     ) {}
 
-    public static function register(?ExceptionHandler $individualExceptionHandler): void
-    {
+    public static function register(
+        ?ExceptionHandler $individualExceptionHandler,
+        CspNonce $cspNonce,
+    ): void {
         if (ExceptionHandler::$registeredInstance !== null) {
             throw new LogicException(message: 'ExceptionHandler is already registered.');
         }
         ExceptionHandler::$registeredInstance = $individualExceptionHandler === null ? new ExceptionHandler(
         ) : $individualExceptionHandler;
+        ExceptionHandler::$registeredInstance->cspNonce = $cspNonce;
         set_exception_handler(callback: [
             ExceptionHandler::$registeredInstance,
             'handleException',
@@ -182,7 +187,7 @@ class ExceptionHandler
                 htmlFileName: $htmlFileName,
             ),
             cspPolicySettings: Core::get()->cspPolicySettings,
-            nonce: CspNonce::get(),
+            nonce: $this->cspNonce->value,
         );
         $httpResponse->sendAndExit();
     }
@@ -214,7 +219,7 @@ class ExceptionHandler
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'cspNonce',
-            content: CspNonce::get(),
+            content: $this->cspNonce->value,
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'csrfField',

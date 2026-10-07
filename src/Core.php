@@ -192,14 +192,18 @@ class Core
         }
         $this->cspPolicySettings = $cspPolicySettings;
         Logger::register(logger: $logger);
-        ExceptionHandler::register(individualExceptionHandler: $individualExceptionHandler);
+        $cspNonce = CspNonce::create();
+        ExceptionHandler::register(
+            individualExceptionHandler: $individualExceptionHandler,
+            cspNonce: $cspNonce,
+        );
         AbstractSessionHandler::register(individualSessionHandler: $individualSessionHandler);
         if (!$routeCollection->hasRoutes()) {
             throw new LogicException(message: 'There must be at least one route');
         }
         RequestHandler::register(routeCollection: $routeCollection);
         LocaleHandler::register();
-        $contentHandler = ContentHandler::register();
+        $contentHandler = ContentHandler::register(cspNonce: $cspNonce);
         if (!$contentHandler->hasContent()) {
             throw new NotFoundException();
         }
@@ -211,7 +215,7 @@ class Core
                 httpStatusCode: $httpStatusCode,
                 htmlContent: $content,
                 cspPolicySettings: $contentHandler->suppressCspHeader ? null : $this->cspPolicySettings,
-                nonce: CspNonce::get(),
+                nonce: $cspNonce->value,
             );
         }
         return Core::$httpResponse = HttpResponse::createResponseFromString(

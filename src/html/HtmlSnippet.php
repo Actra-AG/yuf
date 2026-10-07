@@ -20,13 +20,15 @@ readonly class HtmlSnippet
     public function __construct(
         private string $htmlSnippetFilePath,
         public HtmlReplacementCollection $replacements = new HtmlReplacementCollection(),
+        private ?CspNonce $cspNonce = null,
     ) {}
 
-    public static function createForCurrentView(string $snippetName): HtmlSnippet
+    public static function createForCurrentView(string $snippetName, ?CspNonce $cspNonce = null): HtmlSnippet
     {
         return new HtmlSnippet(
             htmlSnippetFilePath: RequestHandler::get(
             )->route->viewDirectory . 'snippets' . DIRECTORY_SEPARATOR . $snippetName . '.html',
+            cspNonce: $cspNonce,
         );
     }
 
@@ -34,8 +36,11 @@ readonly class HtmlSnippet
     {
         $htmlSnippetFilePath = $this->htmlSnippetFilePath;
         $replacements = $this->replacements;
-        if (!$replacements->has(identifier: 'cspNonce')) {
-            $replacements->addEncodedText(identifier: 'cspNonce', content: CspNonce::get());
+        if (
+            $this->cspNonce !== null
+            && !$replacements->has(identifier: 'cspNonce')
+        ) {
+            $replacements->addEncodedText(identifier: 'cspNonce', content: $this->cspNonce->value);
         }
         $core = Core::get();
         return new TemplateEngine(

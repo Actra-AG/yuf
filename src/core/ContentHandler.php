@@ -11,6 +11,7 @@ namespace actra\yuf\core;
 
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\html\HtmlDocument;
+use actra\yuf\security\CspNonce;
 use Exception;
 use LogicException;
 
@@ -24,8 +25,10 @@ class ContentHandler
     private ContentType $contentType;
     private ?HtmlDocument $htmlDocument = null;
 
-    public function __construct(ContentType $contentType)
-    {
+    public function __construct(
+        ContentType $contentType,
+        public readonly CspNonce $cspNonce,
+    ) {
         $this->contentType = $contentType;
     }
 
@@ -35,7 +38,7 @@ class ContentHandler
     public function getHtmlDocument(): HtmlDocument
     {
         if ($this->htmlDocument === null) {
-            $this->htmlDocument = new HtmlDocument();
+            $this->htmlDocument = new HtmlDocument(cspNonce: $this->cspNonce);
         }
 
         return $this->htmlDocument;
@@ -93,7 +96,7 @@ class ContentHandler
         return trim(string: $this->content) !== '';
     }
 
-    public static function register(): ContentHandler
+    public static function register(CspNonce $cspNonce): ContentHandler
     {
         if (ContentHandler::$registeredInstance !== null) {
             throw new LogicException(message: 'ContentHandler is already registered.');
@@ -103,7 +106,10 @@ class ContentHandler
         if ($route->defaultContentType === null) {
             throw new LogicException(message: 'The route "' . $route->path . '" has no default content type.');
         }
-        $contentHandler = new ContentHandler(contentType: $route->defaultContentType);
+        $contentHandler = new ContentHandler(
+            contentType: $route->defaultContentType,
+            cspNonce: $cspNonce,
+        );
         ContentHandler::$registeredInstance = $contentHandler;
         $contentHandler->processRequest(requestHandler: $requestHandler);
 

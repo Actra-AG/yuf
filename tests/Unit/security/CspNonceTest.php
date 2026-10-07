@@ -10,57 +10,35 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\security;
 
 use actra\yuf\security\CspNonce;
-use Override;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
-use ReflectionProperty;
 
 final class CspNonceTest extends TestCase
 {
-    #[Override]
-    protected function setUp(): void
+    public function testCreatedNonceIsBase64OfSixteenRandomBytes(): void
     {
-        $this->startNewRequest();
+        $nonce = CspNonce::create();
+
+        $this->assertMatchesRegularExpression('#^[A-Za-z0-9+/]{22}==$#', $nonce->value);
+        $this->assertSame(24, strlen(string: $nonce->value));
+        $this->assertSame(16, strlen(string: (string) base64_decode(string: $nonce->value, strict: true)));
     }
 
-    #[Override]
-    protected function tearDown(): void
+    public function testEveryCreatedNonceIsNew(): void
     {
-        unset($_SESSION);
-        $this->startNewRequest();
+        $this->assertNotSame(CspNonce::create()->value, CspNonce::create()->value);
     }
 
-    private function startNewRequest(): void
+    public function testConstructorKeepsTheGivenValue(): void
     {
-        new ReflectionProperty(class: CspNonce::class, property: 'nonce')->setValue(objectOrValue: null, value: null);
+        $this->assertSame('fixed-nonce', new CspNonce(value: 'fixed-nonce')->value);
     }
 
-    public function testNonceIsBase64OfSixteenRandomBytes(): void
+    public function testEmptyValueThrows(): void
     {
-        $nonce = CspNonce::get();
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageIs('The CSP nonce must not be empty.');
 
-        $this->assertMatchesRegularExpression('#^[A-Za-z0-9+/]{22}==$#', $nonce);
-    }
-
-    public function testNonceStaysTheSameWithinTheRequest(): void
-    {
-        $this->assertSame(CspNonce::get(), CspNonce::get());
-    }
-
-    public function testEveryRequestGetsANewNonce(): void
-    {
-        $firstNonce = CspNonce::get();
-
-        $this->startNewRequest();
-
-        $this->assertNotSame($firstNonce, CspNonce::get());
-    }
-
-    public function testNonceIsNotStoredInTheSession(): void
-    {
-        $_SESSION = [];
-
-        CspNonce::get();
-
-        $this->assertSame([], $_SESSION);
+        new CspNonce(value: '');
     }
 }
