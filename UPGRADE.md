@@ -4,6 +4,22 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.9.1] – 2026-10-07
+
+### 🐛 Bug Fixes
+
+* **Security:** `IpValidator::isInWhitelist()` (IP whitelists of `BaseView` and `AuthUser`) checks ranges correctly.
+  Update as soon as possible if a whitelist contains a range (`/`):
+    * An IPv6 range (e.g. `2001:db8::/32`) allowed **every** IPv6 address, `::/0` also every IPv4 address, and
+      `0.0.0.0/0` every IPv6 address. IPv6 ranges are supported now.
+    * An IPv4 range whose address is not the network address was shifted: `192.168.1.77/24` allowed
+      `192.168.1.77` to `192.168.2.76` instead of `192.168.1.0` to `192.168.1.255`.
+    * An invalid range (`10.0.0.0/33`, `10.0.0.0/abc`, `10.0.0.300/8`) throws an `InvalidArgumentException` instead of a
+      PHP error or a wrong result. Fix such entries in the configuration.
+* IPv6 addresses in a whitelist match in any notation (`2001:0db8::0001` matches `2001:db8::1`).
+
+---
+
 ## [v4.9.0] – 2026-10-07
 
 ### ⚙️ Backend & API

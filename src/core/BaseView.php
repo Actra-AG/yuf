@@ -27,6 +27,10 @@ use Throwable;
 
 abstract class BaseView
 {
+    /**
+     * @param array<string> $ipWhitelist IP addresses and ranges the view may be called from (see
+     *     `IpValidator::isInWhitelist()`), empty for all
+     */
     protected function __construct(
         string $requiredViewGroupName,
         array $ipWhitelist,

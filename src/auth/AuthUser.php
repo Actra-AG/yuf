@@ -15,6 +15,10 @@ abstract class AuthUser
 {
     private static ?AuthUser $instance = null;
 
+    /**
+     * @param array<string> $ipWhitelist IP addresses and ranges the user may log in from (see
+     *     `IpValidator::isInWhitelist()`), empty for all
+     */
     public function __construct(
         public readonly int $ID,
         public readonly bool $isActive,

@@ -84,3 +84,22 @@ but the existing code does not meet them yet, so `composer check` is red until t
   `FormField::$topFormComponent` as property hook with a nullable backing property and `hasTopFormComponent()`.
   `UploadedFile::getHash()` uses SHA-256 instead of SHA-1 (changes the posted remove value, listed in `UPGRADE.md`).
 
+## Security check against `standards/security.md` (2026-10-07)
+
+Fixed in v4.9.1: `IpValidator::isInWhitelist()` (any IPv6 range allowed every IPv6 address, shifted IPv4 ranges,
+invalid ranges). Open, postponed by the user:
+
+1. Patch (no API change):
+    - `HttpResponse` sends `Strict-Transport-Security: max-age=<cache max-age>`; file responses with `maxAge: 0`
+      (e.g. `CSVFile`) send `max-age=0`, which removes HSTS in the browser. Use a separate HSTS max-age.
+    - `CsrfToken::validateToken()` compares with `===` instead of `hash_equals()`.
+    - `CsrfToken::getToken()` and `CspNonce::generate()` use `openssl_random_pseudo_bytes()` instead of
+      `random_bytes()`.
+    - `AbstractSessionHandler` calls `session_regenerate_id()` without `delete_old_session: true`.
+2. Minor (breaking, `UPGRADE.md` with ⚠️):
+    - `CsrfTokenField` accepts the token from the query string, `CsrfToken::renderAsGetParam()` builds such URLs
+      (no tokens in URLs).
+    - `TableFilter` renders the CSRF token in its POST form but never validates it.
+    - The CSP nonce is stored in the session and reused for all requests instead of a new nonce per request.
+    - `X-Content-Type-Options: nosniff` and `Referrer-Policy` are not sent.
+
