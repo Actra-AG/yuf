@@ -19,7 +19,6 @@ use actra\yuf\template\template\TemplateEngine;
 
 class HtmlDocument
 {
-    private static ?HtmlDocument $instance = null;
     public readonly HtmlReplacementCollection $replacements;
     public string $templateDirectory {
         set {
@@ -39,7 +38,7 @@ class HtmlDocument
     }
     private array $activeHtmlIds = [];
 
-    private function __construct()
+    public function __construct()
     {
         $requestHandler = RequestHandler::get();
         $viewDirectory = $requestHandler->route->viewDirectory;
@@ -86,15 +85,6 @@ class HtmlDocument
             identifier: 'requestedFileName',
             content: $requestHandler->fileName,
         );
-    }
-
-    public static function get(): HtmlDocument
-    {
-        if (HtmlDocument::$instance === null) {
-            HtmlDocument::$instance = new HtmlDocument();
-        }
-
-        return HtmlDocument::$instance;
     }
 
     public function setActiveHtmlId(int $key, string $val): void

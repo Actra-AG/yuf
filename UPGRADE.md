@@ -4,6 +4,120 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.15.0] – 2026-10-08
+
+### ⚠️ Views get a `ViewContext`
+
+`BaseView::__construct()` has the new first argument `ViewContext $context` and no longer reads `RequestHandler::get()`,
+`ContentHandler::get()` or `JsonRequestBody::get()`. Every view has to accept the context and pass it on;
+`ClassNameViewFactory` creates views with `new $className(context: $context)`.
+
+Before:
+
+```php
+final class index extends BaseView
+{
+    public function __construct()
+    {
+        parent::__construct(requiredViewGroupName: 'frontend', …);
+    }
+}
+```
+
+After:
+
+```php
+final class index extends BaseView
+{
+    public function __construct(ViewContext $context)
+    {
+        parent::__construct(context: $context, requiredViewGroupName: 'frontend', …);
+    }
+}
+```
+
+Views of a `ViewMap` get the context as closure argument:
+
+```php
+// Before
+create: fn(ViewContext $context): BaseView => new IndexView(greeting: 'Hello World'),
+// After
+create: fn(ViewContext $context): BaseView => new IndexView(context: $context, greeting: 'Hello World'),
+```
+
+A view reads the request data from `$this->context` (for example in a shared base view):
+
+```php
+// Before
+$route = RequestHandler::get()->route;
+$value = RequestHandler::get()->pathVars[1];
+$contentType = ContentHandler::get()->getContentType();
+
+// After
+$route = $this->context->route;
+$value = $this->context->pathVars->get(nr: 1);
+$contentType = $this->context->content->getContentType();
+```
+
+`ViewContext` also has `fileGroup`, `fileTitle`, `getHtmlDocument()` and `getJsonRequestBody()`.
+
+### ⚠️ `ViewContext` constructor changed
+
+`ViewContext` is a `final class` (no longer `readonly`) and has the new arguments `PathVars $pathVars` and
+`ContentHandler $content`. Only yuf creates it; create it yourself (for tests) like this:
+
+```php
+new ViewContext(
+    route: $route,
+    fileGroup: null,
+    fileTitle: 'index',
+    pathVars: new PathVars(values: ['index']),
+    content: new ContentHandler(contentType: ContentType::createHtml()),
+);
+```
+
+### ⚠️ `HtmlDocument::get()` is removed
+
+Before:
+
+```php
+HtmlDocument::get()->replacements->addEncodedText(identifier: 'title', content: 'Hello');
+```
+
+After, in a view:
+
+```php
+$this->getHtmlDocument()->replacements->addEncodedText(identifier: 'title', content: 'Hello');
+```
+
+Outside a view: `$context->getHtmlDocument()` or `$contentHandler->getHtmlDocument()` (one instance per request).
+
+### ⚠️ `JsonRequestBody::get()` is removed
+
+Before:
+
+```php
+$body = JsonRequestBody::get();
+```
+
+After, in a view (an invalid body still sends the error response):
+
+```php
+$body = $this->getJsonRequestBody();
+```
+
+Outside a view: `$context->getJsonRequestBody()`, or `JsonRequestBody::fromString(json: $json)` for a JSON string
+(throws an `InvalidArgumentException` for invalid JSON, an empty string is an empty object).
+
+### `ContentHandler` and `HtmlDocument` have public constructors
+
+`new ContentHandler(contentType: ContentType::createHtml())` and `new HtmlDocument()` can be created directly.
+`ContentHandler::register()`, `ContentHandler::get()` and `RequestHandler::get()` work as before.
+`HtmlDocument` still reads the current request in its constructor, so it is not yet usable without a request.
+`ContentHandler::register()` throws a `LogicException` for a route without `defaultContentType` (was a `TypeError`).
+
+---
+
 ## [v4.14.0] – 2026-10-08
 
 ### Views with constructor arguments

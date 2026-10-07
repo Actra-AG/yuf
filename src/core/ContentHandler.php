@@ -22,16 +22,28 @@ class ContentHandler
     public private(set) bool $suppressCspHeader = false;
     private string $content = '';
     private ContentType $contentType;
+    private ?HtmlDocument $htmlDocument = null;
 
-    private function __construct()
+    public function __construct(ContentType $contentType)
     {
-        if (ContentHandler::$registeredInstance !== null) {
-            throw new LogicException(message: 'ContentHandler is already registered.');
+        $this->contentType = $contentType;
+    }
+
+    /**
+     * The HTML document of the request, created on first access.
+     */
+    public function getHtmlDocument(): HtmlDocument
+    {
+        if ($this->htmlDocument === null) {
+            $this->htmlDocument = new HtmlDocument();
         }
-        ContentHandler::$registeredInstance = $this;
-        $requestHandler = RequestHandler::get();
+
+        return $this->htmlDocument;
+    }
+
+    private function processRequest(RequestHandler $requestHandler): void
+    {
         $route = $requestHandler->route;
-        $this->contentType = $route->defaultContentType;
         if ($route->viewCallback !== null) {
             $this->setContent(contentString: call_user_func(callback: $route->viewCallback));
             return;
@@ -39,19 +51,20 @@ class ContentHandler
         ob_start();
         ob_implicit_flush(enable: false);
         $route->loadLocalizedText(fileTitle: $requestHandler->fileTitle);
-        $view = ($route->viewFactory ?? new ClassNameViewFactory())->createView(
-            context: new ViewContext(
-                route: $route,
-                fileGroup: $requestHandler->fileGroup,
-                fileTitle: $requestHandler->fileTitle,
-            ),
+        $context = new ViewContext(
+            route: $route,
+            fileGroup: $requestHandler->fileGroup,
+            fileTitle: $requestHandler->fileTitle,
+            pathVars: new PathVars(values: $requestHandler->pathVars),
+            content: $this,
         );
+        $view = ($route->viewFactory ?? new ClassNameViewFactory())->createView(context: $context);
         if ($view === null) {
-            if ($requestHandler->getPathVar(nr: 1) !== null) {
+            if ($context->pathVars->get(nr: 1) !== null) {
                 throw new NotFoundException();
             }
         } else {
-            if ($requestHandler->getPathVar(nr: ($view->maxAllowedPathVars + 1)) !== null) {
+            if ($context->pathVars->get(nr: ($view->maxAllowedPathVars + 1)) !== null) {
                 throw new NotFoundException();
             }
             if (!$this->hasContent()) {
@@ -62,7 +75,7 @@ class ContentHandler
             !$this->hasContent()
             && $this->contentType->isHtml()
         ) {
-            $this->setContent(HtmlDocument::get()->render());
+            $this->setContent(contentString: $this->getHtmlDocument()->render());
         }
         $outputBufferContents = trim(string: ob_get_clean());
         if ($outputBufferContents !== '') {
@@ -82,7 +95,19 @@ class ContentHandler
 
     public static function register(): ContentHandler
     {
-        return new ContentHandler();
+        if (ContentHandler::$registeredInstance !== null) {
+            throw new LogicException(message: 'ContentHandler is already registered.');
+        }
+        $requestHandler = RequestHandler::get();
+        $route = $requestHandler->route;
+        if ($route->defaultContentType === null) {
+            throw new LogicException(message: 'The route "' . $route->path . '" has no default content type.');
+        }
+        $contentHandler = new ContentHandler(contentType: $route->defaultContentType);
+        ContentHandler::$registeredInstance = $contentHandler;
+        $contentHandler->processRequest(requestHandler: $requestHandler);
+
+        return $contentHandler;
     }
 
     public static function isRegistered(): bool

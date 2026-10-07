@@ -10,9 +10,10 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\core;
 
 use actra\yuf\core\ClassNameViewFactory;
-use actra\yuf\core\Route;
 use actra\yuf\core\ViewContext;
+use actra\yuf\tests\Double\core\ViewContextFactory;
 use actra\yuf\tests\Double\view\frontend\php\sample;
+use actra\yuf\tests\Double\view\frontend\php\sub\nested;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 
@@ -30,29 +31,17 @@ final class ClassNameViewFactoryTest extends TestCase
         string $viewGroup = 'frontend',
         string $prefix = self::TEST_PREFIX,
     ): ViewContext {
-        return new ViewContext(
-            route: new Route(
-                path: '/',
-                viewDirectory: '/tmp/views/',
-                viewClassPrefix: $prefix,
-                viewGroup: $viewGroup,
-            ),
-            fileGroup: $fileGroup,
+        return ViewContextFactory::create(
             fileTitle: $fileTitle,
+            fileGroup: $fileGroup,
+            viewGroup: $viewGroup,
+            viewClassPrefix: $prefix,
         );
     }
 
     public function testClassNameWithoutFileGroup(): void
     {
-        $context = new ViewContext(
-            route: new Route(
-                path: '/',
-                viewDirectory: '/tmp/views/',
-                viewGroup: 'frontend',
-            ),
-            fileGroup: null,
-            fileTitle: 'index',
-        );
+        $context = $this->createContext(fileTitle: 'index', prefix: 'app');
 
         $this->assertSame('app\view\frontend\php\index', new ClassNameViewFactory()->createClassName(context: $context));
     }
@@ -96,13 +85,19 @@ final class ClassNameViewFactoryTest extends TestCase
     {
         $context = $this->createContext(fileTitle: 'sample');
 
-        $this->assertInstanceOf(sample::class, new ClassNameViewFactory()->createView(context: $context));
+        $view = new ClassNameViewFactory()->createView(context: $context);
+
+        $this->assertInstanceOf(sample::class, $view);
+        $this->assertSame($context, $view->getContext());
     }
 
     public function testCreateViewWithFileGroup(): void
     {
         $context = $this->createContext(fileTitle: 'nested', fileGroup: 'sub');
 
-        $this->assertNotNull(new ClassNameViewFactory()->createView(context: $context));
+        $view = new ClassNameViewFactory()->createView(context: $context);
+
+        $this->assertInstanceOf(nested::class, $view);
+        $this->assertSame($context, $view->getContext());
     }
 }

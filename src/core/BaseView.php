@@ -18,6 +18,7 @@ use actra\yuf\common\SimpleXMLExtended;
 use actra\yuf\datacheck\Sanitizer;
 use actra\yuf\datacheck\validatorTypes\IpValidator;
 use actra\yuf\exception\NotFoundException;
+use actra\yuf\html\HtmlDocument;
 use actra\yuf\request\JsonRequestBody;
 use actra\yuf\response\HttpErrorResponseContent;
 use actra\yuf\response\HttpSuccessResponseContent;
@@ -32,6 +33,7 @@ abstract class BaseView
      *     `IpValidator::isInWhitelist()`), empty for all
      */
     protected function __construct(
+        protected readonly ViewContext $context,
         string $requiredViewGroupName,
         array $ipWhitelist,
         ?AuthUser $authUser,
@@ -39,7 +41,7 @@ abstract class BaseView
         private readonly InputParameterCollection $inputParameterCollection,
         public readonly int $maxAllowedPathVars = 0,
     ) {
-        $viewGroup = RequestHandler::get()->route->viewGroup;
+        $viewGroup = $context->route->viewGroup;
         if ($viewGroup !== $requiredViewGroupName) {
             throw new LogicException(
                 message: 'View group needs to be ' . $requiredViewGroupName . ' instead of ' . $viewGroup,
@@ -72,7 +74,7 @@ abstract class BaseView
                 || (!is_array(value: $paramValue) && trim(string: $paramValue) === '')
                 || $paramValue === []
             ) {
-                if (ContentHandler::get()->getContentType()->isHtml()) {
+                if ($context->content->getContentType()->isHtml()) {
                     throw new NotFoundException();
                 }
                 $this->setErrorResponseContent(errorMessage: 'missing or empty mandatory parameter: ' . $name);
@@ -84,7 +86,7 @@ abstract class BaseView
 
     protected function setContent(string $contentString): void
     {
-        ContentHandler::get()->setContent(contentString: $contentString);
+        $this->context->content->setContent(contentString: $contentString);
     }
 
     abstract public function execute(): void;
@@ -137,12 +139,12 @@ abstract class BaseView
 
     protected function setContentType(ContentType $contentType): void
     {
-        ContentHandler::get()->setContentType(contentType: $contentType);
+        $this->context->content->setContentType(contentType: $contentType);
     }
 
     protected function getPathVar(int $nr): ?string
     {
-        return RequestHandler::get()->getPathVar(nr: $nr);
+        return $this->context->pathVars->get(nr: $nr);
     }
 
     /**
@@ -150,7 +152,7 @@ abstract class BaseView
      */
     protected function getPathVarAsInt(int $nr): ?int
     {
-        return $this->pathVars()->getAsInt(nr: $nr);
+        return $this->context->pathVars->getAsInt(nr: $nr);
     }
 
     /**
@@ -158,7 +160,7 @@ abstract class BaseView
      */
     protected function getRequiredPathVarAsInt(int $nr): int
     {
-        return $this->pathVars()->getRequiredAsInt(nr: $nr);
+        return $this->context->pathVars->getRequiredAsInt(nr: $nr);
     }
 
     /**
@@ -166,12 +168,12 @@ abstract class BaseView
      */
     protected function getRequiredPathVarAsString(int $nr): string
     {
-        return $this->pathVars()->getRequiredAsString(nr: $nr);
+        return $this->context->pathVars->getRequiredAsString(nr: $nr);
     }
 
-    private function pathVars(): PathVars
+    protected function getHtmlDocument(): HtmlDocument
     {
-        return new PathVars(values: RequestHandler::get()->pathVars);
+        return $this->context->getHtmlDocument();
     }
 
     protected function setContentByXmlObject(SimpleXMLExtended $xmlObject): void
@@ -188,7 +190,7 @@ abstract class BaseView
         stdClass $data = new stdClass(),
         bool $sendAndExit = false,
     ): void {
-        $contentType = ContentHandler::get()->getContentType();
+        $contentType = $this->context->content->getContentType();
         if ($contentType->isJson()) {
             $httpSuccessResponseContent = HttpSuccessResponseContent::createJsonResponseContent(
                 data: $data,
@@ -218,7 +220,7 @@ abstract class BaseView
         ?stdClass $data = null,
         bool $sendAndExit = false,
     ): void {
-        $contentHandler = ContentHandler::get();
+        $contentHandler = $this->context->content;
         $contentType = $contentHandler->getContentType();
         if ($contentType->isJson()) {
             $httpErrorResponseContent = HttpErrorResponseContent::createJsonResponseContent(
@@ -249,7 +251,7 @@ abstract class BaseView
     protected function getJsonRequestBody(): JsonRequestBody
     {
         try {
-            return JsonRequestBody::get();
+            return $this->context->getJsonRequestBody();
         } catch (Throwable $throwable) {
             $this->setErrorResponseContent(
                 errorMessage: $throwable->getMessage(),

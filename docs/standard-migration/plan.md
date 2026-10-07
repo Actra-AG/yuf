@@ -330,24 +330,27 @@ replaces the static `getPath()` of the views) and the repositories, and remove `
 
 ### Step 4 – v4.15.0: views get request data through the `ViewContext`
 
-Changes:
+Changes (refined in the task; `RequestHandler` and the former `ContentHandler` could not be constructed in tests):
 
-- `ViewContext` gets the request scope: `RequestHandler $request`, `ContentHandler $content`, and the lazily created
-  `getHtmlDocument(): HtmlDocument` and `getJsonRequestBody(): JsonRequestBody` (created by `ContentHandler`, one
-  instance per request). `ViewContext` is then a `final class`, no longer `readonly`.
-- `BaseView::__construct()` gets the first argument `ViewContext $context` (⚠️ every view) and no longer calls
-  `RequestHandler::get()`, `ContentHandler::get()`, `JsonRequestBody::get()`. New protected
-  `BaseView::getHtmlDocument()`.
+- `ContentHandler` gets a plain public constructor `__construct(ContentType $contentType)` (no static registration, no
+  request processing) and `getHtmlDocument()` (lazy, one `HtmlDocument` per `ContentHandler`, also used for the final
+  rendering). `ContentHandler::register()` keeps today's behaviour (static registration, then the request pipeline in a
+  private method); `get()` and `isRegistered()` stay for `ExceptionHandler` (step 10).
+- `ViewContext` becomes a `final class` (no longer `readonly`): `Route $route`, `?string $fileGroup`,
+  `string $fileTitle`, `PathVars $pathVars`, `ContentHandler $content`, plus `getHtmlDocument()` and the lazily cached
+  `getJsonRequestBody()` (`JsonRequestBody::fromString(json: RequestBody::getData())`). No `RequestHandler` in it.
+- `BaseView::__construct()` gets the first argument `ViewContext $context` (⚠️ every view, stored as
+  `protected readonly ViewContext $context`) and no longer calls `RequestHandler::get()`, `ContentHandler::get()`,
+  `JsonRequestBody::get()`. New protected `BaseView::getHtmlDocument()`.
 - `ClassNameViewFactory` creates views with `new $className(context: $context)`.
-- `HtmlDocument::get()`, `JsonRequestBody::get()` and `RequestBody::getData()` are removed (⚠️); `HtmlDocument` and
-  `JsonRequestBody` get public constructors / `JsonRequestBody::fromString()`. `ContentHandler::get()` and
-  `RequestHandler::get()` stay for the rest of yuf (step 10).
+- `HtmlDocument::get()` and `JsonRequestBody::get()` are removed (⚠️); `HtmlDocument` gets a public constructor (its
+  internals still read `RequestHandler::get()`, `Core::get()`, `CspNonce::get()` until step 10), `JsonRequestBody` gets
+  `fromString()`. `RequestBody::getData()` stays: it is the boundary that reads `php://input`, like `HttpRequest`.
+  `ContentHandler::get()` and `RequestHandler::get()` stay for the rest of yuf (step 10).
 - `HttpRequest` stays static (see 1.1).
-- Tests first: characterization of `BaseView` (view group check, IP whitelist, required access rights, required input
-  parameter → `NotFoundException` for HTML, error response for JSON, `maxAllowedPathVars`), then the same tests with a
-  `ViewContext` built from doubles. `JsonRequestBodyTest` with `fromString()`. Doubles: `tests/Double/core/` view and a
-  `ViewContext` factory for tests; `RequestHandler` needs a test constructor or a small `RequestData` value object –
-  decide in the task, without reflection hacks if possible.
+- Tests: `JsonRequestBodyTest` (`fromString()`), `ContentHandlerTest`, `BaseViewTest` (view group, IP whitelist, access
+  rights, path vars, content, error/success responses, missing required parameter), doubles in `tests/Double/`
+  (`ViewContextFactory`, `ConfigurableTestView`, `TestAuthUser`).
 - `example/`: `IndexView` gets `ViewContext $context`, uses `$this->getHtmlDocument()` instead of `HtmlDocument::get()`.
 
 `UPGRADE.md` (draft):
@@ -393,7 +396,7 @@ Views of a `ViewMap` get the context as closure argument:
 `create: fn(ViewContext $context): BaseView => new IndexView(context: $context, …)`.
 
 `HtmlDocument::get()` and `JsonRequestBody::get()` are removed: use `BaseView::getHtmlDocument()` and
-`BaseView::getJsonRequestBody()`.
+`BaseView::getJsonRequestBody()` (`JsonRequestBody::fromString()` for a JSON string).
 ````
 
 `actra/backend` afterwards (task 7, part 2): `BackendView` and the 28 views accept and pass `ViewContext`; replace
@@ -516,3 +519,18 @@ Smaller releases, each for one area:
   `@phpstan-ignore constructor.missingParentCall`; lowercase class names follow the file name convention).
 - `example/`: `app\view\frontend\IndexView` registered with a `ViewMap` (checked: `/` and `/index.html` 200, `nope.html`
   404). README section "Views" and `UPGRADE.md` added; baseline unchanged (767).
+
+### Step 4 (v4.15.0) – done
+
+- `ViewContext` (final class: route, file group/title, `PathVars`, `ContentHandler`, `getHtmlDocument()`, cached
+  `getJsonRequestBody()`); `BaseView` takes it as first argument and uses it for route, path vars, content type and
+  response content; `ClassNameViewFactory` passes it. `ContentHandler` has a public constructor and `getHtmlDocument()`;
+  `register()` runs the pipeline as before. `HtmlDocument::get()` and `JsonRequestBody::get()` removed.
+- Deviation from the draft: no `RequestHandler` in the context and `RequestBody::getData()` kept (it is the I/O
+  boundary). `PathVars::get()` equals `RequestHandler::getPathVar()` (trimmed value or `null`).
+- `JsonRequestBodyTest` is written against `fromString()` (the former `get()` could not be fed in tests);
+  `BaseViewTest` and `ContentHandlerTest` added; step 3 doubles now call the parent constructor.
+- Not covered by tests: `ContentHandler::register()` and `getHtmlDocument()` (`HtmlDocument` reads
+  `RequestHandler::get()`), `BaseView::getHtmlDocument()` / `getJsonRequestBody()`, present required input parameters
+  (`HttpRequest` caches `$_GET`/`$_POST` statically). `example/` checked in the browser (`/`, `/index.html` 200,
+  `nope.html` 404).

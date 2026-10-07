@@ -41,7 +41,7 @@ $core->prepareHttpResponse(
                 language: $english,
                 viewFactory: new ViewMap()->add(
                     fileTitle: 'index',
-                    create: fn(ViewContext $context): BaseView => new IndexView(),
+                    create: fn(ViewContext $context): BaseView => new IndexView(context: $context),
                 ),
             ),
         ],

@@ -9,14 +9,40 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
+use actra\yuf\html\HtmlDocument;
+use actra\yuf\request\JsonRequestBody;
+use actra\yuf\request\RequestBody;
+use InvalidArgumentException;
+
 /**
- * What a view factory needs to choose and create the view of the current request.
+ * The request data of a view and what a view factory needs to choose and create it. One instance per request.
  */
-final readonly class ViewContext
+final class ViewContext
 {
+    private ?JsonRequestBody $jsonRequestBody = null;
+
     public function __construct(
-        public Route $route,
-        public ?string $fileGroup,
-        public string $fileTitle,
+        public readonly Route $route,
+        public readonly ?string $fileGroup,
+        public readonly string $fileTitle,
+        public readonly PathVars $pathVars,
+        public readonly ContentHandler $content,
     ) {}
+
+    public function getHtmlDocument(): HtmlDocument
+    {
+        return $this->content->getHtmlDocument();
+    }
+
+    /**
+     * @throws InvalidArgumentException if the request body is not valid JSON
+     */
+    public function getJsonRequestBody(): JsonRequestBody
+    {
+        if ($this->jsonRequestBody === null) {
+            $this->jsonRequestBody = JsonRequestBody::fromString(json: RequestBody::getData());
+        }
+
+        return $this->jsonRequestBody;
+    }
 }

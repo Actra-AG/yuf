@@ -14,27 +14,26 @@ use stdClass;
 
 class JsonRequestBody extends RequestBody
 {
-    private static ?JsonRequestBody $instance = null;
-
     private function __construct(
         public readonly stdClass $data,
     ) {}
 
-    public static function get(): JsonRequestBody
+    /**
+     * An empty string is an empty object.
+     *
+     * @throws InvalidArgumentException if the string is not valid JSON
+     */
+    public static function fromString(string $json): JsonRequestBody
     {
-        if (JsonRequestBody::$instance === null) {
-            $requestBodyData = RequestBody::getData();
-            if ($requestBodyData === '') {
-                $requestBodyData = '{}';
-            }
-            $data = json_decode(json: $requestBodyData);
-            $jsonLastError = json_last_error();
-            if ($jsonLastError !== JSON_ERROR_NONE) {
-                throw new InvalidArgumentException(message: 'JSON error: ' . json_last_error_msg());
-            }
-            JsonRequestBody::$instance = new JsonRequestBody(data: $data);
+        if ($json === '') {
+            $json = '{}';
         }
-        return JsonRequestBody::$instance;
+        $data = json_decode(json: $json);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new InvalidArgumentException(message: 'JSON error: ' . json_last_error_msg());
+        }
+
+        return new JsonRequestBody(data: $data);
     }
 
     private function getValue(string $keyName): int|float|string|array|null

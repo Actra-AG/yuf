@@ -13,7 +13,8 @@ use LogicException;
 use Override;
 
 /**
- * Default: the class name is built from the route and the file name, the view has no constructor arguments.
+ * Default: the class name is built from the route and the file name, the view is created with
+ * `new $className(context: $context)`.
  */
 final readonly class ClassNameViewFactory implements ViewFactory
 {
@@ -53,6 +54,6 @@ final readonly class ClassNameViewFactory implements ViewFactory
             );
         }
 
-        return new $className();
+        return new $className(context: $context);
     }
 }

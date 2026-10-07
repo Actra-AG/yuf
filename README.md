@@ -121,9 +121,14 @@ optionally qualified like `table.column` or quoted with backticks) and an invali
 ## Views
 
 By default, the view of a request is the class `<viewClassPrefix>\view\<viewGroup>\php\[<fileGroup>\]<fileTitle>`
-(`ClassNameViewFactory`), created without constructor arguments. A `Route` can instead get a `viewFactory`; `ViewMap`
-maps the file name to a closure, so views have any class name and receive their dependencies. Only the view of the
-current request is created; a file without a mapped view is rendered without view.
+(`ClassNameViewFactory`), created with `new $className(context: $context)`. A `Route` can instead get a
+`viewFactory`; `ViewMap` maps the file name to a closure, so views have any class name and receive their dependencies.
+Only the view of the current request is created; a file without a mapped view is rendered without view.
+
+Every view receives the `ViewContext` of the request and passes it to `BaseView::__construct()`. It holds the route
+(`$this->context->route`), the file group and title, the `PathVars` and the `ContentHandler`
+(`$this->context->content->getContentType()`); `BaseView::getHtmlDocument()` and `getJsonRequestBody()` give the HTML
+document and the JSON request body.
 
 ```php
 new Route(
@@ -131,7 +136,7 @@ new Route(
     viewGroup: 'frontend',
     viewFactory: new ViewMap()->add(
         fileTitle: 'index',
-        create: fn(ViewContext $context): BaseView => new IndexView(),
+        create: fn(ViewContext $context): BaseView => new IndexView(context: $context),
     ),
 );
 ```

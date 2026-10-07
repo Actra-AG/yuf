@@ -1027,12 +1027,6 @@ parameters:
 			path: src/core/ContentHandler.php
 
 		-
-			rawMessage: 'Property actra\yuf\core\ContentHandler::$contentType (actra\yuf\core\ContentType) does not accept actra\yuf\core\ContentType|null.'
-			identifier: assign.propertyType
-			count: 1
-			path: src/core/ContentHandler.php
-
-		-
 			rawMessage: 'Cannot access offset int<0, max> on mixed.'
 			identifier: offsetAccess.nonOffsetAccessible
 			count: 5
