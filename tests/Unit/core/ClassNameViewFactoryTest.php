@@ -19,7 +19,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * The expected class names are taken literally from the algorithm of the former Route::getPhpClassName(), which
- * cannot be called in tests (it reads RequestHandler::get()).
+ * read the removed RequestHandler::get().
  */
 final class ClassNameViewFactoryTest extends TestCase
 {

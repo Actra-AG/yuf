@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
+use actra\yuf\Core;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\html\HtmlDocument;
 use actra\yuf\security\CspNonce;
@@ -17,13 +18,13 @@ use LogicException;
 
 class ContentHandler
 {
-    private static ?ContentHandler $registeredInstance = null;
-
     public HttpStatusCodeEnum $httpStatusCode = HttpStatusCodeEnum::HTTP_OK;
     public private(set) bool $suppressCspHeader = false;
     private string $content = '';
     private ContentType $contentType;
     private ?HtmlDocument $htmlDocument = null;
+    private ?RequestHandler $requestHandler = null;
+    private ?Core $core = null;
 
     public function __construct(
         ContentType $contentType,
@@ -34,18 +35,37 @@ class ContentHandler
 
     /**
      * The HTML document of the request, created on first access.
+     *
+     * @throws LogicException if the request is not processed yet
      */
     public function getHtmlDocument(): HtmlDocument
     {
         if ($this->htmlDocument === null) {
-            $this->htmlDocument = new HtmlDocument(cspNonce: $this->cspNonce);
+            if ($this->requestHandler === null || $this->core === null) {
+                throw new LogicException(message: 'The HTML document is only available while the request is processed.');
+            }
+            $this->htmlDocument = new HtmlDocument(
+                requestHandler: $this->requestHandler,
+                cspNonce: $this->cspNonce,
+                core: $this->core,
+            );
         }
 
         return $this->htmlDocument;
     }
 
-    private function processRequest(RequestHandler $requestHandler, LocaleHandler $localeHandler): void
+    /**
+     * Runs the view of the resolved route and sets the content of the response.
+     *
+     * @throws LogicException if called twice
+     */
+    public function processRequest(RequestHandler $requestHandler, LocaleHandler $localeHandler, Core $core): void
     {
+        if ($this->requestHandler !== null) {
+            throw new LogicException(message: 'The request is already processed.');
+        }
+        $this->requestHandler = $requestHandler;
+        $this->core = $core;
         $route = $requestHandler->route;
         if ($route->viewCallback !== null) {
             $this->setContent(contentString: call_user_func(callback: $route->viewCallback));
@@ -90,39 +110,9 @@ class ContentHandler
         }
     }
 
-    public static function get(): ContentHandler
-    {
-        return ContentHandler::$registeredInstance;
-    }
-
     public function hasContent(): bool
     {
         return trim(string: $this->content) !== '';
-    }
-
-    public static function register(CspNonce $cspNonce, LocaleHandler $localeHandler): ContentHandler
-    {
-        if (ContentHandler::$registeredInstance !== null) {
-            throw new LogicException(message: 'ContentHandler is already registered.');
-        }
-        $requestHandler = RequestHandler::get();
-        $route = $requestHandler->route;
-        if ($route->defaultContentType === null) {
-            throw new LogicException(message: 'The route "' . $route->path . '" has no default content type.');
-        }
-        $contentHandler = new ContentHandler(
-            contentType: $route->defaultContentType,
-            cspNonce: $cspNonce,
-        );
-        ContentHandler::$registeredInstance = $contentHandler;
-        $contentHandler->processRequest(requestHandler: $requestHandler, localeHandler: $localeHandler);
-
-        return $contentHandler;
-    }
-
-    public static function isRegistered(): bool
-    {
-        return ContentHandler::$registeredInstance !== null;
     }
 
     public function getContentType(): ContentType

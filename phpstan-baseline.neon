@@ -85,18 +85,6 @@ parameters:
 			path: src/Core.php
 
 		-
-			rawMessage: 'Property actra\yuf\Core::$allowedDomains (array) does not accept mixed.'
-			identifier: assign.propertyType
-			count: 1
-			path: src/Core.php
-
-		-
-			rawMessage: Property actra\yuf\Core::$allowedDomains type has no value type specified in iterable type array.
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/Core.php
-
-		-
 			rawMessage: Property actra\yuf\Core::$config type has no value type specified in iterable type array.
 			identifier: missingType.iterableValue
 			count: 1
@@ -1009,12 +997,6 @@ parameters:
 			path: src/core/BaseView.php
 
 		-
-			rawMessage: 'Method actra\yuf\core\ContentHandler::get() should return actra\yuf\core\ContentHandler but returns actra\yuf\core\ContentHandler|null.'
-			identifier: return.type
-			count: 1
-			path: src/core/ContentHandler.php
-
-		-
 			rawMessage: 'Parameter $contentString of method actra\yuf\core\ContentHandler::setContent() expects string, mixed given.'
 			identifier: argument.type
 			count: 1
@@ -1479,18 +1461,6 @@ parameters:
 		-
 			rawMessage: 'Class actra\yuf\core\HttpRequest referenced with incorrect case: actra\yuf\core\Httprequest.'
 			identifier: class.nameCase
-			count: 1
-			path: src/core/RequestHandler.php
-
-		-
-			rawMessage: 'Method actra\yuf\core\RequestHandler::checkDomain() has parameter $allowedDomains with no value type specified in iterable type array.'
-			identifier: missingType.iterableValue
-			count: 1
-			path: src/core/RequestHandler.php
-
-		-
-			rawMessage: 'Method actra\yuf\core\RequestHandler::get() should return actra\yuf\core\RequestHandler but returns actra\yuf\core\RequestHandler|null.'
-			identifier: return.type
 			count: 1
 			path: src/core/RequestHandler.php
 

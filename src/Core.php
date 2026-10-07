@@ -47,6 +47,7 @@ class Core
     public readonly string $settingsDirectory;
     public readonly string $snippetsDirectory;
     public readonly string $viewDirectory;
+    /** @var list<string> */
     public readonly array $allowedDomains;
     public readonly LanguageCollection $availableLanguages;
     public readonly bool $debug;
@@ -109,7 +110,9 @@ class Core
                 ),
             );
         }
-        $this->allowedDomains = Core::$config['allowedDomains'];
+        /** @var list<string> $allowedDomains */
+        $allowedDomains = Core::$config['allowedDomains'];
+        $this->allowedDomains = $allowedDomains;
         $this->availableLanguages = new LanguageCollection();
         $this->debug = Core::$config['debug'];
         $this->robots = Core::$config['robots'];
@@ -191,13 +194,14 @@ class Core
         }
         $this->cspPolicySettings = $cspPolicySettings;
         $cspNonce = CspNonce::create();
-        ExceptionHandler::register(
+        $exceptionHandler = ExceptionHandler::register(
             individualExceptionHandler: $individualExceptionHandler,
             context: new ExceptionHandlerContext(
                 logger: $logger,
                 cspNonce: $cspNonce,
                 cspPolicySettings: $this->cspPolicySettings,
                 isDebug: $this->debug,
+                core: $this,
             ),
         );
         if ($individualSessionHandler === null) {
@@ -210,13 +214,31 @@ class Core
         if (!$routeCollection->hasRoutes()) {
             throw new LogicException(message: 'There must be at least one route');
         }
-        $requestHandler = RequestHandler::register(routeCollection: $routeCollection);
+        $requestHandler = new RequestHandler(
+            routeCollection: $routeCollection,
+            availableLanguages: $this->availableLanguages,
+            allowedDomains: $this->allowedDomains,
+        );
+        $exceptionHandler->setRequestHandler(requestHandler: $requestHandler);
+        $requestHandler->resolveRoute();
         $localeHandler = new LocaleHandler(
             language: $requestHandler->language,
             availableLanguages: $this->availableLanguages,
         );
         LocaleHandler::register(localeHandler: $localeHandler);
-        $contentHandler = ContentHandler::register(cspNonce: $cspNonce, localeHandler: $localeHandler);
+        $defaultContentType = $requestHandler->route->defaultContentType;
+        if ($defaultContentType === null) {
+            throw new LogicException(
+                message: 'The route "' . $requestHandler->route->path . '" has no default content type.',
+            );
+        }
+        $contentHandler = new ContentHandler(contentType: $defaultContentType, cspNonce: $cspNonce);
+        $exceptionHandler->setContentHandler(contentHandler: $contentHandler);
+        $contentHandler->processRequest(
+            requestHandler: $requestHandler,
+            localeHandler: $localeHandler,
+            core: $this,
+        );
         if (!$contentHandler->hasContent()) {
             throw new NotFoundException();
         }

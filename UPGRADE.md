@@ -4,6 +4,96 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.23.0] – 2026-10-08
+
+### ⚠️ `RequestHandler::get()` and `RequestHandler::register()` removed
+
+The request data is no longer reachable through a static accessor. `Core::prepareHttpResponse()` creates the
+`RequestHandler` itself (constructor `(routeCollection, availableLanguages, allowedDomains)`, then `resolveRoute()`).
+Views read the request data from their `ViewContext`; everything else gets the `RequestHandler` passed.
+
+Before:
+
+```php
+$route = RequestHandler::get()->route;
+$id = RequestHandler::get()->pathVars;
+```
+
+After (in a view):
+
+```php
+$route = $this->context->route;
+$pathVars = $this->context->pathVars;
+```
+
+Elsewhere, pass the `RequestHandler` (or the `Route`) as argument. `HtmlSnippet::createForCurrentView()` now needs the
+route as first argument, because it read `RequestHandler::get()->route`:
+
+```php
+HtmlSnippet::createForCurrentView(route: $this->context->route, snippetName: 'menu');
+```
+
+### ⚠️ `ContentHandler::get()`, `isRegistered()` and `register()` removed
+
+`Core` creates the `ContentHandler` and calls the new `processRequest(requestHandler:, localeHandler:, core:)`.
+`getHtmlDocument()` throws a `LogicException` until `processRequest()` has been called.
+
+Before:
+
+```php
+ContentHandler::get()->setContent(contentString: $json);
+if (ContentHandler::isRegistered()) { /* ... */ }
+```
+
+After (in a view):
+
+```php
+$this->context->content->setContent(contentString: $json);
+```
+
+### ⚠️ `HtmlDocument` constructor
+
+`new HtmlDocument(cspNonce:)` became `new HtmlDocument(requestHandler:, cspNonce:, core:)`. Views keep using
+`$this->context->getHtmlDocument()`.
+
+### ⚠️ `ExceptionHandlerContext` needs `core:`
+
+The exception handler reads the error docs directory, the copyright year and the available languages from it instead of
+`Core::get()`.
+
+Before:
+
+```php
+new ExceptionHandlerContext(logger: $logger, cspNonce: $cspNonce, cspPolicySettings: $settings, isDebug: $debug);
+```
+
+After:
+
+```php
+new ExceptionHandlerContext(
+    logger: $logger,
+    cspNonce: $cspNonce,
+    cspPolicySettings: $settings,
+    isDebug: $debug,
+    core: $core,
+);
+```
+
+### `ExceptionHandler`: `register()` returns the instance, new setters
+
+`ExceptionHandler::register()` returns the registered handler (was `void`). `setRequestHandler()` and
+`setContentHandler()` (each only once) give it the request data; `Core::prepareHttpResponse()` calls them. An exception
+before the request handler exists still renders the error page with the language `en` and the language root `/`.
+
+### `RequestHandler`: two phases
+
+The constructor no longer checks the domain or resolves the route; `resolveRoute()` does (it throws a `NotFoundException`
+as the constructor did, and a `LogicException` when called twice). `route`, `fileTitle`, `fileExtension` and `pathVars`
+are only set afterwards. The language, the path parts, the file name and the default routes are available right after
+the constructor, so the error page of an unknown route keeps its language and language root.
+
+---
+
 ## [v4.22.0] – 2026-10-08
 
 ### ⚠️ `Route` needs `viewDirectory:`

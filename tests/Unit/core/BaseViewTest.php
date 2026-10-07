@@ -26,8 +26,8 @@ use stdClass;
 
 /**
  * Not covered: required input parameters that are present, and getJsonRequestBody() (both read HttpRequest /
- * php://input, which are statically cached and cannot be fed in tests); getHtmlDocument() (HtmlDocument reads
- * RequestHandler::get() until step 10).
+ * php://input, which are statically cached and cannot be fed in tests); getHtmlDocument() (needs a processed
+ * request).
  */
 final class BaseViewTest extends TestCase
 {

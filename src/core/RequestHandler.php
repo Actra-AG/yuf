@@ -9,52 +9,70 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
-use actra\yuf\Core;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\session\AbstractSessionHandler;
 use LogicException;
 
 class RequestHandler
 {
-    private static ?RequestHandler $instance = null;
-
     public readonly array $pathParts;
     public readonly int $countPathParts;
     public private(set) ?RouteCollection $defaultRoutesByLanguage = null;
-    public readonly Route $route;
+    // Set by resolveRoute()
+    public private(set) Route $route; // @phpstan-ignore property.uninitialized
     public ?Language $language = null;
-    public readonly string $fileTitle;
-    public readonly string $fileExtension;
+    // Set by resolveRoute()
+    public private(set) string $fileTitle; // @phpstan-ignore property.uninitialized
+    // Set by resolveRoute()
+    public private(set) string $fileExtension; // @phpstan-ignore property.uninitialized
     public private(set) ?string $fileName = null;
     public private(set) ?string $fileGroup = null;
     public private(set) array $routeVariables = [];
+    // Set by resolveRoute()
     /** @var list<string> */
-    public readonly array $pathVars;
+    public private(set) array $pathVars; // @phpstan-ignore property.uninitialized
+    private bool $routeResolved = false;
 
-    private function __construct(RouteCollection $allRoutes)
-    {
-        if (RequestHandler::$instance !== null) {
-            throw new LogicException(message: 'RequestHandler is already registered');
+    /**
+     * Prepares the request without resolving the route: the language, the path parts, the file name and the default
+     * routes are available afterwards (also for the error page of an unknown route). Call `resolveRoute()` next.
+     *
+     * @param list<string> $allowedDomains
+     */
+    public function __construct(
+        private readonly RouteCollection $routeCollection,
+        private readonly LanguageCollection $availableLanguages,
+        private readonly array $allowedDomains,
+    ) {
+        if (!$availableLanguages->isEmpty()) {
+            $this->language = $availableLanguages->getFirstLanguage();
         }
-        RequestHandler::$instance = $this;
-        $core = Core::get();
-        if (!$core->availableLanguages->isEmpty()) {
-            $this->language = $core->availableLanguages->getFirstLanguage();
-        }
-        $this->checkDomain(allowedDomains: $core->allowedDomains);
         $this->pathParts = explode(separator: '/', string: HttpRequest::getPath());
         $this->countPathParts = count(value: $this->pathParts);
         $this->fileName = trim(string: $this->pathParts[$this->countPathParts - 1]);
-        $this->defaultRoutesByLanguage = $this->initDefaultRoutes(
-            allRoutes: $allRoutes,
-        );
+        $this->defaultRoutesByLanguage = $this->initDefaultRoutes();
+    }
+
+    /**
+     * Finds the route of the request and everything that depends on it.
+     *
+     * @throws NotFoundException if the domain is not allowed, the path is invalid or no route matches
+     * @throws LogicException if called twice
+     */
+    public function resolveRoute(): void
+    {
+        if ($this->routeResolved) {
+            throw new LogicException(message: 'The route is already resolved');
+        }
+        $this->routeResolved = true;
+        $this->checkDomain();
         if (str_contains(
             haystack: HttpRequest::getPath(),
             needle: '//',
         )) {
             throw new NotFoundException();
         }
-        $this->route = $this->initRoute(countPathParts: $this->countPathParts, allRoutes: $allRoutes);
+        $this->route = $this->initRoute();
         $forceFileGroup = $this->route->forceFileGroup;
         if ($forceFileGroup !== null && $forceFileGroup !== '') {
             $this->fileGroup = $forceFileGroup;
@@ -76,7 +94,7 @@ class RequestHandler
                     || $preferredLanguageCode !== $this->language->code
                 )
             ) {
-                if (!$core->availableLanguages->hasLanguage(languageCode: $this->language->code)) {
+                if (!$this->availableLanguages->hasLanguage(languageCode: $this->language->code)) {
                     throw new LogicException(
                         message: 'The preferred language ' . $this->language->code . ' is not available',
                     );
@@ -84,7 +102,8 @@ class RequestHandler
                 $sessionHandler->setPreferredLanguage(language: $this->language);
             }
         }
-        $fileName = (trim(string: $this->fileName) === '') ? $this->route->defaultFileName : $this->fileName;
+        $requestedFileName = $this->fileName ?? '';
+        $fileName = (trim(string: $requestedFileName) === '') ? $this->route->defaultFileName : $requestedFileName;
         $dotPos = strripos(haystack: $fileName, needle: '.');
         if ($dotPos === false) {
             $length = strlen(string: $fileName);
@@ -108,19 +127,14 @@ class RequestHandler
         }
     }
 
-    public static function get(): RequestHandler
-    {
-        return RequestHandler::$instance;
-    }
-
-    private function checkDomain(array $allowedDomains): void
+    private function checkDomain(): void
     {
         $host = HttpRequest::getHost();
 
         if (
             !in_array(
                 needle: $host,
-                haystack: $allowedDomains,
+                haystack: $this->allowedDomains,
                 strict: true,
             )
         ) {
@@ -130,12 +144,11 @@ class RequestHandler
         }
     }
 
-    private function initDefaultRoutes(
-        RouteCollection $allRoutes,
-    ): RouteCollection {
+    private function initDefaultRoutes(): RouteCollection
+    {
         $defaultRoutes = new RouteCollection();
         $usedLanguages = new LanguageCollection();
-        foreach ($allRoutes->routes as $route) {
+        foreach ($this->routeCollection->routes as $route) {
             if (
                 !$route->isDefaultForLanguage
                 || $route->language === null
@@ -147,7 +160,7 @@ class RequestHandler
                     message: 'Default route for language ' . $route->language->code . ' is already set',
                 );
             }
-            if (Core::get()->availableLanguages->hasLanguage(languageCode: $route->language->code)) {
+            if ($this->availableLanguages->hasLanguage(languageCode: $route->language->code)) {
                 $defaultRoutes->addRoute(route: $route);
                 $usedLanguages->add(language: $route->language);
             }
@@ -156,16 +169,16 @@ class RequestHandler
         return $defaultRoutes;
     }
 
-    private function initRoute(int $countPathParts, RouteCollection $allRoutes): Route
+    private function initRoute(): Route
     {
-        $countDirectories = $countPathParts - 2;
+        $countDirectories = $this->countPathParts - 2;
         $requestedDirectories = '/';
         for ($x = 1; $x <= $countDirectories; $x++) {
             $requestedDirectories .= $this->pathParts[$x] . '/';
         }
 
         $requestedPath = HttpRequest::getPath();
-        foreach ($allRoutes->routes as $route) {
+        foreach ($this->routeCollection->routes as $route) {
             $routePath = $route->path;
             if ($routePath === $requestedDirectories) {
                 return $route;
@@ -222,11 +235,6 @@ class RequestHandler
         }
 
         throw new NotFoundException();
-    }
-
-    public static function register(RouteCollection $routeCollection): RequestHandler
-    {
-        return new RequestHandler(allRoutes: $routeCollection);
     }
 
     public function getPathVar(int $nr): ?string

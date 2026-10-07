@@ -30,6 +30,9 @@ class ExceptionHandler
     protected ContentType $contentType;
     // Set by register(): the handler instance is created by the project, before the request dependencies exist
     private ?ExceptionHandlerContext $context = null;
+    // Set by Core as soon as the request data exists; an exception before that uses fallback values
+    private ?RequestHandler $requestHandler = null;
+    private ?ContentHandler $contentHandler = null;
 
     public function __construct(
         protected readonly HtmlReplacementCollection $htmlReplacementCollection = new HtmlReplacementCollection(),
@@ -38,17 +41,41 @@ class ExceptionHandler
     public static function register(
         ?ExceptionHandler $individualExceptionHandler,
         ExceptionHandlerContext $context,
-    ): void {
+    ): ExceptionHandler {
         if (ExceptionHandler::$registeredInstance !== null) {
             throw new LogicException(message: 'ExceptionHandler is already registered.');
         }
-        ExceptionHandler::$registeredInstance = $individualExceptionHandler === null ? new ExceptionHandler(
-        ) : $individualExceptionHandler;
-        ExceptionHandler::$registeredInstance->context = $context;
+        $exceptionHandler = $individualExceptionHandler === null ? new ExceptionHandler() : $individualExceptionHandler;
+        $exceptionHandler->context = $context;
+        ExceptionHandler::$registeredInstance = $exceptionHandler;
         set_exception_handler(callback: [
-            ExceptionHandler::$registeredInstance,
+            $exceptionHandler,
             'handleException',
         ]);
+
+        return $exceptionHandler;
+    }
+
+    /**
+     * @throws LogicException if the request handler is already set
+     */
+    public function setRequestHandler(RequestHandler $requestHandler): void
+    {
+        if ($this->requestHandler !== null) {
+            throw new LogicException(message: 'The request handler is already set.');
+        }
+        $this->requestHandler = $requestHandler;
+    }
+
+    /**
+     * @throws LogicException if the content handler is already set
+     */
+    public function setContentHandler(ContentHandler $contentHandler): void
+    {
+        if ($this->contentHandler !== null) {
+            throw new LogicException(message: 'The content handler is already set.');
+        }
+        $this->contentHandler = $contentHandler;
     }
 
     protected function getContext(): ExceptionHandlerContext
@@ -62,8 +89,9 @@ class ExceptionHandler
 
     final public function handleException(Throwable $throwable): void
     {
-        $this->contentType = ContentHandler::isRegistered() ? ContentHandler::get()->getContentType(
-        ) : ContentType::createHtml();
+        $this->contentType = $this->contentHandler === null
+            ? ContentType::createHtml()
+            : $this->contentHandler->getContentType();
         if ($this->getContext()->isDebug) {
             $this->sendDebugHttpResponseAndExit(throwable: $throwable);
         }
@@ -201,24 +229,25 @@ class ExceptionHandler
 
     private function getHtmlContent(string $htmlFileName): string
     {
-        $core = Core::get();
+        $core = $this->getContext()->core;
         $contentPath = $core->errorDocsDirectory . $htmlFileName;
         if (!file_exists(filename: $contentPath)) {
             return 'Missing error html file ' . $contentPath;
         }
         $htmlReplacementCollection = $this->htmlReplacementCollection;
-        $requestHandler = RequestHandler::get();
+        $requestHandler = $this->requestHandler;
         $htmlReplacementCollection->addEncodedText(
             identifier: 'copyright',
             content: $core->renderCopyrightYear(),
         );
+        $language = $requestHandler?->language;
         $htmlReplacementCollection->addEncodedText(
             identifier: 'language',
-            content: $requestHandler->language === null ? 'en' : $requestHandler->language->code,
+            content: $language === null ? 'en' : $language->code,
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'langRoot',
-            content: $requestHandler->getLanguageRoot(),
+            content: $requestHandler === null ? '/' : $requestHandler->getLanguageRoot(),
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'charset',
@@ -248,13 +277,14 @@ class ExceptionHandler
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'requestedFileName',
-            content: $requestHandler->fileName === null ? null : $requestHandler->fileName,
+            content: $requestHandler?->fileName,
         );
         if (
-            $core->availableLanguages->isMultiLang()
+            $requestHandler !== null
+            && $core->availableLanguages->isMultiLang()
             && !LocaleHandler::isRegistered()
         ) {
-            $this->loadLocalizedText(requestHandler: $requestHandler);
+            $this->loadLocalizedText(requestHandler: $requestHandler, core: $core);
         }
 
         return new HtmlSnippet(
@@ -265,10 +295,11 @@ class ExceptionHandler
 
     private function loadLocalizedText(
         RequestHandler $requestHandler,
+        Core $core,
     ): void {
         $localeHandler = new LocaleHandler(
             language: $requestHandler->language,
-            availableLanguages: Core::get()->availableLanguages,
+            availableLanguages: $core->availableLanguages,
         );
         LocaleHandler::register(localeHandler: $localeHandler);
         $defaultRouteForLanguage = $requestHandler->defaultRoutesByLanguage->getRouteForLanguage(

@@ -483,14 +483,19 @@ Smaller releases, each for one area:
   does not check the available languages (`RequestHandler` does). `MicrosoftAuthenticator` gets `logDirectory` and
   `cacheDirectory` through its constructor and passes the cache directory to `MicrosoftIdToken`. `Pagination` and
   `TableFilter` find their snippets with `__DIR__`.
-- **10.3 request data (v4.23.0 and later):** `HtmlDocument` and `ExceptionHandler` without `RequestHandler::get()` /
-  `Core::get()` / `ContentHandler::get()`; then `RequestHandler::get()` and `ContentHandler::get()` / `isRegistered()`
-  are removed.
+- **10.3 request data (v4.23.0):** no static `RequestHandler` / `ContentHandler` anymore. `RequestHandler` has two
+  phases: the constructor `(routeCollection, availableLanguages, allowedDomains)` sets what cannot throw (first
+  available language, path parts, file name, default routes), `resolveRoute()` does the rest in today's order (domain,
+  `//`, route, language, session, file name parts; twice = `LogicException`), so the 404 page keeps language and
+  language root. `ContentHandler::processRequest(requestHandler, localeHandler, core)` replaces `register()`;
+  `getHtmlDocument()` throws before it. `HtmlDocument(requestHandler, cspNonce, core)`. `ExceptionHandlerContext`
+  gets `core`; `ExceptionHandler::register()` returns the instance, `setRequestHandler()` / `setContentHandler()` give
+  it the request data (fallbacks `en`, `/`, no file name before). `Core::prepareHttpResponse()` orchestrates.
+  `HtmlSnippet::createForCurrentView()` gets the `Route` (it read `RequestHandler::get()`).
 - **Stays:** `Core::get()` and `LocaleHandler::get()` for the compiled templates (`IfTag`, `SnippetTag`, `LangTag`)
   until the template refactoring; `tests/Double/CoreTestInstance` stays as long as `Core::get()` exists.
   Also `HtmlSnippet::render()` and `HtmlDocument` (they create the `TemplateEngine` with `Core::get()->cacheDirectory` /
-  `baseDirectory`: template infrastructure; the request data of `HtmlDocument` is 10.3), and `Core::get()` in
-  `ExceptionHandler` / `RequestHandler` (10.3).
+  `baseDirectory`: template infrastructure; `HtmlDocument` gets the `Core` explicitly since 10.3).
 
 ### Later (separate plans)
 
@@ -646,3 +651,20 @@ Smaller releases, each for one area:
   handler, the language check in `RequestHandler` (needs a request).
 - Baseline unchanged (765 entries). Remaining `Core::get()` uses: `LogFile`, `HtmlSnippet`, `HtmlDocument`,
   `ExceptionHandler`, `RequestHandler`, `IfTag`, `SnippetTag`.
+
+### Step 10.3 (v4.23.0) – done
+
+- `RequestHandler::get()` / `register()` and `ContentHandler::get()` / `isRegistered()` / `register()` removed; design as
+  in 10.3 above. UPGRADE.md has ⚠️ entries for them, `HtmlDocument`, `ExceptionHandlerContext` and
+  `HtmlSnippet::createForCurrentView()`. `RequestHandler::$route`, `fileTitle`, `fileExtension` and `pathVars` are
+  `public private(set)` (not `readonly`: PHPStan rejects readonly assignment outside the constructor) with a
+  `@phpstan-ignore property.uninitialized`. `ContentHandler::processRequest()` also throws when called twice.
+- Behaviour change: the domain check now runs after the default routes are built (it only affects the language root
+  of the error page for an unknown domain). `example/` checked with debug off: the 404 pages of `/nope.html` and
+  `/nope/x.html` (language, language root, file name) are identical to before.
+- Tests: new `RequestHandlerTest` (sets `REQUEST_URI` / `HTTP_HOST`, no reflection), `ContentHandlerTest` (document
+  before `processRequest()`), `ExceptionHandlerTest` (setters twice, `register()` result). Not covered: `processRequest()`
+  and `getHtmlDocument()` after it, `HtmlDocument` (need a full request), redirects of `/`, the session language
+  check, `handleException()` fallbacks, and that `Core` wires everything.
+- `Core::get()` remains in `IfTag`, `SnippetTag`, `HtmlSnippet::render()` and `LogFile` (plus `CoreTestInstance`).
+  Baseline 765 -> 760 entries.

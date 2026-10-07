@@ -18,8 +18,7 @@ use LogicException;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Not covered: getHtmlDocument() (HtmlDocument reads RequestHandler::get() until step 10) and register() (runs the
- * whole request).
+ * Not covered: getHtmlDocument() after processRequest() and processRequest() itself (they need a resolved request).
  */
 final class ContentHandlerTest extends TestCase
 {
@@ -108,6 +107,14 @@ final class ContentHandlerTest extends TestCase
         $first->setContent(contentString: 'a');
 
         $this->assertFalse($second->hasContent());
-        $this->assertFalse(ContentHandler::isRegistered());
+    }
+
+    public function testHtmlDocumentBeforeProcessRequestThrows(): void
+    {
+        $handler = new ContentHandler(contentType: ContentType::createHtml(), cspNonce: CspNonce::create());
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIs('The HTML document is only available while the request is processed.');
+        $handler->getHtmlDocument();
     }
 }

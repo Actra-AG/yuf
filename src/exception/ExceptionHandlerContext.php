@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\exception;
 
+use actra\yuf\Core;
 use actra\yuf\core\Logger;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CspPolicySettings;
@@ -23,5 +24,6 @@ final readonly class ExceptionHandlerContext
         public CspNonce $cspNonce,
         public ?CspPolicySettings $cspPolicySettings,
         public bool $isDebug,
+        public Core $core,
     ) {}
 }

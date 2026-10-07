@@ -38,9 +38,12 @@ class HtmlDocument
     }
     private array $activeHtmlIds = [];
 
-    public function __construct(CspNonce $cspNonce)
-    {
-        $requestHandler = RequestHandler::get();
+    public function __construct(
+        private readonly RequestHandler $requestHandler,
+        CspNonce $cspNonce,
+        private readonly Core $core,
+    ) {
+        $requestHandler = $this->requestHandler;
         $viewDirectory = $requestHandler->route->viewDirectory;
         $this->templateDirectory = $viewDirectory . 'templates/';
         $this->contentFileDirectory = $viewDirectory . 'html/';
@@ -48,7 +51,7 @@ class HtmlDocument
         $this->contentFileName = $fileTitle . '.html';
         $this->replacements = new HtmlReplacementCollection();
         $replacements = $this->replacements;
-        $core = Core::get();
+        $core = $this->core;
         $replacements->addEncodedText(
             identifier: 'bodyClassName',
             content: 'body-' . $fileTitle,
@@ -117,7 +120,7 @@ class HtmlDocument
             throw new NotFoundException();
         }
         $contentFileDirectory = $this->contentFileDirectory;
-        $requestHandler = RequestHandler::get();
+        $requestHandler = $this->requestHandler;
         $fileGroup = $requestHandler->fileGroup;
         if ($fileGroup !== null) {
             $contentFileDirectory .= $fileGroup . '/';
@@ -138,7 +141,7 @@ class HtmlDocument
         ) {
             $templateFilePath = $fullContentFilePath;
         }
-        $core = Core::get();
+        $core = $this->core;
         $tplEngine = new TemplateEngine(
             templateCacheInterface: new DirectoryTemplateCache(
                 cachePath: $core->cacheDirectory,

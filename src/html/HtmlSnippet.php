@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\html;
 
 use actra\yuf\Core;
-use actra\yuf\core\RequestHandler;
+use actra\yuf\core\Route;
 use actra\yuf\security\CspNonce;
 use actra\yuf\template\template\DirectoryTemplateCache;
 use actra\yuf\template\template\TemplateEngine;
@@ -23,11 +23,13 @@ readonly class HtmlSnippet
         private ?CspNonce $cspNonce = null,
     ) {}
 
-    public static function createForCurrentView(string $snippetName, ?CspNonce $cspNonce = null): HtmlSnippet
-    {
+    public static function createForCurrentView(
+        Route $route,
+        string $snippetName,
+        ?CspNonce $cspNonce = null,
+    ): HtmlSnippet {
         return new HtmlSnippet(
-            htmlSnippetFilePath: RequestHandler::get(
-            )->route->viewDirectory . 'snippets' . DIRECTORY_SEPARATOR . $snippetName . '.html',
+            htmlSnippetFilePath: $route->viewDirectory . 'snippets' . DIRECTORY_SEPARATOR . $snippetName . '.html',
             cspNonce: $cspNonce,
         );
     }
