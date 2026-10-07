@@ -29,6 +29,7 @@ class Route
         public readonly ?string $acceptedExtension = null,
         public readonly ?string $forceFileGroup = null,
         public readonly ?string $forceFileName = null,
+        public readonly ?ViewFactory $viewFactory = null,
     ) {
         if ($viewDirectory === '{default}') {
             $this->viewDirectory = Core::get()->viewDirectory . $viewGroup . '/';
@@ -55,25 +56,5 @@ class Route
         if (file_exists(filename: $langFile)) {
             $locale->loadLanguageFile(filePath: $langFile);
         }
-    }
-
-    public function getPhpClassName(): string
-    {
-        $phpClassNameParts = [
-            $this->viewClassPrefix,
-            'view',
-            $this->viewGroup,
-            'php',
-        ];
-        $requestHandler = RequestHandler::get();
-        if ($requestHandler->fileGroup !== null) {
-            $phpClassNameParts[] = $requestHandler->fileGroup;
-        }
-        $phpClassNameParts[] = $requestHandler->fileTitle;
-
-        return implode(
-            separator: '\\',
-            array: $phpClassNameParts,
-        );
     }
 }

@@ -39,17 +39,23 @@ class ContentHandler
         ob_start();
         ob_implicit_flush(enable: false);
         $route->loadLocalizedText(fileTitle: $requestHandler->fileTitle);
-        $viewClass = $this->getViewClass();
-        if ($viewClass === null) {
+        $view = ($route->viewFactory ?? new ClassNameViewFactory())->createView(
+            context: new ViewContext(
+                route: $route,
+                fileGroup: $requestHandler->fileGroup,
+                fileTitle: $requestHandler->fileTitle,
+            ),
+        );
+        if ($view === null) {
             if ($requestHandler->getPathVar(nr: 1) !== null) {
                 throw new NotFoundException();
             }
         } else {
-            if ($requestHandler->getPathVar(nr: ($viewClass->maxAllowedPathVars + 1)) !== null) {
+            if ($requestHandler->getPathVar(nr: ($view->maxAllowedPathVars + 1)) !== null) {
                 throw new NotFoundException();
             }
             if (!$this->hasContent()) {
-                $viewClass->execute();
+                $view->execute();
             }
         }
         if (
@@ -67,24 +73,6 @@ class ContentHandler
     public static function get(): ContentHandler
     {
         return ContentHandler::$registeredInstance;
-    }
-
-    private function getViewClass(): ?BaseView
-    {
-        $phpClassName = RequestHandler::get()->route->getPhpClassName();
-        if (!class_exists(class: $phpClassName)) {
-            return null;
-        }
-        if (!is_subclass_of(
-            object_or_class: $phpClassName,
-            class: BaseView::class,
-        )) {
-            throw new Exception(
-                message: 'The class ' . $phpClassName . ' must extend ' . BaseView::class . '.',
-            );
-        }
-
-        return new $phpClassName();
     }
 
     public function hasContent(): bool

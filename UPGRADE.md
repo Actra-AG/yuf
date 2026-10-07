@@ -4,6 +4,47 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.14.0] – 2026-10-08
+
+### Views with constructor arguments
+
+A `Route` can get a `ViewFactory`. `ViewMap` maps the file name to a closure that creates the view, so views can
+receive their dependencies through the constructor and have any class name. Without a factory, views are created as
+before (`ClassNameViewFactory`).
+
+```php
+new Route(
+    path: '/',
+    viewGroup: 'frontend',
+    viewFactory: new ViewMap()->add(
+        fileTitle: 'index',
+        create: fn(ViewContext $context): BaseView => new IndexView(greeting: 'Hello World'),
+    ),
+);
+```
+
+The content file (`html/index.html`), the language files and `RequestHandler::$fileTitle` still use the file name.
+`ClassNameViewFactory::createView()` throws a `LogicException` (before: `Exception`, same message) for a class that does
+not extend `BaseView`.
+
+### ⚠️ `Route::getPhpClassName()` is removed
+
+Before:
+
+```php
+$className = $route->getPhpClassName();
+```
+
+After:
+
+```php
+$className = new ClassNameViewFactory()->createClassName(
+    context: new ViewContext(route: $route, fileGroup: $fileGroup, fileTitle: $fileTitle),
+);
+```
+
+---
+
 ## [v4.13.0] – 2026-10-08
 
 ### The duplicate route path check is part of `RouteCollection`

@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace app\view\frontend\php;
+namespace app\view\frontend;
 
 use actra\yuf\auth\AccessRightCollection;
 use actra\yuf\core\BaseView;
@@ -15,8 +15,8 @@ use actra\yuf\core\InputParameterCollection;
 use actra\yuf\html\HtmlDocument;
 use Override;
 
-// The class name equals the requested file name ("index.html" → index)
-final class index extends BaseView
+// Registered for "index.html" in the ViewMap of the route (see example/public/index.php)
+final class IndexView extends BaseView
 {
     public function __construct()
     {

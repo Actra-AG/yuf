@@ -504,3 +504,15 @@ Smaller releases, each for one area:
   for a duplicate path within the collection.
 - `RouteCollectionTest` added (characterization first, then the new behaviour); `UPGRADE.md` entry without ⚠️.
 - Baseline and `example/` unchanged.
+
+### Step 3 (v4.14.0) – done
+
+- `ViewFactory`, `ViewContext`, `ClassNameViewFactory` (`createClassName()` = former `Route::getPhpClassName()`),
+  `ViewMap`; `Route::$viewFactory` (last argument), `ContentHandler` creates the view through it. `getPhpClassName()`
+  and `ContentHandler::getViewClass()` removed; a class not extending `BaseView` now throws a `LogicException`.
+- Class names could not be characterized against `Route::getPhpClassName()` (reads `RequestHandler::get()`);
+  `ClassNameViewFactoryTest` takes the expected names literally from the old algorithm. `ViewMapTest` added.
+- Doubles: `tests/Double/core/TestView.php` and `tests/Double/view/frontend/php/...` (view without parent constructor,
+  `@phpstan-ignore constructor.missingParentCall`; lowercase class names follow the file name convention).
+- `example/`: `app\view\frontend\IndexView` registered with a `ViewMap` (checked: `/` and `/index.html` 200, `nope.html`
+  404). README section "Views" and `UPGRADE.md` added; baseline unchanged (767).

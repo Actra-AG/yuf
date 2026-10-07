@@ -118,6 +118,24 @@ literally. An empty search text gives `1=1`. The field names are no user input; 
 optionally qualified like `table.column` or quoted with backticks) and an invalid one throws an
 `InvalidArgumentException`.
 
+## Views
+
+By default, the view of a request is the class `<viewClassPrefix>\view\<viewGroup>\php\[<fileGroup>\]<fileTitle>`
+(`ClassNameViewFactory`), created without constructor arguments. A `Route` can instead get a `viewFactory`; `ViewMap`
+maps the file name to a closure, so views have any class name and receive their dependencies. Only the view of the
+current request is created; a file without a mapped view is rendered without view.
+
+```php
+new Route(
+    path: '/',
+    viewGroup: 'frontend',
+    viewFactory: new ViewMap()->add(
+        fileTitle: 'index',
+        create: fn(ViewContext $context): BaseView => new IndexView(),
+    ),
+);
+```
+
 ## Path variables
 
 A file name like `subscription-42.html` is split at `-` into path variables (`0` → `subscription`, `1` → `42`); the
