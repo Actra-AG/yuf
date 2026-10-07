@@ -20,7 +20,7 @@ class UrlHelper
             if (str_starts_with(haystack: $relativeOrAbsoluteUri, needle: '/')) {
                 $directory = '';
             } else {
-                $directory = dirname(path: HttpRequest::getURI());
+                $directory = dirname(path: HttpRequest::getUri());
                 $directory = ($directory === '/' || $directory === '\\') ? '/' : $directory . '/';
             }
             $absoluteUri = HttpRequest::getProtocol() . '://' . HttpRequest::getHost(

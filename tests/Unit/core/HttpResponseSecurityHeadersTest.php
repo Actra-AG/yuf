@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\core;
 
 use actra\yuf\core\HttpResponse;
-use actra\yuf\core\HttpStatusCode;
+use actra\yuf\core\HttpStatusCodeEnum;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 
@@ -44,7 +44,7 @@ final class HttpResponseSecurityHeadersTest extends TestCase
     public function testHtmlResponseSendsHstsForOneYear(): void
     {
         $httpResponse = HttpResponse::createHtmlResponse(
-            httpStatusCode: HttpStatusCode::HTTP_OK,
+            httpStatusCode: HttpStatusCodeEnum::HTTP_OK,
             htmlContent: '<p>Test</p>',
             cspPolicySettings: null,
             nonce: null,
@@ -58,7 +58,7 @@ final class HttpResponseSecurityHeadersTest extends TestCase
     public function testResponsesForbidMimeSniffingAndLimitTheReferrer(): void
     {
         $httpResponse = HttpResponse::createHtmlResponse(
-            httpStatusCode: HttpStatusCode::HTTP_OK,
+            httpStatusCode: HttpStatusCodeEnum::HTTP_OK,
             htmlContent: '<p>Test</p>',
             cspPolicySettings: null,
             nonce: null,

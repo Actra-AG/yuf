@@ -546,3 +546,13 @@ Smaller releases, each for one area:
   `RecordingAuthenticator` checks the named-argument call of `logAuthResult()`. Like `AuthSessionTest`, it resets the
   `Authenticator` and session handler singletons with reflection, until the session plan removes them.
 - Baseline unchanged (766 entries, one message renamed). README and `example/` needed no change.
+
+### Step 6 (v4.17.0) – done
+
+- `HttpRequest::getUri()`, `getUrl()`, `isSsl()`, `ErrorHandler::handlePhpError()` (also the callable of
+  `set_error_handler()`), enum `HttpStatusCodeEnum` (file renamed; used in `BaseView`, `HttpResponse`, `ContentHandler`,
+  `CurlResponse`, `NotFoundException`, `UnauthorizedException`, `ExceptionHandler`).
+- The scan of `src/core/`, `src/request/`, `src/response/`, `src/exception/` and `Core.php` found no further acronym
+  names (`MimeType` string values and the `SimpleXMLExtended` class are left to step 7).
+- Pure renames, tests adapted. Baseline unchanged (766 entries); `example/` checked: `/` 200, `nope.html` 404, HTTP
+  redirects to HTTPS.

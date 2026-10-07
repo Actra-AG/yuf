@@ -85,15 +85,15 @@ class HttpRequest
 
     public static function getPath(): string
     {
-        return StringUtils::beforeFirst(str: HttpRequest::getURI(), before: '?');
+        return StringUtils::beforeFirst(str: HttpRequest::getUri(), before: '?');
     }
 
-    public static function getURI(): string
+    public static function getUri(): string
     {
         return $_SERVER['REQUEST_URI'];
     }
 
-    public static function isSSL(): bool
+    public static function isSsl(): bool
     {
         return (HttpRequest::getProtocol() === HttpRequest::PROTOCOL_HTTPS);
     }
@@ -185,13 +185,13 @@ class HttpRequest
         return array_key_exists(key: 'HTTP_REFERER', array: $_SERVER) ? $_SERVER['HTTP_REFERER'] : '';
     }
 
-    public static function getURL(?string $protocol = null): string
+    public static function getUrl(?string $protocol = null): string
     {
         if ($protocol === null) {
             $protocol = HttpRequest::getProtocol();
         }
 
-        return $protocol . '://' . HttpRequest::getHost() . HttpRequest::getURI();
+        return $protocol . '://' . HttpRequest::getHost() . HttpRequest::getUri();
     }
 
     public static function getHost(): string

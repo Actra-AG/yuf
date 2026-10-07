@@ -11,7 +11,7 @@ namespace actra\yuf\tests\Unit\core;
 
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentType;
-use actra\yuf\core\HttpStatusCode;
+use actra\yuf\core\HttpStatusCodeEnum;
 use Exception;
 use LogicException;
 use PHPUnit\Framework\TestCase;
@@ -29,7 +29,7 @@ final class ContentHandlerTest extends TestCase
         $handler = new ContentHandler(contentType: $contentType);
 
         $this->assertSame($contentType, $handler->getContentType());
-        $this->assertSame(HttpStatusCode::HTTP_OK, $handler->httpStatusCode);
+        $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $handler->httpStatusCode);
         $this->assertFalse($handler->hasContent());
         $this->assertSame('', $handler->getContent());
         $this->assertFalse($handler->suppressCspHeader);

@@ -1123,7 +1123,7 @@ parameters:
 			path: src/core/HttpRequest.php
 
 		-
-			rawMessage: 'Method actra\yuf\core\HttpRequest::getURI() should return string but returns mixed.'
+			rawMessage: 'Method actra\yuf\core\HttpRequest::getUri() should return string but returns mixed.'
 			identifier: return.type
 			count: 1
 			path: src/core/HttpRequest.php

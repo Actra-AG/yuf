@@ -13,7 +13,7 @@ use actra\yuf\auth\AccessRightCollection;
 use actra\yuf\auth\UnauthorizedAccessRightException;
 use actra\yuf\auth\UnauthorizedIpAddressException;
 use actra\yuf\core\ContentType;
-use actra\yuf\core\HttpStatusCode;
+use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\InputParameter;
 use actra\yuf\core\InputParameterCollection;
 use actra\yuf\exception\NotFoundException;
@@ -199,11 +199,11 @@ final class BaseViewTest extends TestCase
 
         $view->callSetErrorResponseContent(
             errorMessage: 'broken',
-            httpStatusCode: HttpStatusCode::HTTP_NOT_FOUND,
+            httpStatusCode: HttpStatusCodeEnum::HTTP_NOT_FOUND,
             errorCode: 7,
         );
 
-        $this->assertSame(HttpStatusCode::HTTP_NOT_FOUND, $context->content->httpStatusCode);
+        $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $context->content->httpStatusCode);
         $this->assertJsonStringEqualsJsonString(
             '{"success":false,"error":{"code":7,"message":"broken"}}',
             $context->content->getContent(),
@@ -216,7 +216,7 @@ final class BaseViewTest extends TestCase
 
         new ConfigurableTestView(context: $context)->callSetErrorResponseContent(errorMessage: 'x');
 
-        $this->assertSame(HttpStatusCode::HTTP_BAD_REQUEST, $context->content->httpStatusCode);
+        $this->assertSame(HttpStatusCodeEnum::HTTP_BAD_REQUEST, $context->content->httpStatusCode);
     }
 
     public function testErrorResponseForHtmlThrows(): void
@@ -236,7 +236,7 @@ final class BaseViewTest extends TestCase
 
         new ConfigurableTestView(context: $context)->callSetSuccessResponseContent(data: $data);
 
-        $this->assertSame(HttpStatusCode::HTTP_OK, $context->content->httpStatusCode);
+        $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $context->content->httpStatusCode);
         $this->assertJsonStringEqualsJsonString(
             '{"success":true,"data":{"id":5}}',
             $context->content->getContent(),
@@ -271,7 +271,7 @@ final class BaseViewTest extends TestCase
 
         new ConfigurableTestView(context: $context, inputParameterCollection: $parameters);
 
-        $this->assertSame(HttpStatusCode::HTTP_BAD_REQUEST, $context->content->httpStatusCode);
+        $this->assertSame(HttpStatusCodeEnum::HTTP_BAD_REQUEST, $context->content->httpStatusCode);
         $this->assertStringContainsString(
             'missing or empty mandatory parameter: viewTestMissingParam',
             $context->content->getContent(),

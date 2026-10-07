@@ -4,6 +4,46 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.17.0] – 2026-10-08
+
+### ⚠️ Request, response and error names follow the coding standard
+
+Acronyms are written like words and enums end with `Enum`. The old names are removed.
+
+| Before                                          | After                                              |
+|:------------------------------------------------|:---------------------------------------------------|
+| `HttpRequest::getURI()`                         | `HttpRequest::getUri()`                            |
+| `HttpRequest::getURL()`                         | `HttpRequest::getUrl()`                            |
+| `HttpRequest::isSSL()`                          | `HttpRequest::isSsl()`                             |
+| `ErrorHandler::handlePHPError()`                | `ErrorHandler::handlePhpError()`                   |
+| `actra\yuf\core\HttpStatusCode`                 | `actra\yuf\core\HttpStatusCodeEnum`                |
+
+The enum cases and values are unchanged. `HttpStatusCodeEnum` is used in `BaseView::setErrorResponseContent()`,
+`HttpResponse`, `ContentHandler::$httpStatusCode`, `CurlResponse::$responseHttpCode`, `NotFoundException` and
+`UnauthorizedException`.
+
+```php
+// Before
+use actra\yuf\core\HttpStatusCode;
+
+$uri = HttpRequest::getURI();
+if (!HttpRequest::isSSL()) {
+    $url = HttpRequest::getURL();
+}
+$this->setErrorResponseContent(errorMessage: 'Not found', httpStatusCode: HttpStatusCode::HTTP_NOT_FOUND);
+
+// After
+use actra\yuf\core\HttpStatusCodeEnum;
+
+$uri = HttpRequest::getUri();
+if (!HttpRequest::isSsl()) {
+    $url = HttpRequest::getUrl();
+}
+$this->setErrorResponseContent(errorMessage: 'Not found', httpStatusCode: HttpStatusCodeEnum::HTTP_NOT_FOUND);
+```
+
+---
+
 ## [v4.16.0] – 2026-10-08
 
 ### ⚠️ Auth and session names follow the coding standard

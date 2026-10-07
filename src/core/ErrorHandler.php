@@ -22,10 +22,10 @@ class ErrorHandler
             throw new LogicException(message: 'ErrorHandler is already registered.');
         }
         ErrorHandler::$registeredInstance = new ErrorHandler();
-        set_error_handler(callback: [ErrorHandler::$registeredInstance, 'handlePHPError']);
+        set_error_handler(callback: [ErrorHandler::$registeredInstance, 'handlePhpError']);
     }
 
-    public function handlePHPError(int $errorCode, string $errorMessage, string $errorFile, int $errorLine): bool
+    public function handlePhpError(int $errorCode, string $errorMessage, string $errorFile, int $errorLine): bool
     {
         throw new PhpException(message: $errorMessage, code: $errorCode, file: $errorFile, line: $errorLine);
     }

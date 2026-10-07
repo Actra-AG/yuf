@@ -207,7 +207,7 @@ abstract class BaseView
             return;
         }
         HttpResponse::createResponseFromString(
-            httpStatusCode: HttpStatusCode::HTTP_OK,
+            httpStatusCode: HttpStatusCodeEnum::HTTP_OK,
             contentString: $httpSuccessResponseContent->content,
             contentType: $contentType,
         )->sendAndExit();
@@ -215,7 +215,7 @@ abstract class BaseView
 
     protected function setErrorResponseContent(
         string $errorMessage,
-        HttpStatusCode $httpStatusCode = HttpStatusCode::HTTP_BAD_REQUEST,
+        HttpStatusCodeEnum $httpStatusCode = HttpStatusCodeEnum::HTTP_BAD_REQUEST,
         int|string|null $errorCode = null,
         ?stdClass $data = null,
         bool $sendAndExit = false,

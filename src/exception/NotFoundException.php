@@ -9,14 +9,14 @@ declare(strict_types=1);
 
 namespace actra\yuf\exception;
 
-use actra\yuf\core\HttpStatusCode;
+use actra\yuf\core\HttpStatusCodeEnum;
 use Exception;
 
 class NotFoundException extends Exception
 {
     public function __construct(
         string         $message = '',
-        HttpStatusCode $code = HttpStatusCode::HTTP_NOT_FOUND,
+        HttpStatusCodeEnum $code = HttpStatusCodeEnum::HTTP_NOT_FOUND,
     ) {
         if ($message === '') {
             $message = 'Not Found';

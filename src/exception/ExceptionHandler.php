@@ -13,7 +13,7 @@ use actra\yuf\Core;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpResponse;
-use actra\yuf\core\HttpStatusCode;
+use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\Logger;
 use actra\yuf\core\RequestHandler;
@@ -72,13 +72,13 @@ class ExceptionHandler
         $errorMessage = $realException->getMessage();
 
         if ($throwable instanceof NotFoundException) {
-            $httpStatusCode = HttpStatusCode::HTTP_NOT_FOUND;
+            $httpStatusCode = HttpStatusCodeEnum::HTTP_NOT_FOUND;
             $title = 'Page not found';
         } elseif ($throwable instanceof UnauthorizedException) {
-            $httpStatusCode = HttpStatusCode::HTTP_UNAUTHORIZED;
+            $httpStatusCode = HttpStatusCodeEnum::HTTP_UNAUTHORIZED;
             $title = 'Unauthorized';
         } else {
-            $httpStatusCode = HttpStatusCode::HTTP_INTERNAL_SERVER_ERROR;
+            $httpStatusCode = HttpStatusCodeEnum::HTTP_INTERNAL_SERVER_ERROR;
             $title = 'Internal Server Error';
         }
         $this->htmlReplacementCollection->addEncodedText(
@@ -143,7 +143,7 @@ class ExceptionHandler
     }
 
     final protected function sendHttpResponseAndExit(
-        HttpStatusCode $httpStatusCode,
+        HttpStatusCodeEnum $httpStatusCode,
         string $errorMessage,
         string|int $errorCode,
         string $htmlFileName,
@@ -264,7 +264,7 @@ class ExceptionHandler
     protected function sendNotFoundHttpResponseAndExit(Throwable $throwable): void
     {
         $this->sendHttpResponseAndExit(
-            httpStatusCode: HttpStatusCode::HTTP_NOT_FOUND,
+            httpStatusCode: HttpStatusCodeEnum::HTTP_NOT_FOUND,
             errorMessage: $throwable->getMessage(),
             errorCode: $throwable->getCode(),
             htmlFileName: 'notFound.html',
@@ -274,7 +274,7 @@ class ExceptionHandler
     protected function sendUnauthorizedHttpResponseAndExit(Throwable $throwable): void
     {
         $this->sendHttpResponseAndExit(
-            httpStatusCode: HttpStatusCode::HTTP_UNAUTHORIZED,
+            httpStatusCode: HttpStatusCodeEnum::HTTP_UNAUTHORIZED,
             errorMessage: $throwable->getMessage(),
             errorCode: $throwable->getCode(),
             htmlFileName: 'unauthorized.html',
@@ -284,7 +284,7 @@ class ExceptionHandler
     protected function sendDefaultHttpResponseAndExit(Throwable $throwable): void
     {
         $this->sendHttpResponseAndExit(
-            httpStatusCode: HttpStatusCode::HTTP_INTERNAL_SERVER_ERROR,
+            httpStatusCode: HttpStatusCodeEnum::HTTP_INTERNAL_SERVER_ERROR,
             errorMessage: 'Internal Server Error',
             errorCode: $throwable->getCode(),
             htmlFileName: 'default.html',

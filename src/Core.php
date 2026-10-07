@@ -101,9 +101,9 @@ class Core
             ),
         );
         ErrorHandler::register();
-        if (!HttpRequest::isSSL()) {
+        if (!HttpRequest::isSsl()) {
             HttpResponse::redirectAndExit(
-                relativeOrAbsoluteUri: HttpRequest::getURL(
+                relativeOrAbsoluteUri: HttpRequest::getUrl(
                     protocol: HttpRequest::PROTOCOL_HTTPS,
                 ),
             );

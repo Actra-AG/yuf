@@ -18,7 +18,7 @@ class ContentHandler
 {
     private static ?ContentHandler $registeredInstance = null;
 
-    public HttpStatusCode $httpStatusCode = HttpStatusCode::HTTP_OK;
+    public HttpStatusCodeEnum $httpStatusCode = HttpStatusCodeEnum::HTTP_OK;
     public private(set) bool $suppressCspHeader = false;
     private string $content = '';
     private ContentType $contentType;

@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
-enum HttpStatusCode: int
+enum HttpStatusCodeEnum: int
 {
     case HTTP_UNKNOWN = 0;
     // 1xx - Information
@@ -91,30 +91,30 @@ enum HttpStatusCode: int
     public function getStatusCodeDescription(): ?string
     {
         return match ($this) {
-            HttpStatusCode::HTTP_OK => 'OK',
-            HttpStatusCode::HTTP_NOT_MODIFIED => 'Not Modified',
-            HttpStatusCode::HTTP_BAD_REQUEST => 'Bad Request',
-            HttpStatusCode::HTTP_UNAUTHORIZED => 'Unauthorized',
-            HttpStatusCode::HTTP_PAYMENT_REQUIRED => 'Payment Required',
-            HttpStatusCode::HTTP_FORBIDDEN => 'Forbidden',
-            HttpStatusCode::HTTP_NOT_FOUND => 'Not found',
-            HttpStatusCode::HTTP_METHOD_NOT_ALLOWED => 'Method Not Allowed',
-            HttpStatusCode::HTTP_NOT_ACCEPTABLE => 'Not Acceptable',
-            HttpStatusCode::HTTP_PROXY_AUTHENTICATION_REQUIRED => 'Proxy Authentication Required',
-            HttpStatusCode::HTTP_REQUEST_TIME_OUT => 'Request Time-out',
-            HttpStatusCode::HTTP_CONFLICT => 'Conflict',
-            HttpStatusCode::HTTP_GONE => 'Gone',
-            HttpStatusCode::HTTP_LENGTH_REQUIRED => 'Length Required',
-            HttpStatusCode::HTTP_PRECONDITION_FAILED => 'Precondition Failed',
-            HttpStatusCode::HTTP_REQUEST_ENTITY_TOO_LARGE => 'Request Entity Too Large',
-            HttpStatusCode::HTTP_REQUEST_URL_TOO_LONG => 'Request-URI Too Long',
-            HttpStatusCode::HTTP_UNSUPPORTED_MEDIA_TYPE => 'Unsupported Media Type',
-            HttpStatusCode::HTTP_INTERNAL_SERVER_ERROR => 'Internal Server Error',
-            HttpStatusCode::HTTP_NOT_IMPLEMENTED => 'Not Implemented',
-            HttpStatusCode::HTTP_BAD_GATEWAY => 'Bad Gateway',
-            HttpStatusCode::HTTP_SERVICE_UNAVAILABLE => 'Service Unavailable',
-            HttpStatusCode::HTTP_GATEWAY_TIME_OUT => 'Gateway Time-out',
-            HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED => 'HTTP Version not supported',
+            HttpStatusCodeEnum::HTTP_OK => 'OK',
+            HttpStatusCodeEnum::HTTP_NOT_MODIFIED => 'Not Modified',
+            HttpStatusCodeEnum::HTTP_BAD_REQUEST => 'Bad Request',
+            HttpStatusCodeEnum::HTTP_UNAUTHORIZED => 'Unauthorized',
+            HttpStatusCodeEnum::HTTP_PAYMENT_REQUIRED => 'Payment Required',
+            HttpStatusCodeEnum::HTTP_FORBIDDEN => 'Forbidden',
+            HttpStatusCodeEnum::HTTP_NOT_FOUND => 'Not found',
+            HttpStatusCodeEnum::HTTP_METHOD_NOT_ALLOWED => 'Method Not Allowed',
+            HttpStatusCodeEnum::HTTP_NOT_ACCEPTABLE => 'Not Acceptable',
+            HttpStatusCodeEnum::HTTP_PROXY_AUTHENTICATION_REQUIRED => 'Proxy Authentication Required',
+            HttpStatusCodeEnum::HTTP_REQUEST_TIME_OUT => 'Request Time-out',
+            HttpStatusCodeEnum::HTTP_CONFLICT => 'Conflict',
+            HttpStatusCodeEnum::HTTP_GONE => 'Gone',
+            HttpStatusCodeEnum::HTTP_LENGTH_REQUIRED => 'Length Required',
+            HttpStatusCodeEnum::HTTP_PRECONDITION_FAILED => 'Precondition Failed',
+            HttpStatusCodeEnum::HTTP_REQUEST_ENTITY_TOO_LARGE => 'Request Entity Too Large',
+            HttpStatusCodeEnum::HTTP_REQUEST_URL_TOO_LONG => 'Request-URI Too Long',
+            HttpStatusCodeEnum::HTTP_UNSUPPORTED_MEDIA_TYPE => 'Unsupported Media Type',
+            HttpStatusCodeEnum::HTTP_INTERNAL_SERVER_ERROR => 'Internal Server Error',
+            HttpStatusCodeEnum::HTTP_NOT_IMPLEMENTED => 'Not Implemented',
+            HttpStatusCodeEnum::HTTP_BAD_GATEWAY => 'Bad Gateway',
+            HttpStatusCodeEnum::HTTP_SERVICE_UNAVAILABLE => 'Service Unavailable',
+            HttpStatusCodeEnum::HTTP_GATEWAY_TIME_OUT => 'Gateway Time-out',
+            HttpStatusCodeEnum::HTTP_VERSION_NOT_SUPPORTED => 'HTTP Version not supported',
             default => null,
         };
     }

@@ -25,7 +25,7 @@ class HttpResponse
     private function __construct(
         string                   $eTag,
         int                      $lastModifiedTimeStamp,
-        private HttpStatusCode   $httpStatusCode,
+        private HttpStatusCodeEnum   $httpStatusCode,
         ?string                  $downloadFileName,
         ContentType              $contentType,
         private readonly ?string $contentString = null,
@@ -54,7 +54,7 @@ class HttpResponse
             );
         }
         if ($this->notModifiedCheck(eTag: $eTag, lastModifiedTimeStamp: $lastModifiedTimeStamp)) {
-            $this->httpStatusCode = HttpStatusCode::HTTP_NOT_MODIFIED;
+            $this->httpStatusCode = HttpStatusCodeEnum::HTTP_NOT_MODIFIED;
             $this->setHeader(
                 key: 'Connection',
                 val: 'Close',
@@ -140,7 +140,7 @@ class HttpResponse
 
     public static function redirectAndExit(
         string         $relativeOrAbsoluteUri,
-        HttpStatusCode $httpStatusCode = HttpStatusCode::HTTP_SEE_OTHER,
+        HttpStatusCodeEnum $httpStatusCode = HttpStatusCodeEnum::HTTP_SEE_OTHER,
         bool           $setSameSiteCookieTemporaryToLax = false,
     ): void {
         if ($setSameSiteCookieTemporaryToLax) {
@@ -152,7 +152,7 @@ class HttpResponse
     }
 
     public static function createHtmlResponse(
-        HttpStatusCode          $httpStatusCode,
+        HttpStatusCodeEnum          $httpStatusCode,
         string                  $htmlContent,
         ?CspPolicySettings $cspPolicySettings,
         ?string                 $nonce,
@@ -177,7 +177,7 @@ class HttpResponse
     }
 
     public static function createResponseFromString(
-        HttpStatusCode $httpStatusCode,
+        HttpStatusCodeEnum $httpStatusCode,
         string         $contentString,
         ContentType    $contentType,
     ): HttpResponse {
@@ -205,14 +205,14 @@ class HttpResponse
         $realPath = realpath(path: $absolutePathToFile);
 
         if (!is_readable(filename: $realPath)) {
-            header(header: HttpStatusCode::HTTP_FORBIDDEN->getStatusHeader());
+            header(header: HttpStatusCodeEnum::HTTP_FORBIDDEN->getStatusHeader());
             exit;
         }
         if (
             $realPath === false
             || !is_file(filename: $realPath)
         ) {
-            header(header: HttpStatusCode::HTTP_NOT_FOUND->getStatusHeader());
+            header(header: HttpStatusCodeEnum::HTTP_NOT_FOUND->getStatusHeader());
             exit;
         }
         $lastModifiedTimeStamp = filemtime(filename: $realPath);
@@ -227,7 +227,7 @@ class HttpResponse
         $httpResponse = new HttpResponse(
             eTag: md5(string: $lastModifiedTimeStamp . $realPath),
             lastModifiedTimeStamp: $lastModifiedTimeStamp,
-            httpStatusCode: HttpStatusCode::HTTP_OK,
+            httpStatusCode: HttpStatusCodeEnum::HTTP_OK,
             downloadFileName: ($forceDownload ? $fileName : null),
             contentType: $contentType,
             contentString: null,

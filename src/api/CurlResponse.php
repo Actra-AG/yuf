@@ -11,7 +11,7 @@ namespace actra\yuf\api;
 
 use actra\yuf\common\JsonUtils;
 use actra\yuf\common\SimpleXMLExtended;
-use actra\yuf\core\HttpStatusCode;
+use actra\yuf\core\HttpStatusCodeEnum;
 use CurlHandle;
 use stdClass;
 
@@ -22,7 +22,7 @@ class CurlResponse
     private function __construct(
         public readonly false|string $rawResponseBody,
         public readonly array $curlInfo,
-        public readonly HttpStatusCode $responseHttpCode,
+        public readonly HttpStatusCodeEnum $responseHttpCode,
         public readonly float $totalRequestTime,
         public readonly int $errorCode,
         public readonly string $errorMessage,
@@ -34,9 +34,9 @@ class CurlResponse
     ): CurlResponse {
         $rawResponseBody = curl_exec(handle: $preparedCurlHandle);
         $curlInfo = curl_getinfo(handle: $preparedCurlHandle);
-        $responseHttpCode = HttpStatusCode::tryFrom(value: (int) $curlInfo['http_code']);
+        $responseHttpCode = HttpStatusCodeEnum::tryFrom(value: (int) $curlInfo['http_code']);
         if ($responseHttpCode === null) {
-            $responseHttpCode = HttpStatusCode::HTTP_UNKNOWN;
+            $responseHttpCode = HttpStatusCodeEnum::HTTP_UNKNOWN;
         }
         $errorCode = curl_errno(handle: $preparedCurlHandle);
         $errorMessage = curl_error(handle: $preparedCurlHandle);
@@ -62,8 +62,8 @@ class CurlResponse
                 || !in_array(
                     needle: $responseHttpCode,
                     haystack: [
-                        HttpStatusCode::HTTP_MOVED_PERMANENTLY,
-                        HttpStatusCode::HTTP_SEE_OTHER,
+                        HttpStatusCodeEnum::HTTP_MOVED_PERMANENTLY,
+                        HttpStatusCodeEnum::HTTP_SEE_OTHER,
                     ],
                     strict: true,
                 )
@@ -72,13 +72,13 @@ class CurlResponse
             $errorCode = CurlResponse::ERROR_BAD_HTTP_RESPONSE_CODE;
             $errorMessage = __CLASS__ . ': Bad HTTP response code received: ' . $responseHttpCode->value;
             $errorMessage .= match ($responseHttpCode) {
-                HttpStatusCode::HTTP_MOVED_PERMANENTLY => ' ("moved permanently". Check URL/settings.)',
-                HttpStatusCode::HTTP_SEE_OTHER => ' ("Redirect". Maybe HTTP-to-HTTPS? Check URL/settings.)',
-                HttpStatusCode::HTTP_UNAUTHORIZED => ' ("unauthorized". Check credentials or request format.)',
-                HttpStatusCode::HTTP_NOT_FOUND => ' ("not found" on server)',
-                HttpStatusCode::HTTP_METHOD_NOT_ALLOWED => ' ("method not allowed". Check URL or request format/data.)',
-                HttpStatusCode::HTTP_NOT_ACCEPTABLE => ' ("not acceptable" on server. Check request format/data.)',
-                HttpStatusCode::HTTP_INTERNAL_SERVER_ERROR => ' (remote "Server error")',
+                HttpStatusCodeEnum::HTTP_MOVED_PERMANENTLY => ' ("moved permanently". Check URL/settings.)',
+                HttpStatusCodeEnum::HTTP_SEE_OTHER => ' ("Redirect". Maybe HTTP-to-HTTPS? Check URL/settings.)',
+                HttpStatusCodeEnum::HTTP_UNAUTHORIZED => ' ("unauthorized". Check credentials or request format.)',
+                HttpStatusCodeEnum::HTTP_NOT_FOUND => ' ("not found" on server)',
+                HttpStatusCodeEnum::HTTP_METHOD_NOT_ALLOWED => ' ("method not allowed". Check URL or request format/data.)',
+                HttpStatusCodeEnum::HTTP_NOT_ACCEPTABLE => ' ("not acceptable" on server. Check request format/data.)',
+                HttpStatusCodeEnum::HTTP_INTERNAL_SERVER_ERROR => ' (remote "Server error")',
                 default => '',
             };
         }

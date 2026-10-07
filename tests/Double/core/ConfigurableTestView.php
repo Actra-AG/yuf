@@ -13,7 +13,7 @@ use actra\yuf\auth\AccessRightCollection;
 use actra\yuf\auth\AuthUser;
 use actra\yuf\core\BaseView;
 use actra\yuf\core\ContentType;
-use actra\yuf\core\HttpStatusCode;
+use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\InputParameterCollection;
 use actra\yuf\core\ViewContext;
 use actra\yuf\html\HtmlDocument;
@@ -86,7 +86,7 @@ final class ConfigurableTestView extends BaseView
 
     public function callSetErrorResponseContent(
         string $errorMessage,
-        HttpStatusCode $httpStatusCode = HttpStatusCode::HTTP_BAD_REQUEST,
+        HttpStatusCodeEnum $httpStatusCode = HttpStatusCodeEnum::HTTP_BAD_REQUEST,
         int|string|null $errorCode = null,
         ?stdClass $data = null,
     ): void {

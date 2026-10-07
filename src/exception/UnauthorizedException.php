@@ -9,14 +9,14 @@ declare(strict_types=1);
 
 namespace actra\yuf\exception;
 
-use actra\yuf\core\HttpStatusCode;
+use actra\yuf\core\HttpStatusCodeEnum;
 use Exception;
 
 class UnauthorizedException extends Exception
 {
     public function __construct(
         $message = 'Unauthorized',
-        HttpStatusCode $code = HttpStatusCode::HTTP_UNAUTHORIZED,
+        HttpStatusCodeEnum $code = HttpStatusCodeEnum::HTTP_UNAUTHORIZED,
     ) {
         parent::__construct(
             message: $message,

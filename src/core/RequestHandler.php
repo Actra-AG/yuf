@@ -194,7 +194,7 @@ class RequestHandler
 
             return $route;
         }
-        if (HttpRequest::getURI() === '/') {
+        if (HttpRequest::getUri() === '/') {
             $defaultRoutesByLanguage = $this->defaultRoutesByLanguage;
             if (AbstractSessionHandler::enabled()) {
                 $preferredLanguageCode = AbstractSessionHandler::getSessionHandler()->getPreferredLanguageCode();
