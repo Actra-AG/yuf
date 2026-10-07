@@ -16,6 +16,7 @@ use actra\yuf\form\upload\SessionFileUploadStorage;
 use DateTimeImmutable;
 use DirectoryIterator;
 use InvalidArgumentException;
+use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
@@ -33,15 +34,17 @@ final class SessionFileUploadStorageTest extends TestCase
     /** @var array<array-key, mixed> */
     private array $savedServer;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->savedSession = $_SESSION ?? [];
         $this->savedServer = $_SERVER;
         $_SESSION = [];
-        $this->rootDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-upload-test-' . uniqid();
+        $this->rootDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-upload-test-' . bin2hex(string: random_bytes(length: 8));
         mkdir(directory: $this->rootDirectory);
     }
 
+    #[Override]
     protected function tearDown(): void
     {
         $_SESSION = $this->savedSession;
@@ -104,6 +107,7 @@ final class SessionFileUploadStorageTest extends TestCase
 
         $this->createStorage()->save(pointer: 'ptr', files: [$file->getHash() => $file]);
 
+        $this->assertArrayHasKey('ptr', $_SESSION);
         $this->assertSame(
             [['name' => 'a.txt', 'type' => 'text/plain', 'size' => 7, 'path' => $file->path]],
             $_SESSION['ptr'],

@@ -16,6 +16,7 @@ use actra\yuf\form\FormMessages;
 use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 final class SelectOptionsFieldValueTest extends TestCase
@@ -35,6 +36,7 @@ final class SelectOptionsFieldValueTest extends TestCase
         );
     }
 
+    #[Override]
     protected function setUp(): void
     {
         FormNameRegistry::reset();

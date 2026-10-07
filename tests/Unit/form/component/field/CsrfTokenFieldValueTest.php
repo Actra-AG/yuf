@@ -14,6 +14,7 @@ use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\security\CsrfTokenSource;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
+use Override;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 
@@ -241,6 +242,7 @@ final class CsrfTokenFieldValueTest extends TestCase
         $source = new class implements CsrfTokenSource {
             public int $calls = 0;
 
+            #[Override]
             public function getToken(): string
             {
                 $this->calls++;
@@ -248,6 +250,7 @@ final class CsrfTokenFieldValueTest extends TestCase
                 return 'token';
             }
 
+            #[Override]
             public function isValid(string $token): bool
             {
                 $this->calls++;

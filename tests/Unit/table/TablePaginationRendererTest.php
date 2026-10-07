@@ -14,12 +14,14 @@ use actra\yuf\db\FrameworkDB;
 use actra\yuf\table\renderer\TablePaginationRenderer;
 use actra\yuf\tests\Double\CoreTestInstance;
 use actra\yuf\tests\Double\table\FixedPageDbResultTable;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 final class TablePaginationRendererTest extends TestCase
 {
     private static int $tableCounter = 0;
 
+    #[Override]
     public static function setUpBeforeClass(): void
     {
         $cacheDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-pagination-test' . DIRECTORY_SEPARATOR;
@@ -29,6 +31,7 @@ final class TablePaginationRendererTest extends TestCase
         CoreTestInstance::register(cacheDirectory: $cacheDirectory);
     }
 
+    #[Override]
     protected function setUp(): void
     {
         // The template cache checks for its files via is_dir()/file_exists(), which would report stale results
@@ -80,8 +83,8 @@ final class TablePaginationRendererTest extends TestCase
     {
         $table = new FixedPageDbResultTable(
             identifier: 'paginationTest' . ++self::$tableCounter,
-            db: $this->createStub(FrameworkDB::class),
-            dbQuery: $this->createStub(DbQuery::class),
+            db: TablePaginationRendererTest::createStub(FrameworkDB::class),
+            dbQuery: TablePaginationRendererTest::createStub(DbQuery::class),
             totalAmount: 100,
             currentPage: 2,
         );

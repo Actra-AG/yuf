@@ -13,7 +13,6 @@ use actra\yuf\db\DbRow;
 use actra\yuf\db\DbRowValueException;
 use actra\yuf\tests\Double\db\LevelEnum;
 use actra\yuf\tests\Double\db\StatusEnum;
-use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -30,7 +29,7 @@ final class DbRowTest extends TestCase
     public function testMissingColumnThrowsAndNamesTheColumn(): void
     {
         $this->expectException(DbRowValueException::class);
-        $this->expectExceptionMessage('Column "nope" does not exist');
+        $this->expectExceptionMessageIsOrContains('Column "nope" does not exist');
         new DbRow(values: [])->getString(column: 'nope');
     }
 
@@ -49,7 +48,7 @@ final class DbRowTest extends TestCase
         foreach ($getters as $getter) {
             try {
                 $getter();
-                $this->fail('Expected DbRowValueException');
+                DbRowTest::fail('Expected DbRowValueException');
             } catch (DbRowValueException $exception) {
                 $this->assertStringContainsString('Column "c" is NULL', $exception->getMessage());
             }
@@ -79,7 +78,7 @@ final class DbRowTest extends TestCase
     public function testStringGetterRejectsNonStringAndNamesTypes(): void
     {
         $this->expectException(DbRowValueException::class);
-        $this->expectExceptionMessage('Column "i" has the type int, but expected string');
+        $this->expectExceptionMessageIsOrContains('Column "i" has the type int, but expected string');
         new DbRow(values: ['i' => 5])->getString(column: 'i');
     }
 
@@ -268,7 +267,6 @@ final class DbRowTest extends TestCase
     {
         $dateTime = new DbRow(values: ['d' => $value])->getDateTimeImmutable(column: 'd');
 
-        $this->assertInstanceOf(DateTimeImmutable::class, $dateTime);
         $this->assertSame($expected, $dateTime->format(format: 'Y-m-d H:i:s.u'));
         $this->assertSame(date_default_timezone_get(), $dateTime->getTimezone()->getName());
     }
@@ -312,7 +310,7 @@ final class DbRowTest extends TestCase
     public function testEnumGetterThrowsOnUnknownValue(): void
     {
         $this->expectException(DbRowValueException::class);
-        $this->expectExceptionMessage('unknown value "deleted"');
+        $this->expectExceptionMessageIsOrContains('unknown value "deleted"');
         new DbRow(values: ['s' => 'deleted'])->getEnum(column: 's', enumClass: StatusEnum::class);
     }
 

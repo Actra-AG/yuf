@@ -9,17 +9,11 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\clock;
 
-use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
 use PHPUnit\Framework\TestCase;
 
 final class SystemClockTest extends TestCase
 {
-    public function testIsAClock(): void
-    {
-        $this->assertInstanceOf(Clock::class, new SystemClock());
-    }
-
     public function testReturnsTheCurrentTime(): void
     {
         $before = time();

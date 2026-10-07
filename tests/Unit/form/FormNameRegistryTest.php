@@ -11,15 +11,18 @@ namespace actra\yuf\tests\Unit\form;
 
 use actra\yuf\form\FormNameRegistry;
 use LogicException;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 final class FormNameRegistryTest extends TestCase
 {
+    #[Override]
     protected function setUp(): void
     {
         FormNameRegistry::reset();
     }
 
+    #[Override]
     protected function tearDown(): void
     {
         FormNameRegistry::reset();
@@ -38,7 +41,7 @@ final class FormNameRegistryTest extends TestCase
         FormNameRegistry::register(name: 'contact');
 
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('A Form with the name "contact" has already been defined.');
+        $this->expectExceptionMessageIsOrContains('A Form with the name "contact" has already been defined.');
 
         FormNameRegistry::register(name: 'contact');
     }

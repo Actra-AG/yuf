@@ -79,7 +79,7 @@ final class PathVarsTest extends TestCase
     public function testGetRequiredAsIntThrowsNotFoundForNonIntegerValue(string $value): void
     {
         $this->expectException(NotFoundException::class);
-        $this->expectExceptionMessage('Path variable 1 is missing or not an integer');
+        $this->expectExceptionMessageIsOrContains('Path variable 1 is missing or not an integer');
         $this->pathVarsWith(value: $value)->getRequiredAsInt(nr: 1);
     }
 
@@ -124,7 +124,7 @@ final class PathVarsTest extends TestCase
     public function testGetRequiredAsStringThrowsNotFoundForEmptyValue(string $value): void
     {
         $this->expectException(NotFoundException::class);
-        $this->expectExceptionMessage('Path variable 1 is missing or empty');
+        $this->expectExceptionMessageIsOrContains('Path variable 1 is missing or empty');
         $this->pathVarsWith(value: $value)->getRequiredAsString(nr: 1);
     }
 

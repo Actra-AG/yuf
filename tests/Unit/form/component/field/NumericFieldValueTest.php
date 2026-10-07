@@ -30,11 +30,8 @@ final class NumericFieldValueTest extends TestCase
         );
     }
 
-    public function testIsAFinalIntegerField(): void
+    public function testIsFinal(): void
     {
-        $field = $this->createField();
-
-        $this->assertInstanceOf(IntegerField::class, $field);
         $this->assertTrue(new ReflectionClass(objectOrClass: NumericField::class)->isFinal());
     }
 

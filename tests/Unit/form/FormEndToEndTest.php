@@ -37,6 +37,7 @@ use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\InMemoryFileUploadStorage;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
 use DateTimeImmutable;
+use Override;
 use PHPUnit\Framework\TestCase;
 use UnexpectedValueException;
 
@@ -65,6 +66,7 @@ final class FormEndToEndTest extends TestCase
     private FileField $attachment;
     private InMemoryFileUploadStorage $storage;
 
+    #[Override]
     protected function setUp(): void
     {
         FormNameRegistry::reset();
@@ -266,8 +268,7 @@ final class FormEndToEndTest extends TestCase
         $this->assertSame('post', $this->delivery->getValueAsString());
         $this->assertSame('Main street 1', $this->street->getValueAsString());
         $this->assertSame(['line one', 'line two'], $this->message->getValues());
-        $this->assertCount(1, $this->attachment->getFiles());
-        $this->assertSame('cv.pdf', array_values(array: $this->attachment->getFiles())[0]->name);
+        $this->assertSame(['cv.pdf'], array_column(array: array_values(array: $this->attachment->getFiles()), column_key: 'name'));
     }
 
     public function testInitialAndAddedValuesAreTracked(): void
@@ -327,7 +328,7 @@ final class FormEndToEndTest extends TestCase
         $this->send(post: $post);
 
         $this->expectException(UnexpectedValueException::class);
-        $this->expectExceptionMessage('quantity');
+        $this->expectExceptionMessageIsOrContains('quantity');
         $this->quantity->getValueAsInt();
     }
 

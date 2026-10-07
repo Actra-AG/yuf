@@ -53,21 +53,21 @@ final class TableItemModelTest extends TestCase
     public function testNullInNonNullableGetterThrows(): void
     {
         $this->expectException(DbRowValueException::class);
-        $this->expectExceptionMessage('Column "ID" is NULL');
+        $this->expectExceptionMessageIsOrContains('Column "ID" is NULL');
         TableItemModelTest::model(values: ['ID' => null])->getRow()->getInt(column: 'ID');
     }
 
     public function testMissingColumnThrows(): void
     {
         $this->expectException(DbRowValueException::class);
-        $this->expectExceptionMessage('Column "nope" does not exist');
+        $this->expectExceptionMessageIsOrContains('Column "nope" does not exist');
         TableItemModelTest::model(values: ['ID' => 1])->getRow()->getInt(column: 'nope');
     }
 
     public function testWrongTypeThrows(): void
     {
         $this->expectException(DbRowValueException::class);
-        $this->expectExceptionMessage('Column "ID" has the type float, but expected int');
+        $this->expectExceptionMessageIsOrContains('Column "ID" has the type float, but expected int');
         TableItemModelTest::model(values: ['ID' => 1.5])->getRow()->getInt(column: 'ID');
     }
 
@@ -89,7 +89,7 @@ final class TableItemModelTest extends TestCase
     public function testRenderValueOfNonScalarThrows(): void
     {
         $this->expectException(UnexpectedValueException::class);
-        $this->expectExceptionMessage('Column "list" holds a array');
+        $this->expectExceptionMessageIsOrContains('Column "list" holds a array');
         TableItemModelTest::model(values: ['list' => [1]])->renderValue(name: 'list');
     }
 

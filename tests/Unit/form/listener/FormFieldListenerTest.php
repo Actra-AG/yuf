@@ -16,6 +16,7 @@ use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\RecordingFieldListener;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -23,6 +24,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class FormFieldListenerTest extends TestCase
 {
+    #[Override]
     protected function setUp(): void
     {
         FormNameRegistry::reset();

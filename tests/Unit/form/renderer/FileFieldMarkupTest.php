@@ -17,6 +17,7 @@ use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\InMemoryFileUploadStorage;
+use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -32,6 +33,7 @@ final class FileFieldMarkupTest extends TestCase
     private const string SECOND_PATH = '/tmp/v332files/b';
     private static int $formCounter = 0;
 
+    #[Override]
     protected function setUp(): void
     {
         FormNameRegistry::reset();
@@ -348,6 +350,7 @@ final class FileFieldMarkupTest extends TestCase
               . '</div></dd></dl></form>',
         ];
         yield 'remove' => [
+            // @phpstan-ignore disallowed.function (UploadedFile::getHash() uses SHA-1 as identifier, not for security)
             ['file_removeAttachment' => sha1(string: FileFieldMarkupTest::FIRST_PATH)],
             3,
             true,

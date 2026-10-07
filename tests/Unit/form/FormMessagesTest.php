@@ -76,6 +76,7 @@ final class FormMessagesTest extends TestCase
 
         $this->assertSame(array_keys($englishTexts), array_keys($germanTexts));
         foreach ($germanTexts as $name => $germanText) {
+            $this->assertArrayHasKey($name, $englishTexts);
             $this->assertNotSame($englishTexts[$name], $germanText, 'English text in ' . $name);
         }
     }
@@ -86,6 +87,7 @@ final class FormMessagesTest extends TestCase
         $germanTexts = $this->textsOf(messages: FormMessages::german());
 
         foreach ($englishTexts as $name => $englishText) {
+            $this->assertArrayHasKey($name, $germanTexts);
             $this->assertSame(
                 $this->placeholdersOf(text: $englishText),
                 $this->placeholdersOf(text: $germanTexts[$name]),

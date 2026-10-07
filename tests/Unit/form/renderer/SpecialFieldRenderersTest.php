@@ -22,6 +22,7 @@ use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -34,6 +35,7 @@ final class SpecialFieldRenderersTest extends TestCase
 {
     private static int $formCounter = 0;
 
+    #[Override]
     protected function setUp(): void
     {
         FormNameRegistry::reset();

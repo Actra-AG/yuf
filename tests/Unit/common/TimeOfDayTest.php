@@ -64,7 +64,7 @@ final class TimeOfDayTest extends TestCase
     public function testOutOfRangePartThrows(int $hour, int $minute, int $second, string $part): void
     {
         $this->expectException(ValueError::class);
-        $this->expectExceptionMessage('The ' . $part);
+        $this->expectExceptionMessageIsOrContains('The ' . $part);
 
         new TimeOfDay(hour: $hour, minute: $minute, second: $second);
     }

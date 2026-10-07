@@ -12,7 +12,9 @@ namespace actra\yuf\tests\Unit\db;
 use actra\yuf\db\DbRowCountException;
 use actra\yuf\db\DbRuntimeException;
 use actra\yuf\db\DbSelectStmt;
+use Override;
 use PDO;
+use PDOStatement;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -23,6 +25,7 @@ final class DbSelectStmtTest extends TestCase
 {
     private PDO $pdo;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->pdo = new PDO(dsn: 'sqlite::memory:', options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
@@ -34,7 +37,10 @@ final class DbSelectStmtTest extends TestCase
 
     private function stmt(string $sql): DbSelectStmt
     {
-        return new DbSelectStmt(pdoStatement: $this->pdo->prepare($sql));
+        $pdoStatement = $this->pdo->prepare(query: $sql);
+        $this->assertInstanceOf(PDOStatement::class, $pdoStatement);
+
+        return new DbSelectStmt(pdoStatement: $pdoStatement);
     }
 
     public function testFetchRowsReturnsTypedRows(): void
@@ -80,14 +86,14 @@ final class DbSelectStmtTest extends TestCase
     public function testFetchRowThrowsOnMoreThanOneRow(): void
     {
         $this->expectException(DbRowCountException::class);
-        $this->expectExceptionMessage('returned 2 rows');
+        $this->expectExceptionMessageIsOrContains('returned 2 rows');
         $this->stmt(sql: 'SELECT id FROM users')->executeAndFetchRow(parameters: []);
     }
 
     public function testExecutionErrorsAreWrappedWithTheSql(): void
     {
         $this->expectException(DbRuntimeException::class);
-        $this->expectExceptionMessage('SQL-String: "INSERT INTO users (id, name) VALUES (5, NULL)"');
+        $this->expectExceptionMessageIsOrContains('SQL-String: "INSERT INTO users (id, name) VALUES (5, NULL)"');
         // Fails on execute (NOT NULL constraint)
         $this->stmt(sql: 'INSERT INTO users (id, name) VALUES (5, NULL)')->executeAndFetchRows(parameters: []);
     }

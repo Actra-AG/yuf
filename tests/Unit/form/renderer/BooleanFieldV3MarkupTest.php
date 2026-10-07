@@ -15,6 +15,7 @@ use actra\yuf\form\component\layout\CheckboxOptionsLayoutEnum;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
+use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -26,6 +27,7 @@ final class BooleanFieldV3MarkupTest extends TestCase
 {
     private static int $formCounter = 0;
 
+    #[Override]
     protected function setUp(): void
     {
         FormNameRegistry::reset();

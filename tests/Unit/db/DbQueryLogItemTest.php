@@ -12,6 +12,7 @@ namespace actra\yuf\tests\Unit\db;
 use actra\yuf\clock\Clock;
 use actra\yuf\db\DbQueryLogItem;
 use DateTimeImmutable;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 final class DbQueryLogItemTest extends TestCase
@@ -21,6 +22,7 @@ final class DbQueryLogItemTest extends TestCase
         $clock = new class implements Clock {
             private int $calls = 0;
 
+            #[Override]
             public function now(): DateTimeImmutable
             {
                 $this->calls++;

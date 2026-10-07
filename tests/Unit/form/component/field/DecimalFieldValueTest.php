@@ -133,7 +133,7 @@ final class DecimalFieldValueTest extends TestCase
         $field->validate(input: FormInput::fromArray(data: ['price' => $input]));
 
         $this->expectException(UnexpectedValueException::class);
-        $this->expectExceptionMessage('field price');
+        $this->expectExceptionMessageIsOrContains('field price');
 
         $field->getValueAsDecimal();
     }
@@ -242,7 +242,7 @@ final class DecimalFieldValueTest extends TestCase
     public function testSetValueRejectsAnIllegalString(string $value): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('field price');
+        $this->expectExceptionMessageIsOrContains('field price');
 
         $this->createField()->setValue(value: $value);
     }

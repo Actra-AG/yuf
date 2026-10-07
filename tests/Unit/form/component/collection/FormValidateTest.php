@@ -16,6 +16,7 @@ use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
 use LogicException;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -31,6 +32,7 @@ final class FormValidateTest extends TestCase
     /** @var array<array-key, mixed> */
     private array $savedFiles;
 
+    #[Override]
     protected function setUp(): void
     {
         FormNameRegistry::reset();
@@ -42,6 +44,7 @@ final class FormValidateTest extends TestCase
         $_FILES = [];
     }
 
+    #[Override]
     protected function tearDown(): void
     {
         $_GET = $this->savedGet;
@@ -163,7 +166,7 @@ final class FormValidateTest extends TestCase
         $this->createForm();
 
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('A Form with the name "contact" has already been defined.');
+        $this->expectExceptionMessageIsOrContains('A Form with the name "contact" has already been defined.');
 
         $this->createForm();
     }

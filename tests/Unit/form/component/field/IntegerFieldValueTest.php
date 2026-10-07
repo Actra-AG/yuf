@@ -135,7 +135,7 @@ final class IntegerFieldValueTest extends TestCase
         $field->validate(input: FormInput::fromArray(data: ['amount' => $input]));
 
         $this->expectException(UnexpectedValueException::class);
-        $this->expectExceptionMessage('field amount');
+        $this->expectExceptionMessageIsOrContains('field amount');
 
         $field->getValueAsInt();
     }

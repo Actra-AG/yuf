@@ -40,22 +40,22 @@ final class IdTokenTimeClaimsValidatorTest extends TestCase
 
     public function testValidTokenIsAccepted(): void
     {
+        $this->expectNotToPerformAssertions();
+
         $now = IdTokenTimeClaimsValidatorTest::NOW;
         $this->createValidator()->assertValid(
             payload: $this->createPayload(notBefore: $now - 10, issuedAt: $now - 10, expires: $now + 3600),
         );
-
-        $this->addToAssertionCount(1);
     }
 
     public function testTokenIsStillAcceptedOneSecondBeforeTheLeewayEnds(): void
     {
+        $this->expectNotToPerformAssertions();
+
         $now = IdTokenTimeClaimsValidatorTest::NOW;
         $this->createValidator()->assertValid(
             payload: $this->createPayload(notBefore: $now + 60, issuedAt: $now + 60, expires: $now - 59),
         );
-
-        $this->addToAssertionCount(1);
     }
 
     public function testTokenIsRejectedExactlyWhenTheLeewayAfterExpiryEnds(): void
@@ -63,7 +63,7 @@ final class IdTokenTimeClaimsValidatorTest extends TestCase
         $now = IdTokenTimeClaimsValidatorTest::NOW;
 
         $this->expectException(UnauthorizedException::class);
-        $this->expectExceptionMessage('Missing or expired exp');
+        $this->expectExceptionMessageIsOrContains('Missing or expired exp');
         $this->createValidator()->assertValid(
             payload: $this->createPayload(notBefore: $now - 10, issuedAt: $now - 10, expires: $now - 60),
         );
@@ -74,7 +74,7 @@ final class IdTokenTimeClaimsValidatorTest extends TestCase
         $now = IdTokenTimeClaimsValidatorTest::NOW;
 
         $this->expectException(UnauthorizedException::class);
-        $this->expectExceptionMessage('Missing or outdated nbf');
+        $this->expectExceptionMessageIsOrContains('Missing or outdated nbf');
         $this->createValidator()->assertValid(
             payload: $this->createPayload(notBefore: $now + 61, issuedAt: $now, expires: $now + 3600),
         );
@@ -85,7 +85,7 @@ final class IdTokenTimeClaimsValidatorTest extends TestCase
         $now = IdTokenTimeClaimsValidatorTest::NOW;
 
         $this->expectException(UnauthorizedException::class);
-        $this->expectExceptionMessage('Missing or outdated iat');
+        $this->expectExceptionMessageIsOrContains('Missing or outdated iat');
         $this->createValidator()->assertValid(
             payload: $this->createPayload(notBefore: $now, issuedAt: $now + 61, expires: $now + 3600),
         );

@@ -112,7 +112,7 @@ final class DateFieldValueTest extends TestCase
         $field->validate(input: FormInput::fromArray(data: ['date' => $input]));
 
         $this->expectException(UnexpectedValueException::class);
-        $this->expectExceptionMessage('field date');
+        $this->expectExceptionMessageIsOrContains('field date');
 
         $field->getValueAsDateTimeImmutable();
     }

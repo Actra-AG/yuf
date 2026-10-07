@@ -120,7 +120,7 @@ final class FloatFieldValueTest extends TestCase
         $field->validate(input: FormInput::fromArray(data: ['amount' => $input]));
 
         $this->expectException(UnexpectedValueException::class);
-        $this->expectExceptionMessage('field amount');
+        $this->expectExceptionMessageIsOrContains('field amount');
 
         $field->getValueAsFloat();
     }
@@ -242,7 +242,7 @@ final class FloatFieldValueTest extends TestCase
     public function testSetValueRejectsANumberThatIsNotFinite(float $value): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('field amount');
+        $this->expectExceptionMessageIsOrContains('field amount');
 
         $this->createField()->setValue(value: $value);
     }

@@ -12,6 +12,7 @@ namespace actra\yuf\tests\Double\form;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\form\model\UploadInput;
 use actra\yuf\form\upload\FileUploadStorage;
+use Override;
 
 /**
  * A file upload storage without session and file system. It records what the field asked for, so tests can
@@ -56,6 +57,7 @@ final class InMemoryFileUploadStorage implements FileUploadStorage
         $this->failStoring = true;
     }
 
+    #[Override]
     public function load(string $pointer): array
     {
         return array_filter(
@@ -68,11 +70,13 @@ final class InMemoryFileUploadStorage implements FileUploadStorage
         );
     }
 
+    #[Override]
     public function save(string $pointer, array $files): void
     {
         $this->filesByPointer[$pointer] = $files;
     }
 
+    #[Override]
     public function store(string $pointer, UploadInput $upload): ?UploadedFile
     {
         if ($this->failStoring) {
@@ -88,17 +92,20 @@ final class InMemoryFileUploadStorage implements FileUploadStorage
         );
     }
 
+    #[Override]
     public function delete(UploadedFile $file): void
     {
         $this->deletedFiles[] = $file;
     }
 
+    #[Override]
     public function clear(string $pointer): void
     {
         $this->clearedPointers[] = $pointer;
         unset($this->filesByPointer[$pointer]);
     }
 
+    #[Override]
     public function removeExpired(): void
     {
         $this->expiredRemovalCount++;

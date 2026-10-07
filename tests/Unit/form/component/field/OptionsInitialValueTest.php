@@ -100,7 +100,7 @@ final class OptionsInitialValueTest extends TestCase
         $field->validate(input: FormInput::fromArray(data: []));
 
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('field radio');
+        $this->expectExceptionMessageIsOrContains('field radio');
 
         $field->fill(value: 'a');
     }

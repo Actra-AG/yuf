@@ -12,6 +12,7 @@ namespace actra\yuf\tests\Unit\core;
 use actra\yuf\clock\FixedClock;
 use actra\yuf\core\Logger;
 use DateTimeImmutable;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 final class LoggerTest extends TestCase
@@ -19,15 +20,18 @@ final class LoggerTest extends TestCase
     private const int TICKET_MODIFIED = 1_800_000_000;
     private string $logDirectory;
 
+    #[Override]
     protected function setUp(): void
     {
-        $this->logDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-logger-test-' . uniqid() . DIRECTORY_SEPARATOR;
+        $this->logDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-logger-test-' . bin2hex(string: random_bytes(length: 8)) . DIRECTORY_SEPARATOR;
         mkdir(directory: $this->logDirectory);
     }
 
+    #[Override]
     protected function tearDown(): void
     {
-        foreach (glob(pattern: $this->logDirectory . '*') ?: [] as $file) {
+        $files = glob(pattern: $this->logDirectory . '*');
+        foreach ($files === false ? [] : $files as $file) {
             unlink(filename: $file);
         }
         rmdir(directory: $this->logDirectory);

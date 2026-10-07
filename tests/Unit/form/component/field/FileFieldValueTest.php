@@ -15,6 +15,7 @@ use actra\yuf\form\FormMessages;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\InMemoryFileUploadStorage;
+use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -28,6 +29,7 @@ final class FileFieldValueTest extends TestCase
 {
     private InMemoryFileUploadStorage $storage;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->storage = new InMemoryFileUploadStorage();
@@ -192,6 +194,7 @@ final class FileFieldValueTest extends TestCase
         $field->validate(input: $this->request($this->uploads(names: ['a.txt'])));
 
         foreach ($field->getFiles() as $hash => $file) {
+            // @phpstan-ignore disallowed.function (UploadedFile::getHash() uses SHA-1 as identifier, not for security)
             $this->assertSame(sha1(string: $file->path), $hash);
             $this->assertSame($file->getHash(), $hash);
         }
@@ -203,7 +206,9 @@ final class FileFieldValueTest extends TestCase
 
         $field->validate(input: $this->request($this->uploads(names: ['../../etc/passwd'])));
 
-        $file = array_values(array: $field->getFiles())[0];
+        $files = array_values(array: $field->getFiles());
+        $this->assertArrayHasKey(0, $files);
+        $file = $files[0];
         $this->assertStringNotContainsString('passwd', $file->path);
         $this->assertSame('../../etc/passwd', $file->name);
     }

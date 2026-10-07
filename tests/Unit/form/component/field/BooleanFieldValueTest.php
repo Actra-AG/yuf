@@ -32,7 +32,10 @@ final class BooleanFieldValueTest extends TestCase
 
     public function testIsNoCheckboxOptionsFieldAnymore(): void
     {
-        $this->assertNotContains(CheckboxOptionsField::class, class_parents(object_or_class: BooleanField::class));
+        $parentClasses = class_parents(object_or_class: BooleanField::class);
+
+        $this->assertIsArray($parentClasses);
+        $this->assertNotContains(CheckboxOptionsField::class, $parentClasses);
     }
 
     public function testIsCheckedAfterConstructionWithDefault(): void

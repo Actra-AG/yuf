@@ -28,6 +28,7 @@ final class UploadedFileTest extends TestCase
     {
         $file = new UploadedFile(name: 'a.txt', type: 'text/plain', size: 5, path: '/tmp/x/php1');
 
+        // @phpstan-ignore disallowed.function (UploadedFile::getHash() uses SHA-1 as identifier, not for security)
         $this->assertSame(sha1(string: '/tmp/x/php1'), $file->getHash());
     }
 

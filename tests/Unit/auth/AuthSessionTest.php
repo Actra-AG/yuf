@@ -13,6 +13,7 @@ use actra\yuf\auth\AuthSession;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CsrfToken;
 use actra\yuf\session\AbstractSessionHandler;
+use Override;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 use UnexpectedValueException;
@@ -25,6 +26,7 @@ final class AuthSessionTest extends TestCase
 {
     private ReflectionProperty $handlerProperty;
 
+    #[Override]
     protected function setUp(): void
     {
         $this->handlerProperty = new ReflectionProperty(
@@ -34,6 +36,7 @@ final class AuthSessionTest extends TestCase
         $_SESSION = [];
     }
 
+    #[Override]
     protected function tearDown(): void
     {
         $this->handlerProperty->setValue(null, null);
@@ -119,10 +122,12 @@ final class AuthSessionTestSessionHandler extends AbstractSessionHandler
     /**
      * Does not start a session.
      */
-    public function __construct() {}
+    public function __construct() {} // @phpstan-ignore constructor.missingParentCall (the parent starts a session)
 
+    #[Override]
     protected function executePreStartActions(): void {}
 
+    #[Override]
     public function regenerateID(): void
     {
         $this->regenerations++;

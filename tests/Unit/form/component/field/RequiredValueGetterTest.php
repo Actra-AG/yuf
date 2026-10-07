@@ -183,7 +183,7 @@ final class RequiredValueGetterTest extends TestCase
         $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['field' => ''])));
 
         $this->expectException(FormFieldValueMissingException::class);
-        $this->expectExceptionMessage('Field field has no value');
+        $this->expectExceptionMessageIsOrContains('Field field has no value');
 
         $required($field);
     }
@@ -205,8 +205,8 @@ final class RequiredValueGetterTest extends TestCase
         $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['field' => ''])));
 
         $this->expectException(FormFieldValueMissingException::class);
-        $this->expectExceptionMessage('is not required');
-        $this->expectExceptionMessage($nullableGetter . '()');
+        $this->expectExceptionMessageIsOrContains('is not required');
+        $this->expectExceptionMessageIsOrContains($nullableGetter . '()');
 
         $required($field);
     }

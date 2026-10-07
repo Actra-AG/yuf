@@ -15,12 +15,14 @@ use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 final class ZipCodeFieldValueTest extends TestCase
 {
     private static int $formCounter = 0;
 
+    #[Override]
     protected function setUp(): void
     {
         FormNameRegistry::reset();

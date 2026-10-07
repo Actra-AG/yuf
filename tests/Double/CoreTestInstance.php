@@ -11,6 +11,7 @@ namespace actra\yuf\tests\Double;
 
 use actra\yuf\Core;
 use Closure;
+use LogicException;
 use ReflectionClass;
 
 /**
@@ -23,7 +24,7 @@ final class CoreTestInstance
     {
         $reflection = new ReflectionClass(objectOrClass: Core::class);
         $core = $reflection->newInstanceWithoutConstructor();
-        Closure::bind(
+        $initialize = Closure::bind(
             closure: function () use ($cacheDirectory): void {
                 $this->frameworkDirectory = __DIR__ . '/../../src/'; // @phpstan-ignore property.readOnlyAssignOutOfClass
                 $this->cacheDirectory = $cacheDirectory; // @phpstan-ignore property.readOnlyAssignOutOfClass
@@ -31,7 +32,11 @@ final class CoreTestInstance
             },
             newThis: $core,
             newScope: Core::class,
-        )();
+        );
+        if ($initialize === null) {
+            throw new LogicException(message: 'Could not bind the initializer to Core.');
+        }
+        $initialize();
         $reflection->setStaticPropertyValue(name: 'instance', value: $core);
     }
 }

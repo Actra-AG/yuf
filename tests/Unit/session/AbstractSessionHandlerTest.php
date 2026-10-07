@@ -12,6 +12,7 @@ namespace actra\yuf\tests\Unit\session;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CsrfToken;
 use actra\yuf\session\AbstractSessionHandler;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 final class AbstractSessionHandlerTest extends TestCase
@@ -25,6 +26,7 @@ final class AbstractSessionHandlerTest extends TestCase
         CspNonce::SESSION_INDICATOR => 'nonce',
     ];
 
+    #[Override]
     protected function tearDown(): void
     {
         unset($_SESSION);

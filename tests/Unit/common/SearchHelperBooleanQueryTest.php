@@ -14,6 +14,7 @@ use actra\yuf\db\DbQuery;
 use actra\yuf\db\DbQueryData;
 use InvalidArgumentException;
 use PDO;
+use PDOStatement;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 use PHPUnit\Framework\TestCase;
@@ -227,6 +228,7 @@ final class SearchHelperBooleanQueryTest extends TestCase
         );
 
         $this->assertSame(
+            // @phpstan-ignore method.deprecated (characterization test of the deprecated method)
             SearchHelper::getInstance(instanceName: 'test')->getBooleanQuery(
                 spaceSeparatedFieldNames: 'a.name b.city',
                 query_text: $queryText,
@@ -290,6 +292,7 @@ final class SearchHelperBooleanQueryTest extends TestCase
         $queryData = $dbQuery->getDbQueryData(offset: 0, rowCount: 100);
 
         $statement = $pdo->prepare(query: $queryData->query);
+        $this->assertInstanceOf(PDOStatement::class, $statement);
         $statement->execute(params: $queryData->params);
 
         $this->assertSame($expectedIds, $statement->fetchAll(mode: PDO::FETCH_COLUMN));

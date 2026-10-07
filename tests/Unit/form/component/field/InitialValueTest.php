@@ -59,7 +59,7 @@ final class InitialValueTest extends TestCase
         $field->validate(input: FormInput::fromArray(data: []));
 
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('field');
+        $this->expectExceptionMessageIsOrContains('field');
 
         $field->fill(value: 'late');
     }

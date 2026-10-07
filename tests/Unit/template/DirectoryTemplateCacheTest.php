@@ -12,21 +12,25 @@ namespace actra\yuf\tests\Unit\template;
 use actra\yuf\clock\FixedClock;
 use actra\yuf\template\template\DirectoryTemplateCache;
 use DateTimeImmutable;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 final class DirectoryTemplateCacheTest extends TestCase
 {
     private string $cachePath;
 
+    #[Override]
     protected function setUp(): void
     {
-        $this->cachePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-template-cache-test-' . uniqid() . DIRECTORY_SEPARATOR;
+        $this->cachePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-template-cache-test-' . bin2hex(string: random_bytes(length: 8)) . DIRECTORY_SEPARATOR;
         mkdir(directory: $this->cachePath);
     }
 
+    #[Override]
     protected function tearDown(): void
     {
-        foreach (glob(pattern: $this->cachePath . '*') ?: [] as $file) {
+        $files = glob(pattern: $this->cachePath . '*');
+        foreach ($files === false ? [] : $files as $file) {
             unlink(filename: $file);
         }
         rmdir(directory: $this->cachePath);

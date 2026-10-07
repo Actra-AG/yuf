@@ -23,6 +23,7 @@ use actra\yuf\form\renderer\DefaultComponentRenderer;
 use actra\yuf\form\renderer\InputFieldRenderer;
 use actra\yuf\html\HtmlText;
 use LogicException;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -40,6 +41,7 @@ final class ToggleChildrenTest extends TestCase
         return $formOptions;
     }
 
+    #[Override]
     protected function setUp(): void
     {
         FormNameRegistry::reset();
@@ -95,7 +97,7 @@ final class ToggleChildrenTest extends TestCase
         $toggle = $this->createToggle();
 
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('The mainOption x does not exist!');
+        $this->expectExceptionMessageIsOrContains('The mainOption x does not exist!');
 
         $toggle->addChildField(mainOption: 'x', childField: $this->createChild(name: 'child'));
     }
@@ -105,7 +107,7 @@ final class ToggleChildrenTest extends TestCase
         $toggle = $this->createToggle();
 
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('The mainOption a has no child nope');
+        $this->expectExceptionMessageIsOrContains('The mainOption a has no child nope');
 
         $toggle->getChildField(mainOption: 'a', fieldName: 'nope');
     }

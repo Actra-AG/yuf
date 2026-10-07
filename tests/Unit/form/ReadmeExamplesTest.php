@@ -26,6 +26,7 @@ use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\NoSpacesRule;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -34,6 +35,7 @@ use PHPUnit\Framework\TestCase;
  */
 final class ReadmeExamplesTest extends TestCase
 {
+    #[Override]
     protected function setUp(): void
     {
         FormNameRegistry::reset();

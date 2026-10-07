@@ -16,6 +16,7 @@ use actra\yuf\form\FormMessages;
 use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -29,6 +30,7 @@ final class FormCsrfTest extends TestCase
 
     private static int $formCounter = 0;
 
+    #[Override]
     protected function setUp(): void
     {
         FormNameRegistry::reset();

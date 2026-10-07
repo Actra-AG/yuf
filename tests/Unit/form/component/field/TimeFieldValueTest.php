@@ -111,7 +111,7 @@ final class TimeFieldValueTest extends TestCase
         $field->validate(input: FormInput::fromArray(data: ['time' => $input]));
 
         $this->expectException(UnexpectedValueException::class);
-        $this->expectExceptionMessage('field time');
+        $this->expectExceptionMessageIsOrContains('field time');
 
         $field->getValueAsTimeOfDay();
     }

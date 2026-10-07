@@ -15,6 +15,7 @@ use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
+use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -27,6 +28,7 @@ final class FormMessagesHandoverTest extends TestCase
         return new TextField(name: 'field', label: HtmlText::encoded(textContent: 'Label'));
     }
 
+    #[Override]
     protected function setUp(): void
     {
         FormNameRegistry::reset();

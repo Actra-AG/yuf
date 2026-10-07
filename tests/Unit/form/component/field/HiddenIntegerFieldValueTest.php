@@ -94,7 +94,7 @@ final class HiddenIntegerFieldValueTest extends TestCase
         $field->validate(input: FormInput::fromArray(data: ['id' => $input]));
 
         $this->expectException(UnexpectedValueException::class);
-        $this->expectExceptionMessage('field id');
+        $this->expectExceptionMessageIsOrContains('field id');
 
         $field->getValueAsInt();
     }

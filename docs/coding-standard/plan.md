@@ -47,7 +47,7 @@ but the existing code does not meet them yet, so `composer check` is red until t
     - Strict `in_array()` compared numeric array keys (int) with string values: option/checkbox/radio selection in the
       templates (new `@internal CustomTagsHelper::isSelected()`, test: `OptionsSelectionTest`) and
       `SearchHelper::checkMultiFilter()` (key cast to string).
-- Intended changes for `UPGRADE.md` (add them in the release commit after task 2, no "unreleased" section):
+- Changes for `UPGRADE.md` (added in v4.8.1 with task 2):
     - `AuthWebToken` decodes Base64 strictly: tokens with invalid characters are rejected (`UnauthorizedException`)
       instead of decoding the remaining characters.
     - `StringUtils::randomString()`, `StringUtils::generateSalt()` and the temporary file name of `CSVFile` use
@@ -55,4 +55,18 @@ but the existing code does not meet them yet, so `composer check` is red until t
 - Not changed (pre-existing bug, separate fix): `ContentType::createDefault()` checks `in_array()` against the values
   of an array whose keys are the types, so `forceDownloadByDefault` is always `true`.
 - Baseline: 1179 → 1057 entries.
+
+### Task 2 (tests) – done
+
+- `composer check` is green.
+- `#[Override]` added in 30 files of `tests/`.
+- The deprecated `expectExceptionMessage()` is replaced by `expectExceptionMessageIsOrContains()` (same behaviour;
+  most tests check only a part of the message). Use `expectExceptionMessageIs()` in new tests.
+- Removed checks that PHPStan already proves (`testIsAClock()` of both clocks, `assertInstanceOf()` on typed return
+  values). `assertArrayHasKey()` before reading array offsets, `assertInstanceOf(PDOStatement::class, …)` after
+  `prepare()`, `random_bytes()` instead of `uniqid()` for temporary directories.
+- `@phpstan-ignore` with reason: SHA-1 in the tests of `UploadedFile::getHash()` (identifier, not security), the test
+  session handler that does not call the parent constructor, the characterization test of the deprecated
+  `SearchHelper::getBooleanQuery()`.
+- Released as v4.8.1. Remaining: task 3 (shrink the baseline with the refactoring of each area).
 

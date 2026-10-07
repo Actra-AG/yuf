@@ -4,6 +4,21 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.8.1] – 2026-10-07
+
+yuf is now developed with the [Actra coding standard](https://github.com/Actra-AG/coding-standard): all files are
+formatted with PHP-CS-Fixer (PER Coding Style) and checked with the strict PHPStan configuration. No code change is
+needed in projects.
+
+### 🐛 Bug Fixes
+
+* `AuthWebToken` decodes the Base64 parts of a token strictly: a token with invalid characters is rejected with an
+  `UnauthorizedException` instead of being decoded without these characters.
+* `StringUtils::randomString()`, `StringUtils::generateSalt()` and the name of the temporary file of
+  `CSVFile::createTemporaryFile()` use the cryptographically secure `random_int()` instead of `mt_rand()` / `rand()`.
+
+---
+
 ## [v4.8.0] – 2026-10-07
 
 ### ⚙️ Backend & API

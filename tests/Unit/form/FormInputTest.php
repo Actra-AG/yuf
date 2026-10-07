@@ -244,7 +244,9 @@ final class FormInputTest extends TestCase
             files: ['file' => ['name' => " a.txt\n", 'type' => ' text/plain '] + FormInputTest::singleFile()],
         );
 
-        $upload = $input->getUploads(name: 'file')[0];
+        $uploads = $input->getUploads(name: 'file');
+        $this->assertArrayHasKey(0, $uploads);
+        $upload = $uploads[0];
         $this->assertSame('a.txt', $upload->name);
         $this->assertSame('text/plain', $upload->type);
     }
