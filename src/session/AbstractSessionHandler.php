@@ -15,7 +15,6 @@ use actra\yuf\Core;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\Language;
 use actra\yuf\exception\UnauthorizedException;
-use actra\yuf\security\CspNonce;
 use Exception;
 use LogicException;
 use SessionHandler;
@@ -31,7 +30,7 @@ abstract class AbstractSessionHandler extends SessionHandler
     private const string PREFERRED_LANGUAGE_INDICATOR = 'preferredLanguage';
     /**
      * Session data that is not bound to the user: the session handler needs its own data on every request, and the
-     * CSP nonce may already be in the header of the current response.
+     * preferred language stays for the next user of the browser.
      */
     private const array SESSION_KEYS_WITHOUT_USER_DATA = [
         AbstractSessionHandler::SESSION_CREATED_INDICATOR,
@@ -39,7 +38,6 @@ abstract class AbstractSessionHandler extends SessionHandler
         AbstractSessionHandler::TRUSTED_USER_AGENT_INDICATOR,
         AbstractSessionHandler::LAST_ACTIVITY_INDICATOR,
         AbstractSessionHandler::PREFERRED_LANGUAGE_INDICATOR,
-        CspNonce::SESSION_INDICATOR,
     ];
     private static false|AbstractSessionHandler|null $abstractSessionHandler = null;
     public private(set) ?string $name = null {
@@ -347,8 +345,8 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     /**
      * Removes all data of the user from the session, e.g. on logout (breadcrumb, table and search state, uploads, CSRF
-     * token, login state, project data, …). Keeps only the data of the session handler, the preferred language and
-     * the CSP nonce. Does nothing if sessions are disabled.
+     * token, login state, project data, …). Keeps only the data of the session handler and the preferred
+     * language. Does nothing if sessions are disabled.
      */
     public static function clearUserData(): void
     {

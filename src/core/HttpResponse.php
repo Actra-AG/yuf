@@ -75,6 +75,14 @@ class HttpResponse
             key: 'Strict-Transport-Security',
             val: 'max-age=' . HttpResponse::HSTS_MAX_AGE,
         );
+        $this->setHeader(
+            key: 'X-Content-Type-Options',
+            val: 'nosniff',
+        );
+        $this->setHeader(
+            key: 'Referrer-Policy',
+            val: 'strict-origin-when-cross-origin',
+        );
     }
 
     public function setHeader(string $key, string $val): void

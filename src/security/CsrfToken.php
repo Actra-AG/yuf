@@ -15,11 +15,6 @@ class CsrfToken
 {
     public const string CSRFTOKENSTORAGE = 'csrftoken';
 
-    public static function renderAsGetParam(): string
-    {
-        return CsrfToken::CSRFTOKENSTORAGE . '=' . urlencode(CsrfToken::getToken());
-    }
-
     /**
      * Returns a CSRF-Token (generate and stores it, if not already done)
      *

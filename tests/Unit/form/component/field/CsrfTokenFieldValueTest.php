@@ -123,18 +123,11 @@ final class CsrfTokenFieldValueTest extends TestCase
         $this->assertTrue($isValid);
     }
 
-    public function testMissingPostedTokenFallsBackToTheQueryString(): void
+    public function testTokenInTheQueryStringIsIgnored(): void
     {
         $field = $this->createField();
 
         $isValid = $this->validate(field: $field, data: [], query: ['csrftoken' => 'expected-token']);
-
-        $this->assertTrue($isValid);
-    }
-
-    public function testWrongTokenInTheQueryStringIsInvalid(): void
-    {
-        $isValid = $this->validate(field: $this->createField(), data: [], query: ['csrftoken' => 'abc']);
 
         $this->assertFalse($isValid);
     }

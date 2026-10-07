@@ -401,7 +401,7 @@ final class SpecialFieldRenderersTest extends TestCase
         );
     }
 
-    public function testFormWithTheTokenInTheQueryStringHasNoError(): void
+    public function testFormWithThePostedTokenHasNoError(): void
     {
         $form = $this->createForm();
         $formName = $form->name;
@@ -409,8 +409,8 @@ final class SpecialFieldRenderersTest extends TestCase
 
         $isValid = $form->validate(
             input: FormInput::fromArray(
-                data: ['phone' => '044 668 18 00'],
-                query: [$formName => '', 'csrftoken' => 'tok+en/1='],
+                data: ['phone' => '044 668 18 00', 'csrftoken' => 'tok+en/1='],
+                query: [$formName => ''],
             ),
         );
 

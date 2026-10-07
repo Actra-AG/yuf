@@ -88,12 +88,7 @@ but the existing code does not meet them yet, so `composer check` is red until t
 
 Fixed in v4.9.1: `IpValidator::isInWhitelist()` (any IPv6 range allowed every IPv6 address, shifted IPv4 ranges,
 invalid ranges). Fixed in v4.9.2: HSTS max-age independent of the cache max-age, `hash_equals()` for the CSRF token,
-`random_bytes()` for the CSRF token and the CSP nonce, `session_regenerate_id(delete_old_session: true)`. Open:
-
-1. Minor (breaking, `UPGRADE.md` with ⚠️):
-    - `CsrfTokenField` accepts the token from the query string, `CsrfToken::renderAsGetParam()` builds such URLs
-      (no tokens in URLs).
-    - `TableFilter` renders the CSRF token in its POST form but never validates it.
-    - The CSP nonce is stored in the session and reused for all requests instead of a new nonce per request.
-    - `X-Content-Type-Options: nosniff` and `Referrer-Policy` are not sent.
-
+`random_bytes()` for the CSRF token and the CSP nonce, `session_regenerate_id(delete_old_session: true)`. Fixed in
+v4.10.0 (decisions of the user): no CSRF token in URLs (no query string fallback, no `renderAsGetParam()`), no CSRF
+token in GET forms, `TableFilter` validates the posted token, a new CSP nonce per request (not in the session),
+`X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`. No open finding left.

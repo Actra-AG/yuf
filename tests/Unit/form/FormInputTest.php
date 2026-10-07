@@ -370,7 +370,7 @@ final class FormInputTest extends TestCase
     public function testFromGlobalsOfAPostFormReadsThePostedValuesAndTheQueryPart(): void
     {
         $this->withGlobals(
-            get: ['contact' => '', 'csrftoken' => 'fallback', 'name' => 'from get'],
+            get: ['contact' => '', 'page' => '2', 'name' => 'from get'],
             post: ['name' => 'from post', 'tags' => ['a', 'b']],
             files: [],
             test: function (): void {
@@ -379,7 +379,7 @@ final class FormInputTest extends TestCase
                 $this->assertSame('from post', $input->getText(name: 'name'));
                 $this->assertSame(['a', 'b'], $input->getList(name: 'tags'));
                 $this->assertTrue($input->hasQueryKey(key: 'contact'));
-                $this->assertSame('fallback', $input->getQueryText(key: 'csrftoken'));
+                $this->assertSame('2', $input->getQueryText(key: 'page'));
             },
         );
     }

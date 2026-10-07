@@ -139,8 +139,7 @@ the integer range count as not an integer.
 same browser does not see the data of the previous one (breadcrumb, table and search state, uploads, CSRF token, own
 project data, …). Projects do not need to clear the session themselves.
 
-`clearUserData()` removes everything except the data of the session handler, the preferred language and the CSP nonce
-(which may already be in the header of the current response). It does nothing if sessions are disabled. Call it
+`clearUserData()` removes everything except the data of the session handler and the preferred language. It does nothing if sessions are disabled. Call it
 directly to clear the session without a logout. Data that has to survive a logout (e.g. a message for the login page)
 must be written to the session after `AuthSession::logOut()`.
 

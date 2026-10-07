@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\auth;
 
 use actra\yuf\auth\AuthSession;
-use actra\yuf\security\CspNonce;
 use actra\yuf\security\CsrfToken;
 use actra\yuf\session\AbstractSessionHandler;
 use Override;
@@ -69,7 +68,6 @@ final class AuthSessionTest extends TestCase
         AuthSession::logIn(authSessionID: 5);
         $_SESSION['sessionCreated'] = 1_790_000_000;
         $_SESSION['preferredLanguage'] = 'de';
-        $_SESSION[CspNonce::SESSION_INDICATOR] = 'nonce';
         $_SESSION[CsrfToken::CSRFTOKENSTORAGE] = 'token';
         $_SESSION['sess_breadcrumb'] = ['home' => ['title' => 'Home', 'link' => 'home']];
 
@@ -79,7 +77,6 @@ final class AuthSessionTest extends TestCase
             [
                 'sessionCreated' => 1_790_000_000,
                 'preferredLanguage' => 'de',
-                CspNonce::SESSION_INDICATOR => 'nonce',
                 'auth_userSession' => ['isLoggedIn' => false, 'authSessionID' => 0],
             ],
             $_SESSION,

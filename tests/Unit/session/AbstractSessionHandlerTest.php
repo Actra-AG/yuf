@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\session;
 
-use actra\yuf\security\CspNonce;
 use actra\yuf\security\CsrfToken;
 use actra\yuf\session\AbstractSessionHandler;
 use Override;
@@ -23,7 +22,6 @@ final class AbstractSessionHandlerTest extends TestCase
         'trustedUserAgent' => 'Browser',
         'lastActivity' => 1_790_000_100,
         'preferredLanguage' => 'de',
-        CspNonce::SESSION_INDICATOR => 'nonce',
     ];
 
     #[Override]
@@ -44,7 +42,7 @@ final class AbstractSessionHandlerTest extends TestCase
         $this->assertSame(AbstractSessionHandlerTest::DATA_WITHOUT_USER_DATA, $_SESSION);
     }
 
-    public function testClearUserDataKeepsSessionHandlerDataLanguageAndCspNonce(): void
+    public function testClearUserDataKeepsSessionHandlerDataAndLanguage(): void
     {
         $_SESSION = AbstractSessionHandlerTest::DATA_WITHOUT_USER_DATA;
 

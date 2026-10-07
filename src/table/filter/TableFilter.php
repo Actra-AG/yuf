@@ -11,6 +11,7 @@ namespace actra\yuf\table\filter;
 
 use actra\yuf\Core;
 use actra\yuf\core\HttpRequest;
+use actra\yuf\core\RequestMethodEnum;
 use actra\yuf\html\HtmlDataObjectCollection;
 use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\html\HtmlSnippet;
@@ -51,11 +52,28 @@ class TableFilter
         if (HttpRequest::getInputString(keyName: $this->resetParameter) !== null) {
             $this->reset(dbResultTable: $dbResultTable);
         }
-        if (HttpRequest::getInputString(keyName: $this->identifier) !== null) {
+        if (HttpRequest::getInputString(keyName: $this->identifier) !== null && $this->hasValidCsrfToken()) {
             $this->reset(dbResultTable: $dbResultTable);
             $this->checkInput();
         }
         $this->filtersApplied = $this->applyFilters(dbResultTable: $dbResultTable);
+    }
+
+    /**
+     * The filter input is only accepted from the filter form: a POST request with the CSRF token of the user in the
+     * posted data (never from the URL). Otherwise, the previous filter stays.
+     */
+    private function hasValidCsrfToken(): bool
+    {
+        if (HttpRequest::getRequestMethod() !== RequestMethodEnum::POST) {
+            return false;
+        }
+        $fieldName = CsrfToken::getFieldName();
+        if (!array_key_exists(key: $fieldName, array: $_POST) || !is_string(value: $_POST[$fieldName])) {
+            return false;
+        }
+
+        return CsrfToken::validateToken(token: $_POST[$fieldName]);
     }
 
     protected function reset(DbResultTable $dbResultTable): void

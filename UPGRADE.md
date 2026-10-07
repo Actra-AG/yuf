@@ -4,6 +4,62 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.10.0] – 2026-10-07
+
+Security hardening following the Actra coding standard (`standards/security.md`).
+
+### ⚠️ The CSRF token is never read from the URL
+
+`Form` (`CsrfTokenField`) only accepts the posted token; the fallback to the query string (`?csrftoken=…`) is removed,
+and so is `CsrfToken::renderAsGetParam()`. Tokens in URLs end up in logs, the browser history and the `Referer`
+header.
+
+```php
+// Before: the token in the URL was accepted when it was not posted
+$url = '?' . $form->sentIndicator . '&' . CsrfToken::renderAsGetParam();
+
+// After: send the form with POST, the hidden field contains the token
+$form = new Form(name: 'contact');
+```
+
+### ⚠️ GET forms have no CSRF token
+
+A `Form` with `methodPost: false` no longer adds the CSRF field: a GET request must not change state, and the token
+would be in the URL. The rendered HTML of GET forms has no hidden `csrftoken` field anymore. Forms that change data
+must use POST (the default):
+
+```php
+// Before: a GET form that changes data, protected by the token in the URL
+$form = new Form(name: 'delete', methodPost: false);
+
+// After
+$form = new Form(name: 'delete');
+```
+
+### ⚠️ `TableFilter` checks the CSRF token
+
+The filter input is only applied when it is posted with the CSRF token of the user (the rendered filter form does
+that). A filter sent with GET or without a valid token is ignored, and the previous filter stays. Links that set a
+filter in the URL (`?myFilter&find&…`) do not work anymore; the reset link still works.
+
+### ⚠️ A new CSP nonce for every request
+
+`CspNonce::get()` returns a new random nonce for every request (the same within the request) instead of one nonce per
+session. It is no longer stored in the session, also works without a session (pages without session now get a nonce in
+the `Content-Security-Policy` header), and `CspNonce::SESSION_INDICATOR` is removed. HTML that is loaded later (e.g.
+via AJAX) and contains inline scripts or styles with the nonce of an earlier response is blocked; render such HTML
+without inline code, or with the nonce of the response that loads it.
+
+`AbstractSessionHandler::clearUserData()` keeps the data of the session handler and the preferred language.
+
+### ⚠️ New security headers
+
+Every `HttpResponse` sends `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`.
+Browsers no longer guess the type of a response, so files must be delivered with the correct `Content-Type`.
+Override the headers with `HttpResponse::setHeader()` if a project needs other values.
+
+---
+
 ## [v4.9.2] – 2026-10-07
 
 ### 🐛 Bug Fixes

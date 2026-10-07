@@ -9,28 +9,16 @@ declare(strict_types=1);
 
 namespace actra\yuf\security;
 
-use actra\yuf\session\AbstractSessionHandler;
-
+/**
+ * The nonce of the Content Security Policy: a new random value for every request, the same for all calls within the
+ * request (header and inline scripts and styles of the response).
+ */
 class CspNonce
 {
-    public const string SESSION_INDICATOR = 'security_cspNonce';
+    private static ?string $nonce = null;
 
     public static function get(): string
     {
-        if (!AbstractSessionHandler::enabled()) {
-            return '';
-        }
-        $cspNonce = $_SESSION[CspNonce::SESSION_INDICATOR] ?? null;
-        if (!is_string(value: $cspNonce)) {
-            $cspNonce = CspNonce::generate();
-            $_SESSION[CspNonce::SESSION_INDICATOR] = $cspNonce;
-        }
-
-        return $cspNonce;
-    }
-
-    private static function generate(): string
-    {
-        return base64_encode(string: random_bytes(length: 16));
+        return CspNonce::$nonce ??= base64_encode(string: random_bytes(length: 16));
     }
 }

@@ -9,8 +9,6 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
-use actra\yuf\form\FormInput;
-use actra\yuf\form\InputShapeEnum;
 use actra\yuf\form\renderer\HiddenFieldRenderer;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlEncoder;
@@ -23,14 +21,11 @@ use Override;
 /**
  * The hidden field with the CSRF token of the user. It renders the token of the `CsrfTokenSource` (read when the
  * field is rendered, so the session is not touched before) and checks the posted token against it. It has neither a
- * getter nor a setter: the posted token is of no use to a project and the token cannot be overwritten.
- *
- * A token that is missing in the posted data is taken from the query string (the fallback for forms that are sent
- * with a token in the URL).
+ * getter nor a setter: the posted token is of no use to a project and the token cannot be overwritten. The token is
+ * only read from the posted data, never from the query string (tokens do not belong into URLs).
  */
 final class CsrfTokenField extends InputField
 {
-    private ?string $queryToken = null;
     private bool $postedTokenIsValid = false;
 
     public function __construct(private readonly CsrfTokenSource $tokenSource = new SessionCsrfTokenSource())
@@ -55,19 +50,10 @@ final class CsrfTokenField extends InputField
     }
 
     #[Override]
-    protected function readAdditionalInput(FormInput $input): void
-    {
-        $this->queryToken = $input->getShape(name: $this->name) === InputShapeEnum::MISSING
-            ? $input->getQueryText(key: $this->name)
-            : null;
-    }
-
-    #[Override]
     protected function accept(string $text): void
     {
-        $token = $this->queryToken ?? $text;
-        parent::accept(text: $token);
-        $this->postedTokenIsValid = $this->tokenSource->isValid(token: $token);
+        parent::accept(text: $text);
+        $this->postedTokenIsValid = $this->tokenSource->isValid(token: $text);
     }
 
     /**

@@ -14,7 +14,7 @@ use actra\yuf\core\HttpStatusCode;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 
-final class HttpResponseHstsTest extends TestCase
+final class HttpResponseSecurityHeadersTest extends TestCase
 {
     /**
      * @return array<mixed>
@@ -53,5 +53,21 @@ final class HttpResponseHstsTest extends TestCase
         $headers = $this->headersOf(httpResponse: $httpResponse);
         $this->assertArrayHasKey('Strict-Transport-Security', $headers);
         $this->assertSame('max-age=31536000', $headers['Strict-Transport-Security']);
+    }
+
+    public function testResponsesForbidMimeSniffingAndLimitTheReferrer(): void
+    {
+        $httpResponse = HttpResponse::createHtmlResponse(
+            httpStatusCode: HttpStatusCode::HTTP_OK,
+            htmlContent: '<p>Test</p>',
+            cspPolicySettingsModel: null,
+            nonce: null,
+        );
+
+        $headers = $this->headersOf(httpResponse: $httpResponse);
+        $this->assertArrayHasKey('X-Content-Type-Options', $headers);
+        $this->assertSame('nosniff', $headers['X-Content-Type-Options']);
+        $this->assertArrayHasKey('Referrer-Policy', $headers);
+        $this->assertSame('strict-origin-when-cross-origin', $headers['Referrer-Policy']);
     }
 }

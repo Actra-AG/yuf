@@ -48,9 +48,12 @@ class Form extends FormCollection
         $this->sentIndicator = $individualSentIndicator === null ? $name : $individualSentIndicator;
         parent::__construct(name: $name);
 
-        $this->addField(
-            formField: new CsrfTokenField(tokenSource: $csrfTokenSource ?? new SessionCsrfTokenSource()),
-        );
+        if ($methodPost) {
+            // A GET form must not change state and would put the token into the URL, so it has no CSRF token
+            $this->addField(
+                formField: new CsrfTokenField(tokenSource: $csrfTokenSource ?? new SessionCsrfTokenSource()),
+            );
+        }
     }
 
     public function addField(FormField $formField): void

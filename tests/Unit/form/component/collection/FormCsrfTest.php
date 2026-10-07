@@ -96,20 +96,14 @@ final class FormCsrfTest extends TestCase
         $this->assertSame(FormCsrfTest::ENGLISH_MESSAGE, $form->errorCollection->getFirstError()->render());
     }
 
-    public function testMissingPostedTokenFallsBackToTheQueryString(): void
+    public function testTokenInTheQueryStringIsIgnored(): void
     {
         $form = $this->createForm();
 
         $isValid = $this->send(form: $form, post: [], query: ['csrftoken' => 'expected-token']);
 
-        $this->assertTrue($isValid);
-    }
-
-    public function testWrongTokenInTheQueryStringIsInvalid(): void
-    {
-        $form = $this->createForm();
-
-        $this->assertFalse($this->send(form: $form, post: [], query: ['csrftoken' => 'wrong']));
+        $this->assertFalse($isValid);
+        $this->assertSame(FormCsrfTest::ENGLISH_MESSAGE, $form->errorCollection->getFirstError()->render());
     }
 
     public function testPostedTokenWinsOverTheQueryString(): void
@@ -125,11 +119,12 @@ final class FormCsrfTest extends TestCase
         $this->assertFalse($isValid);
     }
 
-    public function testFormWithGetMethodReadsTheTokenFromTheQueryString(): void
+    public function testFormWithGetMethodHasNoCsrfToken(): void
     {
         $form = $this->createForm(methodPost: false);
-        $query = [$form->sentIndicator => '', 'csrftoken' => 'expected-token'];
+        $query = [$form->sentIndicator => ''];
 
+        $this->assertFalse($form->hasChildComponent(childComponentName: 'csrftoken'));
         $this->assertTrue($form->validate(input: FormInput::fromArray(data: $query, query: $query)));
     }
 
