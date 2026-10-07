@@ -1417,12 +1417,6 @@ parameters:
 			path: src/core/Logger.php
 
 		-
-			rawMessage: 'Method actra\yuf\core\Logger::get() should return actra\yuf\core\Logger but returns actra\yuf\core\Logger|null.'
-			identifier: return.type
-			count: 1
-			path: src/core/Logger.php
-
-		-
 			rawMessage: Offset 'SERVER_NAME' might not exist on array<mixed>.
 			identifier: offsetAccess.notFound
 			count: 1

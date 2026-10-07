@@ -457,12 +457,16 @@ afterwards: `CsvFile`, `SmtpMailer`, `DB extends FrameworkDb`, table constants i
 - Tests: `CspNonceTest` without reflection; `ContentHandlerTest`; new `HtmlSnippetTest` (with fixtures in
   `tests/Fixture/`); `HttpResponseSecurityHeadersTest` checks the nonce in `script-src` and `style-src`.
 
-### Step 9 – v4.20.0: logger through the constructor
+### Step 9 – v4.20.0: logger without static accessor
 
-- `ExceptionHandler` gets the `Logger` (and `CspPolicySettings`, debug flag) through `Core`, instead of
-  `Logger::get()` and `Core::get()`. `Logger::register()` / `get()` are removed (⚠️); custom exception handlers that
-  extend `ExceptionHandler` adapt their constructor.
-- Tests: `ExceptionHandler` with a hand-written `Logger` double (`tests/Double/core/`).
+- Projects create their `ExceptionHandler` subclass before `Core` has created the logger and the nonce, so the request
+  dependencies are handed over in `ExceptionHandler::register(individualExceptionHandler:, context:)`, bundled in the
+  new `final readonly class ExceptionHandlerContext` (`$logger`, `$cspNonce`, `$cspPolicySettings`, `$isDebug`).
+  Subclasses read it through `protected getContext()` (throws `LogicException` before `register()`).
+- `Logger::register()` / `get()` are removed (⚠️); `ExceptionHandler::$cspNonce` is removed (⚠️);
+  `Core::prepareHttpResponse()` still accepts `?Logger $logger` and builds the context.
+- Tests: `ExceptionHandlerTest` with a hand-written `RecordingLogger` double (`tests/Double/core/`).
+- The other `Core::get()` / `RequestHandler::get()` uses in `ExceptionHandler::getHtmlContent()` stay for step 10.
 
 ### Step 10 – v4.21.0 and later: locale and `Core::get()` inside yuf
 
@@ -592,3 +596,15 @@ Smaller releases, each for one area:
   `HtmlDocument` rendering the nonce. `example/` checked: `/` 200 and `nope.html` 404 both send a CSP header with a
   nonce (different per request); the example templates do not render `{cspNonce}`. No `src/` template uses it.
 - Baseline unchanged (766 entries).
+
+### Step 9 (v4.20.0) – done
+
+- New `ExceptionHandlerContext`; `ExceptionHandler` keeps it in `private ?ExceptionHandlerContext $context`, which
+  removes the `@phpstan-ignore property.uninitialized` of step 8. `Logger` lost `register()`, `get()` and the static
+  instance. UPGRADE.md has three ⚠️ entries.
+- Tests: new `ExceptionHandlerTest` (context without `register()` throws, `register()` keeps the context, second
+  `register()` throws), doubles `RecordingLogger` and `ContextExposingExceptionHandler`. The test resets the static
+  registered instance with `ReflectionProperty` (pattern of `AuthSessionTest`) and calls
+  `restore_exception_handler()` in `tearDown()`.
+- Not covered by tests: `handleException()` (every path sends the response and exits), so `RecordingLogger` is only
+  used to construct the context; and that `Core` builds the context from its own values.

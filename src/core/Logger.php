@@ -12,13 +12,11 @@ namespace actra\yuf\core;
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
 use Exception;
-use LogicException;
 use Throwable;
 
 class Logger
 {
     private const string dnl = PHP_EOL . PHP_EOL;
-    private static ?Logger $registeredInstance = null;
     private int $maxLogSize = 10000000;
     private bool $lastIssueIsNew = false;
 
@@ -30,19 +28,6 @@ class Logger
         if (!is_dir(filename: $this->logDirectory)) {
             throw new Exception(message: 'Log directory does not exist: ' . $this->logDirectory);
         }
-    }
-
-    public static function register(Logger $logger): void
-    {
-        if (Logger::$registeredInstance !== null) {
-            throw new LogicException(message: 'Logger is already registered.');
-        }
-        Logger::$registeredInstance = $logger;
-    }
-
-    public static function get(): Logger
-    {
-        return Logger::$registeredInstance;
     }
 
     public function logException(Throwable $throwable): void

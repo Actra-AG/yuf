@@ -21,6 +21,7 @@ use actra\yuf\core\Logger;
 use actra\yuf\core\RequestHandler;
 use actra\yuf\core\RouteCollection;
 use actra\yuf\exception\ExceptionHandler;
+use actra\yuf\exception\ExceptionHandlerContext;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CspPolicySettings;
@@ -191,11 +192,15 @@ class Core
             );
         }
         $this->cspPolicySettings = $cspPolicySettings;
-        Logger::register(logger: $logger);
         $cspNonce = CspNonce::create();
         ExceptionHandler::register(
             individualExceptionHandler: $individualExceptionHandler,
-            cspNonce: $cspNonce,
+            context: new ExceptionHandlerContext(
+                logger: $logger,
+                cspNonce: $cspNonce,
+                cspPolicySettings: $this->cspPolicySettings,
+                isDebug: $this->debug,
+            ),
         );
         AbstractSessionHandler::register(individualSessionHandler: $individualSessionHandler);
         if (!$routeCollection->hasRoutes()) {

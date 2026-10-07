@@ -15,13 +15,11 @@ use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\LocaleHandler;
-use actra\yuf\core\Logger;
 use actra\yuf\core\RequestHandler;
 use actra\yuf\html\HtmlReplacement;
 use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\html\HtmlSnippet;
 use actra\yuf\response\HttpErrorResponseContent;
-use actra\yuf\security\CspNonce;
 use actra\yuf\security\CsrfToken;
 use LogicException;
 use Throwable;
@@ -30,8 +28,8 @@ class ExceptionHandler
 {
     private static ?ExceptionHandler $registeredInstance = null;
     protected ContentType $contentType;
-    // Set by register(): the handler instance is created by the project
-    protected CspNonce $cspNonce; // @phpstan-ignore property.uninitialized
+    // Set by register(): the handler instance is created by the project, before the request dependencies exist
+    private ?ExceptionHandlerContext $context = null;
 
     public function __construct(
         protected readonly HtmlReplacementCollection $htmlReplacementCollection = new HtmlReplacementCollection(),
@@ -39,25 +37,34 @@ class ExceptionHandler
 
     public static function register(
         ?ExceptionHandler $individualExceptionHandler,
-        CspNonce $cspNonce,
+        ExceptionHandlerContext $context,
     ): void {
         if (ExceptionHandler::$registeredInstance !== null) {
             throw new LogicException(message: 'ExceptionHandler is already registered.');
         }
         ExceptionHandler::$registeredInstance = $individualExceptionHandler === null ? new ExceptionHandler(
         ) : $individualExceptionHandler;
-        ExceptionHandler::$registeredInstance->cspNonce = $cspNonce;
+        ExceptionHandler::$registeredInstance->context = $context;
         set_exception_handler(callback: [
             ExceptionHandler::$registeredInstance,
             'handleException',
         ]);
     }
 
+    protected function getContext(): ExceptionHandlerContext
+    {
+        if ($this->context === null) {
+            throw new LogicException(message: 'ExceptionHandler is not registered: the context is not available.');
+        }
+
+        return $this->context;
+    }
+
     final public function handleException(Throwable $throwable): void
     {
         $this->contentType = ContentHandler::isRegistered() ? ContentHandler::get()->getContentType(
         ) : ContentType::createHtml();
-        if (Core::get()->debug) {
+        if ($this->getContext()->isDebug) {
             $this->sendDebugHttpResponseAndExit(throwable: $throwable);
         }
         if ($throwable instanceof NotFoundException) {
@@ -66,7 +73,7 @@ class ExceptionHandler
         if ($throwable instanceof UnauthorizedException) {
             $this->sendUnauthorizedHttpResponseAndExit(throwable: $throwable);
         }
-        Logger::get()->logException(throwable: $throwable);
+        $this->getContext()->logger->logException(throwable: $throwable);
         $this->sendDefaultHttpResponseAndExit(throwable: $throwable);
     }
 
@@ -186,8 +193,8 @@ class ExceptionHandler
             htmlContent: $this->getHtmlContent(
                 htmlFileName: $htmlFileName,
             ),
-            cspPolicySettings: Core::get()->cspPolicySettings,
-            nonce: $this->cspNonce->value,
+            cspPolicySettings: $this->getContext()->cspPolicySettings,
+            nonce: $this->getContext()->cspNonce->value,
         );
         $httpResponse->sendAndExit();
     }
@@ -219,7 +226,7 @@ class ExceptionHandler
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'cspNonce',
-            content: $this->cspNonce->value,
+            content: $this->getContext()->cspNonce->value,
         );
         $htmlReplacementCollection->addEncodedText(
             identifier: 'csrfField',

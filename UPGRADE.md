@@ -4,6 +4,58 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.20.0] – 2026-10-08
+
+### ⚠️ `Logger::register()` and `Logger::get()` are removed
+
+`Core` hands the logger to the exception handler; there is no static accessor any more.
+
+Before:
+
+```php
+$core->prepareHttpResponse(logger: $logger); // registered the logger statically
+Logger::get()->logMessage(message: 'Something happened');
+```
+
+After:
+
+```php
+$core->prepareHttpResponse(logger: $logger);
+$this->getContext()->logger->logMessage(message: 'Something happened'); // in a custom ExceptionHandler
+$logger->logMessage(message: 'Something happened'); // elsewhere: keep the logger you created
+```
+
+### ⚠️ `ExceptionHandler::register()` takes an `ExceptionHandlerContext`
+
+Only relevant for projects that call it themselves (`Core` does it). The new `ExceptionHandlerContext` bundles the
+logger, the CSP nonce, the CSP policy settings and the debug flag of the request.
+
+Before:
+
+```php
+ExceptionHandler::register(individualExceptionHandler: $handler, cspNonce: $cspNonce);
+```
+
+After:
+
+```php
+ExceptionHandler::register(
+    individualExceptionHandler: $handler,
+    context: new ExceptionHandlerContext(
+        logger: $logger,
+        cspNonce: $cspNonce,
+        cspPolicySettings: $cspPolicySettings,
+        isDebug: $debug,
+    ),
+);
+```
+
+### ⚠️ `ExceptionHandler::$cspNonce` is removed
+
+Before: `$this->cspNonce`. After: `$this->getContext()->cspNonce` (throws a `LogicException` before `register()`).
+
+---
+
 ## [v4.19.0] – 2026-10-08
 
 ### ⚠️ `CspNonce` is an object per request, `CspNonce::get()` is removed
