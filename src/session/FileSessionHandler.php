@@ -16,16 +16,16 @@ use Override;
 class FileSessionHandler extends AbstractSessionHandler
 {
     public function __construct(
-        private readonly SessionSettingsModel $sessionSettingsModel,
+        private readonly SessionSettings $sessionSettings,
         Clock $clock = new SystemClock(),
     ) {
-        parent::__construct(sessionSettingsModel: $sessionSettingsModel, clock: $clock);
+        parent::__construct(sessionSettings: $sessionSettings, clock: $clock);
     }
 
     #[Override]
     protected function executePreStartActions(): void
     {
-        $savePath = $this->sessionSettingsModel->savePath;
+        $savePath = $this->sessionSettings->savePath;
         if ($savePath !== '') {
             if (!is_dir(filename: $savePath)) {
                 mkdir(

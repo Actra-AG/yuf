@@ -12,7 +12,7 @@ namespace actra\yuf\tests\Unit\session;
 use actra\yuf\security\CsrfToken;
 use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\session\FileSessionHandler;
-use actra\yuf\session\SessionSettingsModel;
+use actra\yuf\session\SessionSettings;
 use actra\yuf\tests\Double\CoreTestInstance;
 use Override;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
@@ -80,7 +80,7 @@ final class AbstractSessionHandlerTest extends TestCase
         $_POST[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::REQUESTED_SESSION_ID;
 
         try {
-            $sessionHandler = new FileSessionHandler(sessionSettingsModel: new SessionSettingsModel(
+            $sessionHandler = new FileSessionHandler(sessionSettings: new SessionSettings(
                 savePath: $savePath,
                 individualName: AbstractSessionHandlerTest::SESSION_NAME,
             ));

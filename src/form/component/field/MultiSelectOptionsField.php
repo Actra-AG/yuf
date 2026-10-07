@@ -21,7 +21,7 @@ use Override;
  */
 class MultiSelectOptionsField extends MultiOptionsField
 {
-    use SelectOptionsSettings;
+    use HasSelectOptionsPresentation;
 
     /**
      * @param list<string> $initialValues
@@ -50,7 +50,7 @@ class MultiSelectOptionsField extends MultiOptionsField
         if ($requiredError !== null) {
             $this->addRequiredRule(errorMessage: $requiredError);
         }
-        $this->initializeSelectOptionsSettings(
+        $this->initializeSelectOptionsPresentation(
             isRequired: $requiredError !== null,
             individualEmptyValueLabel: $individualEmptyValueLabel,
             cssClasses: $cssClasses,

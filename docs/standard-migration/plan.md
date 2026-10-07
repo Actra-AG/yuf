@@ -122,11 +122,11 @@ Version numbers assume that nothing else is released in between. Every step: cha
 behaviour changes), hand-written doubles in `tests/Double/`, `composer check` green, `example/` checked in the browser
 when routing, views or HTML output change, `UPGRADE.md` section in the releasing commit.
 
-### Step 1 – v4.11.0: settings and value object names (coding standard v1.2.0)
+### Step 1 – v4.12.0: settings and value object names (coding standard v1.2.0)
 
 Changes:
 
-- `composer.json`: `actra/coding-standard` `^1.2.0` (already done in the working tree).
+- `composer.json`: `actra/coding-standard` `^1.2.0` (already committed before v4.10.1).
 - `DbSettingsModel` → `DbSettings`; `FrameworkDB::__construct(dbSettings:)`, `FrameworkDB::getInstance(dbSettings:)`.
 - `SessionSettingsModel` → `SessionSettings`; `FileSessionHandler::__construct(sessionSettings:)`,
   `AbstractSessionHandler::__construct(sessionSettings:)`.
@@ -184,7 +184,7 @@ property `$dbSettingsModel`, a breaking change of backend), `DB::useConnection()
 `TableItemModel` → `TableItem` in the callbacks of `VisitTable`, `UserTable`, `TokenTable`, `NotificationTable` and in
 `AbstractTable`.
 
-### Step 2 – v4.12.0: route registry without static state
+### Step 2 – v4.13.0: route registry without static state
 
 Changes:
 
@@ -199,7 +199,7 @@ Changes:
 
 `actra/backend` afterwards: nothing.
 
-### Step 3 – v4.13.0: view factory and PascalCase view classes
+### Step 3 – v4.14.0: view factory and PascalCase view classes
 
 Design (no container, no new static state):
 
@@ -328,7 +328,7 @@ them with a `ViewMap` per `BackendRoute`, inject `BackendMessages`, the route pa
 replaces the static `getPath()` of the views) and the repositories, and remove `ActraBackend::get()`, `messages()` and
 `path()` where the views used them. Release as a breaking minor of backend.
 
-### Step 4 – v4.14.0: views get request data through the `ViewContext`
+### Step 4 – v4.15.0: views get request data through the `ViewContext`
 
 Changes:
 
@@ -399,7 +399,7 @@ Views of a `ViewMap` get the context as closure argument:
 `actra/backend` afterwards (task 7, part 2): `BackendView` and the 28 views accept and pass `ViewContext`; replace
 `RequestHandler::get()` (2×), `ContentHandler::get()` and `HtmlDocument::get()` in `BackendView`.
 
-### Step 5 – v4.15.0: auth and session names
+### Step 5 – v4.16.0: auth and session names
 
 Changes (all ⚠️):
 
@@ -422,14 +422,14 @@ Changes (all ⚠️):
 `getAuthSessionId()`, `logIn(authSessionId:)`, `getId()` of the session handler, `AuthResultEnum`, `AuthMethodEnum`;
 then its own `$userID`, `$sessionID`, `$groupID`, … (its task 5).
 
-### Step 6 – v4.16.0: request, response and error names
+### Step 6 – v4.17.0: request, response and error names
 
 Changes (all ⚠️): `HttpRequest::getUri()`, `getUrl()`, `isSsl()`; `ErrorHandler::handlePhpError()`; enum
 `HttpStatusCode` → `HttpStatusCodeEnum` (used in many signatures: `BaseView::setErrorResponseContent(httpStatusCode:)`,
 `HttpResponse`, `ContentHandler::$httpStatusCode`). Tests adapted; `example/` checked. `actra/backend` afterwards:
 `getURI()` (2×) and `HttpStatusCode`, if used.
 
-### Step 7 – v4.17.0: remaining class, method and constant names
+### Step 7 – v4.18.0: remaining class, method and constant names
 
 Changes (all ⚠️): `CSVFile` → `CsvFile`, `SMTPMailer` → `SmtpMailer`, `FrameworkDB` → `FrameworkDb`,
 `SimpleXMLExtended` → `SimpleXmlExtended` (`addXml()`, `addCdata()`); `AbstractMail::addCc()`, `addBcc()`;
@@ -439,7 +439,7 @@ Changes (all ⚠️): `CSVFile` → `CsvFile`, `SMTPMailer` → `SmtpMailer`, `F
 these classes. Split into two releases (mailer / table and common) if the diff gets too large. `actra/backend`
 afterwards: `CsvFile`, `SmtpMailer`, `DB extends FrameworkDb`, table constants if used.
 
-### Step 8 – v4.18.0: CSP nonce per request as object
+### Step 8 – v4.19.0: CSP nonce per request as object
 
 - `CspNonce` becomes a `final readonly class` with `CspNonce::create()` (random) and `$value`; `Core` creates one per
   request and passes it to `HtmlDocument`, `HtmlSnippet`, `ExceptionHandler` and `HttpResponse::createHtmlResponse()`.
@@ -447,14 +447,14 @@ afterwards: `CsvFile`, `SmtpMailer`, `DB extends FrameworkDb`, table constants i
 - Tests: `CspNonceTest` (length, randomness, base64) adapted; `HtmlSnippet` test with a fixed nonce.
 - Keep the security feature covered: a test that the HTML response header and the rendered nonce are equal.
 
-### Step 9 – v4.19.0: logger through the constructor
+### Step 9 – v4.20.0: logger through the constructor
 
 - `ExceptionHandler` gets the `Logger` (and `CspPolicySettings`, debug flag) through `Core`, instead of
   `Logger::get()` and `Core::get()`. `Logger::register()` / `get()` are removed (⚠️); custom exception handlers that
   extend `ExceptionHandler` adapt their constructor.
 - Tests: `ExceptionHandler` with a hand-written `Logger` double (`tests/Double/core/`).
 
-### Step 10 – v4.20.0 and later: locale and `Core::get()` inside yuf
+### Step 10 – v4.21.0 and later: locale and `Core::get()` inside yuf
 
 Smaller releases, each for one area:
 
@@ -480,13 +480,20 @@ Smaller releases, each for one area:
 
 | yuf release        | `actra/backend` task                                                                                                  |
 |:-------------------|:----------------------------------------------------------------------------------------------------------------------|
-| v4.11.0 (step 1)   | `DbSettings`, `TableItem`; require `actra/yuf ^4.11`                                                                  |
-| v4.12.0 (step 2)   | none                                                                                                                  |
-| v4.13.0 (step 3)   | task 7 part 1: PascalCase views, `ViewMap` per `BackendRoute`, inject `BackendMessages`, paths, repositories; remove `ActraBackend::get()`, `messages()`, `path()` from views |
-| v4.14.0 (step 4)   | task 7 part 2: `ViewContext` in `BackendView` and the views; no `RequestHandler::get()`, `ContentHandler::get()`, `HtmlDocument::get()` |
-| v4.15.0 (step 5)   | task 5 inherited names: `id`, `userId`, `sessionId`, `authSessionId`, `getId()`, `AuthResultEnum`, `AuthMethodEnum`  |
-| v4.16.0 (step 6)   | `HttpRequest::getUri()`, `HttpStatusCodeEnum`                                                                         |
-| v4.17.0 (step 7)   | `CsvFile`, `SmtpMailer`, `FrameworkDb`                                                                                |
-| v4.18.0+ (8–10)    | only if backend uses the removed accessors (today: none)                                                              |
+| v4.12.0 (step 1)   | `DbSettings`, `TableItem`; require `actra/yuf ^4.12`                                                                  |
+| v4.13.0 (step 2)   | none                                                                                                                  |
+| v4.14.0 (step 3)   | task 7 part 1: PascalCase views, `ViewMap` per `BackendRoute`, inject `BackendMessages`, paths, repositories; remove `ActraBackend::get()`, `messages()`, `path()` from views |
+| v4.15.0 (step 4)   | task 7 part 2: `ViewContext` in `BackendView` and the views; no `RequestHandler::get()`, `ContentHandler::get()`, `HtmlDocument::get()` |
+| v4.16.0 (step 5)   | task 5 inherited names: `id`, `userId`, `sessionId`, `authSessionId`, `getId()`, `AuthResultEnum`, `AuthMethodEnum`  |
+| v4.17.0 (step 6)   | `HttpRequest::getUri()`, `HttpStatusCodeEnum`                                                                         |
+| v4.18.0 (step 7)   | `CsvFile`, `SmtpMailer`, `FrameworkDb`                                                                                |
+| v4.19.0+ (8–10)    | only if backend uses the removed accessors (today: none)                                                              |
 
 ## Handover notes
+
+### Step 1 (v4.12.0) – done
+
+- `DbSettings`, `SessionSettings`, `CspPolicySettings`, `TableItem` and the trait `HasSelectOptionsPresentation`
+  (`@internal`); named arguments and `Core::$cspPolicySettings` renamed, no aliases. Pure renames, no behaviour change.
+- `TableItemModelTest` → `TableItemTest`; README and `docs/form-v4/plan.md` updated; baseline unchanged (767 entries,
+  6 messages/paths renamed). `example/` needed no change.

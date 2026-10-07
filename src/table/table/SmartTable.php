@@ -11,8 +11,8 @@ namespace actra\yuf\table\table;
 
 use actra\yuf\table\column\AbstractTableColumn;
 use actra\yuf\table\renderer\TableHeadRenderer;
+use actra\yuf\table\TableItem;
 use actra\yuf\table\TableItemCollection;
-use actra\yuf\table\TableItemModel;
 use LogicException;
 
 // Can be extended or used directly to render a table with data from different sources
@@ -71,9 +71,9 @@ class SmartTable
         $this->columns[$columnIdentifier] = $abstractTableColumn;
     }
 
-    public function addDataItem(TableItemModel $tableItemModel): void
+    public function addDataItem(TableItem $tableItem): void
     {
-        $this->tableItemCollection->add(tableItemModel: $tableItemModel);
+        $this->tableItemCollection->add(tableItem: $tableItem);
     }
 
     public function render(): string
@@ -90,11 +90,11 @@ class SmartTable
         }
         $bodyArr = [];
         $rowNumber = 0;
-        foreach ($this->tableItemCollection->list() as $tableItemModel) {
+        foreach ($this->tableItemCollection->list() as $tableItem) {
             $rowNumber++;
             $cells = [];
             foreach ($this->columns as $abstractTableColumn) {
-                $cells[] = $abstractTableColumn->renderCell(tableItemModel: $tableItemModel);
+                $cells[] = $abstractTableColumn->renderCell(tableItem: $tableItem);
             }
             $rowHtml = (($rowNumber % 2) === 0) ? $this->evenRowHtml : $this->oddRowHtml;
             $bodyArr[] = str_replace(

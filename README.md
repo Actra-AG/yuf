@@ -405,19 +405,19 @@ session must match it.
 
 ### Typed values in table columns
 
-Columns of a `DbResultTable` or `SmartTable` get each row as `TableItemModel`. `getRow()` returns the row as `DbRow` with
+Columns of a `DbResultTable` or `SmartTable` get each row as `TableItem`. `getRow()` returns the row as `DbRow` with
 the same typed getters and exceptions. `renderValue()` returns the HTML-encoded value, `getRawValue()` the untyped one.
 
 ```php
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\table\column\CallbackColumn;
-use actra\yuf\table\TableItemModel;
+use actra\yuf\table\TableItem;
 
 $dbResultTable->addColumn(abstractTableColumn: new CallbackColumn(
     identifier: 'path',
     label: 'Pfad',
-    callbackFunction: fn(TableItemModel $tableItemModel): string => HtmlEncoder::encode(
-        value: Category::getPath(id: $tableItemModel->getRow()->getInt(column: 'ID'))
+    callbackFunction: fn(TableItem $tableItem): string => HtmlEncoder::encode(
+        value: Category::getPath(id: $tableItem->getRow()->getInt(column: 'ID'))
     )
 ));
 ```

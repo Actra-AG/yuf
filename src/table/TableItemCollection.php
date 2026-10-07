@@ -11,18 +11,18 @@ namespace actra\yuf\table;
 
 class TableItemCollection
 {
-    /** @var TableItemModel[] */
+    /** @var TableItem[] */
     private array $items = [];
     private int $amount = 0;
 
-    public function add(TableItemModel $tableItemModel): void
+    public function add(TableItem $tableItem): void
     {
-        $this->items[] = $tableItemModel;
+        $this->items[] = $tableItem;
         $this->amount++;
     }
 
     /**
-     * @return TableItemModel[]
+     * @return TableItem[]
      */
     public function list(): array
     {

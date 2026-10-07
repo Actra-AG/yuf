@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\table\column;
 
 use actra\yuf\html\HtmlEncoder;
-use actra\yuf\table\TableItemModel;
+use actra\yuf\table\TableItem;
 use Override;
 
 class ActionsColumn extends AbstractTableColumn
@@ -61,7 +61,7 @@ class ActionsColumn extends AbstractTableColumn
     }
 
     #[Override]
-    protected function renderCellValue(TableItemModel $tableItemModel): string
+    protected function renderCellValue(TableItem $tableItem): string
     {
         $actionLinks = $this->actionLinks;
         if (
@@ -71,7 +71,7 @@ class ActionsColumn extends AbstractTableColumn
             )
             && $this->hideDeleteLinkField !== null
             && $this->hideDeleteLinkField !== ''
-            && $tableItemModel->getRawValue(name: $this->hideDeleteLinkField) === $this->hideDeleteLinkValue
+            && $tableItem->getRawValue(name: $this->hideDeleteLinkField) === $this->hideDeleteLinkValue
         ) {
             unset($actionLinks[ActionsColumn::DELETE]);
         }
@@ -80,7 +80,7 @@ class ActionsColumn extends AbstractTableColumn
         }
         $srcArr = [];
         $rplArr = [];
-        foreach ($tableItemModel->data as $key => $val) {
+        foreach ($tableItem->data as $key => $val) {
             $srcArr[] = '[' . $key . ']';
             $rplArr[] = HtmlEncoder::encode(value: $val);
         }

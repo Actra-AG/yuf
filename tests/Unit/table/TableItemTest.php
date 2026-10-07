@@ -10,17 +10,17 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\table;
 
 use actra\yuf\db\DbRowValueException;
-use actra\yuf\table\TableItemModel;
+use actra\yuf\table\TableItem;
 use actra\yuf\tests\Double\db\StatusEnum;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 use UnexpectedValueException;
 
-final class TableItemModelTest extends TestCase
+final class TableItemTest extends TestCase
 {
     public function testGetRowGivesTypedValues(): void
     {
-        $row = TableItemModelTest::model(values: [
+        $row = TableItemTest::tableItem(values: [
             'ID' => 42,
             'name' => 'Muster',
             'price' => '12.50',
@@ -44,7 +44,7 @@ final class TableItemModelTest extends TestCase
 
     public function testNullableGettersReturnNull(): void
     {
-        $row = TableItemModelTest::model(values: ['ID' => null, 'name' => null])->getRow();
+        $row = TableItemTest::tableItem(values: ['ID' => null, 'name' => null])->getRow();
 
         $this->assertNull($row->getNullableInt(column: 'ID'));
         $this->assertNull($row->getNullableString(column: 'name'));
@@ -54,50 +54,50 @@ final class TableItemModelTest extends TestCase
     {
         $this->expectException(DbRowValueException::class);
         $this->expectExceptionMessageIsOrContains('Column "ID" is NULL');
-        TableItemModelTest::model(values: ['ID' => null])->getRow()->getInt(column: 'ID');
+        TableItemTest::tableItem(values: ['ID' => null])->getRow()->getInt(column: 'ID');
     }
 
     public function testMissingColumnThrows(): void
     {
         $this->expectException(DbRowValueException::class);
         $this->expectExceptionMessageIsOrContains('Column "nope" does not exist');
-        TableItemModelTest::model(values: ['ID' => 1])->getRow()->getInt(column: 'nope');
+        TableItemTest::tableItem(values: ['ID' => 1])->getRow()->getInt(column: 'nope');
     }
 
     public function testWrongTypeThrows(): void
     {
         $this->expectException(DbRowValueException::class);
         $this->expectExceptionMessageIsOrContains('Column "ID" has the type float, but expected int');
-        TableItemModelTest::model(values: ['ID' => 1.5])->getRow()->getInt(column: 'ID');
+        TableItemTest::tableItem(values: ['ID' => 1.5])->getRow()->getInt(column: 'ID');
     }
 
     public function testRawAndRenderedValuesAreUnchanged(): void
     {
-        $tableItemModel = TableItemModelTest::model(values: ['ID' => 7, 'text' => "<b>A & B</b>\n\"C\"", 'empty' => null]);
+        $tableItem = TableItemTest::tableItem(values: ['ID' => 7, 'text' => "<b>A & B</b>\n\"C\"", 'empty' => null]);
 
-        $this->assertSame(7, $tableItemModel->getRawValue(name: 'ID'));
-        $this->assertSame('7', $tableItemModel->renderValue(name: 'ID'));
-        $this->assertSame("&lt;b&gt;A &amp; B&lt;/b&gt;\n\"C\"", $tableItemModel->renderValue(name: 'text'));
+        $this->assertSame(7, $tableItem->getRawValue(name: 'ID'));
+        $this->assertSame('7', $tableItem->renderValue(name: 'ID'));
+        $this->assertSame("&lt;b&gt;A &amp; B&lt;/b&gt;\n\"C\"", $tableItem->renderValue(name: 'text'));
         $this->assertSame(
             "&lt;b&gt;A &amp; B&lt;/b&gt;<br />\n\"C\"",
-            $tableItemModel->renderValue(name: 'text', renderNewLines: true),
+            $tableItem->renderValue(name: 'text', renderNewLines: true),
         );
-        $this->assertSame('', $tableItemModel->renderValue(name: 'empty'));
-        $this->assertSame(['ID' => 7, 'text' => "<b>A & B</b>\n\"C\"", 'empty' => null], $tableItemModel->data);
+        $this->assertSame('', $tableItem->renderValue(name: 'empty'));
+        $this->assertSame(['ID' => 7, 'text' => "<b>A & B</b>\n\"C\"", 'empty' => null], $tableItem->data);
     }
 
     public function testRenderValueOfNonScalarThrows(): void
     {
         $this->expectException(UnexpectedValueException::class);
         $this->expectExceptionMessageIsOrContains('Column "list" holds a array');
-        TableItemModelTest::model(values: ['list' => [1]])->renderValue(name: 'list');
+        TableItemTest::tableItem(values: ['list' => [1]])->renderValue(name: 'list');
     }
 
     /**
      * @param array<string, mixed> $values
      */
-    private static function model(array $values): TableItemModel
+    private static function tableItem(array $values): TableItem
     {
-        return new TableItemModel(dataObject: (object) $values);
+        return new TableItem(dataObject: (object) $values);
     }
 }

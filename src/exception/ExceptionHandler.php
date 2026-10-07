@@ -181,7 +181,7 @@ class ExceptionHandler
             htmlContent: $this->getHtmlContent(
                 htmlFileName: $htmlFileName,
             ),
-            cspPolicySettingsModel: Core::get()->cspPolicySettingsModel,
+            cspPolicySettings: Core::get()->cspPolicySettings,
             nonce: CspNonce::get(),
         );
         $httpResponse->sendAndExit();

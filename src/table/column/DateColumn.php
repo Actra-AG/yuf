@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\table\column;
 
 use actra\yuf\html\HtmlText;
-use actra\yuf\table\TableItemModel;
+use actra\yuf\table\TableItem;
 use DateTimeImmutable;
 use Override;
 
@@ -25,9 +25,9 @@ class DateColumn extends AbstractTableColumn
     }
 
     #[Override]
-    protected function renderCellValue(TableItemModel $tableItemModel): string
+    protected function renderCellValue(TableItem $tableItem): string
     {
-        $value = trim(string: (string) $tableItemModel->getRawValue(name: $this->identifier));
+        $value = trim(string: (string) $tableItem->getRawValue(name: $this->identifier));
 
         if ($value === '') {
             return $this->emptyValueText === null ? '' : $this->emptyValueText->render();

@@ -281,7 +281,7 @@ Done (2026-10-04), `ddev composer check` green (604 tests), 32 baseline entries 
   `setInitialValue(?string)`), `MultiOptionsField` (`list<string>`; `getValues()`, `setValues(list<string>)`, protected
   `setInitialValues(list<string>)`, `getAddedValues()`, `getRemovedValues()`), `MultiSelectOptionsField`,
   `MultiToggleField`, `ToggleChildren` (final, child registry + validation of the children of the selected options +
-  form handover), `ToggleFieldRenderer`, the trait `SelectOptionsSettings` (cssClasses, placeholder, empty option,
+  form handover), `ToggleFieldRenderer`, the trait `HasSelectOptionsPresentation` (cssClasses, placeholder, empty option,
   data attributes shared by the two select classes). `OptionsField` (abstract) now has no value: `isSelected()`,
   `isMultiple()`, `readInput()` (abstract), `rejectInvalidOption()`.
 - Changed: `RadioOptionsField`, `SelectOptionsField`, `ToggleField` extend `SingleOptionsField`;
@@ -330,7 +330,7 @@ paragraph marked "(added in review)" and decision 19.
    `messages->selectOneOption` in `validateCurrentValue()` (the field gets its messages only in `Form::addField()`);
    `emptyValueLabel` of the select classes is a computed property (individual label, else `selectEmptyOption` if
    required, else `''`). The invalid option text uses `[field]` (`str_replace`).
-8. **Select presentation settings** are shared by a trait (`SelectOptionsSettings`), because `SelectOptionsField` and
+8. **Select presentation settings** are shared by a trait (`HasSelectOptionsPresentation`), because `SelectOptionsField` and
    `MultiSelectOptionsField` cannot share a base class (different value types) and duplicating ~60 lines was worse.
    The three `readonly` properties became `private(set)` (PHPStan rejects assigning `readonly` from a trait method).
 9. **`ToggleField`/`MultiToggleField` set `ToggleFieldRenderer` as their renderer in the constructor** (via
@@ -775,7 +775,7 @@ entries (13 blocks) remain in `src/form/`. `example/` returns 200 with "Hello Wo
    step); behaviour identical. `IbanNumberField`, `ZipCodeField`, `PhoneNumberField`, `CsrfTokenField` keep their
    `validateCurrentValue()` overrides.
 6. `MultiOptionsField::toKeyList()` keeps a phpdoc `array<array-key, mixed>` (runtime `TypeError` guard for non-strings).
-7. `grep getRawValue src/` still matches `src/table/` (`TableItemModel::getRawValue()`, unrelated).
+7. `grep getRawValue src/` still matches `src/table/` (`TableItem::getRawValue()`, unrelated).
 
 **Bridge removed (checklist)**: `getRawValue`, `getOriginalValue`, `setOriginalValue`, `initializeLegacyValue`,
 `readInputData`, `validate(array, bool)`, `validateInput`, `TextualField::setValue` (throwing), bridge `setValue(mixed)` and

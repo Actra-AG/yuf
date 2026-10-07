@@ -14,8 +14,10 @@ use actra\yuf\html\HtmlText;
 /**
  * The presentation settings that `SelectOptionsField` and `MultiSelectOptionsField` share (read by
  * `SelectOptionsRenderer`). The two classes differ in their value type, so they cannot share a base class.
+ *
+ * @internal
  */
-trait SelectOptionsSettings
+trait HasSelectOptionsPresentation
 {
     /** @var list<string> */
     public private(set) array $cssClasses;
@@ -42,7 +44,7 @@ trait SelectOptionsSettings
     /**
      * @param list<string> $cssClasses
      */
-    private function initializeSelectOptionsSettings(
+    private function initializeSelectOptionsPresentation(
         bool $isRequired,
         ?HtmlText $individualEmptyValueLabel,
         array $cssClasses,

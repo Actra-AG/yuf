@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\table\column;
 
-use actra\yuf\table\TableItemModel;
+use actra\yuf\table\TableItem;
 use Override;
 
 class BooleanColumn extends AbstractTableColumn
@@ -18,9 +18,9 @@ class BooleanColumn extends AbstractTableColumn
     public string $falseLabel = 'Nein';
 
     #[Override]
-    protected function renderCellValue(TableItemModel $tableItemModel): string
+    protected function renderCellValue(TableItem $tableItem): string
     {
-        $value = $tableItemModel->getRawValue(name: $this->identifier);
+        $value = $tableItem->getRawValue(name: $this->identifier);
 
         if ($value === null) {
             return '';
@@ -34,6 +34,6 @@ class BooleanColumn extends AbstractTableColumn
             return $this->falseLabel;
         }
 
-        return $tableItemModel->renderValue(name: $this->identifier);
+        return $tableItem->renderValue(name: $this->identifier);
     }
 }

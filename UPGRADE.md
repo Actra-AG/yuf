@@ -4,6 +4,49 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.12.0] – 2026-10-08
+
+Development dependency `actra/coding-standard` is now `^1.2.0`.
+
+### ⚠️ Settings bundles and value objects without `Model` suffix
+
+Coding standard v1.2.0: settings bundles end with `Settings`, value objects have no type suffix. The old names are
+removed.
+
+| Before                                       | After                                   |
+|:---------------------------------------------|:----------------------------------------|
+| `actra\yuf\db\DbSettingsModel`               | `actra\yuf\db\DbSettings`               |
+| `actra\yuf\session\SessionSettingsModel`     | `actra\yuf\session\SessionSettings`     |
+| `actra\yuf\security\CspPolicySettingsModel`  | `actra\yuf\security\CspPolicySettings`  |
+| `actra\yuf\table\TableItemModel`             | `actra\yuf\table\TableItem`             |
+
+The named arguments and the property are renamed as well:
+
+```php
+// Before
+new FileSessionHandler(sessionSettingsModel: new SessionSettingsModel());
+$core->prepareHttpResponse(cspPolicySettingsModel: new CspPolicySettingsModel());
+$core->cspPolicySettingsModel;
+FrameworkDB::getInstance(dbSettingsModel: $dbSettingsModel);
+new CallbackColumn(…, callback: fn(TableItemModel $tableItemModel): string => …);
+protected function renderCellValue(TableItemModel $tableItemModel): string
+
+// After
+new FileSessionHandler(sessionSettings: new SessionSettings());
+$core->prepareHttpResponse(cspPolicySettings: new CspPolicySettings());
+$core->cspPolicySettings;
+FrameworkDB::getInstance(dbSettings: $dbSettings);
+new CallbackColumn(…, callback: fn(TableItem $tableItem): string => …);
+protected function renderCellValue(TableItem $tableItem): string
+```
+
+### ⚠️ `SelectOptionsSettings` is internal
+
+The trait is renamed to `HasSelectOptionsPresentation` and marked `@internal`. Use `SelectOptionsField` or
+`MultiSelectOptionsField`.
+
+---
+
 ## [v4.10.1] – 2026-10-07
 
 ### 🐛 Bug Fixes

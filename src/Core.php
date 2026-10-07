@@ -23,10 +23,10 @@ use actra\yuf\core\RouteCollection;
 use actra\yuf\exception\ExceptionHandler;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\security\CspNonce;
-use actra\yuf\security\CspPolicySettingsModel;
+use actra\yuf\security\CspPolicySettings;
 use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\session\FileSessionHandler;
-use actra\yuf\session\SessionSettingsModel;
+use actra\yuf\session\SessionSettings;
 use LogicException;
 
 class Core
@@ -49,7 +49,7 @@ class Core
     public readonly array $allowedDomains;
     public readonly LanguageCollection $availableLanguages;
     public readonly bool $debug;
-    public readonly ?CspPolicySettingsModel $cspPolicySettingsModel;
+    public readonly ?CspPolicySettings $cspPolicySettings;
     public readonly string $robots;
 
     public function __construct(
@@ -176,9 +176,9 @@ class Core
         ?Logger $logger = null,
         RouteCollection $routeCollection = new RouteCollection(),
         ?ExceptionHandler $individualExceptionHandler = null,
-        ?CspPolicySettingsModel $cspPolicySettingsModel = new CspPolicySettingsModel(),
+        ?CspPolicySettings $cspPolicySettings = new CspPolicySettings(),
         false|AbstractSessionHandler $individualSessionHandler = new FileSessionHandler(
-            sessionSettingsModel: new SessionSettingsModel(),
+            sessionSettings: new SessionSettings(),
         ),
     ): HttpResponse {
         if (Core::$httpResponse !== null) {
@@ -190,7 +190,7 @@ class Core
                 logDirectory: $this->logDirectory,
             );
         }
-        $this->cspPolicySettingsModel = $cspPolicySettingsModel;
+        $this->cspPolicySettings = $cspPolicySettings;
         Logger::register(logger: $logger);
         ExceptionHandler::register(individualExceptionHandler: $individualExceptionHandler);
         AbstractSessionHandler::register(individualSessionHandler: $individualSessionHandler);
@@ -210,7 +210,7 @@ class Core
             return Core::$httpResponse = HttpResponse::createHtmlResponse(
                 httpStatusCode: $httpStatusCode,
                 htmlContent: $content,
-                cspPolicySettingsModel: $contentHandler->suppressCspHeader ? null : $this->cspPolicySettingsModel,
+                cspPolicySettings: $contentHandler->suppressCspHeader ? null : $this->cspPolicySettings,
                 nonce: CspNonce::get(),
             );
         }

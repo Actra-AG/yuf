@@ -11,7 +11,7 @@ namespace actra\yuf\security;
 
 use actra\yuf\core\HttpRequest;
 
-readonly class CspPolicySettingsModel
+readonly class CspPolicySettings
 {
     public const string PROTOCOL_PLACEHOLDER = '{PROTOCOL}';
     public const string HOST_PLACEHOLDER = '{HOST}';
@@ -19,10 +19,10 @@ readonly class CspPolicySettingsModel
     // Content Security Policy Reference: https://content-security-policy.com/
 
     public function __construct(
-        private string $defaultSrc = "'self' data: " . CspPolicySettingsModel::PROTOCOL_PLACEHOLDER . '://' . CspPolicySettingsModel::HOST_PLACEHOLDER,
+        private string $defaultSrc = "'self' data: " . CspPolicySettings::PROTOCOL_PLACEHOLDER . '://' . CspPolicySettings::HOST_PLACEHOLDER,
         private string $styleSrc = "'self'",
         private string $fontSrc = "'self'",
-        private string $imgSrc = "'self' data: " . CspPolicySettingsModel::PROTOCOL_PLACEHOLDER . '://' . CspPolicySettingsModel::HOST_PLACEHOLDER,
+        private string $imgSrc = "'self' data: " . CspPolicySettings::PROTOCOL_PLACEHOLDER . '://' . CspPolicySettings::HOST_PLACEHOLDER,
         private string $objectSrc = "'none'",
         private string $mediaSrc = '',
         private string $scriptSrc = "'strict-dynamic'",
@@ -94,8 +94,8 @@ readonly class CspPolicySettingsModel
             array: array_map(
                 callback: fn($value) => str_replace(
                     search: [
-                        CspPolicySettingsModel::PROTOCOL_PLACEHOLDER,
-                        CspPolicySettingsModel::HOST_PLACEHOLDER,
+                        CspPolicySettings::PROTOCOL_PLACEHOLDER,
+                        CspPolicySettings::HOST_PLACEHOLDER,
                     ],
                     replace: [
                         HttpRequest::getProtocol(),

@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\table\column;
 
-use actra\yuf\table\TableItemModel;
+use actra\yuf\table\TableItem;
 use Override;
 
 class CallbackColumn extends AbstractTableColumn
@@ -34,11 +34,11 @@ class CallbackColumn extends AbstractTableColumn
     }
 
     #[Override]
-    protected function renderCellValue(TableItemModel $tableItemModel): string
+    protected function renderCellValue(TableItem $tableItem): string
     {
         return call_user_func(
             $this->callbackFunction,
-            $tableItemModel,
+            $tableItem,
         ); // TODO: Named parameters not working in PHP 8.0
     }
 }

@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\table\column;
 
 use actra\yuf\common\StringUtils;
-use actra\yuf\table\TableItemModel;
+use actra\yuf\table\TableItem;
 
 abstract class AbstractTableColumn
 {
@@ -54,7 +54,7 @@ abstract class AbstractTableColumn
         $this->cellCssClasses[] = $className;
     }
 
-    public function renderCell(TableItemModel $tableItemModel): string
+    public function renderCell(TableItem $tableItem): string
     {
         $attributesArr = ['td'];
         if ($this->cellCssClasses !== []) {
@@ -65,11 +65,11 @@ abstract class AbstractTableColumn
             separator: StringUtils::IMPLODE_DEFAULT_SEPARATOR,
             array: [
                 '<' . implode(separator: ' ', array: $attributesArr) . '>',
-                $this->renderCellValue(tableItemModel: $tableItemModel),
+                $this->renderCellValue(tableItem: $tableItem),
                 '</td>',
             ],
         );
     }
 
-    abstract protected function renderCellValue(TableItemModel $tableItemModel): string;
+    abstract protected function renderCellValue(TableItem $tableItem): string;
 }

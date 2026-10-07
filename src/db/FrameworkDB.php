@@ -25,9 +25,9 @@ class FrameworkDB extends PDO
     private static array $instances = [];
     private bool $usedTransactions = false;
 
-    protected function __construct(DbSettingsModel $dbSettingsModel)
+    protected function __construct(DbSettings $dbSettings)
     {
-        $identifier = $dbSettingsModel->identifier;
+        $identifier = $dbSettings->identifier;
         if (array_key_exists($identifier, FrameworkDB::$instances)) {
             throw new LogicException(
                 'It is not allowed to instantiate this class multiple times with the same identifier ' . $identifier,
@@ -36,12 +36,12 @@ class FrameworkDB extends PDO
         FrameworkDB::$instances[$identifier] = $this;
 
         $initSetCommands = [];
-        $timeNamesLanguage = $dbSettingsModel->timeNamesLanguage;
+        $timeNamesLanguage = $dbSettings->timeNamesLanguage;
         if ($timeNamesLanguage !== null) {
             $initSetCommands[] = 'lc_time_names=' . $timeNamesLanguage;
         }
 
-        if ($dbSettingsModel->sqlSafeUpdates) {
+        if ($dbSettings->sqlSafeUpdates) {
             // see: https://dev.mysql.com/doc/refman/8.0/en/mysql-tips.html
             $initSetCommands[] = 'sql_safe_updates=1';
         }
@@ -49,9 +49,9 @@ class FrameworkDB extends PDO
         $dsn = implode(
             separator: ';',
             array: [
-                'mysql:host=' . $dbSettingsModel->hostName,
-                'dbname=' . $dbSettingsModel->databaseName,
-                'charset=' . $dbSettingsModel->charset,
+                'mysql:host=' . $dbSettings->hostName,
+                'dbname=' . $dbSettings->databaseName,
+                'charset=' . $dbSettings->charset,
             ],
         );
 
@@ -68,7 +68,7 @@ class FrameworkDB extends PDO
             );
         }
         try {
-            parent::__construct($dsn, $dbSettingsModel->userName, $dbSettingsModel->password, $attributeOptions);
+            parent::__construct($dsn, $dbSettings->userName, $dbSettings->password, $attributeOptions);
         } catch (Throwable $throwable) {
             // We do not want to leak the database password in the StackTrace of the caught (PDO)Exception.
             throw new PDOException(
@@ -78,14 +78,14 @@ class FrameworkDB extends PDO
         }
     }
 
-    public static function getInstance(DbSettingsModel $dbSettingsModel): FrameworkDB
+    public static function getInstance(DbSettings $dbSettings): FrameworkDB
     {
-        $identifier = $dbSettingsModel->identifier;
+        $identifier = $dbSettings->identifier;
         if (isset(FrameworkDB::$instances[$identifier])) {
             return FrameworkDB::$instances[$identifier];
         }
 
-        return FrameworkDB::$instances[$identifier] = new FrameworkDB($dbSettingsModel);
+        return FrameworkDB::$instances[$identifier] = new FrameworkDB($dbSettings);
     }
 
     /**

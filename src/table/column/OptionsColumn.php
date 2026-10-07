@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\table\column;
 
-use actra\yuf\table\TableItemModel;
+use actra\yuf\table\TableItem;
 use Override;
 
 class OptionsColumn extends AbstractTableColumn
@@ -30,13 +30,13 @@ class OptionsColumn extends AbstractTableColumn
     }
 
     #[Override]
-    protected function renderCellValue(TableItemModel $tableItemModel): string
+    protected function renderCellValue(TableItem $tableItem): string
     {
-        $rawValue = $tableItemModel->getRawValue($this->identifier);
+        $rawValue = $tableItem->getRawValue($this->identifier);
         if (array_key_exists(key: $rawValue, array: $this->options)) {
             return $this->options[$rawValue];
         }
 
-        return $tableItemModel->renderValue(name: $this->identifier);
+        return $tableItem->renderValue(name: $this->identifier);
     }
 }

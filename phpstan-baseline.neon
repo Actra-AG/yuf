@@ -7,7 +7,7 @@ parameters:
 			path: src/Core.php
 
 		-
-			rawMessage: Class actra\yuf\Core has an uninitialized readonly property $cspPolicySettingsModel. Assign it in the constructor.
+			rawMessage: Class actra\yuf\Core has an uninitialized readonly property $cspPolicySettings. Assign it in the constructor.
 			identifier: property.uninitializedReadonly
 			count: 1
 			path: src/Core.php
@@ -115,7 +115,7 @@ parameters:
 			path: src/Core.php
 
 		-
-			rawMessage: Readonly property actra\yuf\Core::$cspPolicySettingsModel is assigned outside of the constructor.
+			rawMessage: Readonly property actra\yuf\Core::$cspPolicySettings is assigned outside of the constructor.
 			identifier: property.readOnlyAssignNotInConstructor
 			count: 1
 			path: src/Core.php
@@ -1297,7 +1297,7 @@ parameters:
 			path: src/core/HttpResponse.php
 
 		-
-			rawMessage: 'Parameter $nonce of method actra\yuf\security\CspPolicySettingsModel::getHttpHeaderDataString() expects string, string|null given.'
+			rawMessage: 'Parameter $nonce of method actra\yuf\security\CspPolicySettings::getHttpHeaderDataString() expects string, string|null given.'
 			identifier: argument.type
 			count: 1
 			path: src/core/HttpResponse.php
@@ -1879,10 +1879,10 @@ parameters:
 			path: src/db/DbSelectStmt.php
 
 		-
-			rawMessage: Property actra\yuf\db\DbSettingsModel::$instances type has no value type specified in iterable type array.
+			rawMessage: Property actra\yuf\db\DbSettings::$instances type has no value type specified in iterable type array.
 			identifier: missingType.iterableValue
 			count: 1
-			path: src/db/DbSettingsModel.php
+			path: src/db/DbSettings.php
 
 		-
 			rawMessage: 'Calling isset() is forbidden, compare explicitly: array_key_exists(), !== null or a typed property (see standards/php.md).'
@@ -3022,7 +3022,7 @@ parameters:
 			rawMessage: 'Offset string might not exist on array<string, mixed>.'
 			identifier: offsetAccess.notFound
 			count: 2
-			path: src/table/TableItemModel.php
+			path: src/table/TableItem.php
 
 		-
 			rawMessage: 'Parameter $array of function implode expects array<string>, array given.'

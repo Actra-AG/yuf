@@ -11,7 +11,7 @@ namespace actra\yuf\core;
 
 use actra\yuf\common\FileHandler;
 use actra\yuf\common\UrlHelper;
-use actra\yuf\security\CspPolicySettingsModel;
+use actra\yuf\security\CspPolicySettings;
 use actra\yuf\session\AbstractSessionHandler;
 use LogicException;
 
@@ -154,7 +154,7 @@ class HttpResponse
     public static function createHtmlResponse(
         HttpStatusCode          $httpStatusCode,
         string                  $htmlContent,
-        ?CspPolicySettingsModel $cspPolicySettingsModel,
+        ?CspPolicySettings $cspPolicySettings,
         ?string                 $nonce,
     ): HttpResponse {
         $httpResponse = new HttpResponse(
@@ -166,10 +166,10 @@ class HttpResponse
             contentString: $htmlContent,
             contentFilePath: null,
         );
-        if ($cspPolicySettingsModel !== null) {
+        if ($cspPolicySettings !== null) {
             $httpResponse->setHeader(
                 key: 'Content-Security-Policy',
-                val: $cspPolicySettingsModel->getHttpHeaderDataString(nonce: $nonce),
+                val: $cspPolicySettings->getHttpHeaderDataString(nonce: $nonce),
             );
         }
 

@@ -11,7 +11,7 @@ namespace actra\yuf\db;
 
 use LogicException;
 
-class DbSettingsModel
+class DbSettings
 {
     private static array $instances = [];
     public readonly string $charset;
@@ -28,11 +28,11 @@ class DbSettingsModel
     ) {
         if (array_key_exists(
             key: $identifier,
-            array: DbSettingsModel::$instances,
+            array: DbSettings::$instances,
         )) {
             throw new LogicException(message: 'There is already an instance with the identifier ' . $identifier);
         }
-        DbSettingsModel::$instances[$identifier] = $this;
+        DbSettings::$instances[$identifier] = $this;
         $charset = trim(string: (string) $charset);
         if ($charset === '') {
             $charset = 'utf8mb4';

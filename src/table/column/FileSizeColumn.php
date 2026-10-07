@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\table\column;
 
 use actra\yuf\common\StringUtils;
-use actra\yuf\table\TableItemModel;
+use actra\yuf\table\TableItem;
 use Override;
 
 class FileSizeColumn extends AbstractTableColumn
@@ -18,9 +18,9 @@ class FileSizeColumn extends AbstractTableColumn
     public int $decimals = 2;
 
     #[Override]
-    protected function renderCellValue(TableItemModel $tableItemModel): string
+    protected function renderCellValue(TableItem $tableItem): string
     {
-        $bytes = $tableItemModel->getRawValue(name: $this->identifier);
+        $bytes = $tableItem->getRawValue(name: $this->identifier);
         if ($bytes === null) {
             return '';
         }

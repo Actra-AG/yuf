@@ -17,8 +17,8 @@ use actra\yuf\table\filter\TableFilter;
 use actra\yuf\table\renderer\SortableTableHeadRenderer;
 use actra\yuf\table\renderer\TablePaginationRenderer;
 use actra\yuf\table\TableHelper;
+use actra\yuf\table\TableItem;
 use actra\yuf\table\TableItemCollection;
-use actra\yuf\table\TableItemModel;
 use Override;
 
 class DbResultTable extends SmartTable
@@ -124,7 +124,7 @@ class DbResultTable extends SmartTable
             rowCount: $this->itemsPerPage,
         );
         foreach ($res as $dataItem) {
-            $this->addDataItem(tableItemModel: new TableItemModel(dataObject: $dataItem));
+            $this->addDataItem(tableItem: new TableItem(dataObject: $dataItem));
         }
         $this->filledDataBySelectQuery = true;
         $this->filledAmount = count(value: $res);

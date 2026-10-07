@@ -14,7 +14,7 @@ use actra\yuf\html\HtmlEncoder;
 use stdClass;
 use UnexpectedValueException;
 
-readonly class TableItemModel
+readonly class TableItem
 {
     /** @var array<string, mixed> */
     public array $data;
@@ -27,7 +27,7 @@ readonly class TableItemModel
     }
 
     /**
-     * Typed access to the values of this row, e.g. `$tableItemModel->getRow()->getInt(column: 'ID')`.
+     * Typed access to the values of this row, e.g. `$tableItem->getRow()->getInt(column: 'ID')`.
      */
     public function getRow(): DbRow
     {

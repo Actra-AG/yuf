@@ -67,7 +67,7 @@ abstract class AbstractSessionHandler extends SessionHandler
     private string $clientUserAgent;
 
     protected function __construct(
-        private readonly SessionSettingsModel $sessionSettingsModel,
+        private readonly SessionSettings $sessionSettings,
         private readonly Clock $clock = new SystemClock(),
     ) {
         $this->currentTime = $this->clock->now()->getTimestamp();
@@ -79,14 +79,14 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     private function start(): void
     {
-        $sessionSettingsModel = $this->sessionSettingsModel;
+        $sessionSettings = $this->sessionSettings;
         $this->setDefaultConfigurationOptions(
-            gcDivisor: $sessionSettingsModel->gcDivisor,
-            maxLifeTime: $sessionSettingsModel->maxLifeTime,
-            gcProbability: $sessionSettingsModel->gcProbability,
+            gcDivisor: $sessionSettings->gcDivisor,
+            maxLifeTime: $sessionSettings->maxLifeTime,
+            gcProbability: $sessionSettings->gcProbability,
         );
-        $this->setDefaultSecuritySettings(isSameSiteStrict: $sessionSettingsModel->isSameSiteStrict);
-        $this->setSessionName(individualName: $sessionSettingsModel->individualName);
+        $this->setDefaultSecuritySettings(isSameSiteStrict: $sessionSettings->isSameSiteStrict);
+        $this->setSessionName(individualName: $sessionSettings->individualName);
         $this->executePreStartActions();
         session_set_save_handler( // Named parameters are not supported for alternative prototypes: https://github.com/php/php-src/issues/17263
             $this,
@@ -280,7 +280,7 @@ abstract class AbstractSessionHandler extends SessionHandler
 
         return (
             is_int(value: $lastActivity)
-            && ($this->currentTime - $lastActivity > $this->sessionSettingsModel->maxLifeTime)
+            && ($this->currentTime - $lastActivity > $this->sessionSettings->maxLifeTime)
         );
     }
 

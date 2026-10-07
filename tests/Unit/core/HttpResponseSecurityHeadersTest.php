@@ -46,7 +46,7 @@ final class HttpResponseSecurityHeadersTest extends TestCase
         $httpResponse = HttpResponse::createHtmlResponse(
             httpStatusCode: HttpStatusCode::HTTP_OK,
             htmlContent: '<p>Test</p>',
-            cspPolicySettingsModel: null,
+            cspPolicySettings: null,
             nonce: null,
         );
 
@@ -60,7 +60,7 @@ final class HttpResponseSecurityHeadersTest extends TestCase
         $httpResponse = HttpResponse::createHtmlResponse(
             httpStatusCode: HttpStatusCode::HTTP_OK,
             htmlContent: '<p>Test</p>',
-            cspPolicySettingsModel: null,
+            cspPolicySettings: null,
             nonce: null,
         );
 

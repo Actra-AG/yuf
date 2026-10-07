@@ -21,7 +21,7 @@ use Override;
  */
 class SelectOptionsField extends SingleOptionsField
 {
-    use SelectOptionsSettings;
+    use HasSelectOptionsPresentation;
 
     /**
      * @param list<string> $cssClasses
@@ -49,7 +49,7 @@ class SelectOptionsField extends SingleOptionsField
         if ($requiredError !== null) {
             $this->addRequiredRule(errorMessage: $requiredError);
         }
-        $this->initializeSelectOptionsSettings(
+        $this->initializeSelectOptionsPresentation(
             isRequired: $requiredError !== null,
             individualEmptyValueLabel: $individualEmptyValueLabel,
             cssClasses: $cssClasses,

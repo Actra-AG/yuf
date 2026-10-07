@@ -19,7 +19,7 @@ use actra\yuf\table\column\DefaultColumn;
 use actra\yuf\table\column\FileSizeColumn;
 use actra\yuf\table\column\OptionsColumn;
 use actra\yuf\table\column\StripHtmlTagsColumn;
-use actra\yuf\table\TableItemModel;
+use actra\yuf\table\TableItem;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -94,7 +94,7 @@ final class TableColumnRenderingTest extends TestCase
                 new CallbackColumn(
                     identifier: 'cb',
                     label: 'Callback',
-                    callbackFunction: fn(TableItemModel $tableItemModel): string => '#' . $tableItemModel->renderValue(name: 'ID'),
+                    callbackFunction: fn(TableItem $tableItem): string => '#' . $tableItem->renderValue(name: 'ID'),
                 ),
                 '<td>#42</td>',
             ],
@@ -102,7 +102,7 @@ final class TableColumnRenderingTest extends TestCase
                 new CallbackColumn(
                     identifier: 'cb',
                     label: 'Callback',
-                    callbackFunction: fn(TableItemModel $tableItemModel): string => (string) ($tableItemModel->getRow()->getInt(column: 'ID') * 2),
+                    callbackFunction: fn(TableItem $tableItem): string => (string) ($tableItem->getRow()->getInt(column: 'ID') * 2),
                 ),
                 '<td>84</td>',
             ],
@@ -112,7 +112,7 @@ final class TableColumnRenderingTest extends TestCase
     #[DataProvider('columnProvider')]
     public function testColumnRendersAsBefore(AbstractTableColumn $abstractTableColumn, string $expectedHtml): void
     {
-        $this->assertSame($expectedHtml, $abstractTableColumn->renderCell(tableItemModel: TableColumnRenderingTest::model()));
+        $this->assertSame($expectedHtml, $abstractTableColumn->renderCell(tableItem: TableColumnRenderingTest::model()));
     }
 
     public function testActionsColumnReplacesPlaceholdersEncoded(): void
@@ -125,7 +125,7 @@ final class TableColumnRenderingTest extends TestCase
             '<td class="td-action"><div class="td-action-group">'
             . '<a href="edit/42/?n=&lt;b&gt;Müller &amp; Co&lt;/b&gt;' . "\n" . '&quot;Zürich&quot;" class="edit">Bearbeiten</a>'
             . "\n" . '<a href="delete/42/" class="delete">Löschen</a></div></td>',
-            $actionsColumn->renderCell(tableItemModel: TableColumnRenderingTest::model()),
+            $actionsColumn->renderCell(tableItem: TableColumnRenderingTest::model()),
         );
     }
 
@@ -136,12 +136,12 @@ final class TableColumnRenderingTest extends TestCase
 
         $this->assertSame(
             '<td class="td-action"></td>',
-            $actionsColumn->renderCell(tableItemModel: TableColumnRenderingTest::model()),
+            $actionsColumn->renderCell(tableItem: TableColumnRenderingTest::model()),
         );
     }
 
-    private static function model(): TableItemModel
+    private static function model(): TableItem
     {
-        return new TableItemModel(dataObject: (object) TableColumnRenderingTest::ROW);
+        return new TableItem(dataObject: (object) TableColumnRenderingTest::ROW);
     }
 }

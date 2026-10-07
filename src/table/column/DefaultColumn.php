@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\table\column;
 
-use actra\yuf\table\TableItemModel;
+use actra\yuf\table\TableItem;
 use Override;
 
 class DefaultColumn extends AbstractTableColumn
@@ -17,8 +17,8 @@ class DefaultColumn extends AbstractTableColumn
     public bool $renderNewLines = true;
 
     #[Override]
-    protected function renderCellValue(TableItemModel $tableItemModel): string
+    protected function renderCellValue(TableItem $tableItem): string
     {
-        return $tableItemModel->renderValue(name: $this->identifier, renderNewLines: $this->renderNewLines);
+        return $tableItem->renderValue(name: $this->identifier, renderNewLines: $this->renderNewLines);
     }
 }

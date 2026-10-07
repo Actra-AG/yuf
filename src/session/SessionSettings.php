@@ -11,7 +11,7 @@ namespace actra\yuf\session;
 
 use actra\yuf\Core;
 
-readonly class SessionSettingsModel
+readonly class SessionSettings
 {
     public string $savePath;
 
