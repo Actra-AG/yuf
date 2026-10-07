@@ -4,6 +4,23 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.8.2] – 2026-10-07
+
+### 🐛 Bug Fixes
+
+* `HttpResponse::createResponseFromFilePath()` shows CSS, JPG, GIF, PNG and MOV files in the browser again instead of
+  always forcing a download (`ContentType::$forceDownloadByDefault` was `true` for all of them). Other unknown file
+  types are still downloaded. To keep forcing the download, pass it explicitly:
+  ```php
+  // Before: forceDownload: null downloaded these files
+  HttpResponse::createResponseFromFilePath(absolutePathToFile: $path, forceDownload: null, individualFileName: null, maxAge: 0);
+
+  // After: request the download explicitly
+  HttpResponse::createResponseFromFilePath(absolutePathToFile: $path, forceDownload: true, individualFileName: null, maxAge: 0);
+  ```
+
+---
+
 ## [v4.8.1] – 2026-10-07
 
 yuf is now developed with the [Actra coding standard](https://github.com/Actra-AG/coding-standard): all files are

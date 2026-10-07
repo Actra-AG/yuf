@@ -55,7 +55,7 @@ but the existing code does not meet them yet, so `composer check` is red until t
       instead of decoding the remaining characters.
     - `StringUtils::randomString()`, `StringUtils::generateSalt()` and the temporary file name of `CSVFile` use
       `random_int()` (cryptographically secure) instead of `mt_rand()` / `rand()`.
-- Not changed (pre-existing bug, separate fix): `ContentType::createDefault()` checks `in_array()` against the values
+- Pre-existing bug, fixed in v4.8.2: `ContentType::createDefault()` checks `in_array()` against the values
   of an array whose keys are the types, so `forceDownloadByDefault` is always `true`.
 - Baseline: 1179 → 1057 entries.
 

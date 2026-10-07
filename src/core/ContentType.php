@@ -120,11 +120,11 @@ class ContentType
             forceDownloadByDefault: !in_array(
                 needle: $type,
                 haystack: [
-                    ContentType::CSS => false,
-                    ContentType::JPG => false,
-                    ContentType::GIF => false,
-                    ContentType::PNG => false,
-                    ContentType::MOV => false,
+                    ContentType::CSS,
+                    ContentType::JPG,
+                    ContentType::GIF,
+                    ContentType::PNG,
+                    ContentType::MOV,
                 ],
                 strict: true,
             ),
