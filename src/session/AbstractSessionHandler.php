@@ -153,26 +153,22 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     private function setSessionName(string $individualName): void
     {
+        // The session ID is only read from the cookie, never from the request input (prevents session fixation)
         if ($individualName !== '') {
-            $sessionName = $individualName;
-
-            // Overwrite session id in cookie when provided by get-Parameter
-            $requestedSessionID = HttpRequest::getInputString(keyName: $sessionName);
-            if (!empty($requestedSessionID) && isset($_COOKIE[$sessionName]) && $_COOKIE[$sessionName] !== $requestedSessionID) {
-                $_COOKIE[$sessionName] = $requestedSessionID;
-                session_id(id: $requestedSessionID);
-            }
-
-            session_name(name: $sessionName);
+            session_name(name: $individualName);
         }
 
         // Just generate a new session id if current from cookie contains illegal characters
         // Inspired from http://stackoverflow.com/questions/32898857/session-start-issues-regarding-illegal-characters-empty-session-id-and-failed
-        $sessionName = session_name();
-        if (isset($_COOKIE[$sessionName]) && (!is_string(value: $_COOKIE[$sessionName]) || $this->checkSessionIdAgainstSidBitsPerChar(
-            sessionId: $_COOKIE[$sessionName],
+        $sessionName = AbstractSessionHandler::readSessionName();
+        if (!array_key_exists(key: $sessionName, array: $_COOKIE)) {
+            return;
+        }
+        $sessionID = $_COOKIE[$sessionName];
+        if (!is_string(value: $sessionID) || !$this->checkSessionIdAgainstSidBitsPerChar(
+            sessionId: $sessionID,
             sidBitsPerChar: (int) ini_get(option: 'session.sid_bits_per_character'),
-        ) === false)) {
+        )) {
             unset($_COOKIE[$sessionName]);
         }
     }

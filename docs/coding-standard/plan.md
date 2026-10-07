@@ -91,4 +91,6 @@ invalid ranges). Fixed in v4.9.2: HSTS max-age independent of the cache max-age,
 `random_bytes()` for the CSRF token and the CSP nonce, `session_regenerate_id(delete_old_session: true)`. Fixed in
 v4.10.0 (decisions of the user): no CSRF token in URLs (no query string fallback, no `renderAsGetParam()`), no CSRF
 token in GET forms, `TableFilter` validates the posted token, a new CSP nonce per request (not in the session),
-`X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`. No open finding left.
+`X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`. Fixed in v4.10.1:
+`AbstractSessionHandler` reads the session ID only from the cookie (with `individualName`, a GET or POST parameter
+replaced it: session fixation). No open finding left.

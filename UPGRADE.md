@@ -4,6 +4,17 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.10.1] – 2026-10-07
+
+### 🐛 Bug Fixes
+
+* **Security:** `AbstractSessionHandler` only reads the session ID from the cookie. With
+  `SessionSettingsModel::$individualName`, a GET or POST parameter with the session name replaced the session ID of the
+  cookie, so an attacker could make a victim use a session the attacker knows (session fixation). Links or forms that
+  pass the session ID as a parameter no longer switch the session.
+
+---
+
 ## [v4.10.0] – 2026-10-07
 
 Security hardening following the Actra coding standard (`standards/security.md`).
