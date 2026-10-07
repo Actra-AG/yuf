@@ -61,10 +61,7 @@ final class FileField extends FormField
         }
         $this->storage = $storage ?? SessionFileUploadStorage::forCurrentRequest();
         $this->uniqueSessFileStorePointer = $this->sanitizePointer(
-            pointer: uniqid(
-                prefix: $name . '__',
-                more_entropy: true,
-            ),
+            pointer: $name . '__' . bin2hex(string: random_bytes(length: 16)),
         );
         parent::__construct(
             name: $name,

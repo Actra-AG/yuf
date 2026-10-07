@@ -158,6 +158,10 @@ final readonly class FormInput
         }
         $uploads = [];
         foreach ($names as $key => $name) {
+            if (!array_key_exists(key: $key, array: $tmpNames) || !array_key_exists(key: $key, array: $types)
+                || !array_key_exists(key: $key, array: $errors) || !array_key_exists(key: $key, array: $sizes)) {
+                return null;
+            }
             $upload = FormInput::toUpload(
                 name: $name,
                 tmpName: $tmpNames[$key],

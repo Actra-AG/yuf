@@ -46,16 +46,13 @@ class RadioOptionsField extends SingleOptionsField
         } else {
             $this->addRequiredRule(errorMessage: $requiredError);
         }
-        switch ($layout) {
-            case RadioOptionsLayoutEnum::DEFINITION_LIST:
-                $this->setRenderer(renderer: new DefinitionListRenderer(formField: $this));
-                break;
-
-            case RadioOptionsLayoutEnum::LEGEND_AND_LIST:
-                $this->setRenderer(renderer: new LegendAndListRenderer(optionsField: $this));
-                break;
-            case RadioOptionsLayoutEnum::NONE:
-                break;
+        $renderer = match ($layout) {
+            RadioOptionsLayoutEnum::DEFINITION_LIST => new DefinitionListRenderer(formField: $this),
+            RadioOptionsLayoutEnum::LEGEND_AND_LIST => new LegendAndListRenderer(optionsField: $this),
+            RadioOptionsLayoutEnum::NONE => null,
+        };
+        if ($renderer !== null) {
+            $this->setRenderer(renderer: $renderer);
         }
     }
 

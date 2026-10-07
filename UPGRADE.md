@@ -4,6 +4,39 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.9.0] – 2026-10-07
+
+### ⚙️ Backend & API
+
+* New `FormField::hasTopFormComponent()` tells whether the field is part of a form yet.
+* Reading `FormField::$topFormComponent` of a field that is not part of a form throws a `LogicException` with a hint
+  to `Form::addField()` instead of the PHP `Error` "must not be accessed before initialization". The type stays
+  `Form`, no code change needed.
+* All overriding methods have the `#[\Override]` attribute. Subclasses in projects are not affected.
+
+### ⚠️ `UploadedFile::getHash()` uses SHA-256 instead of SHA-1
+
+The hash is the key of the file in `FileField::getFiles()` and the value of the remove button of an uploaded file, so the
+rendered HTML changes (64 instead of 40 hex characters). Projects that use `getHash()` need no change; tests or code that
+compute the hash themselves adapt:
+
+```php
+// Before
+$hash = sha1($uploadedFile->path);
+
+// After
+$hash = $uploadedFile->getHash();
+```
+
+A remove request of a form that was rendered before the update is ignored; the user removes the file again.
+
+### 🐛 Bug Fixes
+
+* `FileField` creates the pointer to the uploaded files of the session with `random_bytes()` instead of `uniqid()`, so
+  it cannot be guessed.
+
+---
+
 ## [v4.8.2] – 2026-10-07
 
 ### 🐛 Bug Fixes

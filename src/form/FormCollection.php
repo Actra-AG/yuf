@@ -24,7 +24,7 @@ abstract class FormCollection extends FormComponent
     final public function addChildComponent(FormComponent $formComponent): void
     {
         $childComponentName = $formComponent->name;
-        if (isset($this->childComponents[$childComponentName])) {
+        if (array_key_exists(key: $childComponentName, array: $this->childComponents)) {
             throw new LogicException(
                 'There is already an existing child component with the same name: ' . $childComponentName,
             );
@@ -36,7 +36,7 @@ abstract class FormCollection extends FormComponent
 
     public function getChildComponent(string $childComponentName): FormComponent
     {
-        if (!$this->hasChildComponent($childComponentName)) {
+        if (!array_key_exists(key: $childComponentName, array: $this->childComponents)) {
             throw new LogicException(
                 'FormCollection ' . $this->name . ' does not contain requested ChildComponent ' . $childComponentName,
             );

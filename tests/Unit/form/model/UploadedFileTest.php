@@ -24,12 +24,11 @@ final class UploadedFileTest extends TestCase
         $this->assertSame('/tmp/x/php1', $file->path);
     }
 
-    public function testHashIsTheSha1OfThePath(): void
+    public function testHashIsTheSha256OfThePath(): void
     {
         $file = new UploadedFile(name: 'a.txt', type: 'text/plain', size: 5, path: '/tmp/x/php1');
 
-        // @phpstan-ignore disallowed.function (UploadedFile::getHash() uses SHA-1 as identifier, not for security)
-        $this->assertSame(sha1(string: '/tmp/x/php1'), $file->getHash());
+        $this->assertSame(hash(algo: 'sha256', data: '/tmp/x/php1'), $file->getHash());
     }
 
     public function testHashDoesNotDependOnTheNameOrTheSize(): void

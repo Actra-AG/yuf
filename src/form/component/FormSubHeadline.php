@@ -24,7 +24,7 @@ class FormSubHeadline extends FormComponent
         $this->headingLevel = $headingLevel;
         $this->content = $content;
 
-        parent::__construct(uniqid());
+        parent::__construct(name: bin2hex(string: random_bytes(length: 8)));
     }
 
     #[Override]

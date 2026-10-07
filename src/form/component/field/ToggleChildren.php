@@ -74,7 +74,7 @@ final class ToggleChildren
 
     public function has(string $mainOption): bool
     {
-        return isset($this->childrenByMainOption[$mainOption]);
+        return array_key_exists(key: $mainOption, array: $this->childrenByMainOption);
     }
 
     /**
@@ -159,7 +159,7 @@ final class ToggleChildren
      */
     private function adoptForm(FormComponent $childComponent): void
     {
-        if (!$childComponent instanceof FormField || !isset($this->toggleField->topFormComponent)) {
+        if (!$childComponent instanceof FormField || !$this->toggleField->hasTopFormComponent()) {
             return;
         }
         $childComponent->topFormComponent = $this->toggleField->topFormComponent;

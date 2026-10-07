@@ -194,8 +194,7 @@ final class FileFieldValueTest extends TestCase
         $field->validate(input: $this->request($this->uploads(names: ['a.txt'])));
 
         foreach ($field->getFiles() as $hash => $file) {
-            // @phpstan-ignore disallowed.function (UploadedFile::getHash() uses SHA-1 as identifier, not for security)
-            $this->assertSame(sha1(string: $file->path), $hash);
+            $this->assertSame(hash(algo: 'sha256', data: $file->path), $hash);
             $this->assertSame($file->getHash(), $hash);
         }
     }

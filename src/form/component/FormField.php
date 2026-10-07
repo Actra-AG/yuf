@@ -27,7 +27,15 @@ abstract class FormField extends FormComponent
     public ?HtmlText $fieldInfo = null;
     public ?HtmlText $labelInfoText = null;
     public ?HtmlText $additionalColumnContent = null;
-    public Form $topFormComponent;
+    /** The form of the field; set by `Form::addField()`, and by a toggle field for its children. */
+    public Form $topFormComponent {
+        get => $this->topForm ?? throw new LogicException(
+            message: 'The field ' . $this->name . ' is not part of a form yet. Add it with Form::addField().',
+        );
+        set {
+            $this->topForm = $value;
+        }
+    }
     public bool $renderRequiredAbbr = true;
     public string $id;
     public private(set) HtmlText $label;
@@ -39,6 +47,7 @@ abstract class FormField extends FormComponent
     protected array $listeners = [];
 
     private ?HtmlText $requiredErrorMessage = null;
+    private ?Form $topForm = null;
     private bool $inputReceived = false;
     private bool $inputRejected = false;
     private bool $validatesInput = false;
@@ -59,6 +68,11 @@ abstract class FormField extends FormComponent
         parent::__construct(name: $name);
         $this->messages = new FormMessages();
         $this->labelInfoText = $labelInfoText;
+    }
+
+    public function hasTopFormComponent(): bool
+    {
+        return $this->topForm !== null;
     }
 
     /**

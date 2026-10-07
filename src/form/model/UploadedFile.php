@@ -24,11 +24,10 @@ final readonly class UploadedFile
     ) {}
 
     /**
-     * The key of the file in `FileField::getFiles()` and the value posted to remove it (sha1 of the path).
+     * The key of the file in `FileField::getFiles()` and the value posted to remove it (SHA-256 of the path).
      */
     public function getHash(): string
     {
-        // Usage of sha1 is safe here: it is an identifier, not a security feature
-        return sha1(string: $this->path);
+        return hash(algo: 'sha256', data: $this->path);
     }
 }

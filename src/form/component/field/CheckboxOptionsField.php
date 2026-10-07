@@ -42,18 +42,14 @@ class CheckboxOptionsField extends MultiOptionsField
         if ($requiredError !== null) {
             $this->addRequiredRule(errorMessage: $requiredError);
         }
-        switch ($layout) {
-            case CheckboxOptionsLayoutEnum::DEFINITION_LIST:
-                $this->setRenderer(renderer: new DefinitionListRenderer(formField: $this));
-                break;
-            case CheckboxOptionsLayoutEnum::LEGEND_AND_LIST:
-                $this->setRenderer(renderer: new LegendAndListRenderer(optionsField: $this));
-                break;
-            case CheckboxOptionsLayoutEnum::CHECKBOX_ITEM:
-                $this->setRenderer(renderer: new CheckboxItemRenderer(checkboxOptionsField: $this));
-                break;
-            case CheckboxOptionsLayoutEnum::NONE:
-                break;
+        $renderer = match ($layout) {
+            CheckboxOptionsLayoutEnum::DEFINITION_LIST => new DefinitionListRenderer(formField: $this),
+            CheckboxOptionsLayoutEnum::LEGEND_AND_LIST => new LegendAndListRenderer(optionsField: $this),
+            CheckboxOptionsLayoutEnum::CHECKBOX_ITEM => new CheckboxItemRenderer(checkboxOptionsField: $this),
+            CheckboxOptionsLayoutEnum::NONE => null,
+        };
+        if ($renderer !== null) {
+            $this->setRenderer(renderer: $renderer);
         }
     }
 

@@ -132,7 +132,7 @@ final class FileFieldMarkupTest extends TestCase
               . '<label for="file">File<span class="required">*</span><i class="label-info">(max. 3)</i></label>'
               . '</dt><dd><div class="fileupload-enhanced" data-max-files="2"><ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
-              . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+              . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul><input type="file" name="file[]" id="file" multiple>'
               . '<input type="hidden" name="file_UID" value="ptr1"></div></dd></dl></form>',
         ];
@@ -147,7 +147,7 @@ final class FileFieldMarkupTest extends TestCase
               . '</dt><dd class="has-error"><div class="fileupload-enhanced" data-max-files="2">'
               . '<ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
-              . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+              . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
               . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
@@ -167,7 +167,7 @@ final class FileFieldMarkupTest extends TestCase
               . '</dt><dd class="has-error"><div class="fileupload-enhanced" data-max-files="2">'
               . '<ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
-              . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+              . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
               . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
@@ -187,7 +187,7 @@ final class FileFieldMarkupTest extends TestCase
               . '</dt><dd class="has-error"><div class="fileupload-enhanced" data-max-files="2">'
               . '<ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
-              . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+              . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
               . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
@@ -207,7 +207,7 @@ final class FileFieldMarkupTest extends TestCase
               . '</dt><dd class="has-error"><div class="fileupload-enhanced" data-max-files="2">'
               . '<ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
-              . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+              . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
               . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
@@ -227,7 +227,7 @@ final class FileFieldMarkupTest extends TestCase
               . '</dt><dd class="has-error"><div class="fileupload-enhanced" data-max-files="2">'
               . '<ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
-              . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+              . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
               . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
@@ -246,7 +246,7 @@ final class FileFieldMarkupTest extends TestCase
               . '<label for="file">File<span class="required">*</span><i class="label-info">(max. 3)</i></label>'
               . '</dt><dd><div class="fileupload-enhanced" data-max-files="2"><ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
-              . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+              . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul><input type="file" name="file[]" id="file" multiple>'
               . '<input type="hidden" name="file_UID" value="ptr1"></div></dd></dl></form>',
         ];
@@ -261,7 +261,7 @@ final class FileFieldMarkupTest extends TestCase
               . '</dt><dd class="has-error"><div class="fileupload-enhanced" data-max-files="2">'
               . '<ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
-              . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+              . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
               . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
@@ -281,7 +281,7 @@ final class FileFieldMarkupTest extends TestCase
               . '</dt><dd class="has-error"><div class="fileupload-enhanced" data-max-files="2">'
               . '<ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
-              . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+              . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
               . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
@@ -301,7 +301,7 @@ final class FileFieldMarkupTest extends TestCase
               . '</dt><dd class="has-error"><div class="fileupload-enhanced" data-max-files="2">'
               . '<ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
-              . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+              . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
               . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
@@ -321,7 +321,7 @@ final class FileFieldMarkupTest extends TestCase
               . '</dt><dd class="has-error"><div class="fileupload-enhanced" data-max-files="2">'
               . '<ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
-              . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+              . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
               . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
@@ -341,7 +341,7 @@ final class FileFieldMarkupTest extends TestCase
               . '</dt><dd class="has-error"><div class="fileupload-enhanced" data-max-files="2">'
               . '<ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
-              . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+              . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
               . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
@@ -350,8 +350,7 @@ final class FileFieldMarkupTest extends TestCase
               . '</div></dd></dl></form>',
         ];
         yield 'remove' => [
-            // @phpstan-ignore disallowed.function (UploadedFile::getHash() uses SHA-1 as identifier, not for security)
-            ['file_removeAttachment' => sha1(string: FileFieldMarkupTest::FIRST_PATH)],
+            ['file_removeAttachment' => hash(algo: 'sha256', data: FileFieldMarkupTest::FIRST_PATH)],
             3,
             true,
             null,
@@ -375,7 +374,7 @@ final class FileFieldMarkupTest extends TestCase
               . '<label for="file">File<span class="required">*</span><i class="label-info">(max. 3)</i></label>'
               . '</dt><dd><div class="fileupload-enhanced" data-max-files="2"><ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
-              . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+              . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul><input type="file" name="file[]" id="file" multiple>'
               . '<input type="hidden" name="file_UID" value="ptr1"></div></dd></dl></form>',
         ];
@@ -437,10 +436,10 @@ final class FileFieldMarkupTest extends TestCase
         $this->assertSame(
             '<div class="fileupload" data-max-files="1"><ul class="fileupload-list"><li>'
             . '<span>first &quot;file&quot;.txt</span> <button type="submit" name="file_removeAttachment" '
-            . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+            . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
             . '</li><li>'
             . '<span>&lt;b&gt;second&lt;/b&gt;.pdf</span> <button type="submit" name="file_removeAttachment" '
-            . 'value="f50dd1d7180e89a360be1c2912862904aebf506f">löschen</button>'
+            . 'value="92711c2008e55b0066ef9f6fd5ff97c453af6d9f684fa612081597b204458156">löschen</button>'
             . '</li></ul><input type="file" name="file[]" id="file">'
             . '<input type="hidden" name="file_UID" value="ptr1"></div>',
             $this->createFieldWithTwoFiles(maxFileUploadCount: 3)->render(),
@@ -452,10 +451,10 @@ final class FileFieldMarkupTest extends TestCase
         $this->assertSame(
             '<div class="fileupload" data-max-files="0"><ul class="fileupload-list"><li>'
             . '<span>first &quot;file&quot;.txt</span> <button type="submit" name="file_removeAttachment" '
-            . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+            . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
             . '</li><li>'
             . '<span>&lt;b&gt;second&lt;/b&gt;.pdf</span> <button type="submit" name="file_removeAttachment" '
-            . 'value="f50dd1d7180e89a360be1c2912862904aebf506f">löschen</button>'
+            . 'value="92711c2008e55b0066ef9f6fd5ff97c453af6d9f684fa612081597b204458156">löschen</button>'
             . '</li></ul><input type="file" name="file[]" id="file">'
             . '<input type="hidden" name="file_UID" value="ptr1"></div>',
             $this->createFieldWithTwoFiles(maxFileUploadCount: 2)->render(),
@@ -470,10 +469,10 @@ final class FileFieldMarkupTest extends TestCase
         $this->assertSame(
             '<div class="fileupload" data-max-files="1"><ul class="fileupload-list"><li>'
             . '<span>first &quot;file&quot;.txt</span> <button type="submit" name="file_removeAttachment" '
-            . 'value="25b7df71caccd1b9b20886b5ad455874d00d8e1c">löschen</button>'
+            . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
             . '</li><li>'
             . '<span>&lt;b&gt;second&lt;/b&gt;.pdf</span> <button type="submit" name="file_removeAttachment" '
-            . 'value="f50dd1d7180e89a360be1c2912862904aebf506f">löschen</button>'
+            . 'value="92711c2008e55b0066ef9f6fd5ff97c453af6d9f684fa612081597b204458156">löschen</button>'
             . '</li></ul>'
             . '<input type="file" name="file[]" id="file" aria-invalid="true" aria-describedby="file-error">'
             . '<input type="hidden" name="file_UID" value="ptr1"></div>',

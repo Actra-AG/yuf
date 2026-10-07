@@ -29,7 +29,7 @@ class FormInfo extends FormComponent
         public readonly array $dtClasses = [],
         public readonly array $ddClasses = [],
     ) {
-        parent::__construct(uniqid());
+        parent::__construct(name: bin2hex(string: random_bytes(length: 8)));
     }
 
     #[Override]

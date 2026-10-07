@@ -79,4 +79,8 @@ but the existing code does not meet them yet, so `composer check` is red until t
   1057 → 794 entries.
 - Remaining entries per area: `src/template` is the largest, followed by `src/common`, `src/form`, `src/core` and
   `src/phone`. Most frequent identifiers: `argument.type`, `missingType.iterableValue`, `offsetAccess.notFound`.
+- `src/form/` has no baseline entries again (v4.9.0): explicit `array_key_exists()` instead of `isset()`, `match`
+  instead of `switch` for the layouts of the option fields, `random_bytes()` instead of `uniqid()`,
+  `FormField::$topFormComponent` as property hook with a nullable backing property and `hasTopFormComponent()`.
+  `UploadedFile::getHash()` uses SHA-256 instead of SHA-1 (changes the posted remove value, listed in `UPGRADE.md`).
 
