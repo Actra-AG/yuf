@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\api;
 
 use actra\yuf\common\JsonUtils;
-use actra\yuf\common\SimpleXMLExtended;
+use actra\yuf\common\SimpleXmlExtended;
 use actra\yuf\core\HttpStatusCodeEnum;
 use CurlHandle;
 use stdClass;
@@ -106,9 +106,9 @@ class CurlResponse
         );
     }
 
-    public function getXmlResponse(): SimpleXMLExtended
+    public function getXmlResponse(): SimpleXmlExtended
     {
-        return new SimpleXMLExtended(
+        return new SimpleXmlExtended(
             data: $this->rawResponseBody,
             options: LIBXML_NOCDATA,
         );

@@ -360,13 +360,13 @@ $logger = new Logger(
 
 ## Typed database rows
 
-`FrameworkDB::select()` returns untyped `stdClass` rows. `selectRows()` and `selectRow()` return `DbRow` objects whose
+`FrameworkDb::select()` returns untyped `stdClass` rows. `selectRows()` and `selectRow()` return `DbRow` objects whose
 getters narrow the value once and throw a `DbRowValueException` (naming column, expected and actual type) for a missing
 column, `NULL` in a non-nullable getter or a wrong type. Nothing is cast silently.
 
 ```php
 use actra\yuf\db\DbRow;
-use actra\yuf\db\FrameworkDB;
+use actra\yuf\db\FrameworkDb;
 
 enum UserStatusEnum: string
 {
@@ -397,7 +397,7 @@ final readonly class User
 
 final readonly class UserRepository
 {
-    public function __construct(private FrameworkDB $db)
+    public function __construct(private FrameworkDb $db)
     {
     }
 

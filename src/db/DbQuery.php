@@ -331,7 +331,7 @@ class DbQuery
     /**
      * @return stdClass[]
      */
-    public function selectFromDb(FrameworkDB $db, int $offset, int $rowCount): array
+    public function selectFromDb(FrameworkDb $db, int $offset, int $rowCount): array
     {
         $dbQueryData = $this->getDbQueryData(
             offset: $offset,
@@ -381,7 +381,7 @@ class DbQuery
      * of the "FROM" or "JOIN" parts and those of the "WHERE" part are kept, as their placeholders
      * remain within the query.
      */
-    public function getTotalAmount(FrameworkDB $db): int
+    public function getTotalAmount(FrameworkDb $db): int
     {
         $query = DbQuery::buildQuery(
             queryParts: [

@@ -27,7 +27,7 @@ class DbSelectStmt
     }
 
     // The classic PDOStatement has execute() and fetch(). It was desired to mimic the
-    // effect of FrameworkDB->select(), which does both on ONE call.
+    // effect of FrameworkDb->select(), which does both on ONE call.
     /**
      * @param list<mixed> $parameters
      *

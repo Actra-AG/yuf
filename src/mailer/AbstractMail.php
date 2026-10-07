@@ -103,7 +103,7 @@ abstract class AbstractMail
         );
     }
 
-    public function addCC(string $inputEmail, string $inputName = ''): void
+    public function addCc(string $inputEmail, string $inputName = ''): void
     {
         $this->mailerAddressCollection->addItem(
             mailerAddress: MailerAddress::createCcAddress(
@@ -113,7 +113,7 @@ abstract class AbstractMail
         );
     }
 
-    public function addBCC(string $inputEmail, string $inputName = ''): void
+    public function addBcc(string $inputEmail, string $inputName = ''): void
     {
         $this->mailerAddressCollection->addItem(
             mailerAddress: MailerAddress::createBccAddress(
@@ -190,7 +190,7 @@ abstract class AbstractMail
                         message: $alternativeBody,
                         length: $wordWrap,
                         charSet: $charSet,
-                        qp_mode: false,
+                        qpMode: false,
                     );
                     break;
                 default:
@@ -198,7 +198,7 @@ abstract class AbstractMail
                         message: $body,
                         length: $wordWrap,
                         charSet: $charSet,
-                        qp_mode: false,
+                        qpMode: false,
                     );
                     break;
             }

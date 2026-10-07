@@ -14,7 +14,7 @@ use actra\yuf\auth\AuthUser;
 use actra\yuf\auth\UnauthorizedAccessRightException;
 use actra\yuf\auth\UnauthorizedIpAddressException;
 use actra\yuf\common\JsonUtils;
-use actra\yuf\common\SimpleXMLExtended;
+use actra\yuf\common\SimpleXmlExtended;
 use actra\yuf\datacheck\Sanitizer;
 use actra\yuf\datacheck\validatorTypes\IpValidator;
 use actra\yuf\exception\NotFoundException;
@@ -176,7 +176,7 @@ abstract class BaseView
         return $this->context->getHtmlDocument();
     }
 
-    protected function setContentByXmlObject(SimpleXMLExtended $xmlObject): void
+    protected function setContentByXmlObject(SimpleXmlExtended $xmlObject): void
     {
         $this->setContent(contentString: $xmlObject->asXML());
     }

@@ -62,7 +62,7 @@ class SearchHelper
      *
      * @throws InvalidArgumentException If a column reference is empty or contains a "?".
      */
-    public static function createSQLFilters(array $filterArr): DbQueryData
+    public static function createSqlFilters(array $filterArr): DbQueryData
     {
         $whereConditions = [];
         $sqlParams = [];
@@ -207,7 +207,7 @@ class SearchHelper
     }
 
     /**
-     * @deprecated "%" and "_" in the string are not escaped and act as wildcards. createSQLFilters() no longer uses it.
+     * @deprecated "%" and "_" in the string are not escaped and act as wildcards. createSqlFilters() no longer uses it.
      */
     public static function addWildcardToString(string $string): string
     {
@@ -371,12 +371,12 @@ class SearchHelper
      *             the search words into the SQL: a "?" in the search text breaks DbQuery::addWherePart() (placeholder
      *             count mismatch), "%" and "_" act as wildcards, and backslashes are removed from the search text.
      */
-    public function getBooleanQuery(string $spaceSeparatedFieldNames, string $query_text, $splitFields = true): string
+    public function getBooleanQuery(string $spaceSeparatedFieldNames, string $queryText, $splitFields = true): string
     {
-        $clean_query_text = $this->cleanQuery(string: $query_text);
+        $cleanQueryText = $this->cleanQuery(string: $queryText);
 
         return '(' . $this->createQuery(
-            text: $clean_query_text,
+            text: $cleanQueryText,
             splitFields: $splitFields,
             spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
         ) . ')';
@@ -529,16 +529,16 @@ class SearchHelper
      */
     private function explodeRespectQuotes(string $line): array
     {
-        $quote_level = 0; #keep track if we are in or out of quote-space
+        $quoteLevel = 0; #keep track if we are in or out of quote-space
         $buffer = '';
 
         for ($a = 0; $a < strlen(string: $line); $a++) {
             if ($line[$a] === '"') {
-                $quote_level++;
-                if ($quote_level === 2) {
-                    $quote_level = 0;
+                $quoteLevel++;
+                if ($quoteLevel === 2) {
+                    $quoteLevel = 0;
                 }
-            } elseif ($line[$a] === ' ' && $quote_level === 0) {
+            } elseif ($line[$a] === ' ' && $quoteLevel === 0) {
                 $buffer = $buffer . '~~~~'; #Hackish magic key
             } else {
                 $buffer = $buffer . $line[$a];
@@ -730,7 +730,7 @@ class SearchHelper
      *
      * @throws InvalidArgumentException If no column is given or a column name is invalid.
      */
-    public function createSQLSearch(string $string, array $columns): array
+    public function createSqlSearch(string $string, array $columns): array
     {
         if ($columns === []) {
             throw new InvalidArgumentException(message: 'At least one column is required for the search.');

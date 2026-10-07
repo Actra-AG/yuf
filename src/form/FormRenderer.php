@@ -52,11 +52,11 @@ abstract class FormRenderer
                 ),
             ],
         );
-        $errorsHTML = [];
+        $errorsHtml = [];
         foreach ($formComponentWithErrors->errorCollection->listErrors() as $htmlText) {
-            $errorsHTML[] = $htmlText->render();
+            $errorsHtml[] = $htmlText->render();
         }
-        $divTag->addText(htmlText: HtmlText::encoded(textContent: implode(separator: '<br>', array: $errorsHTML)));
+        $divTag->addText(htmlText: HtmlText::encoded(textContent: implode(separator: '<br>', array: $errorsHtml)));
         $parentHtmlTag->addTag(htmlTag: $divTag);
     }
 

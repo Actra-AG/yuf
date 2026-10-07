@@ -15,7 +15,7 @@ use Override;
 use RuntimeException;
 use Throwable;
 
-class SMTPMailer extends AbstractMailer
+class SmtpMailer extends AbstractMailer
 {
     public private(set) string $lastReply = '';
     public private(set) array $log = [];
@@ -69,15 +69,15 @@ class SMTPMailer extends AbstractMailer
             commandTimeout: 300,
         );
         $serverName = $this->getServerName();
-        $this->sendCommandEHLO(serverName: $serverName);
+        $this->sendCommandEhlo(serverName: $serverName);
         if ($this->useTls) {
-            $this->sendCommandSTARTTLS();
+            $this->sendCommandStartTls();
             stream_socket_enable_crypto(
                 stream: $this->stream,
                 enable: true,
                 crypto_method: STREAM_CRYPTO_METHOD_TLS_CLIENT,
             );
-            $this->sendCommandEHLO(serverName: $serverName);
+            $this->sendCommandEhlo(serverName: $serverName);
         }
         if ($this->smtpUserName !== '') {
             $this->sendCommandAuthLogin();
@@ -211,7 +211,7 @@ class SMTPMailer extends AbstractMailer
         return $data;
     }
 
-    private function sendCommandEHLO(string $serverName): void
+    private function sendCommandEhlo(string $serverName): void
     {
         $this->sendCommand(
             command: 'EHLO ' . $serverName,
@@ -246,8 +246,8 @@ class SMTPMailer extends AbstractMailer
         if (!is_resource(value: $this->stream)) {
             return false;
         }
-        $sock_status = stream_get_meta_data(stream: $this->stream);
-        if ($sock_status['eof']) {
+        $sockStatus = stream_get_meta_data(stream: $this->stream);
+        if ($sockStatus['eof']) {
             return false;
         }
 
@@ -260,7 +260,7 @@ class SMTPMailer extends AbstractMailer
         fwrite(stream: $this->stream, data: $data . MailerConstants::CRLF);
     }
 
-    private function sendCommandSTARTTLS(): void
+    private function sendCommandStartTls(): void
     {
         $this->sendCommand(
             command: 'STARTTLS',
@@ -317,7 +317,7 @@ class SMTPMailer extends AbstractMailer
     /**
      * Send an SMTP DATA command.
      * Issues a data command and sends the msg_data to the server,
-     * finalizing the mail transaction. $msg_data is the message
+     * finalizing the mail transaction. $msgData is the message
      * that is to be sent with the headers. Each header needs to be
      * on a single line followed by a <CRLF> with the message headers
      * and the message body being separated by an additional <CRLF>.
@@ -363,17 +363,17 @@ class SMTPMailer extends AbstractMailer
                 needle: ':',
             ),
         );
-        $in_headers = false;
+        $inHeaders = false;
         if (
             $field !== ''
             && !str_contains(haystack: $field, needle: ' ')
         ) {
-            $in_headers = true;
+            $inHeaders = true;
         }
         foreach ($lines as $line) {
-            $lines_out = [];
-            if ($in_headers && $line === '') {
-                $in_headers = false;
+            $linesOut = [];
+            if ($inHeaders && $line === '') {
+                $inHeaders = false;
             }
             // Break this line up into several smaller lines if it's too long
             while (strlen(string: $line) > MailerConstants::MAX_LINE_LENGTH) {
@@ -390,29 +390,29 @@ class SMTPMailer extends AbstractMailer
                 if ($pos === false || $pos === 0) {
                     // No nice break found, add a hard break
                     $pos = MailerConstants::MAX_LINE_LENGTH - 1;
-                    $lines_out[] = substr(string: $line, offset: 0, length: $pos);
+                    $linesOut[] = substr(string: $line, offset: 0, length: $pos);
                     $line = substr(string: $line, offset: $pos);
                 } else {
                     // Break at the found point
-                    $lines_out[] = substr(string: $line, offset: 0, length: $pos);
+                    $linesOut[] = substr(string: $line, offset: 0, length: $pos);
                     // Move along by the amount we dealt with
                     $line = substr(string: $line, offset: $pos + 1);
                 }
                 // If processing headers add a LWSP-char to the front of new line RFC822 section 3.1.1
-                if ($in_headers) {
+                if ($inHeaders) {
                     $line = "\t" . $line;
                 }
             }
-            $lines_out[] = $line;
+            $linesOut[] = $line;
 
             // Send the lines to the server
-            foreach ($lines_out as $line_out) {
+            foreach ($linesOut as $lineOut) {
                 // Dot-stuffing as per RFC5321 section 4.5.2
                 // https://tools.ietf.org/html/rfc5321#section-4.5.2
                 if (str_starts_with(haystack: $line, needle: '.')) {
-                    $line_out = '.' . $line_out;
+                    $lineOut = '.' . $lineOut;
                 }
-                $this->sendRawDataToServer(data: $line_out);
+                $this->sendRawDataToServer(data: $lineOut);
             }
         }
         $this->sendCommandDataEnd();

@@ -30,7 +30,7 @@ namespace actra\yuf\mailer;
 
 class MailerFunctions
 {
-    public static function stripTrailingWSP(string $text): string
+    public static function stripTrailingWsp(string $text): string
     {
         return rtrim(string: $text, characters: " \r\n\t");
     }
@@ -96,7 +96,7 @@ class MailerFunctions
             case MailerConstants::ENCODING_BINARY:
                 return $string;
             case MailerConstants::ENCODING_QUOTED_PRINTABLE:
-                return MailerFunctions::encodeQP(string: $string);
+                return MailerFunctions::encodeQp(string: $string);
             default:
                 throw new MailerException(message: 'Unknown encoding: ' . $encoding);
         }
@@ -112,7 +112,7 @@ class MailerFunctions
         return str_replace(search: "\n", replace: $breaktype, subject: $text);
     }
 
-    private static function encodeQP(string $string): string
+    private static function encodeQp(string $string): string
     {
         return MailerFunctions::normalizeBreaks(text: quoted_printable_encode(string: $string));
     }
@@ -179,7 +179,7 @@ class MailerFunctions
             case 'B':
                 if (MailerFunctions::hasMultiBytes(str: $string, charset: $charset)) {
                     // Use a custom function which correctly encodes and wraps long multibyte strings without breaking lines within a character
-                    $encoded = MailerFunctions::base64EncodeWrapMB(str: $string, charset: $charset);
+                    $encoded = MailerFunctions::base64EncodeWrapMb(str: $string, charset: $charset);
                 } else {
                     $encoded = base64_encode(string: $string);
                     $maxLength -= $maxLength % 4;
@@ -197,7 +197,7 @@ class MailerFunctions
                     message: $encoded,
                     length: $maxLength,
                     charSet: $defaultCharSet,
-                    qp_mode: true,
+                    qpMode: true,
                 );
                 $encoded = str_replace(
                     search: '=' . MailerConstants::CRLF,
@@ -222,23 +222,23 @@ class MailerFunctions
         return strlen(string: $str) > mb_strlen(string: $str, encoding: $charset);
     }
 
-    private static function base64EncodeWrapMB(string $str, string $charset): string
+    private static function base64EncodeWrapMb(string $str, string $charset): string
     {
         $linebreak = "\n";
         $start = '=?' . $charset . '?B?';
         $end = '?=';
         $encoded = '';
 
-        $mb_length = mb_strlen(string: $str, encoding: $charset);
+        $mbLength = mb_strlen(string: $str, encoding: $charset);
 
         // Each line must have length <= 75, including $start and $end
         $length = 75 - strlen(string: $start) - strlen(string: $end);
         // Average multi-byte ratio
-        $ratio = $mb_length / strlen(string: $str);
+        $ratio = $mbLength / strlen(string: $str);
         // Base64 has a 4:3 ratio
         $avgLength = floor(num: $length * $ratio * .75);
 
-        for ($i = 0; $i < $mb_length; $i += $offset) {
+        for ($i = 0; $i < $mbLength; $i += $offset) {
             $lookBack = 0;
             do {
                 $offset = $avgLength - $lookBack;
@@ -279,15 +279,15 @@ class MailerFunctions
         return str_replace(search: ' ', replace: '_', subject: $encoded);
     }
 
-    public static function wrapText(string $message, int $length, string $charSet, bool $qp_mode): string
+    public static function wrapText(string $message, int $length, string $charSet, bool $qpMode): string
     {
-        if ($qp_mode) {
-            $soft_break = ' =' . MailerConstants::CRLF;
+        if ($qpMode) {
+            $softBreak = ' =' . MailerConstants::CRLF;
         } else {
-            $soft_break = MailerConstants::CRLF;
+            $softBreak = MailerConstants::CRLF;
         }
         // If utf-8 encoding is used, we will need to make sure we don't split multibyte characters when we wrap
-        $is_utf8 = strtolower($charSet) === MailerConstants::CHARSET_UTF8;
+        $isUtf8 = strtolower($charSet) === MailerConstants::CHARSET_UTF8;
         $lelen = strlen(string: MailerConstants::CRLF);
         $crlflen = strlen(string: MailerConstants::CRLF);
 
@@ -307,17 +307,17 @@ class MailerFunctions
             $buf = '';
             $firstWord = true;
             foreach ($words as $word) {
-                if ($qp_mode && (strlen(string: $word) > $length)) {
-                    $space_left = $length - strlen(string: $buf) - $crlflen;
+                if ($qpMode && (strlen(string: $word) > $length)) {
+                    $spaceLeft = $length - strlen(string: $buf) - $crlflen;
                     if (!$firstWord) {
-                        if ($space_left > 20) {
-                            $len = MailerFunctions::calcLen(len: $space_left, is_utf8: $is_utf8, word: $word);
+                        if ($spaceLeft > 20) {
+                            $len = MailerFunctions::calcLen(len: $spaceLeft, isUtf8: $isUtf8, word: $word);
                             $part = substr(string: $word, offset: 0, length: $len);
                             $word = substr(string: $word, offset: $len);
                             $buf .= ' ' . $part;
                             $message .= $buf . '=' . MailerConstants::CRLF;
                         } else {
-                            $message .= $buf . $soft_break;
+                            $message .= $buf . $softBreak;
                         }
                         $buf = '';
                     }
@@ -325,7 +325,7 @@ class MailerFunctions
                         if ($length <= 0) {
                             break;
                         }
-                        $len = MailerFunctions::calcLen(len: $length, is_utf8: $is_utf8, word: $word);
+                        $len = MailerFunctions::calcLen(len: $length, isUtf8: $isUtf8, word: $word);
                         $part = substr(string: $word, offset: 0, length: $len);
                         $word = substr(string: $word, offset: $len);
 
@@ -336,14 +336,14 @@ class MailerFunctions
                         }
                     }
                 } else {
-                    $buf_o = $buf;
+                    $bufO = $buf;
                     if (!$firstWord) {
                         $buf .= ' ';
                     }
                     $buf .= $word;
 
-                    if ($buf_o !== '' && strlen(string: $buf) > $length) {
-                        $message .= $buf_o . $soft_break;
+                    if ($bufO !== '' && strlen(string: $buf) > $length) {
+                        $message .= $bufO . $softBreak;
                         $buf = $word;
                     }
                 }
@@ -355,9 +355,9 @@ class MailerFunctions
         return $message;
     }
 
-    private static function calcLen(int $len, bool $is_utf8, string $word): int
+    private static function calcLen(int $len, bool $isUtf8, string $word): int
     {
-        if ($is_utf8) {
+        if ($isUtf8) {
             return MailerFunctions::utf8CharBoundary(encodedText: $word, maxLength: $len);
         }
         if (substr(string: $word, offset: $len - 1, length: 1) === '=') {
@@ -480,12 +480,12 @@ class MailerFunctions
         if ($qpos !== false) {
             $fileName = substr($fileName, 0, $qpos);
         }
-        $extension = MailerFunctions::mb_pathinfo(path: $fileName, options: PATHINFO_EXTENSION);
+        $extension = MailerFunctions::mbPathinfo(path: $fileName, options: PATHINFO_EXTENSION);
 
         return MailerMimeTypes::getByExtension(extension: $extension);
     }
 
-    public static function mb_pathinfo(string $path, int $options): string|array
+    public static function mbPathinfo(string $path, int $options): string|array
     {
         $ret = ['dirname' => '', 'basename' => '', 'extension' => '', 'filename' => ''];
         $pathInfo = [];

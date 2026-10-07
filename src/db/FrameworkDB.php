@@ -20,7 +20,7 @@ use RuntimeException;
 use stdClass;
 use Throwable;
 
-class FrameworkDB extends PDO
+class FrameworkDb extends PDO
 {
     private static array $instances = [];
     private bool $usedTransactions = false;
@@ -28,12 +28,12 @@ class FrameworkDB extends PDO
     protected function __construct(DbSettings $dbSettings)
     {
         $identifier = $dbSettings->identifier;
-        if (array_key_exists($identifier, FrameworkDB::$instances)) {
+        if (array_key_exists($identifier, FrameworkDb::$instances)) {
             throw new LogicException(
                 'It is not allowed to instantiate this class multiple times with the same identifier ' . $identifier,
             );
         }
-        FrameworkDB::$instances[$identifier] = $this;
+        FrameworkDb::$instances[$identifier] = $this;
 
         $initSetCommands = [];
         $timeNamesLanguage = $dbSettings->timeNamesLanguage;
@@ -78,14 +78,14 @@ class FrameworkDB extends PDO
         }
     }
 
-    public static function getInstance(DbSettings $dbSettings): FrameworkDB
+    public static function getInstance(DbSettings $dbSettings): FrameworkDb
     {
         $identifier = $dbSettings->identifier;
-        if (isset(FrameworkDB::$instances[$identifier])) {
-            return FrameworkDB::$instances[$identifier];
+        if (isset(FrameworkDb::$instances[$identifier])) {
+            return FrameworkDb::$instances[$identifier];
         }
 
-        return FrameworkDB::$instances[$identifier] = new FrameworkDB($dbSettings);
+        return FrameworkDb::$instances[$identifier] = new FrameworkDb($dbSettings);
     }
 
     /**

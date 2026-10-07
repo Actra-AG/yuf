@@ -60,7 +60,7 @@ readonly class MailerFileAttachment
         $this->path = $path;
         $fileName = trim(string: $fileName);
         if ($fileName === '') {
-            $fileName = MailerFunctions::mb_pathinfo(path: $path, options: PATHINFO_BASENAME);
+            $fileName = MailerFunctions::mbPathinfo(path: $path, options: PATHINFO_BASENAME);
         }
         $this->fileName = $fileName;
         $type = trim(string: $type);

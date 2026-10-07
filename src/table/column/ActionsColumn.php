@@ -37,9 +37,9 @@ class ActionsColumn extends AbstractTableColumn
 
     public function addIndividualActionLink(
         string $identifier,
-        string $linkHTML,
+        string $linkHtml,
     ): void {
-        $this->actionLinks[$identifier] = $linkHTML;
+        $this->actionLinks[$identifier] = $linkHtml;
     }
 
     public function addEditActionLink(

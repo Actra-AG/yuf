@@ -11,7 +11,7 @@ namespace actra\yuf\common;
 
 use actra\yuf\core\HttpResponse;
 
-class CSVFile
+class CsvFile
 {
     private array $rows = [];
 

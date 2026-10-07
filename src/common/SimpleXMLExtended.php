@@ -14,7 +14,7 @@ use SimpleXMLElement;
 use stdClass;
 use Throwable;
 
-class SimpleXMLExtended extends SimpleXMLElement
+class SimpleXmlExtended extends SimpleXMLElement
 {
     /**
      * Converts XML to a nested array for standardized output
@@ -38,7 +38,7 @@ class SimpleXMLExtended extends SimpleXMLElement
             jsonString: JsonUtils::convertToJsonString((array) $tmp),
             returnAssociativeArray: true,
         );
-        SimpleXMLExtended::stringifyEmptyInnerArrays(data: $arr);
+        SimpleXmlExtended::stringifyEmptyInnerArrays(data: $arr);
 
         return $arr;
     }
@@ -56,7 +56,7 @@ class SimpleXMLExtended extends SimpleXMLElement
                 $data = '';
             } else {
                 foreach ($data as &$value) {
-                    SimpleXMLExtended::stringifyEmptyInnerArrays($value, $instanceCounter++);
+                    SimpleXmlExtended::stringifyEmptyInnerArrays($value, $instanceCounter++);
                 }
             }
         }
@@ -70,7 +70,7 @@ class SimpleXMLExtended extends SimpleXMLElement
         }
     }
 
-    public function addArray(array|stdClass $array, ?SimpleXMLElement $xml = null, bool $include_null = true): bool
+    public function addArray(array|stdClass $array, ?SimpleXMLElement $xml = null, bool $includeNull = true): bool
     {
         if ($xml === null) {
             $xml = $this;
@@ -85,7 +85,7 @@ class SimpleXMLExtended extends SimpleXMLElement
         }
 
         foreach ($array as $key => $val) {
-            if (!$include_null && $val === null) {
+            if (!$includeNull && $val === null) {
                 continue;
             }
 
@@ -102,8 +102,8 @@ class SimpleXMLExtended extends SimpleXMLElement
                 $this->addArray($val, $child);
                 continue;
             }
-            if ($child instanceof SimpleXMLExtended) {
-                $child->addCData($val);
+            if ($child instanceof SimpleXmlExtended) {
+                $child->addCdata($val);
             }
         }
 
@@ -113,29 +113,29 @@ class SimpleXMLExtended extends SimpleXMLElement
     #[Override]
     public function addChild(string $qualifiedName, ?string $value = null, ?string $namespace = null): ?static
     {
-        $new_child = parent::addChild($qualifiedName, null, $namespace);
+        $newChild = parent::addChild($qualifiedName, null, $namespace);
 
-        if ($new_child !== null && $value !== null) {
-            $node = dom_import_simplexml($new_child);
+        if ($newChild !== null && $value !== null) {
+            $node = dom_import_simplexml($newChild);
             $no = $node->ownerDocument;
             $node->appendChild($no->createCDATASection($value));
         }
 
-        return $new_child;
+        return $newChild;
     }
 
-    public function addCData($cdata_text): void
+    public function addCdata($cdataText): void
     {
         $node = dom_import_simplexml($this);
         $no = $node->ownerDocument;
-        $node->appendChild($no->createCDATASection((string) $cdata_text));
+        $node->appendChild($no->createCDATASection((string) $cdataText));
     }
 
     /**
      * Append another xml to current xmlElement.
      * Inspired by http://stackoverflow.com/questions/3418019/simplexml-append-one-tree-to-another
      */
-    public function addXML(SimpleXMLElement $xmlToAppend): bool
+    public function addXml(SimpleXMLElement $xmlToAppend): bool
     {
         $parent = dom_import_simplexml($this);
         $child = dom_import_simplexml($xmlToAppend);

@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\table;
 
 use actra\yuf\db\DbQuery;
-use actra\yuf\db\FrameworkDB;
+use actra\yuf\db\FrameworkDb;
 use actra\yuf\table\renderer\TablePaginationRenderer;
 use actra\yuf\tests\Double\CoreTestInstance;
 use actra\yuf\tests\Double\table\FixedPageDbResultTable;
@@ -83,7 +83,7 @@ final class TablePaginationRendererTest extends TestCase
     {
         $table = new FixedPageDbResultTable(
             identifier: 'paginationTest' . ++self::$tableCounter,
-            db: TablePaginationRendererTest::createStub(FrameworkDB::class),
+            db: TablePaginationRendererTest::createStub(FrameworkDb::class),
             dbQuery: TablePaginationRendererTest::createStub(DbQuery::class),
             totalAmount: 100,
             currentPage: 2,

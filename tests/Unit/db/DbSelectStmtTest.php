@@ -18,7 +18,7 @@ use PDOStatement;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Uses an in-memory SQLite database: FrameworkDB itself builds a MySQL connection, but selectRows()/selectRow() only
+ * Uses an in-memory SQLite database: FrameworkDb itself builds a MySQL connection, but selectRows()/selectRow() only
  * delegate to DbSelectStmt.
  */
 final class DbSelectStmtTest extends TestCase

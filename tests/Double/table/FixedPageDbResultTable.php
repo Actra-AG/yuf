@@ -10,14 +10,14 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Double\table;
 
 use actra\yuf\db\DbQuery;
-use actra\yuf\db\FrameworkDB;
+use actra\yuf\db\FrameworkDb;
 use actra\yuf\table\table\DbResultTable;
 
 final class FixedPageDbResultTable extends DbResultTable
 {
     public function __construct(
         string $identifier,
-        FrameworkDB $db,
+        FrameworkDb $db,
         DbQuery $dbQuery,
         private readonly int $totalAmount,
         private readonly int $currentPage,

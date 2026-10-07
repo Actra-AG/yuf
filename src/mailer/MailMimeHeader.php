@@ -158,7 +158,7 @@ class MailMimeHeader
             ),
         );
         $this->addHeaderItemIfNotEmpty(
-            item: $this->getMailMIME(
+            item: $this->getMailMime(
                 messageType: $messageType,
                 contentType: $contentType,
                 charSet: $charSet,
@@ -176,7 +176,7 @@ class MailMimeHeader
         $this->headerItems[] = $item;
     }
 
-    private function getMailMIME(
+    private function getMailMime(
         string $messageType,
         string $contentType,
         string $charSet,
@@ -245,7 +245,7 @@ class MailMimeHeader
 
     public function getMimeHeader(): string
     {
-        return MailerFunctions::stripTrailingWSP(
+        return MailerFunctions::stripTrailingWsp(
             text: implode(
                 separator: StringUtils::IMPLODE_DEFAULT_SEPARATOR,
                 array: $this->headerItems,

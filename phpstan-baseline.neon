@@ -253,7 +253,7 @@ parameters:
 			path: src/api/CurlResponse.php
 
 		-
-			rawMessage: 'Parameter $data of class actra\yuf\common\SimpleXMLExtended constructor expects string, string|false given.'
+			rawMessage: 'Parameter $data of class actra\yuf\common\SimpleXmlExtended constructor expects string, string|false given.'
 			identifier: argument.type
 			count: 1
 			path: src/api/CurlResponse.php
@@ -445,64 +445,64 @@ parameters:
 			path: src/auth/MicrosoftIdToken.php
 
 		-
-			rawMessage: 'Method actra\yuf\common\CSVFile::__construct() has parameter $headersList with no value type specified in iterable type array.'
+			rawMessage: 'Method actra\yuf\common\CsvFile::__construct() has parameter $headersList with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
-			path: src/common/CSVFile.php
+			path: src/common/CsvFile.php
 
 		-
-			rawMessage: 'Method actra\yuf\common\CSVFile::addRow() has parameter $data with no value type specified in iterable type array.'
+			rawMessage: 'Method actra\yuf\common\CsvFile::addRow() has parameter $data with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
-			path: src/common/CSVFile.php
+			path: src/common/CsvFile.php
 
 		-
-			rawMessage: 'Method actra\yuf\common\CSVFile::stringToArray() return type has no value type specified in iterable type array.'
+			rawMessage: 'Method actra\yuf\common\CsvFile::stringToArray() return type has no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
-			path: src/common/CSVFile.php
+			path: src/common/CsvFile.php
 
 		-
 			rawMessage: 'Parameter $fields of function fputcsv expects array<int|string, bool|float|int|string|null>, array given.'
 			identifier: argument.type
 			count: 1
-			path: src/common/CSVFile.php
+			path: src/common/CsvFile.php
 
 		-
 			rawMessage: 'Parameter $fields of function fputcsv expects array<int|string, bool|float|int|string|null>, mixed given.'
 			identifier: argument.type
 			count: 1
-			path: src/common/CSVFile.php
+			path: src/common/CsvFile.php
 
 		-
 			rawMessage: 'Parameter $separator of function explode expects non-empty-string, string given.'
 			identifier: argument.type
 			count: 1
-			path: src/common/CSVFile.php
+			path: src/common/CsvFile.php
 
 		-
 			rawMessage: 'Parameter $stream of function fclose expects resource, resource|false given.'
 			identifier: argument.type
 			count: 1
-			path: src/common/CSVFile.php
+			path: src/common/CsvFile.php
 
 		-
 			rawMessage: 'Parameter $stream of function fputcsv expects resource, resource|false given.'
 			identifier: argument.type
 			count: 2
-			path: src/common/CSVFile.php
+			path: src/common/CsvFile.php
 
 		-
 			rawMessage: 'Parameter $stream of function fwrite expects resource, resource|false given.'
 			identifier: argument.type
 			count: 1
-			path: src/common/CSVFile.php
+			path: src/common/CsvFile.php
 
 		-
-			rawMessage: Property actra\yuf\common\CSVFile::$rows type has no value type specified in iterable type array.
+			rawMessage: Property actra\yuf\common\CsvFile::$rows type has no value type specified in iterable type array.
 			identifier: missingType.iterableValue
 			count: 1
-			path: src/common/CSVFile.php
+			path: src/common/CsvFile.php
 
 		-
 			rawMessage: 'Only numeric types are allowed in +, int|false given on the left side.'
@@ -778,73 +778,73 @@ parameters:
 			rawMessage: 'Call to function is_array() with array will always evaluate to true.'
 			identifier: function.alreadyNarrowedType
 			count: 1
-			path: src/common/SimpleXMLExtended.php
+			path: src/common/SimpleXmlExtended.php
 
 		-
 			rawMessage: 'Calling isset() is forbidden, compare explicitly: array_key_exists(), !== null or a typed property (see standards/php.md).'
 			identifier: disallowed.isset
 			count: 1
-			path: src/common/SimpleXMLExtended.php
+			path: src/common/SimpleXmlExtended.php
 
 		-
 			rawMessage: 'Cannot call method createCDATASection() on DOMDocument|null.'
 			identifier: method.nonObject
 			count: 2
-			path: src/common/SimpleXMLExtended.php
+			path: src/common/SimpleXmlExtended.php
 
 		-
 			rawMessage: 'Cannot call method importNode() on DOMDocument|null.'
 			identifier: method.nonObject
 			count: 1
-			path: src/common/SimpleXMLExtended.php
+			path: src/common/SimpleXmlExtended.php
 
 		-
 			rawMessage: Cannot cast mixed to string.
 			identifier: cast.string
 			count: 1
-			path: src/common/SimpleXMLExtended.php
+			path: src/common/SimpleXmlExtended.php
 
 		-
-			rawMessage: 'Method actra\yuf\common\SimpleXMLExtended::addArray() has parameter $array with no value type specified in iterable type array.'
+			rawMessage: 'Method actra\yuf\common\SimpleXmlExtended::addArray() has parameter $array with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
-			path: src/common/SimpleXMLExtended.php
+			path: src/common/SimpleXmlExtended.php
 
 		-
-			rawMessage: 'Method actra\yuf\common\SimpleXMLExtended::addCData() has parameter $cdata_text with no type specified.'
+			rawMessage: 'Method actra\yuf\common\SimpleXmlExtended::addCdata() has parameter $cdataText with no type specified.'
 			identifier: missingType.parameter
 			count: 1
-			path: src/common/SimpleXMLExtended.php
+			path: src/common/SimpleXmlExtended.php
 
 		-
-			rawMessage: 'Method actra\yuf\common\SimpleXMLExtended::convertXmlToArray() return type has no value type specified in iterable type array.'
+			rawMessage: 'Method actra\yuf\common\SimpleXmlExtended::convertXmlToArray() return type has no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
-			path: src/common/SimpleXMLExtended.php
+			path: src/common/SimpleXmlExtended.php
 
 		-
-			rawMessage: 'Method actra\yuf\common\SimpleXMLExtended::convertXmlToArray() should return array|false but returns mixed.'
+			rawMessage: 'Method actra\yuf\common\SimpleXmlExtended::convertXmlToArray() should return array|false but returns mixed.'
 			identifier: return.type
 			count: 1
-			path: src/common/SimpleXMLExtended.php
+			path: src/common/SimpleXmlExtended.php
 
 		-
-			rawMessage: 'Method actra\yuf\common\SimpleXMLExtended::stringifyEmptyInnerArrays() has parameter $data with no type specified.'
+			rawMessage: 'Method actra\yuf\common\SimpleXmlExtended::stringifyEmptyInnerArrays() has parameter $data with no type specified.'
 			identifier: missingType.parameter
 			count: 1
-			path: src/common/SimpleXMLExtended.php
+			path: src/common/SimpleXmlExtended.php
 
 		-
 			rawMessage: PHPDoc tag @return with type array|bool is not subtype of native type array|false.
 			identifier: return.phpDocType
 			count: 1
-			path: src/common/SimpleXMLExtended.php
+			path: src/common/SimpleXmlExtended.php
 
 		-
 			rawMessage: 'Parameter #1 $node of method DOMNode::appendChild() expects DOMCdataSection, (DOMCdataSection|false) given.'
 			identifier: argument.type
 			count: 2
-			path: src/common/SimpleXMLExtended.php
+			path: src/common/SimpleXmlExtended.php
 
 		-
 			rawMessage: 'Method actra\yuf\common\StringUtils::explode() has parameter $tokens with no value type specified in iterable type array.'
@@ -1882,67 +1882,67 @@ parameters:
 			rawMessage: 'Calling isset() is forbidden, compare explicitly: array_key_exists(), !== null or a typed property (see standards/php.md).'
 			identifier: disallowed.isset
 			count: 3
-			path: src/db/FrameworkDB.php
+			path: src/db/FrameworkDb.php
 
 		-
-			rawMessage: 'Method actra\yuf\db\FrameworkDB::createInQuery() has parameter $paramArr with no value type specified in iterable type array.'
+			rawMessage: 'Method actra\yuf\db\FrameworkDb::createInQuery() has parameter $paramArr with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
-			path: src/db/FrameworkDB.php
+			path: src/db/FrameworkDb.php
 
 		-
-			rawMessage: 'Method actra\yuf\db\FrameworkDB::execute() has parameter $parameters with no value type specified in iterable type array.'
+			rawMessage: 'Method actra\yuf\db\FrameworkDb::execute() has parameter $parameters with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
-			path: src/db/FrameworkDB.php
+			path: src/db/FrameworkDb.php
 
 		-
-			rawMessage: 'Method actra\yuf\db\FrameworkDB::getInstance() should return actra\yuf\db\FrameworkDB but returns mixed.'
+			rawMessage: 'Method actra\yuf\db\FrameworkDb::getInstance() should return actra\yuf\db\FrameworkDb but returns mixed.'
 			identifier: return.type
 			count: 1
-			path: src/db/FrameworkDB.php
+			path: src/db/FrameworkDb.php
 
 		-
-			rawMessage: 'Method actra\yuf\db\FrameworkDB::getQueryLog() should return array<actra\yuf\db\DbQueryLogItem> but returns array.'
+			rawMessage: 'Method actra\yuf\db\FrameworkDb::getQueryLog() should return array<actra\yuf\db\DbQueryLogItem> but returns array.'
 			identifier: return.type
 			count: 1
-			path: src/db/FrameworkDB.php
+			path: src/db/FrameworkDb.php
 
 		-
-			rawMessage: 'Method actra\yuf\db\FrameworkDB::prepare() has parameter $options with no value type specified in iterable type array.'
+			rawMessage: 'Method actra\yuf\db\FrameworkDb::prepare() has parameter $options with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
-			path: src/db/FrameworkDB.php
+			path: src/db/FrameworkDb.php
 
 		-
-			rawMessage: 'Method actra\yuf\db\FrameworkDB::select() has parameter $parameters with no value type specified in iterable type array.'
+			rawMessage: 'Method actra\yuf\db\FrameworkDb::select() has parameter $parameters with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
-			path: src/db/FrameworkDB.php
+			path: src/db/FrameworkDb.php
 
 		-
-			rawMessage: 'Method actra\yuf\db\FrameworkDB::select() should return array<stdClass> but returns array.'
+			rawMessage: 'Method actra\yuf\db\FrameworkDb::select() should return array<stdClass> but returns array.'
 			identifier: return.type
 			count: 1
-			path: src/db/FrameworkDB.php
+			path: src/db/FrameworkDb.php
 
 		-
-			rawMessage: 'Parameter #1 $name (string) of method actra\yuf\db\FrameworkDB::lastInsertId() should be contravariant with parameter $name (string|null) of method PDO::lastInsertId()'
+			rawMessage: 'Parameter #1 $name (string) of method actra\yuf\db\FrameworkDb::lastInsertId() should be contravariant with parameter $name (string|null) of method PDO::lastInsertId()'
 			identifier: method.childParameterType
 			count: 1
-			path: src/db/FrameworkDB.php
+			path: src/db/FrameworkDb.php
 
 		-
-			rawMessage: Property actra\yuf\db\FrameworkDB::$instances type has no value type specified in iterable type array.
+			rawMessage: Property actra\yuf\db\FrameworkDb::$instances type has no value type specified in iterable type array.
 			identifier: missingType.iterableValue
 			count: 1
-			path: src/db/FrameworkDB.php
+			path: src/db/FrameworkDb.php
 
 		-
-			rawMessage: 'Return type (int) of method actra\yuf\db\FrameworkDB::lastInsertId() should be compatible with return type (string|false) of method PDO::lastInsertId()'
+			rawMessage: 'Return type (int) of method actra\yuf\db\FrameworkDb::lastInsertId() should be compatible with return type (string|false) of method PDO::lastInsertId()'
 			identifier: method.childReturnType
 			count: 1
-			path: src/db/FrameworkDB.php
+			path: src/db/FrameworkDb.php
 
 		-
 			rawMessage: 'Calling isset() is forbidden, compare explicitly: array_key_exists(), !== null or a typed property (see standards/php.md).'
@@ -2089,13 +2089,13 @@ parameters:
 			path: src/html/HtmlDocument.php
 
 		-
-			rawMessage: 'Method actra\yuf\html\HtmlDocument::setCSSActive() has parameter $m with no value type specified in iterable type array.'
+			rawMessage: 'Method actra\yuf\html\HtmlDocument::setCssActive() has parameter $m with no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/html/HtmlDocument.php
 
 		-
-			rawMessage: 'Method actra\yuf\html\HtmlDocument::setCSSActive() should return string but returns mixed.'
+			rawMessage: 'Method actra\yuf\html\HtmlDocument::setCssActive() should return string but returns mixed.'
 			identifier: return.type
 			count: 1
 			path: src/html/HtmlDocument.php
@@ -2311,7 +2311,7 @@ parameters:
 			path: src/mailer/MailerFunctions.php
 
 		-
-			rawMessage: 'Method actra\yuf\mailer\MailerFunctions::mb_pathinfo() return type has no value type specified in iterable type array.'
+			rawMessage: 'Method actra\yuf\mailer\MailerFunctions::mbPathinfo() return type has no value type specified in iterable type array.'
 			identifier: missingType.iterableValue
 			count: 1
 			path: src/mailer/MailerFunctions.php
@@ -2392,37 +2392,37 @@ parameters:
 			rawMessage: 'Only booleans are allowed in &&, int given on the left side.'
 			identifier: booleanAnd.leftNotBoolean
 			count: 1
-			path: src/mailer/SMTPMailer.php
+			path: src/mailer/SmtpMailer.php
 
 		-
 			rawMessage: 'Parameter $length of function substr expects int|null, int<0, max>|false given.'
 			identifier: argument.type
 			count: 1
-			path: src/mailer/SMTPMailer.php
+			path: src/mailer/SmtpMailer.php
 
 		-
 			rawMessage: 'Parameter $string of function substr expects string, string|false given.'
 			identifier: argument.type
 			count: 1
-			path: src/mailer/SMTPMailer.php
+			path: src/mailer/SmtpMailer.php
 
 		-
-			rawMessage: Property actra\yuf\mailer\SMTPMailer::$log type has no value type specified in iterable type array.
+			rawMessage: Property actra\yuf\mailer\SmtpMailer::$log type has no value type specified in iterable type array.
 			identifier: missingType.iterableValue
 			count: 1
-			path: src/mailer/SMTPMailer.php
+			path: src/mailer/SmtpMailer.php
 
 		-
-			rawMessage: 'Property actra\yuf\mailer\SMTPMailer::$stream (resource) does not accept null.'
+			rawMessage: 'Property actra\yuf\mailer\SmtpMailer::$stream (resource) does not accept null.'
 			identifier: assign.propertyType
 			count: 1
-			path: src/mailer/SMTPMailer.php
+			path: src/mailer/SmtpMailer.php
 
 		-
-			rawMessage: 'Property actra\yuf\mailer\SMTPMailer::$stream (resource) does not accept resource|false.'
+			rawMessage: 'Property actra\yuf\mailer\SmtpMailer::$stream (resource) does not accept resource|false.'
 			identifier: assign.propertyType
 			count: 1
-			path: src/mailer/SMTPMailer.php
+			path: src/mailer/SmtpMailer.php
 
 		-
 			rawMessage: 'Property actra\yuf\mailer\attachment\MailerFileAttachment::$fileName (string) does not accept array|string.'

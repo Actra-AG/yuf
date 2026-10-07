@@ -4,6 +4,70 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.18.0] – 2026-10-08
+
+### ⚠️ Class, method and constant names follow the coding standard
+
+Acronyms are written like words, methods are camelCase and constants UPPER_SNAKE_CASE. The old names are removed.
+
+| Before                                                | After                                               |
+|:------------------------------------------------------|:----------------------------------------------------|
+| `actra\yuf\common\CSVFile`                            | `actra\yuf\common\CsvFile`                          |
+| `actra\yuf\mailer\SMTPMailer`                         | `actra\yuf\mailer\SmtpMailer`                       |
+| `actra\yuf\db\FrameworkDB`                            | `actra\yuf\db\FrameworkDb`                          |
+| `actra\yuf\common\SimpleXMLExtended`                  | `actra\yuf\common\SimpleXmlExtended`                |
+| `SimpleXmlExtended::addXML()`                         | `SimpleXmlExtended::addXml()`                       |
+| `SimpleXmlExtended::addCData($cdata_text)`            | `SimpleXmlExtended::addCdata($cdataText)`           |
+| `SimpleXmlExtended::addArray(include_null: …)`        | `SimpleXmlExtended::addArray(includeNull: …)`       |
+| `AbstractMail::addCC()`                               | `AbstractMail::addCc()`                             |
+| `AbstractMail::addBCC()`                              | `AbstractMail::addBcc()`                            |
+| `MailerFunctions::stripTrailingWSP()`                 | `MailerFunctions::stripTrailingWsp()`               |
+| `MailerFunctions::mb_pathinfo()`                      | `MailerFunctions::mbPathinfo()`                     |
+| `MailerFunctions::wrapText(qp_mode: …)`               | `MailerFunctions::wrapText(qpMode: …)`              |
+| `StringUtils::utf8_to_punycode_email()`               | `StringUtils::utf8ToPunycodeEmail()`                |
+| `StringUtils::punycode_to_utf8_email()`               | `StringUtils::punycodeToUtf8Email()`                |
+| `SearchHelper::createSQLFilters()`                    | `SearchHelper::createSqlFilters()`                  |
+| `SearchHelper::createSQLSearch()`                     | `SearchHelper::createSqlSearch()`                   |
+| `SearchHelper::getBooleanQuery(query_text: …)`        | `SearchHelper::getBooleanQuery(queryText: …)`       |
+| `ActionsColumn::addIndividualActionLink(linkHTML: …)` | `ActionsColumn::addIndividualActionLink(linkHtml: …)` |
+| `SmartTable::totalAmount`                             | `SmartTable::TOTAL_AMOUNT`                          |
+| `SmartTable::table`                                   | `SmartTable::TABLE`                                 |
+| `SmartTable::tableHeader`                             | `SmartTable::TABLE_HEADER`                          |
+| `SmartTable::tableBody`                               | `SmartTable::TABLE_BODY`                            |
+| `SmartTable::cells`                                   | `SmartTable::CELLS`                                 |
+| `SmartTable::totalAmountMessagePlaceholder`           | `SmartTable::TOTAL_AMOUNT_MESSAGE_PLACEHOLDER`      |
+| `SmartTable::amount`                                  | `SmartTable::AMOUNT`                                |
+| `DbResultTable::sessionDataType` (protected)          | `DbResultTable::SESSION_DATA_TYPE`                  |
+| `DbResultTable::filter` (protected)                   | `DbResultTable::FILTER`                             |
+| `DbResultTable::pagination` (protected)               | `DbResultTable::PAGINATION`                         |
+
+The values of the table constants are unchanged (they are placeholders in the HTML templates and session keys), so
+existing templates and stored sessions keep working.
+
+```php
+// Before
+use actra\yuf\common\CSVFile;
+use actra\yuf\db\FrameworkDB;
+
+class DB extends FrameworkDB {}
+
+$csv = new CSVFile(/* … */);
+$mail->addCC(inputEmail: 'a@example.com');
+$table->tableHtml = '<tbody>' . SmartTable::tableBody . '</tbody>';
+
+// After
+use actra\yuf\common\CsvFile;
+use actra\yuf\db\FrameworkDb;
+
+class DB extends FrameworkDb {}
+
+$csv = new CsvFile(/* … */);
+$mail->addCc(inputEmail: 'a@example.com');
+$table->tableHtml = '<tbody>' . SmartTable::TABLE_BODY . '</tbody>';
+```
+
+---
+
 ## [v4.17.0] – 2026-10-08
 
 ### ⚠️ Request, response and error names follow the coding standard

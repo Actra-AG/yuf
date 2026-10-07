@@ -21,7 +21,7 @@ use LogicException;
 
 class TableFilter
 {
-    private const string sessionDataType = 'tableFilter';
+    private const string SESSION_DATA_TYPE = 'tableFilter';
     /** @var TableFilter[] */
     private static array $instances = [];
 
@@ -198,7 +198,7 @@ class TableFilter
     protected function getFromSession(string $index): ?string
     {
         return DbResultTable::getFromSession(
-            dataType: TableFilter::sessionDataType,
+            dataType: TableFilter::SESSION_DATA_TYPE,
             identifier: $this->identifier,
             index: $index,
         );
@@ -207,7 +207,7 @@ class TableFilter
     protected function saveToSession(string $index, string $value): void
     {
         DbResultTable::saveToSession(
-            dataType: TableFilter::sessionDataType,
+            dataType: TableFilter::SESSION_DATA_TYPE,
             identifier: $this->identifier,
             index: $index,
             value: $value,

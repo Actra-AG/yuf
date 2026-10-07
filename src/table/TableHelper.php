@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\table;
 
 use actra\yuf\db\DbQuery;
-use actra\yuf\db\FrameworkDB;
+use actra\yuf\db\FrameworkDb;
 use actra\yuf\table\column\ActionsColumn;
 use actra\yuf\table\column\CallbackColumn;
 use actra\yuf\table\column\DateColumn;
@@ -43,7 +43,7 @@ class TableHelper
 
     public static function createDbResultTable(
         string $identifier,
-        FrameworkDB $db,
+        FrameworkDb $db,
         string $selectQuery,
         array $params = [],
         ?TableFilter $tableFilter = null,

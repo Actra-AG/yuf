@@ -17,7 +17,7 @@ use LogicException;
 
 abstract class AbstractTableFilterField
 {
-    private const string sessionDataType = 'columnFilter';
+    private const string SESSION_DATA_TYPE = 'columnFilter';
 
     /** @var AbstractTableFilterField[] */
     private static array $instances = [];
@@ -68,7 +68,7 @@ abstract class AbstractTableFilterField
     protected function getFromSession(string $index): ?string
     {
         return DbResultTable::getFromSession(
-            dataType: AbstractTableFilterField::sessionDataType,
+            dataType: AbstractTableFilterField::SESSION_DATA_TYPE,
             identifier: $this->identifier,
             index: $index,
         );
@@ -77,7 +77,7 @@ abstract class AbstractTableFilterField
     protected function saveToSession(string $index, string $value): void
     {
         DbResultTable::saveToSession(
-            dataType: AbstractTableFilterField::sessionDataType,
+            dataType: AbstractTableFilterField::SESSION_DATA_TYPE,
             identifier: $this->identifier,
             index: $index,
             value: $value,

@@ -392,12 +392,12 @@ class MailMimeBody
         if (!MailerFunctions::fileIsAccessible(path: $path)) {
             throw new MailerException(message: 'File Error: Could not open file: ' . $path);
         }
-        $file_buffer = file_get_contents(filename: $path);
-        if ($file_buffer === false) {
+        $fileBuffer = file_get_contents(filename: $path);
+        if ($fileBuffer === false) {
             throw new MailerException(message: 'File Error: Could not open file: ' . $path);
         }
 
-        return MailerFunctions::encodeString(string: $file_buffer, encoding: $encoding);
+        return MailerFunctions::encodeString(string: $fileBuffer, encoding: $encoding);
     }
 
     private function endBoundary(string $boundary): string

@@ -231,7 +231,7 @@ final class SearchHelperBooleanQueryTest extends TestCase
             // @phpstan-ignore method.deprecated (characterization test of the deprecated method)
             SearchHelper::getInstance(instanceName: 'test')->getBooleanQuery(
                 spaceSeparatedFieldNames: 'a.name b.city',
-                query_text: $queryText,
+                queryText: $queryText,
             ),
             $inlinedQuery,
         );

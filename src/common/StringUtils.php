@@ -154,7 +154,7 @@ class StringUtils
         return ($string === '') ? null : $string;
     }
 
-    public static function utf8_to_punycode_email(string $email): string
+    public static function utf8ToPunycodeEmail(string $email): string
     {
         $fragments = explode(separator: '@', string: $email);
         $lastFragment = array_pop(array: $fragments);
@@ -162,7 +162,7 @@ class StringUtils
         return implode(separator: '@', array: $fragments) . '@' . idn_to_ascii(domain: $lastFragment);
     }
 
-    public static function punycode_to_utf8_email(string $email): string
+    public static function punycodeToUtf8Email(string $email): string
     {
         $fragments = explode(separator: '@', string: $email);
         $lastFragment = array_pop(array: $fragments);

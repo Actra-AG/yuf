@@ -162,13 +162,13 @@ class HtmlDocument
             pattern: '/(\s+id="nav-(.+?)")(\s+class="(.+?)")?/',
             callback: [
                 $this,
-                'setCSSActive',
+                'setCssActive',
             ],
             subject: $htmlAfterReplacements,
         );
     }
 
-    private function setCSSActive(array $m): string
+    private function setCssActive(array $m): string
     {
         if (!in_array(
             needle: $m[2],

@@ -11,7 +11,7 @@ namespace actra\yuf\tests\Unit\table\filter;
 
 use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQuery;
-use actra\yuf\db\FrameworkDB;
+use actra\yuf\db\FrameworkDb;
 use actra\yuf\security\CsrfToken;
 use actra\yuf\table\filter\TableFilter;
 use actra\yuf\tests\Double\table\FixedPageDbResultTable;
@@ -69,7 +69,7 @@ final class TableFilterCsrfTest extends TestCase
         $tableFilter->validate(
             dbResultTable: new FixedPageDbResultTable(
                 identifier: $identifier . 'Table',
-                db: TableFilterCsrfTest::createStub(FrameworkDB::class),
+                db: TableFilterCsrfTest::createStub(FrameworkDb::class),
                 dbQuery: TableFilterCsrfTest::createStub(DbQuery::class),
                 totalAmount: 0,
                 currentPage: 1,

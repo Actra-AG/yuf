@@ -56,7 +56,7 @@ class TextFilterField extends AbstractTableFilterField
     #[Override]
     public function getWhereCondition(): DbQueryData
     {
-        return SearchHelper::createSQLFilters(filterArr: [
+        return SearchHelper::createSqlFilters(filterArr: [
             preg_replace(
                 pattern: '!\s+!',
                 replacement: ' ',

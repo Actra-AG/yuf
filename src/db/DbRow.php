@@ -19,7 +19,7 @@ use ReflectionEnum;
  * column, a NULL in a non-nullable getter or a value of the wrong type throws a `DbRowValueException`, nothing is
  * cast silently.
  *
- * Types that arrive from pdo_mysql with the attributes set by `FrameworkDB` (native prepared statements, no
+ * Types that arrive from pdo_mysql with the attributes set by `FrameworkDb` (native prepared statements, no
  * stringified fetches): integer and tinyint columns as `int`, FLOAT/DOUBLE as `float`, DECIMAL, DATE, DATETIME and
  * TIMESTAMP as `string`, BIGINT UNSIGNED above PHP_INT_MAX as `string`. The getters also accept numeric strings, so
  * they keep working if a project switches to emulated prepares or stringified fetches.

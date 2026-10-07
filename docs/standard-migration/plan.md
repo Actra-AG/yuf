@@ -556,3 +556,16 @@ Smaller releases, each for one area:
   names (`MimeType` string values and the `SimpleXMLExtended` class are left to step 7).
 - Pure renames, tests adapted. Baseline unchanged (766 entries); `example/` checked: `/` 200, `nope.html` 404, HTTP
   redirects to HTTPS.
+
+### Step 7 (v4.18.0) – done
+
+- Classes `CsvFile`, `SmtpMailer`, `FrameworkDb`, `SimpleXmlExtended` (files renamed); methods `addXml()`, `addCdata()`,
+  `addCc()`, `addBcc()`, `stripTrailingWsp()`, `mbPathinfo()`, `utf8ToPunycodeEmail()`, `punycodeToUtf8Email()`,
+  `createSqlFilters()`, `createSqlSearch()`; constants of `SmartTable` and `DbResultTable` in UPPER_SNAKE_CASE (values
+  unchanged); the private `SESSION_DATA_TYPE` of `TableFilter` and `AbstractTableFilterField` too.
+- Beyond the list: private `getMailMime()`, `encodeQp()`, `base64EncodeWrapMb()`, `sendCommandEhlo()`,
+  `sendCommandStartTls()`, `setCssActive()`, `$errorsHtml`; public named parameters `linkHtml`, `includeNull`,
+  `queryText`, `qpMode`; snake_case variables in `src/common/` and `src/mailer/`.
+- Pure renames, tests adapted; baseline unchanged (766 entries, messages renamed). Left: `src/template/`, `src/phone/`.
+- The four class files are case-only renames: on a case-insensitive file system, git keeps the old file names unless
+  they are renamed with `git mv` (otherwise the autoloader does not find the classes on Linux).

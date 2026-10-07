@@ -18,24 +18,24 @@ use LogicException;
 // Can be extended or used directly to render a table with data from different sources
 class SmartTable
 {
-    public const string totalAmount = '[totalAmount]';
-    public const string table = '[table]';
-    public const string tableHeader = '[tableHeader]';
-    public const string tableBody = '[tableBody]';
-    public const string cells = '[cells]';
+    public const string TOTAL_AMOUNT = '[totalAmount]';
+    public const string TABLE = '[table]';
+    public const string TABLE_HEADER = '[tableHeader]';
+    public const string TABLE_BODY = '[tableBody]';
+    public const string CELLS = '[cells]';
 
-    public const string totalAmountMessagePlaceholder = '[TOTAL_AMOUNT_MESSAGE]';
-    public const string amount = '[AMOUNT]';
+    public const string TOTAL_AMOUNT_MESSAGE_PLACEHOLDER = '[TOTAL_AMOUNT_MESSAGE]';
+    public const string AMOUNT = '[AMOUNT]';
     /** @var SmartTable[] */
     private static array $instances = [];
     public string $noDataHtml = '<p class="no-entry">Es wurden keine Einträge gefunden.</p>';
-    public string $totalAmountHtml = '<p class="search-result">' . SmartTable::totalAmountMessagePlaceholder . '</p>';
-    public string $fullHtml = '<div class="table-meta table-meta-header">' . SmartTable::totalAmount . '</div><div class="table-wrap">' . SmartTable::table . '</div>';
-    public string $tableHtml = '<thead>' . SmartTable::tableHeader . '</thead><tbody>' . SmartTable::tableBody . '</tbody>';
-    public string $oddRowHtml = '<tr>' . SmartTable::cells . '</tr>';
-    public string $evenRowHtml = '<tr>' . SmartTable::cells . '</tr>';
+    public string $totalAmountHtml = '<p class="search-result">' . SmartTable::TOTAL_AMOUNT_MESSAGE_PLACEHOLDER . '</p>';
+    public string $fullHtml = '<div class="table-meta table-meta-header">' . SmartTable::TOTAL_AMOUNT . '</div><div class="table-wrap">' . SmartTable::TABLE . '</div>';
+    public string $tableHtml = '<thead>' . SmartTable::TABLE_HEADER . '</thead><tbody>' . SmartTable::TABLE_BODY . '</tbody>';
+    public string $oddRowHtml = '<tr>' . SmartTable::CELLS . '</tr>';
+    public string $evenRowHtml = '<tr>' . SmartTable::CELLS . '</tr>';
     public string $totalAmountMessage_oneResult = 'Es wurde <strong>1</strong> Resultat gefunden.';
-    public string $totalAmountMessage_numResults = 'Es wurden <strong>' . SmartTable::amount . '</strong> Resultate gefunden.';
+    public string $totalAmountMessage_numResults = 'Es wurden <strong>' . SmartTable::AMOUNT . '</strong> Resultate gefunden.';
     /** @var AbstractTableColumn[] */
     public private(set) array $columns = [];
     private array $cssClasses = ['table'];
@@ -83,7 +83,7 @@ class SmartTable
             $totalAmountMessage = $this->totalAmountMessage_oneResult;
         } else {
             $totalAmountMessage = str_replace(
-                search: SmartTable::amount,
+                search: SmartTable::AMOUNT,
                 replace: number_format(num: $totalAmountOfItems, thousands_separator: '\''),
                 subject: $this->totalAmountMessage_numResults,
             );
@@ -98,7 +98,7 @@ class SmartTable
             }
             $rowHtml = (($rowNumber % 2) === 0) ? $this->evenRowHtml : $this->oddRowHtml;
             $bodyArr[] = str_replace(
-                search: SmartTable::cells,
+                search: SmartTable::CELLS,
                 replace: implode(separator: PHP_EOL, array: $cells),
                 subject: $rowHtml,
             );
@@ -109,8 +109,8 @@ class SmartTable
         }
         $tableHtml = str_replace(
             search: [
-                SmartTable::tableHeader,
-                SmartTable::tableBody,
+                SmartTable::TABLE_HEADER,
+                SmartTable::TABLE_BODY,
             ],
             replace: [
                 $this->tableHeadRenderer->render(smartTable: $this),
@@ -120,12 +120,12 @@ class SmartTable
         );
 
         $placeholders = [
-            SmartTable::totalAmount => str_replace(
-                search: SmartTable::totalAmountMessagePlaceholder,
+            SmartTable::TOTAL_AMOUNT => str_replace(
+                search: SmartTable::TOTAL_AMOUNT_MESSAGE_PLACEHOLDER,
                 replace: $totalAmountMessage,
                 subject: $this->totalAmountHtml,
             ),
-            SmartTable::table => implode(
+            SmartTable::TABLE => implode(
                 separator: PHP_EOL,
                 array: [
                     '<' . implode(

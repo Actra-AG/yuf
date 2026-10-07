@@ -58,7 +58,7 @@ final class SearchHelperFilterTest extends TestCase
     #[DataProvider('filterProvider')]
     public function testCreateSQLFilters(string $value, string $expectedQuery, array $expectedParameters): void
     {
-        $data = SearchHelper::createSQLFilters(filterArr: [' c ' => $value]);
+        $data = SearchHelper::createSqlFilters(filterArr: [' c ' => $value]);
 
         $this->assertSame($expectedQuery, $data->query);
         $this->assertSame($expectedParameters, $data->params);
@@ -66,7 +66,7 @@ final class SearchHelperFilterTest extends TestCase
 
     public function testCreateSQLFiltersCombinesColumnsAndAcceptsExpressions(): void
     {
-        $data = SearchHelper::createSQLFilters(filterArr: [
+        $data = SearchHelper::createSqlFilters(filterArr: [
             "CONCAT_WS(' ', a.firstName, a.lastName)" => 'haas',
             'b.city' => '',
             'b.zip' => 80,
@@ -96,7 +96,7 @@ final class SearchHelperFilterTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        SearchHelper::createSQLFilters(filterArr: [$column => 'haas']);
+        SearchHelper::createSqlFilters(filterArr: [$column => 'haas']);
     }
 
     /**
@@ -130,7 +130,7 @@ final class SearchHelperFilterTest extends TestCase
         );
         $dbQuery = DbQuery::createFromSqlQuery(query: 'SELECT id FROM item');
         $dbQuery->addOrderPart(column: 'id');
-        $data = SearchHelper::createSQLFilters(filterArr: ["name || ' ' || city" => $value]);
+        $data = SearchHelper::createSqlFilters(filterArr: ["name || ' ' || city" => $value]);
         $dbQuery->addWherePart(wherePart: $data->query, parameters: $data->params);
         $queryData = $dbQuery->getDbQueryData(offset: 0, rowCount: 100);
 
@@ -143,7 +143,7 @@ final class SearchHelperFilterTest extends TestCase
 
     public function testCreateSQLSearchQuotesColumnsAndEscapesWords(): void
     {
-        $result = SearchHelper::getInstance(instanceName: 'test')->createSQLSearch(
+        $result = SearchHelper::getInstance(instanceName: 'test')->createSqlSearch(
             string: 'foo "bar baz" 50%',
             columns: ['name', 't.city', '`order`'],
         );
@@ -164,7 +164,7 @@ final class SearchHelperFilterTest extends TestCase
     {
         $this->assertSame(
             ['sql' => '', 'params' => [], 'searchWords' => []],
-            SearchHelper::getInstance(instanceName: 'test')->createSQLSearch(string: ' , ', columns: ['name']),
+            SearchHelper::getInstance(instanceName: 'test')->createSqlSearch(string: ' , ', columns: ['name']),
         );
     }
 
@@ -189,6 +189,6 @@ final class SearchHelperFilterTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        SearchHelper::getInstance(instanceName: 'test')->createSQLSearch(string: 'foo', columns: $columns);
+        SearchHelper::getInstance(instanceName: 'test')->createSqlSearch(string: 'foo', columns: $columns);
     }
 }
