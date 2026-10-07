@@ -31,6 +31,6 @@ class CspNonce
 
     private static function generate(): string
     {
-        return base64_encode(string: openssl_random_pseudo_bytes(length: 16));
+        return base64_encode(string: random_bytes(length: 16));
     }
 }

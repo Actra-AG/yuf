@@ -4,6 +4,20 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.9.2] – 2026-10-07
+
+### 🐛 Bug Fixes
+
+* **Security:** `HttpResponse` always sends `Strict-Transport-Security: max-age=31536000` (one year). File responses
+  used their cache `maxAge` for HSTS, so `CSVFile` and `FileHandler` downloads (`maxAge: 0`) sent `max-age=0`, which
+  removes HSTS in the browser. The `maxAge` of `createResponseFromFilePath()` only sets the `Expires` header now.
+* `CsrfToken::validateToken()` compares the token with `hash_equals()` (timing-safe) instead of `===`.
+* The CSRF token and the CSP nonce are generated with `random_bytes()` instead of `openssl_random_pseudo_bytes()`.
+* `AbstractSessionHandler` deletes the old session file when it regenerates the session ID (on login, logout and
+  privilege change), so a stolen old session ID cannot be used anymore.
+
+---
+
 ## [v4.9.1] – 2026-10-07
 
 ### 🐛 Bug Fixes

@@ -232,7 +232,7 @@ abstract class AbstractSessionHandler extends SessionHandler
                 session_start(options: [
                     'use_strict_mode' => true,
                 ]);
-                session_regenerate_id();
+                session_regenerate_id(delete_old_session: true);
                 $this->ID = AbstractSessionHandler::readSessionID();
             } catch (Throwable $throwable) {
                 if (!str_contains(haystack: $throwable->getMessage(), needle: 'Session object destruction failed')) {
@@ -307,7 +307,7 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     public function regenerateID(): void
     {
-        session_regenerate_id();
+        session_regenerate_id(delete_old_session: true);
         $this->ID = AbstractSessionHandler::readSessionID();
         $this->setSessionCreated();
     }

@@ -17,6 +17,9 @@ use LogicException;
 
 class HttpResponse
 {
+    /** One year, independent of how long the response may be cached (max-age=0 would remove HSTS in the browser). */
+    private const int HSTS_MAX_AGE = 31536000;
+
     private array $headers = [];
 
     private function __construct(
@@ -27,7 +30,6 @@ class HttpResponse
         ContentType              $contentType,
         private readonly ?string $contentString = null,
         private readonly ?string $contentFilePath = null,
-        int                      $maxAge = 31536000, // one year
     ) {
         $this->setHeader(
             key: 'Etag',
@@ -71,7 +73,7 @@ class HttpResponse
         }
         $this->setHeader(
             key: 'Strict-Transport-Security',
-            val: 'max-age=' . $maxAge,
+            val: 'max-age=' . HttpResponse::HSTS_MAX_AGE,
         );
     }
 
@@ -222,7 +224,6 @@ class HttpResponse
             contentType: $contentType,
             contentString: null,
             contentFilePath: $realPath,
-            maxAge: $maxAge,
         );
         $httpResponse->setHeader(
             key: 'Content-Length',

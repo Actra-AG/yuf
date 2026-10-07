@@ -2965,20 +2965,8 @@ parameters:
 			path: src/response/HttpErrorResponseContent.php
 
 		-
-			rawMessage: 'Calling openssl_random_pseudo_bytes() is forbidden, use random_bytes().'
-			identifier: disallowed.function
-			count: 1
-			path: src/security/CspNonce.php
-
-		-
 			rawMessage: 'Calling isset() is forbidden, compare explicitly: array_key_exists(), !== null or a typed property (see standards/php.md).'
 			identifier: disallowed.isset
-			count: 1
-			path: src/security/CsrfToken.php
-
-		-
-			rawMessage: 'Calling openssl_random_pseudo_bytes() is forbidden, use random_bytes().'
-			identifier: disallowed.function
 			count: 1
 			path: src/security/CsrfToken.php
 

@@ -31,7 +31,7 @@ class CsrfToken
             unset($_SESSION[CsrfToken::CSRFTOKENSTORAGE]);
         }
         if (!isset($_SESSION[CsrfToken::CSRFTOKENSTORAGE])) {
-            $_SESSION[CsrfToken::CSRFTOKENSTORAGE] = base64_encode(openssl_random_pseudo_bytes(32));
+            $_SESSION[CsrfToken::CSRFTOKENSTORAGE] = base64_encode(string: random_bytes(length: 32));
         }
 
         return $_SESSION[CsrfToken::CSRFTOKENSTORAGE];
@@ -59,6 +59,6 @@ class CsrfToken
 
     public static function validateToken(string $token): bool
     {
-        return ($token === CsrfToken::getToken());
+        return hash_equals(known_string: CsrfToken::getToken(), user_string: $token);
     }
 }
