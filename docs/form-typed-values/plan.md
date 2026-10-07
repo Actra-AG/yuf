@@ -12,7 +12,7 @@ while `getRawValue()` and the `mixed` value storage go away.
 
 ## Rules for every task
 
-- Read and follow `AGENTS.md` and `docs/code-quality.md`.
+- Read and follow `AGENTS.md` and `actra/coding-standard`.
 - **No breaking changes in v3.3.0.** Do not change signatures (parameter types, return types, visibility) of existing
   public or protected methods or constructors. Do not add `final` to existing classes, do not remove or rename anything.
   Only add new methods and fix bugs.

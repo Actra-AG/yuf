@@ -15,7 +15,7 @@ Status: approved (2026-10-04), refined in review. Task 1 of [plan.md](plan.md). 
   `getValueAsDateTimeImmutable()`, `isChecked()`, `HiddenField` `valueIsInt` (now `HiddenIntegerField`), `AmountParser`.
   `null`/missing input gives `''`/`null`/`[]`; invalid values throw an `UnexpectedValueException` naming the field.
   Typed setters replace `setValue(mixed)`.
-- Code rules of `docs/code-quality.md` apply: `final` by default (except the extension points, 3.12), one purpose
+- Code rules of `actra/coding-standard` apply: `final` by default (except the extension points, 3.12), one purpose
   per class, composition over inheritance, enums `*Enum`, no new abstraction without a reason, pure logic separated
   from I/O.
 
@@ -468,7 +468,7 @@ final class FormNameRegistry
   `Form::__construct()` calls `FormNameRegistry::register($name)` exactly where it checks today, so the behaviour is
   unchanged (`LogicException` 'A Form with the name "x" has already been defined.'); `$formNameList` is removed from
   `Form`. This is the **one deliberately kept piece of global state in `src/form/`** (an exception to the "no new static
-  state" rule of `docs/code-quality.md`, because it is existing behaviour that is moved, not new state). Why it stays
+  state" rule of `actra/coding-standard`, because it is existing behaviour that is moved, not new state). Why it stays
   global: the check needs a memory that lives for the whole request and spans independent `Form` instances; passing a
   registry to every `Form` would be boilerplate in every project for a safety check; checking via `FormInput` would
   need static memoization too (a `FormInput` is built per `validate()` call). Containing it in a small named class

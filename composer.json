@@ -28,22 +28,27 @@
     "ext-ctype": "*"
   },
   "require-dev": {
-    "phpstan/phpstan": "^2.2",
+    "actra/coding-standard": "^1.1",
     "phpunit/phpunit": "^13.4"
   },
   "scripts": {
+    "cs": "php-cs-fixer check --diff",
+    "cs:fix": "php-cs-fixer fix",
     "phpstan": "phpstan analyse --memory-limit=-1",
     "phpstan:baseline": "phpstan analyse --memory-limit=-1 --generate-baseline",
     "test": "phpunit",
     "check": [
+      "@cs",
       "@phpstan",
       "@test"
     ]
   },
   "scripts-descriptions": {
-    "phpstan": "Run the static analysis (PHPStan level 10)",
+    "cs": "Check the code style (PER Coding Style)",
+    "cs:fix": "Fix the code style",
+    "phpstan": "Run the static analysis (PHPStan level 10, strict)",
     "phpstan:baseline": "Regenerate phpstan-baseline.neon",
     "test": "Run all tests",
-    "check": "Run the static analysis and all tests"
+    "check": "Check the code style, run the static analysis and all tests"
   }
 }

@@ -433,8 +433,9 @@ For more detailed examples, please refer to:
 
 ## Contributing
 
-Follow [docs/code-quality.md](docs/code-quality.md) and [AGENTS.md](AGENTS.md). Every change must pass the static
-analysis (PHPStan level 10) and all tests:
+Follow the [Actra coding standard](https://github.com/Actra-AG/coding-standard) (installed as development dependency
+`actra/coding-standard`) and the project-specific rules in [AGENTS.md](AGENTS.md). Every change must pass the code style
+check, the static analysis (PHPStan level 10, strict) and all tests:
 
 ```bash
 composer install

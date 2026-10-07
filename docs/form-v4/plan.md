@@ -13,7 +13,7 @@ are allowed and documented in `UPGRADE.md` with before/after examples.
 
 - Work on the branch `v4`. v3 patches are made on `main` and then merged into `v4`; `v4` is merged into `main` for
   the v4.0.0 release.
-- Read and follow `AGENTS.md` and `docs/code-quality.md` (full rules, including `final`, enums and fixing all
+- Read and follow `AGENTS.md` and `actra/coding-standard` (full rules, including `final`, enums and fixing all
   baseline entries of touched files).
 - The characterization and getter tests from v3.3.0 are the regression base: features they cover must keep working;
   tests only change where the API changes on purpose.

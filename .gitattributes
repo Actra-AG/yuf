@@ -1,6 +1,8 @@
 /.ddev export-ignore
+/.editorconfig export-ignore
 /.gitattributes export-ignore
 /.gitignore export-ignore
+/.php-cs-fixer.dist.php export-ignore
 /AGENTS.md export-ignore
 /CLAUDE.md export-ignore
 /docs export-ignore
