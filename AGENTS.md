@@ -31,7 +31,8 @@ This project follows the Actra coding standard, installed as development depende
 - PHPStan and PHP-CS-Fixer also check the PHP code of `example/`. Only generated code is excluded: the phone number
   metadata in `src/phone/data/` and the template cache of the example in `example/app/cache/`.
 - Exceptions: specific SPL exceptions or the yuf exceptions.
-- Keep the existing security features (CSP nonces, CSRF tokens, IP whitelists) working and covered by tests.
+- Keep the existing security features (CSP nonces, CSRF tokens, IP whitelists) working and covered by tests. They
+  follow `standards/security.md` like all other code; this is no exception from it.
 - yuf ships no JavaScript.
 - `.ddev/config.yaml` provides PHP 8.5 without a database.
 - `example/` is a minimal running app (https://yuf.ddev.site/) using the sources of `src/`. Keep it working when changing
