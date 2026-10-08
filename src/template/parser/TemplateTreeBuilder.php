@@ -38,7 +38,9 @@ final class TemplateTreeBuilder
      */
     public function addTag(string $name, array $attributes, int $line): void
     {
-        $this->addNode(node: new TagNode(name: $name, attributes: $attributes, children: [], line: $line, hasBody: false));
+        $this->addNode(
+            node: new TagNode(name: $name, attributes: $attributes, children: [], line: $line, hasBody: false),
+        );
     }
 
     /**
@@ -61,8 +63,9 @@ final class TemplateTreeBuilder
         }
         if ($frame->name !== $name) {
             throw new TemplateException(
-                reason: 'The closing tag </' . $this->namespacePrefix . ':' . $name . '> does not match the opening tag <'
-                    . $this->namespacePrefix . ':' . $frame->name . '> of line ' . $frame->line,
+                reason: 'The closing tag </' . $this->namespacePrefix . ':' . $name
+                    . '> does not match the opening tag <' . $this->namespacePrefix . ':' . $frame->name
+                    . '> of line ' . $frame->line,
                 templateFile: $this->templateFile,
                 templateLine: $line,
             );

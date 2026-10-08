@@ -57,7 +57,10 @@ final class TemplateLangTagTest extends TemplateEngineTestCase
         $templateFile = $this->writeTemplate(source: "{tst:lang key='greeting' vars='name'}");
 
         $this->expectException(TemplateException::class);
-        $this->expectExceptionMessageIs('The vars "name" must be an array with the values for the placeholders, got string in ' . $templateFile . ' on line 1');
+        $this->expectExceptionMessageIs(
+            'The vars "name" must be an array with the values for the placeholders, got string in ' . $templateFile
+                . ' on line 1',
+        );
 
         $this->renderFile(templateFile: $templateFile, data: ['name' => 'Anna']);
     }
@@ -67,7 +70,10 @@ final class TemplateLangTagTest extends TemplateEngineTestCase
         $templateFile = $this->writeTemplate(source: '<tst:lang key="greeting" vars="name"/>');
 
         $this->expectException(TemplateException::class);
-        $this->expectExceptionMessageIs('The vars "name" must be an array with the values for the placeholders, got string in ' . $templateFile . ' on line 1');
+        $this->expectExceptionMessageIs(
+            'The vars "name" must be an array with the values for the placeholders, got string in ' . $templateFile
+                . ' on line 1',
+        );
 
         $this->renderFile(templateFile: $templateFile, data: ['name' => 'Anna']);
     }

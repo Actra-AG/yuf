@@ -42,7 +42,8 @@ final class OptionsTagTest extends TemplateEngineTestCase
         );
 
         $this->assertSame(
-            "<option value=\"1\" selected>One</option>\n<option value=\"2\">Two</option>\n<option value=\"3\" selected>Three</option>\n",
+            "<option value=\"1\" selected>One</option>\n<option value=\"2\">Two</option>\n<option value=\"3\" "
+                . "selected>Three</option>\n",
             $html,
         );
     }
@@ -51,21 +52,45 @@ final class OptionsTagTest extends TemplateEngineTestCase
     {
         $data = ['o' => [1 => 'One', 'a' => 'A', '' => 'Empty'], 's' => '1'];
 
-        $this->assertStringContainsString('<option value="1" selected>', $this->render(source: OptionsTagTest::SOURCE, data: $data));
-        $this->assertStringContainsString('<option value="1" selected>', $this->render(source: OptionsTagTest::SOURCE, data: [...$data, 's' => 1]));
-        $this->assertStringContainsString('<option value="1" selected>', $this->render(source: OptionsTagTest::SOURCE, data: [...$data, 's' => new StringableValue(value: '1')]));
-        $this->assertStringNotContainsString('selected', $this->render(source: OptionsTagTest::SOURCE, data: [...$data, 's' => '01']));
+        $this->assertStringContainsString(
+            '<option value="1" selected>',
+            $this->render(source: OptionsTagTest::SOURCE, data: $data),
+        );
+        $this->assertStringContainsString(
+            '<option value="1" selected>',
+            $this->render(source: OptionsTagTest::SOURCE, data: [...$data, 's' => 1]),
+        );
+        $this->assertStringContainsString(
+            '<option value="1" selected>',
+            $this->render(source: OptionsTagTest::SOURCE, data: [...$data, 's' => new StringableValue(value: '1')]),
+        );
+        $this->assertStringNotContainsString(
+            'selected',
+            $this->render(source: OptionsTagTest::SOURCE, data: [...$data, 's' => '01']),
+        );
         // A boolean has the text '1' (as in the output of a text tag)
-        $this->assertStringContainsString('<option value="1" selected>', $this->render(source: OptionsTagTest::SOURCE, data: [...$data, 's' => true]));
+        $this->assertStringContainsString(
+            '<option value="1" selected>',
+            $this->render(source: OptionsTagTest::SOURCE, data: [...$data, 's' => true]),
+        );
     }
 
     public function testNullAndEmptySelectionSelectNothingExceptTheEmptyKey(): void
     {
         $data = ['o' => ['a' => 'A', '' => 'Empty']];
 
-        $this->assertStringNotContainsString('selected', $this->render(source: OptionsTagTest::SOURCE, data: [...$data, 's' => null]));
-        $this->assertStringNotContainsString('selected', $this->render(source: OptionsTagTest::SOURCE, data: [...$data, 's' => []]));
-        $this->assertStringContainsString('<option value="" selected>', $this->render(source: OptionsTagTest::SOURCE, data: [...$data, 's' => '']));
+        $this->assertStringNotContainsString(
+            'selected',
+            $this->render(source: OptionsTagTest::SOURCE, data: [...$data, 's' => null]),
+        );
+        $this->assertStringNotContainsString(
+            'selected',
+            $this->render(source: OptionsTagTest::SOURCE, data: [...$data, 's' => []]),
+        );
+        $this->assertStringContainsString(
+            '<option value="" selected>',
+            $this->render(source: OptionsTagTest::SOURCE, data: [...$data, 's' => '']),
+        );
     }
 
     public function testNestedArrayBecomesAnOptgroup(): void
@@ -76,7 +101,8 @@ final class OptionsTagTest extends TemplateEngineTestCase
         );
 
         $this->assertSame(
-            "<option value=\"a\">A</option>\n<optgroup label=\"g\">\n<option value=\"b\">B</option>\n<option value=\"c\" selected>C</option>\n</optgroup>\n",
+            "<option value=\"a\">A</option>\n<optgroup label=\"g\">\n<option value=\"b\">B</option>\n<option "
+                . "value=\"c\" selected>C</option>\n</optgroup>\n",
             $html,
         );
     }
@@ -89,7 +115,8 @@ final class OptionsTagTest extends TemplateEngineTestCase
         );
 
         $this->assertSame(
-            "<option value=\"a&quot;b\" selected>T&lt;w&gt;o &amp; &lt;i&gt;x&lt;/i&gt;</option>\n<optgroup label=\"g&lt;\">\n<option value=\"x\">&quot;q&quot;</option>\n</optgroup>\n",
+            "<option value=\"a&quot;b\" selected>T&lt;w&gt;o &amp; &lt;i&gt;x&lt;/i&gt;</option>\n<optgroup "
+                . "label=\"g&lt;\">\n<option value=\"x\">&quot;q&quot;</option>\n</optgroup>\n",
             $html,
         );
     }
@@ -115,7 +142,10 @@ final class OptionsTagTest extends TemplateEngineTestCase
 
     public function testEmptyListRendersNothing(): void
     {
-        $this->assertSame('[]', $this->render(source: '[' . OptionsTagTest::SOURCE . ']', data: ['o' => [], 's' => '']));
+        $this->assertSame(
+            '[]',
+            $this->render(source: '[' . OptionsTagTest::SOURCE . ']', data: ['o' => [], 's' => '']),
+        );
     }
 
     public function testOptionsThatAreNotAnArrayThrow(): void
@@ -123,7 +153,9 @@ final class OptionsTagTest extends TemplateEngineTestCase
         $templateFile = $this->writeTemplate(source: OptionsTagTest::SOURCE);
 
         $this->expectException(TemplateException::class);
-        $this->expectExceptionMessageIs('The options "o" must be an array, got string in ' . $templateFile . ' on line 1');
+        $this->expectExceptionMessageIs(
+            'The options "o" must be an array, got string in ' . $templateFile . ' on line 1',
+        );
 
         $this->renderFile(templateFile: $templateFile, data: ['o' => 'text', 's' => '']);
     }
@@ -134,7 +166,8 @@ final class OptionsTagTest extends TemplateEngineTestCase
 
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
-            'Cannot output a value of type stdClass, only text, numbers, booleans and null in ' . $templateFile . ' on line 1',
+            'Cannot output a value of type stdClass, only text, numbers, booleans and null in ' . $templateFile
+                . ' on line 1',
         );
 
         $this->renderFile(templateFile: $templateFile, data: ['o' => ['a' => (object) []], 's' => '']);
@@ -156,7 +189,8 @@ final class OptionsTagTest extends TemplateEngineTestCase
 
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
-            'The template data "s" does not exist. Check that the view provides a replacement with this identifier in ' . $templateFile . ' on line 1',
+            'The template data "s" does not exist. Check that the view provides a replacement with this identifier in '
+                . $templateFile . ' on line 1',
         );
 
         $this->renderFile(templateFile: $templateFile, data: ['o' => ['a' => 'A']]);

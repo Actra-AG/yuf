@@ -71,7 +71,8 @@ final class LangTagTest extends TemplateEngineTestCase
 
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
-            'The vars "name" must be an array with the values for the placeholders, got string in ' . $templateFile . ' on line 1',
+            'The vars "name" must be an array with the values for the placeholders, got string in ' . $templateFile
+                . ' on line 1',
         );
 
         $this->renderFile(templateFile: $templateFile, data: ['name' => 'Anna']);
@@ -83,7 +84,8 @@ final class LangTagTest extends TemplateEngineTestCase
 
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
-            'Cannot output a value of type array, only text, numbers, booleans and null in ' . $templateFile . ' on line 1',
+            'Cannot output a value of type array, only text, numbers, booleans and null in ' . $templateFile
+                . ' on line 1',
         );
 
         $this->renderFile(templateFile: $templateFile, data: ['texts' => ['name' => ['Anna']]]);

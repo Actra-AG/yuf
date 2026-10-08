@@ -160,7 +160,8 @@ final class TemplateFilesTest extends TemplateEngineTestCase
                 '    <ul>',
                 '                    <li class="backdisabled">',
                 '        <span>',
-                '          <svg height="24" role="img" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><title>Back &lt;&amp;&gt;</title><path',
+                '          <svg height="24" role="img" viewBox="0 0 24 24" width="24" '
+                    . 'xmlns="http://www.w3.org/2000/svg"><title>Back &lt;&amp;&gt;</title><path',
                 '                  d="M0 0h24v24H0z" fill="none"/><path',
                 '                  d="M10.828 12l4.95 4.95-1.414 1.414L8 12l6.364-6.364 1.414 1.414z"/></svg>',
                 '        </span>',
@@ -168,11 +169,14 @@ final class TemplateFilesTest extends TemplateEngineTestCase
                 '        ',
                 '                                                        <li><strong>1</strong></li>',
                 '            ',
-                '                                                                        <li><a href="?page=2|list&amp;x=1">2</a></li>',
-                '                                                                        <li><a href="?page=3|list&amp;x=1">3</a></li>',
+                '                                                                        <li><a '
+                    . 'href="?page=2|list&amp;x=1">2</a></li>',
+                '                                                                        <li><a '
+                    . 'href="?page=3|list&amp;x=1">3</a></li>',
                 '                                                    <li class="next">',
                 '                <a href="?page=2|list">',
-                '                    <svg height="24" role="img" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">',
+                '                    <svg height="24" role="img" viewBox="0 0 24 24" width="24" '
+                    . 'xmlns="http://www.w3.org/2000/svg">',
                 '                        <title>Next</title>',
                 '                        <path d="M0 0h24v24H0z" fill="none"/>',
                 '                        <path d="M13.172 12l-4.95-4.95 1.414-1.414L16 12l-6.364 6.364-1.414-1.414z"/>',
@@ -207,7 +211,8 @@ final class TemplateFilesTest extends TemplateEngineTestCase
                 '    <ul>',
                 '                    <li class="back">',
                 '                <a href="?page=3|list">',
-                '                    <svg height="24" role="img" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">',
+                '                    <svg height="24" role="img" viewBox="0 0 24 24" width="24" '
+                    . 'xmlns="http://www.w3.org/2000/svg">',
                 '                        <title>Back &lt;&amp;&gt;</title>',
                 '                        <path d="M0 0h24v24H0z" fill="none"/>',
                 '                        <path d="M10.828 12l4.95 4.95-1.414 1.414L8 12l6.364-6.364 1.414 1.414z"/>',
@@ -215,16 +220,20 @@ final class TemplateFilesTest extends TemplateEngineTestCase
                 '                </a>',
                 '            </li>',
                 '                                                        <li><a href="?page=1|list&amp;x=1">1</a></li>',
-                '                                                                        <li><a href="?page=2|list&amp;x=1">2</a></li>',
+                '                                                                        <li><a '
+                    . 'href="?page=2|list&amp;x=1">2</a></li>',
                 '                                        <li><span class="pagination-dots">...</span></li>',
                 '                                                            <li><strong>4</strong></li>',
                 '            ',
-                '                                                            <li><span class="pagination-dots">...</span></li>',
+                '                                                            <li><span class="pagination-dots">...'
+                    . '</span></li>',
                 '                                        <li><a href="?page=6|list&amp;x=1">6</a></li>',
-                '                                                                        <li><a href="?page=7|list&amp;x=1">7</a></li>',
+                '                                                                        <li><a '
+                    . 'href="?page=7|list&amp;x=1">7</a></li>',
                 '                                                    <li class="next">',
                 '                <a href="?page=5|list">',
-                '                    <svg height="24" role="img" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">',
+                '                    <svg height="24" role="img" viewBox="0 0 24 24" width="24" '
+                    . 'xmlns="http://www.w3.org/2000/svg">',
                 '                        <title>Next</title>',
                 '                        <path d="M0 0h24v24H0z" fill="none"/>',
                 '                        <path d="M13.172 12l-4.95-4.95 1.414-1.414L16 12l-6.364 6.364-1.414-1.414z"/>',
@@ -253,7 +262,8 @@ final class TemplateFilesTest extends TemplateEngineTestCase
                 '    <ul>',
                 '                    <li class="back">',
                 '                <a href="?page=2|list">',
-                '                    <svg height="24" role="img" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">',
+                '                    <svg height="24" role="img" viewBox="0 0 24 24" width="24" '
+                    . 'xmlns="http://www.w3.org/2000/svg">',
                 '                        <title>Back &lt;&amp;&gt;</title>',
                 '                        <path d="M0 0h24v24H0z" fill="none"/>',
                 '                        <path d="M10.828 12l4.95 4.95-1.414 1.414L8 12l6.364-6.364 1.414 1.414z"/>',
@@ -265,7 +275,8 @@ final class TemplateFilesTest extends TemplateEngineTestCase
                 '            ',
                 '                                                    <li class="nextdisabled">',
                 '        <span>',
-                '          <svg height="24" role="img" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><title>Next</title><path',
+                '          <svg height="24" role="img" viewBox="0 0 24 24" width="24" '
+                    . 'xmlns="http://www.w3.org/2000/svg"><title>Next</title><path',
                 '                  d="M0 0h24v24H0z" fill="none"/><path',
                 '                  d="M13.172 12l-4.95-4.95 1.414-1.414L16 12l-6.364 6.364-1.414-1.414z"/></svg>',
                 '        </span>',
@@ -295,10 +306,13 @@ final class TemplateFilesTest extends TemplateEngineTestCase
                 '<div class="table-filter-wrapper">',
                 '            <div class="table-filter-legend-wrap">',
                 '            <button class="trigger-table-filter-legend">',
-                '                <svg height="24" role="img" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">',
+                '                <svg height="24" role="img" viewBox="0 0 24 24" width="24" '
+                    . 'xmlns="http://www.w3.org/2000/svg">',
                 '                    <title>Suchoptionen</title>',
                 '                    <path d="M0 0h24v24H0z" fill="none"/>',
-                '                    <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-1-5h2v2h-2v-2zm2-1.645V14h-2v-1.5a1 1 0 0 1 1-1 1.5 1.5 0 1 0-1.471-1.794l-1.962-.393A3.501 3.501 0 1 1 13 13.355z"/>',
+                '                    <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 '
+                    . '10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-1-5h2v2h-2v-2zm2-1.645V14h-2v-1.5a1 1 0 0 1 1-1 1.5 '
+                    . '1.5 0 1 0-1.471-1.794l-1.962-.393A3.501 3.501 0 1 1 13 13.355z"/>',
                 '                </svg>',
                 '            </button>',
                 '            <div class="table-filter-legend">',
@@ -333,23 +347,29 @@ final class TemplateFilesTest extends TemplateEngineTestCase
                 '            </div>',
                 '        </div>',
                 '        <form action="?table&amp;find" class="form-tablefilter" method="post">',
-                '        <input type="hidden" name="csrf" value="token">        <div class="table-filter-primary-wrap">',
+                '        <input type="hidden" name="csrf" value="token">        <div '
+                    . 'class="table-filter-primary-wrap">',
                 '            <ul class="table-filter table-filter-primary">',
                 '                                    <li>',
                 '                                                    <label>',
-                '                                Name                                <input name="name" type="text">                            </label>',
+                '                                Name                                <input name="name" type="text"> '
+                    . '                           </label>',
                 '                                            </li>',
                 '                                    <li>',
                 '                                                    <label class="highlight">',
-                '                                City                                <input name="city" type="text" value="Bern">                            </label>',
+                '                                City                                <input name="city" type="text" '
+                    . 'value="Bern">                            </label>',
                 '                        ',
                 '                                            </li>',
                 '                            </ul>',
-                '                                                <button class="trigger-table-filter-secondary triggered" type="button">',
-                '                        <svg height="24" role="img" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">',
+                '                                                <button class="trigger-table-filter-secondary '
+                    . 'triggered" type="button">',
+                '                        <svg height="24" role="img" viewBox="0 0 24 24" width="24" '
+                    . 'xmlns="http://www.w3.org/2000/svg">',
                 '                            <title>Erweiterte Suche</title>',
                 '                            <path d="M0 0h24v24H0z" fill="none"/>',
-                '                            <path d="M11 11V7h2v4h4v2h-4v4h-2v-4H7v-2h4zm1 11C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/>',
+                '                            <path d="M11 11V7h2v4h4v2h-4v4h-2v-4H7v-2h4zm1 11C6.477 22 2 17.523 2 '
+                    . '12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/>',
                 '                        </svg>',
                 '                    </button>',
                 '                ',
@@ -358,7 +378,8 @@ final class TemplateFilesTest extends TemplateEngineTestCase
                 '                <ul class="table-filter table-filter-secondary">',
                 '                                            <li>',
                 '                                                            <label>',
-                '                                    Status                                    <select name="status"></select>                                </label>',
+                '                                    Status                                    <select '
+                    . 'name="status"></select>                                </label>',
                 '                                                    </li>',
                 '                                    </ul>',
                 '            </div>',
@@ -389,23 +410,29 @@ final class TemplateFilesTest extends TemplateEngineTestCase
             TemplateFilesTest::lines([
                 '<div class="table-filter-wrapper">',
                 '        <form action="?table&amp;find" class="form-tablefilter" method="post">',
-                '        <input type="hidden" name="csrf" value="token">        <div class="table-filter-primary-wrap">',
+                '        <input type="hidden" name="csrf" value="token">        <div '
+                    . 'class="table-filter-primary-wrap">',
                 '            <ul class="table-filter table-filter-primary">',
                 '                                    <li>',
                 '                                                    <label>',
-                '                                Name                                <input name="name" type="text">                            </label>',
+                '                                Name                                <input name="name" type="text"> '
+                    . '                           </label>',
                 '                                            </li>',
                 '                                    <li>',
                 '                                                    <label class="highlight">',
-                '                                City                                <input name="city" type="text" value="Bern">                            </label>',
+                '                                City                                <input name="city" type="text" '
+                    . 'value="Bern">                            </label>',
                 '                        ',
                 '                                            </li>',
                 '                            </ul>',
-                '                                                <button class="trigger-table-filter-secondary" type="button">',
-                '                        <svg height="24" role="img" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">',
+                '                                                <button class="trigger-table-filter-secondary" '
+                    . 'type="button">',
+                '                        <svg height="24" role="img" viewBox="0 0 24 24" width="24" '
+                    . 'xmlns="http://www.w3.org/2000/svg">',
                 '                            <title>Erweiterte Suche</title>',
                 '                            <path d="M0 0h24v24H0z" fill="none"/>',
-                '                            <path d="M11 11V7h2v4h4v2h-4v4h-2v-4H7v-2h4zm1 11C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/>',
+                '                            <path d="M11 11V7h2v4h4v2h-4v4h-2v-4H7v-2h4zm1 11C6.477 22 2 17.523 2 '
+                    . '12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/>',
                 '                        </svg>',
                 '                    </button>',
                 '                                    </div>',
@@ -413,7 +440,8 @@ final class TemplateFilesTest extends TemplateEngineTestCase
                 '                <ul class="table-filter table-filter-secondary">',
                 '                                            <li>',
                 '                                                            <label>',
-                '                                    Status                                    <select name="status"></select>                                </label>',
+                '                                    Status                                    <select '
+                    . 'name="status"></select>                                </label>',
                 '                                                    </li>',
                 '                                    </ul>',
                 '            </div>',
@@ -444,15 +472,18 @@ final class TemplateFilesTest extends TemplateEngineTestCase
             TemplateFilesTest::lines([
                 '<div class="table-filter-wrapper">',
                 '        <form action="?table&amp;find" class="form-tablefilter" method="post">',
-                '        <input type="hidden" name="csrf" value="token">        <div class="table-filter-primary-wrap">',
+                '        <input type="hidden" name="csrf" value="token">        <div '
+                    . 'class="table-filter-primary-wrap">',
                 '            <ul class="table-filter table-filter-primary">',
                 '                                    <li>',
                 '                                                    <label>',
-                '                                Name                                <input name="name" type="text">                            </label>',
+                '                                Name                                <input name="name" type="text"> '
+                    . '                           </label>',
                 '                                            </li>',
                 '                                    <li>',
                 '                                                    <label class="highlight">',
-                '                                City                                <input name="city" type="text" value="Bern">                            </label>',
+                '                                City                                <input name="city" type="text" '
+                    . 'value="Bern">                            </label>',
                 '                        ',
                 '                                            </li>',
                 '                            </ul>',
@@ -527,7 +558,10 @@ final class TemplateFilesTest extends TemplateEngineTestCase
         ) {
             $replacements->addHtml(identifier: $identifier, html: $content);
         }
-        $html = $this->renderProjectFile(relativePath: 'example/app/error_docs/notFound.html', replacements: $replacements);
+        $html = $this->renderProjectFile(
+            relativePath: 'example/app/error_docs/notFound.html',
+            replacements: $replacements,
+        );
 
         $this->assertSame(
             TemplateFilesTest::lines([
@@ -561,7 +595,10 @@ final class TemplateFilesTest extends TemplateEngineTestCase
         ) {
             $replacements->addHtml(identifier: $identifier, html: $content);
         }
-        $html = $this->renderProjectFile(relativePath: 'example/app/error_docs/default.html', replacements: $replacements);
+        $html = $this->renderProjectFile(
+            relativePath: 'example/app/error_docs/default.html',
+            replacements: $replacements,
+        );
 
         $this->assertSame(
             TemplateFilesTest::lines([

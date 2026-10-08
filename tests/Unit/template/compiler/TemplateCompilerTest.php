@@ -87,7 +87,10 @@ final class TemplateCompilerTest extends TestCase
     public function testAttributeValuesAreOnlyEverLiterals(string $value): void
     {
         $value = str_replace(search: ['"', "'"], replace: '', subject: $value);
-        $code = $this->compile(source: '<tst:custom a="' . $value . '"/><tst:if compare="' . $value . '" against="' . $value . '">x</tst:if>');
+        $code = $this->compile(
+            source: '<tst:custom a="' . $value . '"/><tst:if compare="' . $value . '" against="' . $value
+                . '">x</tst:if>',
+        );
 
         $tokens = $this->tokenIds(code: $code);
         $this->assertCount(1, array_keys(array: $tokens, filter_value: T_OPEN_TAG, strict: true));
@@ -144,15 +147,26 @@ final class TemplateCompilerTest extends TestCase
     {
         $code = $this->compile(source: '<tst:custom x="1">in</tst:custom>');
 
-        $this->assertStringContainsString("echo \$runtime->renderTag('custom', ['x' => '1'], 1, static function () use (\$runtime): string {\n", $code);
-        $this->assertStringContainsString("    ob_start();\n    echo 'in';\n    return (string) ob_get_clean();\n});\n", $code);
+        $this->assertStringContainsString(
+            "echo \$runtime->renderTag('custom', ['x' => '1'], 1, static function () use (\$runtime): string {\n",
+            $code,
+        );
+        $this->assertStringContainsString(
+            "    ob_start();\n    echo 'in';\n    return (string) ob_get_clean();\n});\n",
+            $code,
+        );
     }
 
     public function testIfWithElse(): void
     {
-        $code = $this->compile(source: '<tst:if compare="p" operator="GT" against="1">Y</tst:if><tst:else>N</tst:else>');
+        $code = $this->compile(
+            source: '<tst:if compare="p" operator="GT" against="1">Y</tst:if><tst:else>N</tst:else>',
+        );
 
-        $this->assertStringContainsString("if (\$runtime->compare('p', 'gt', '1', 1)) {\n    echo 'Y';\n} else {\n    echo 'N';\n}\n", $code);
+        $this->assertStringContainsString(
+            "if (\$runtime->compare('p', 'gt', '1', 1)) {\n    echo 'Y';\n} else {\n    echo 'N';\n}\n",
+            $code,
+        );
     }
 
     public function testIfWithoutElseAndDefaultOperator(): void
@@ -168,7 +182,8 @@ final class TemplateCompilerTest extends TestCase
         $code = $this->compile(source: '<tst:for value="l" var="i">x</tst:for>');
 
         $this->assertStringContainsString(
-            "foreach (\$runtime->iterate('l', 1) as \$item) {\n    \$runtime->pushScope('i', \$item);\n    echo 'x';\n    \$runtime->popScope();\n}\n",
+            "foreach (\$runtime->iterate('l', 1) as \$item) {\n    \$runtime->pushScope('i', \$item);\n    echo "
+                . "'x';\n    \$runtime->popScope();\n}\n",
             $code,
         );
     }
@@ -194,7 +209,10 @@ final class TemplateCompilerTest extends TestCase
     {
         $code = $this->compile(source: "<tst:if compare=\"v\" against=\"a\">Y</tst:if>\n  <tst:else>N</tst:else>\nz");
 
-        $this->assertStringContainsString("echo 'Y';\n    echo '\n  ';\n} else {\n    echo 'N';\n}\necho 'z';\n", $code);
+        $this->assertStringContainsString(
+            "echo 'Y';\n    echo '\n  ';\n} else {\n    echo 'N';\n}\necho 'z';\n",
+            $code,
+        );
     }
 
     public function testWhitespaceAfterAnIfWithoutElseIsPlainText(): void
@@ -209,29 +227,45 @@ final class TemplateCompilerTest extends TestCase
      */
     public static function syntaxErrorProvider(): iterable
     {
-        yield 'if without compare' => ['<tst:if against="a">x</tst:if>', 'Missing attribute "compare" for the tag "if" in page.html on line 1'];
-        yield 'if without against' => ['<tst:if compare="a">x</tst:if>', 'Missing attribute "against" for the tag "if" in page.html on line 1'];
+        yield 'if without compare' => [
+            '<tst:if against="a">x</tst:if>',
+            'Missing attribute "compare" for the tag "if" in page.html on line 1',
+        ];
+        yield 'if without against' => [
+            '<tst:if compare="a">x</tst:if>',
+            'Missing attribute "against" for the tag "if" in page.html on line 1',
+        ];
         yield 'unknown operator' => [
             "\n<tst:if compare=\"a\" operator=\"like\" against=\"b\">x</tst:if>",
             'Unknown operator "like", valid are in, eq, ne, gt, ge, lt, le in page.html on line 2',
         ];
-        yield 'for without value' => ['<tst:for var="i">x</tst:for>', 'Missing attribute "value" for the tag "for" in page.html on line 1'];
-        yield 'for without var' => ['<tst:for value="l">x</tst:for>', 'Missing attribute "var" for the tag "for" in page.html on line 1'];
+        yield 'for without value' => [
+            '<tst:for var="i">x</tst:for>',
+            'Missing attribute "value" for the tag "for" in page.html on line 1',
+        ];
+        yield 'for without var' => [
+            '<tst:for value="l">x</tst:for>',
+            'Missing attribute "var" for the tag "for" in page.html on line 1',
+        ];
         yield 'else without if' => [
             'a<tst:else>x</tst:else>',
-            'The tag <tst:else> must directly follow </tst:if> (only whitespace may be in between) in page.html on line 1',
+            'The tag <tst:else> must directly follow </tst:if> (only whitespace may be in between) in page.html on '
+                . 'line 1',
         ];
         yield 'else after text' => [
             '<tst:if compare="a" against="b">x</tst:if>y<tst:else>z</tst:else>',
-            'The tag <tst:else> must directly follow </tst:if> (only whitespace may be in between) in page.html on line 1',
+            'The tag <tst:else> must directly follow </tst:if> (only whitespace may be in between) in page.html on '
+                . 'line 1',
         ];
         yield 'else after for' => [
             '<tst:for value="l" var="i">x</tst:for><tst:else>z</tst:else>',
-            'The tag <tst:else> must directly follow </tst:if> (only whitespace may be in between) in page.html on line 1',
+            'The tag <tst:else> must directly follow </tst:if> (only whitespace may be in between) in page.html on '
+                . 'line 1',
         ];
         yield 'second else' => [
             '<tst:if compare="a" against="b">x</tst:if><tst:else>y</tst:else><tst:else>z</tst:else>',
-            'The tag <tst:else> must directly follow </tst:if> (only whitespace may be in between) in page.html on line 1',
+            'The tag <tst:else> must directly follow </tst:if> (only whitespace may be in between) in page.html on '
+                . 'line 1',
         ];
     }
 

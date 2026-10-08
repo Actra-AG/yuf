@@ -34,7 +34,12 @@ final readonly class PrintTag implements TemplateTag
         if ($value instanceof DateTimeInterface) {
             return $context->escape(value: $value->format(format: 'Y-m-d H:i:s'));
         }
-        if ($value === null || is_scalar(value: $value) || $value instanceof Stringable || $value instanceof TrustedHtml) {
+        if (
+            $value === null
+            || is_scalar(value: $value)
+            || $value instanceof Stringable
+            || $value instanceof TrustedHtml
+        ) {
             return $context->escape(value: $value);
         }
 

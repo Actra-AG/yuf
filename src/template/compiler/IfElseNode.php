@@ -21,7 +21,8 @@ use actra\yuf\template\parser\TextNode;
 final readonly class IfElseNode implements TemplateNode
 {
     /**
-     * @param list<TextNode> $whitespace The whitespace between `</tst:if>` and `<tst:else>`, rendered with the `if` branch
+     * @param list<TextNode> $whitespace The whitespace between `</tst:if>` and `<tst:else>`, rendered with the `if`
+     *                                   branch
      */
     public function __construct(
         public TagNode $if,

@@ -26,7 +26,8 @@ final class TemplateWorkDirectory
 
     public function __construct()
     {
-        $this->workDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-template-test-' . bin2hex(string: random_bytes(length: 8)) . DIRECTORY_SEPARATOR;
+        $this->workDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-template-test-'
+            . bin2hex(string: random_bytes(length: 8)) . DIRECTORY_SEPARATOR;
         $this->templateDirectory = $this->workDirectory . 'templates' . DIRECTORY_SEPARATOR;
         $this->cacheDirectory = $this->workDirectory . 'cache' . DIRECTORY_SEPARATOR;
         mkdir(directory: $this->templateDirectory, recursive: true);

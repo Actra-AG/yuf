@@ -42,7 +42,8 @@ final readonly class TemplateCompiler
      */
     public function compile(array $nodes, string $templateFile): string
     {
-        return "<?php\n\ndeclare(strict_types=1);\n\n// yuf template, format version " . TemplateCompiler::FORMAT_VERSION . "\n\n"
+        return "<?php\n\ndeclare(strict_types=1);\n\n// yuf template, format version "
+            . TemplateCompiler::FORMAT_VERSION . "\n\n"
             . $this->compileNodes(nodes: $nodes, templateFile: $templateFile, depth: 0, skipLineBreak: false);
     }
 
@@ -155,15 +156,34 @@ final readonly class TemplateCompiler
         $operator = $this->readOperator(tag: $tag, templateFile: $templateFile);
         $indent = $this->indent(depth: $depth);
         $code = $indent . 'if ($runtime->compare('
-            . $this->literal(value: $this->requireAttribute(tag: $tag, name: 'compare', templateFile: $templateFile)) . ', '
+            . $this->literal(
+                value: $this->requireAttribute(tag: $tag, name: 'compare', templateFile: $templateFile),
+            ) . ', '
             . $this->literal(value: $operator->value) . ', '
-            . $this->literal(value: $this->requireAttribute(tag: $tag, name: 'against', templateFile: $templateFile)) . ', '
+            . $this->literal(
+                value: $this->requireAttribute(tag: $tag, name: 'against', templateFile: $templateFile),
+            ) . ', '
             . $tag->line . ")) {\n"
-            . $this->compileNodes(nodes: $tag->children, templateFile: $templateFile, depth: $depth + 1, skipLineBreak: true)
-            . $this->compileNodes(nodes: $node->whitespace, templateFile: $templateFile, depth: $depth + 1, skipLineBreak: false);
+            . $this->compileNodes(
+                nodes: $tag->children,
+                templateFile: $templateFile,
+                depth: $depth + 1,
+                skipLineBreak: true,
+            )
+            . $this->compileNodes(
+                nodes: $node->whitespace,
+                templateFile: $templateFile,
+                depth: $depth + 1,
+                skipLineBreak: false,
+            );
         if ($node->else !== null) {
             $code .= $indent . "} else {\n"
-                . $this->compileNodes(nodes: $node->else->children, templateFile: $templateFile, depth: $depth + 1, skipLineBreak: true);
+                . $this->compileNodes(
+                    nodes: $node->else->children,
+                    templateFile: $templateFile,
+                    depth: $depth + 1,
+                    skipLineBreak: true,
+                );
         }
 
         return $code . $indent . "}\n";
@@ -175,9 +195,15 @@ final readonly class TemplateCompiler
         $variable = $this->requireAttribute(tag: $tag, name: 'var', templateFile: $templateFile);
         $selector = $this->requireAttribute(tag: $tag, name: 'value', templateFile: $templateFile);
 
-        return $indent . 'foreach ($runtime->iterate(' . $this->literal(value: $selector) . ', ' . $tag->line . ') as $item) {' . "\n"
+        return $indent . 'foreach ($runtime->iterate(' . $this->literal(value: $selector) . ', ' . $tag->line
+            . ') as $item) {' . "\n"
             . $indent . '    $runtime->pushScope(' . $this->literal(value: $variable) . ', $item);' . "\n"
-            . $this->compileNodes(nodes: $tag->children, templateFile: $templateFile, depth: $depth + 1, skipLineBreak: true)
+            . $this->compileNodes(
+                nodes: $tag->children,
+                templateFile: $templateFile,
+                depth: $depth + 1,
+                skipLineBreak: true,
+            )
             . $indent . "    \$runtime->popScope();\n"
             . $indent . "}\n";
     }
@@ -193,7 +219,12 @@ final readonly class TemplateCompiler
         if ($tag->hasBody) {
             $body = "static function () use (\$runtime): string {\n"
                 . $indent . "    ob_start();\n"
-                . $this->compileNodes(nodes: $tag->children, templateFile: $templateFile, depth: $depth + 1, skipLineBreak: true)
+                . $this->compileNodes(
+                    nodes: $tag->children,
+                    templateFile: $templateFile,
+                    depth: $depth + 1,
+                    skipLineBreak: true,
+                )
                 . $indent . "    return (string) ob_get_clean();\n"
                 . $indent . '}';
         }
@@ -234,7 +265,8 @@ final readonly class TemplateCompiler
     {
         return match (true) {
             str_starts_with(haystack: $text, needle: "\r\n") => substr(string: $text, offset: 2),
-            str_starts_with(haystack: $text, needle: "\n"), str_starts_with(haystack: $text, needle: "\r") => substr(string: $text, offset: 1),
+            str_starts_with(haystack: $text, needle: "\n"),
+            str_starts_with(haystack: $text, needle: "\r") => substr(string: $text, offset: 1),
             default => $text,
         };
     }

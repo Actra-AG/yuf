@@ -72,7 +72,10 @@ final class TemplateSyntaxTest extends TemplateEngineTestCase
 
     public function testTagsOfOtherNamespacesAreNotTouched(): void
     {
-        $this->assertSame('<other:text value="x"/>{other:text value=\'x\'}', $this->render(source: '<other:text value="x"/>{other:text value=\'x\'}'));
+        $this->assertSame(
+            '<other:text value="x"/>{other:text value=\'x\'}',
+            $this->render(source: '<other:text value="x"/>{other:text value=\'x\'}'),
+        );
     }
 
     public function testMismatchedClosingTag(): void
@@ -81,7 +84,8 @@ final class TemplateSyntaxTest extends TemplateEngineTestCase
 
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
-            'The closing tag </tst:for> does not match the opening tag <tst:if> of line 1 in ' . $templateFile . ' on line 1',
+            'The closing tag </tst:for> does not match the opening tag <tst:if> of line 1 in ' . $templateFile
+                . ' on line 1',
         );
 
         $this->renderFile(templateFile: $templateFile, data: ['v' => 'a']);
@@ -93,7 +97,8 @@ final class TemplateSyntaxTest extends TemplateEngineTestCase
 
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
-            'PHP code is not allowed in a template, prepare the values in the view instead in ' . $templateFile . ' on line 2',
+            'PHP code is not allowed in a template, prepare the values in the view instead in ' . $templateFile
+                . ' on line 2',
         );
 
         $this->renderFile(templateFile: $templateFile);

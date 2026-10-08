@@ -44,7 +44,12 @@ final readonly class ValueComparator
     private function isEqual(mixed $value, string $against): bool
     {
         return match (strtolower(string: $against)) {
-            'null' => $value === null || $value === '' || $value === [] || $value === false || $value === 0 || $value === 0.0,
+            'null' => $value === null
+                || $value === ''
+                || $value === []
+                || $value === false
+                || $value === 0
+                || $value === 0.0,
             '' => $value === null || $value === '' || $value === false,
             'true' => $this->isTruthy(value: $value),
             'false' => !$this->isTruthy(value: $value),
@@ -63,7 +68,12 @@ final readonly class ValueComparator
      */
     private function equalsAsText(mixed $value, string $against): bool
     {
-        if (is_string(value: $value) || is_int(value: $value) || is_float(value: $value) || $value instanceof Stringable) {
+        if (
+            is_string(value: $value)
+            || is_int(value: $value)
+            || is_float(value: $value)
+            || $value instanceof Stringable
+        ) {
             return (string) $value === $against;
         }
 
@@ -83,7 +93,10 @@ final readonly class ValueComparator
 
     private function compareNumbers(mixed $value, string $against): int
     {
-        if (!(is_int(value: $value) || is_float(value: $value) || is_string(value: $value)) || !is_numeric(value: $value)) {
+        if (
+            !(is_int(value: $value) || is_float(value: $value) || is_string(value: $value))
+            || !is_numeric(value: $value)
+        ) {
             throw new TemplateException(
                 reason: 'The operators gt, ge, lt and le need a numeric value, got ' . get_debug_type(value: $value),
             );

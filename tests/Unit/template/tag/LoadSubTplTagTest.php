@@ -64,7 +64,8 @@ final class LoadSubTplTagTest extends TemplateEngineTestCase
     public function testSubTemplateSeesTheLoopVariable(): void
     {
         $html = $this->render(
-            source: '<tst:for value="l" var="i"><tst:loadSubTpl tplfile="' . TemplateEngineTestCase::fixtureDirectory() . 'subLoop.html"/>;</tst:for>',
+            source: '<tst:for value="l" var="i"><tst:loadSubTpl tplfile="' . TemplateEngineTestCase::fixtureDirectory()
+                . 'subLoop.html"/>;</tst:for>',
             data: ['l' => [1, 2]],
         );
 
@@ -76,7 +77,9 @@ final class LoadSubTplTagTest extends TemplateEngineTestCase
         $templateFile = $this->writeTemplate(source: "a\n<tst:loadSubTpl tplfile=\"/nonexistent/sub.html\"/>");
 
         $this->expectException(TemplateException::class);
-        $this->expectExceptionMessageIs('Template file not found: /nonexistent/sub.html in ' . $templateFile . ' on line 2');
+        $this->expectExceptionMessageIs(
+            'Template file not found: /nonexistent/sub.html in ' . $templateFile . ' on line 2',
+        );
 
         $this->renderFile(templateFile: $templateFile);
     }
@@ -87,7 +90,8 @@ final class LoadSubTplTagTest extends TemplateEngineTestCase
 
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
-            'The template data "file" does not exist. Check that the view provides a replacement with this identifier in ' . $templateFile . ' on line 1',
+            'The template data "file" does not exist. Check that the view provides a replacement with this '
+                . 'identifier in ' . $templateFile . ' on line 1',
         );
 
         $this->renderFile(templateFile: $templateFile);
@@ -100,7 +104,8 @@ final class LoadSubTplTagTest extends TemplateEngineTestCase
 
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
-            'The template data "missing" does not exist. Check that the view provides a replacement with this identifier in ' . $subTemplate . ' on line 2',
+            'The template data "missing" does not exist. Check that the view provides a replacement with this '
+                . 'identifier in ' . $subTemplate . ' on line 2',
         );
 
         $this->renderFile(templateFile: $templateFile);
@@ -112,7 +117,9 @@ final class LoadSubTplTagTest extends TemplateEngineTestCase
         $templateFile = $this->writeTemplate(source: '<tst:loadSubTpl tplfile="' . $subTemplate . '"/>');
 
         $this->expectException(TemplateException::class);
-        $this->expectExceptionMessageIs('Unexpected closing tag </tst:if> without an opening tag in ' . $subTemplate . ' on line 2');
+        $this->expectExceptionMessageIs(
+            'Unexpected closing tag </tst:if> without an opening tag in ' . $subTemplate . ' on line 2',
+        );
 
         $this->renderFile(templateFile: $templateFile);
     }

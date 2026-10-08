@@ -18,8 +18,9 @@ use Throwable;
 use Traversable;
 
 /**
- * The only object that compiled templates can reach (variable `$runtime`): it holds the data scopes, resolves selectors,
- * compares, iterates and renders the tags. One runtime lives for one render call and is shared by the sub-templates.
+ * The only object that compiled templates can reach (variable `$runtime`): it holds the data scopes, resolves
+ * selectors, compares, iterates and renders the tags. One runtime lives for one render call and is shared by the
+ * sub-templates.
  *
  * @internal
  *
@@ -133,7 +134,8 @@ final class TemplateRuntime
             is_object(value: $value) && !$value instanceof TrustedHtml => get_object_vars(object: $value),
             default => throw $this->locate(
                 exception: new TemplateException(
-                    reason: 'The value "' . $selector . '" of type ' . get_debug_type(value: $value) . ' cannot be used in a for tag, it must be an array or an object',
+                    reason: 'The value "' . $selector . '" of type ' . get_debug_type(value: $value)
+                        . ' cannot be used in a for tag, it must be an array or an object',
                 ),
                 line: $line,
             ),

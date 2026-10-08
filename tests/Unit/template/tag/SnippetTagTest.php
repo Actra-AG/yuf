@@ -36,7 +36,10 @@ final class SnippetTagTest extends TestCase
         file_put_contents(filename: $this->snippetsDirectory . 'page.html', data: "<b>{tst:text value='name'}</b>");
         file_put_contents(filename: $this->snippetsDirectory . 'UPPER.HTML', data: "{tst:text value='name'}");
         file_put_contents(filename: $this->snippetsDirectory . 'sub/deep.html', data: 'deep');
-        file_put_contents(filename: $this->snippetsDirectory . 'icon.svg', data: "<svg>{tst:text value='name'}</svg>\n");
+        file_put_contents(
+            filename: $this->snippetsDirectory . 'icon.svg',
+            data: "<svg>{tst:text value='name'}</svg>\n",
+        );
         file_put_contents(filename: $this->workDirectory->templateDirectory . 'secret.html', data: 'secret');
         $this->engine = new TemplateEngine(
             cache: new DirectoryTemplateCache(
@@ -74,7 +77,10 @@ final class SnippetTagTest extends TestCase
 
     public function testOtherFilesAreOutputAsTheyAre(): void
     {
-        $this->assertSame("a<svg>{tst:text value='name'}</svg>\nb", $this->render(source: "a{tst:snippet name='icon.svg'}b"));
+        $this->assertSame(
+            "a<svg>{tst:text value='name'}</svg>\nb",
+            $this->render(source: "a{tst:snippet name='icon.svg'}b"),
+        );
     }
 
     public function testSnippetInASubdirectory(): void
@@ -89,7 +95,9 @@ final class SnippetTagTest extends TestCase
                 cacheDirectory: $this->workDirectory->cacheDirectory,
                 templateBaseDirectory: $this->workDirectory->templateDirectory,
             ),
-            tags: new TemplateTagCollection(new SnippetTag(snippetsDirectory: rtrim(string: $this->snippetsDirectory, characters: '/'))),
+            tags: new TemplateTagCollection(
+                new SnippetTag(snippetsDirectory: rtrim(string: $this->snippetsDirectory, characters: '/')),
+            ),
         );
 
         $html = $engine->render(
@@ -133,11 +141,16 @@ final class SnippetTagTest extends TestCase
 
     public function testSymbolicLinkThatLeavesTheSnippetsDirectoryThrows(): void
     {
-        symlink(target: $this->workDirectory->templateDirectory . 'secret.html', link: $this->snippetsDirectory . 'link.html');
+        symlink(
+            target: $this->workDirectory->templateDirectory . 'secret.html',
+            link: $this->snippetsDirectory . 'link.html',
+        );
         $templateFile = $this->workDirectory->writeTemplate(source: "{tst:snippet name='link.html'}");
 
         $this->expectException(TemplateException::class);
-        $this->expectExceptionMessageIs('The snippet name "link.html" leaves the snippets directory in ' . $templateFile . ' on line 1');
+        $this->expectExceptionMessageIs(
+            'The snippet name "link.html" leaves the snippets directory in ' . $templateFile . ' on line 1',
+        );
 
         $this->engine->render(templateFile: $templateFile, data: new TemplateData());
     }

@@ -56,7 +56,13 @@ final class TemplateParserTest extends TestCase
         $this->assertEquals(
             [
                 new TextNode(text: 'a'),
-                new TagNode(name: 'lang', attributes: ['key' => 'greeting', 'vars' => 'v'], children: [], line: 1, hasBody: false),
+                new TagNode(
+                    name: 'lang',
+                    attributes: ['key' => 'greeting', 'vars' => 'v'],
+                    children: [],
+                    line: 1,
+                    hasBody: false,
+                ),
                 new TextNode(text: 'b'),
             ],
             $nodes,
@@ -111,7 +117,10 @@ final class TemplateParserTest extends TestCase
 
     public function testNestedTags(): void
     {
-        $nodes = $this->parse(source: '<tst:for value="a" var="x"><tst:for value="x" var="y"><tst:if compare="y" against="1">Y</tst:if></tst:for></tst:for>');
+        $nodes = $this->parse(
+            source: '<tst:for value="a" var="x"><tst:for value="x" var="y"><tst:if compare="y" against="1">Y'
+                . '</tst:if></tst:for></tst:for>',
+        );
 
         $outer = $this->tagAt(nodes: $nodes, index: 0);
         $inner = $this->tagAt(nodes: $outer->children, index: 0);
@@ -125,7 +134,15 @@ final class TemplateParserTest extends TestCase
         $nodes = $this->parse(source: '<tst:if against="" compare="p" operator="EQ"/>');
 
         $this->assertEquals(
-            [new TagNode(name: 'if', attributes: ['against' => '', 'compare' => 'p', 'operator' => 'EQ'], children: [], line: 1, hasBody: false)],
+            [
+                new TagNode(
+                    name: 'if',
+                    attributes: ['against' => '', 'compare' => 'p', 'operator' => 'EQ'],
+                    children: [],
+                    line: 1,
+                    hasBody: false,
+                ),
+            ],
             $nodes,
         );
     }
@@ -144,12 +161,18 @@ final class TemplateParserTest extends TestCase
     {
         $nodes = $this->parse(source: '<tst:if compare="a" against="x > {y}"/>');
 
-        $this->assertSame(['compare' => 'a', 'against' => 'x > {y}'], $this->tagAt(nodes: $nodes, index: 0)->attributes);
+        $this->assertSame(
+            ['compare' => 'a', 'against' => 'x > {y}'],
+            $this->tagAt(nodes: $nodes, index: 0)->attributes,
+        );
     }
 
     public function testLineNumbers(): void
     {
-        $nodes = $this->parse(source: "line 1\n{tst:text value='a'}\n\n<tst:if compare=\"b\" against=\"c\">\n  {tst:text value='d'}\n</tst:if>");
+        $nodes = $this->parse(
+            source: "line 1\n{tst:text value='a'}\n\n<tst:if compare=\"b\" against=\"c\">\n  {tst:text value='d'}\n"
+                . '</tst:if>',
+        );
 
         $this->assertSame(2, $this->tagAt(nodes: $nodes, index: 1)->line);
         $if = $this->tagAt(nodes: $nodes, index: 3);
@@ -234,7 +257,9 @@ final class TemplateParserTest extends TestCase
     public function testClosingTagWithoutOpeningTagThrows(): void
     {
         $this->expectException(TemplateException::class);
-        $this->expectExceptionMessageIs('Unexpected closing tag </tst:if> without an opening tag in page.html on line 2');
+        $this->expectExceptionMessageIs(
+            'Unexpected closing tag </tst:if> without an opening tag in page.html on line 2',
+        );
 
         $this->parse(source: "a\n</tst:if>");
     }
@@ -275,7 +300,8 @@ final class TemplateParserTest extends TestCase
     {
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
-            'PHP code is not allowed in a template, prepare the values in the view instead in page.html on line ' . $expectedLine,
+            'PHP code is not allowed in a template, prepare the values in the view instead in page.html on line '
+                . $expectedLine,
         );
 
         $this->parse(source: $source);

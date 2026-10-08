@@ -225,8 +225,11 @@ final class ValueComparatorTest extends TestCase
     }
 
     #[DataProvider('nonNumericProvider')]
-    public function testNumericComparisonOfAValueThatIsNotNumericThrows(mixed $value, string $operator, string $against): void
-    {
+    public function testNumericComparisonOfAValueThatIsNotNumericThrows(
+        mixed $value,
+        string $operator,
+        string $against,
+    ): void {
         $this->expectException(TemplateException::class);
 
         $this->compare(value: $value, operator: $operator, against: $against);

@@ -93,7 +93,10 @@ final class TemplateDataTest extends TestCase
 
         $data = TemplateData::fromReplacements(replacements: $replacements);
 
-        $this->assertEquals([new TrustedHtml(html: '<i>'), new TrustedHtml(html: '&lt;i&gt;')], $this->valueOf($data, 'texts'));
+        $this->assertEquals(
+            [new TrustedHtml(html: '<i>'), new TrustedHtml(html: '&lt;i&gt;')],
+            $this->valueOf($data, 'texts'),
+        );
     }
 
     public function testStringsOfADataObjectAreTrustedHtmlAlsoWhenNested(): void

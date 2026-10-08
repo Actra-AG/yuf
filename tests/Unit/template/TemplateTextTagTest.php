@@ -169,7 +169,10 @@ final class TemplateTextTagTest extends TemplateEngineTestCase
         $templateFile = $this->writeTemplate(source: "{tst:text value='x'}");
 
         $this->expectException(TemplateException::class);
-        $this->expectExceptionMessageIs('The template data "x" does not exist. Check that the view provides a replacement with this identifier in ' . $templateFile . ' on line 1');
+        $this->expectExceptionMessageIs(
+            'The template data "x" does not exist. Check that the view provides a replacement with this identifier in '
+                . $templateFile . ' on line 1',
+        );
 
         $this->renderFile(templateFile: $templateFile);
     }

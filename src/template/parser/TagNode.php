@@ -20,7 +20,8 @@ final readonly class TagNode implements TemplateNode
     /**
      * @param array<string, string> $attributes
      * @param list<TemplateNode> $children
-     * @param bool $hasBody true for `<tst:name>…</tst:name>` (also when empty), false for inline tags and `<tst:name/>`
+     * @param bool $hasBody true for `<tst:name>…</tst:name>` (also when empty), false for inline tags and
+     *                      `<tst:name/>`
      */
     public function __construct(
         public string $name,

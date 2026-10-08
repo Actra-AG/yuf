@@ -166,7 +166,8 @@ final class TemplateIfTagTest extends TemplateEngineTestCase
 
     public function testNestedIfAndElse(): void
     {
-        $nested = '<tst:if compare="a" operator="eq" against="true"><tst:if compare="b" operator="eq" against="true">AB</tst:if><tst:else>A!B</tst:else></tst:if><tst:else>!A</tst:else>';
+        $nested = '<tst:if compare="a" operator="eq" against="true"><tst:if compare="b" operator="eq" '
+            . 'against="true">AB</tst:if><tst:else>A!B</tst:else></tst:if><tst:else>!A</tst:else>';
 
         $this->assertSame('A!B', $this->render(source: $nested, data: ['a' => true, 'b' => false]));
         $this->assertSame('AB', $this->render(source: $nested, data: ['a' => true, 'b' => true]));
@@ -188,7 +189,10 @@ final class TemplateIfTagTest extends TemplateEngineTestCase
         $templateFile = $this->writeTemplate(source: '<tst:if compare="o" operator="eq" against="x">Y</tst:if>');
 
         $this->expectException(TemplateException::class);
-        $this->expectExceptionMessageIs('The template data "o" does not exist. Check that the view provides a replacement with this identifier in ' . $templateFile . ' on line 1');
+        $this->expectExceptionMessageIs(
+            'The template data "o" does not exist. Check that the view provides a replacement with this identifier in '
+                . $templateFile . ' on line 1',
+        );
 
         $this->renderFile(templateFile: $templateFile);
     }
@@ -205,7 +209,9 @@ final class TemplateIfTagTest extends TemplateEngineTestCase
         $templateFile = $this->writeTemplate(source: '<tst:if compare="v" operator="eq">Y</tst:if>');
 
         $this->expectException(TemplateException::class);
-        $this->expectExceptionMessageIs('Missing attribute "against" for the tag "if" in ' . $templateFile . ' on line 1');
+        $this->expectExceptionMessageIs(
+            'Missing attribute "against" for the tag "if" in ' . $templateFile . ' on line 1',
+        );
 
         $this->renderFile(templateFile: $templateFile, data: ['v' => 'a']);
     }
@@ -215,7 +221,9 @@ final class TemplateIfTagTest extends TemplateEngineTestCase
         $templateFile = $this->writeTemplate(source: '<tst:if compare="v" operator="xx" against="a">Y</tst:if>');
 
         $this->expectException(TemplateException::class);
-        $this->expectExceptionMessageIs('Unknown operator "xx", valid are in, eq, ne, gt, ge, lt, le in ' . $templateFile . ' on line 1');
+        $this->expectExceptionMessageIs(
+            'Unknown operator "xx", valid are in, eq, ne, gt, ge, lt, le in ' . $templateFile . ' on line 1',
+        );
 
         $this->renderFile(templateFile: $templateFile, data: ['v' => 'a']);
     }
@@ -235,7 +243,10 @@ final class TemplateIfTagTest extends TemplateEngineTestCase
         $templateFile = $this->writeTemplate(source: 'a<tst:else>E</tst:else>b');
 
         $this->expectException(TemplateException::class);
-        $this->expectExceptionMessageIs('The tag <tst:else> must directly follow </tst:if> (only whitespace may be in between) in ' . $templateFile . ' on line 1');
+        $this->expectExceptionMessageIs(
+            'The tag <tst:else> must directly follow </tst:if> (only whitespace may be in between) in ' . $templateFile
+                . ' on line 1',
+        );
 
         $this->renderFile(templateFile: $templateFile);
     }
@@ -247,7 +258,10 @@ final class TemplateIfTagTest extends TemplateEngineTestCase
         );
 
         $this->expectException(TemplateException::class);
-        $this->expectExceptionMessageIs('The tag <tst:else> must directly follow </tst:if> (only whitespace may be in between) in ' . $templateFile . ' on line 1');
+        $this->expectExceptionMessageIs(
+            'The tag <tst:else> must directly follow </tst:if> (only whitespace may be in between) in ' . $templateFile
+                . ' on line 1',
+        );
 
         $this->renderFile(templateFile: $templateFile, data: ['v' => 'a']);
     }
@@ -258,15 +272,25 @@ final class TemplateIfTagTest extends TemplateEngineTestCase
             . "    <tst:else>\n        <li>N</li>\n    </tst:else>\n</ul>\n";
 
         // The line break right after a closing tag is swallowed by the PHP closing tag of the compiled code
-        $this->assertSame("<ul>\n            <li>Y</li>\n    \n    </ul>\n", $this->render(source: $source, data: ['v' => 'a']));
-        $this->assertSame("<ul>\n            <li>N</li>\n    </ul>\n", $this->render(source: $source, data: ['v' => 'b']));
+        $this->assertSame(
+            "<ul>\n            <li>Y</li>\n    \n    </ul>\n",
+            $this->render(source: $source, data: ['v' => 'a']),
+        );
+        $this->assertSame(
+            "<ul>\n            <li>N</li>\n    </ul>\n",
+            $this->render(source: $source, data: ['v' => 'b']),
+        );
     }
 
     public function testWhitespaceAroundIfWithoutElse(): void
     {
-        $source = "<ul>\n    <tst:if compare=\"v\" operator=\"eq\" against=\"a\">\n        <li>Y</li>\n    </tst:if>\n</ul>\n";
+        $source = "<ul>\n    <tst:if compare=\"v\" operator=\"eq\" against=\"a\">\n        <li>Y</li>\n    "
+            . "</tst:if>\n</ul>\n";
 
-        $this->assertSame("<ul>\n            <li>Y</li>\n    </ul>\n", $this->render(source: $source, data: ['v' => 'a']));
+        $this->assertSame(
+            "<ul>\n            <li>Y</li>\n    </ul>\n",
+            $this->render(source: $source, data: ['v' => 'a']),
+        );
         $this->assertSame("<ul>\n    </ul>\n", $this->render(source: $source, data: ['v' => 'b']));
     }
 
@@ -277,7 +301,8 @@ final class TemplateIfTagTest extends TemplateEngineTestCase
 
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
-            'The template data "hasSnippet" does not exist. Check that the view provides a replacement with this identifier in ' . $templateFile . ' on line 1',
+            'The template data "hasSnippet" does not exist. Check that the view provides a replacement with this '
+                . 'identifier in ' . $templateFile . ' on line 1',
         );
 
         $this->renderFile(templateFile: $templateFile);

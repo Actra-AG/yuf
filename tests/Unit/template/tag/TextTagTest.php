@@ -37,7 +37,8 @@ final class TextTagTest extends TemplateEngineTestCase
 
     public function testNumbersBooleansAndNull(): void
     {
-        $source = "{tst:text value='i'}|{tst:text value='f'}|{tst:text value='t'}|{tst:text value='n'}|{tst:text value='z'}";
+        $source = "{tst:text value='i'}|{tst:text value='f'}|{tst:text value='t'}|{tst:text value='n'}|{tst:text "
+            . "value='z'}";
 
         $html = $this->render(source: $source, data: ['i' => 7, 'f' => 1.5, 't' => true, 'n' => null, 'z' => false]);
 
@@ -73,7 +74,10 @@ final class TextTagTest extends TemplateEngineTestCase
         $replacements = new HtmlReplacementCollection();
         $replacements->addHtmlText(identifier: 'x', htmlText: HtmlText::fromText(text: '<b> & "q"'));
 
-        $this->assertSame('&lt;b&gt; &amp; &quot;q&quot;', $this->render(source: "{tst:text value='x'}", data: $replacements));
+        $this->assertSame(
+            '&lt;b&gt; &amp; &quot;q&quot;',
+            $this->render(source: "{tst:text value='x'}", data: $replacements),
+        );
     }
 
     public function testArrayCannotBeOutput(): void
@@ -82,7 +86,8 @@ final class TextTagTest extends TemplateEngineTestCase
 
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
-            'Cannot output a value of type array, only text, numbers, booleans and null in ' . $templateFile . ' on line 2',
+            'Cannot output a value of type array, only text, numbers, booleans and null in ' . $templateFile
+                . ' on line 2',
         );
 
         $this->renderFile(templateFile: $templateFile, data: ['x' => [1]]);

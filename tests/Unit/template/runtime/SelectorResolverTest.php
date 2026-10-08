@@ -28,7 +28,10 @@ final class SelectorResolverTest extends TestCase
      */
     private function resolve(string $selector, array $values): mixed
     {
-        return new SelectorResolver()->resolve(selector: $selector, scopes: new TemplateScopes(data: new TemplateData(values: $values)));
+        return new SelectorResolver()->resolve(
+            selector: $selector,
+            scopes: new TemplateScopes(data: new TemplateData(values: $values)),
+        );
     }
 
     /**
@@ -118,9 +121,21 @@ final class SelectorResolverTest extends TestCase
         yield 'method with a required argument' => ['probe.needsArgument', null, $cannotRead('needsArgument', 'probe')];
         yield 'method call syntax' => ['probe.needsArgument(x)', null, $cannotRead('needsArgument(x)', 'probe')];
         yield 'method call syntax without arguments' => ['probe.summary()', null, $cannotRead('summary()', 'probe')];
-        yield 'part of a string' => ['text.y', null, 'Cannot read "y" of "text": the value is not an array and not an object'];
-        yield 'part of null' => ['nothing.y', null, 'Cannot read "y" of "nothing": the value is not an array and not an object'];
-        yield 'part of trusted HTML' => ['html.y', null, 'Cannot read "y" of "html": the value is not an array and not an object'];
+        yield 'part of a string' => [
+            'text.y',
+            null,
+            'Cannot read "y" of "text": the value is not an array and not an object',
+        ];
+        yield 'part of null' => [
+            'nothing.y',
+            null,
+            'Cannot read "y" of "nothing": the value is not an array and not an object',
+        ];
+        yield 'part of trusted HTML' => [
+            'html.y',
+            null,
+            'Cannot read "y" of "html": the value is not an array and not an object',
+        ];
         yield 'empty part' => ['arr.', null, 'The array "arr" has no key ""'];
     }
 

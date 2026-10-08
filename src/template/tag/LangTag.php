@@ -51,7 +51,8 @@ final readonly class LangTag implements TemplateTag
         $vars = $context->resolve(selector: $selector);
         if (!is_array(value: $vars)) {
             throw new TemplateException(
-                reason: 'The vars "' . $selector . '" must be an array with the values for the placeholders, got ' . get_debug_type(value: $vars),
+                reason: 'The vars "' . $selector . '" must be an array with the values for the placeholders, got '
+                    . get_debug_type(value: $vars),
             );
         }
         $escaped = [];

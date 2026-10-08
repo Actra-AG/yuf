@@ -178,7 +178,8 @@ final class DirectoryTemplateCacheTest extends TestCase
         $compiledFile = $this->cache->store(templateFile: $outsideFile, compiledCode: 'x');
 
         $this->assertSame(
-            $this->workDirectory->cacheDirectory . 'v' . TemplateCompiler::FORMAT_VERSION . '/external/' . hash(algo: 'sha256', data: $outsideFile) . '.php',
+            $this->workDirectory->cacheDirectory . 'v' . TemplateCompiler::FORMAT_VERSION . '/external/'
+                . hash(algo: 'sha256', data: $outsideFile) . '.php',
             $compiledFile,
         );
     }
@@ -190,7 +191,10 @@ final class DirectoryTemplateCacheTest extends TestCase
 
         $compiledFile = $this->cache->store(templateFile: $templateFile, compiledCode: 'x');
 
-        $this->assertStringStartsWith($this->workDirectory->cacheDirectory . 'v' . TemplateCompiler::FORMAT_VERSION . '/external/', $compiledFile);
+        $this->assertStringStartsWith(
+            $this->workDirectory->cacheDirectory . 'v' . TemplateCompiler::FORMAT_VERSION . '/external/',
+            $compiledFile,
+        );
         $this->assertStringNotContainsString('..', $compiledFile);
     }
 
@@ -202,6 +206,9 @@ final class DirectoryTemplateCacheTest extends TestCase
         );
         $templateFile = $this->writeTemplate(relativePath: 'page.html', modificationTime: 1_000);
 
-        $this->assertSame($this->cache->getCompiledFile(templateFile: $templateFile), $cache->getCompiledFile(templateFile: $templateFile));
+        $this->assertSame(
+            $this->cache->getCompiledFile(templateFile: $templateFile),
+            $cache->getCompiledFile(templateFile: $templateFile),
+        );
     }
 }

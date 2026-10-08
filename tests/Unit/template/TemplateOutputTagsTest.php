@@ -39,7 +39,8 @@ final class TemplateOutputTagsTest extends TemplateEngineTestCase
         ];
         yield 'array' => [
             ['a' => 1, 'b' => ['c' => '<2>']],
-            "Array\n(\n    [a] =&gt; 1\n    [b] =&gt; Array\n        (\n            [c] =&gt; &lt;2&gt;\n        )\n\n)\n",
+            "Array\n(\n    [a] =&gt; 1\n    [b] =&gt; Array\n        (\n            [c] =&gt; &lt;2&gt;\n        "
+                . ")\n\n)\n",
         ];
     }
 
@@ -101,7 +102,8 @@ final class TemplateOutputTagsTest extends TemplateEngineTestCase
         );
 
         $this->assertSame(
-            "<option value=\"1\" selected>One</option>\n<option value=\"2\">Two</option>\n<option value=\"3\" selected>Three</option>\n",
+            "<option value=\"1\" selected>One</option>\n<option value=\"2\">Two</option>\n<option value=\"3\" "
+                . "selected>Three</option>\n",
             $html,
         );
     }

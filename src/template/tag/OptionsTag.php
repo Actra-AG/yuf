@@ -76,7 +76,8 @@ final readonly class OptionsTag implements TemplateTag
                 continue;
             }
             $selected = in_array(needle: (string) $key, haystack: $selection, strict: true) ? ' selected' : '';
-            $html .= '<option value="' . $escapedKey . '"' . $selected . '>' . $context->escape(value: $label) . "</option>\n";
+            $html .= '<option value="' . $escapedKey . '"' . $selected . '>'
+                . $context->escape(value: $label) . "</option>\n";
         }
 
         return $html;

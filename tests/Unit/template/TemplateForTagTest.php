@@ -67,7 +67,8 @@ final class TemplateForTagTest extends TemplateEngineTestCase
         $second->count = 2;
 
         $html = $this->render(
-            source: '<tst:for value="l" var="item"><tst:text value="item.name"/>=<tst:text value="item.count"/>;</tst:for>',
+            source: '<tst:for value="l" var="item"><tst:text value="item.name"/>=<tst:text value="item.count"/>;'
+                . '</tst:for>',
             data: ['l' => [$first, $second]],
         );
 
@@ -126,7 +127,8 @@ final class TemplateForTagTest extends TemplateEngineTestCase
     public function testNestedLoopOverTheOuterItem(): void
     {
         $html = $this->render(
-            source: '<tst:for value="l" var="row"><tst:for value="row" var="cell">{tst:text value=\'cell\'}</tst:for>;</tst:for>',
+            source: '<tst:for value="l" var="row"><tst:for value="row" var="cell">{tst:text value=\'cell\'}'
+                . '</tst:for>;</tst:for>',
             data: ['l' => [[1, 2], [3]]],
         );
 
@@ -146,7 +148,8 @@ final class TemplateForTagTest extends TemplateEngineTestCase
     public function testIfInsideLoop(): void
     {
         $html = $this->render(
-            source: '<tst:for value="l" var="i"><tst:if compare="i" operator="gt" against="1">big </tst:if><tst:else>small </tst:else></tst:for>',
+            source: '<tst:for value="l" var="i"><tst:if compare="i" operator="gt" against="1">big </tst:if>'
+                . '<tst:else>small </tst:else></tst:for>',
             data: ['l' => [1, 2]],
         );
 
@@ -201,6 +204,9 @@ final class TemplateForTagTest extends TemplateEngineTestCase
 
         // The line break right after the opening and after the closing tag is swallowed by the PHP closing tag of the
         // compiled code
-        $this->assertSame("<ul>\n  <li>1</li>\n  <li>2</li>\n</ul>\n", $this->render(source: $source, data: ['l' => [1, 2]]));
+        $this->assertSame(
+            "<ul>\n  <li>1</li>\n  <li>2</li>\n</ul>\n",
+            $this->render(source: $source, data: ['l' => [1, 2]]),
+        );
     }
 }

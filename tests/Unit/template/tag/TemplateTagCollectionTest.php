@@ -83,7 +83,10 @@ final class TemplateTagCollectionTest extends TestCase
     public function testCreateDefaultRejectsOwnTagWithBuiltInName(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageIs('The template tag "date" is already registered (a built-in tag or another own tag has this name); choose another name');
+        $this->expectExceptionMessageIs(
+            'The template tag "date" is already registered (a built-in tag or another own tag has this name); choose '
+                . 'another name',
+        );
 
         TemplateTagCollection::createDefault(
             localeHandler: new LocaleHandler(language: null, availableLanguages: new LanguageCollection()),
@@ -96,7 +99,10 @@ final class TemplateTagCollectionTest extends TestCase
     public function testCreateDefaultRejectsDuplicateOwnTags(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageIs('The template tag "shout" is already registered (a built-in tag or another own tag has this name); choose another name');
+        $this->expectExceptionMessageIs(
+            'The template tag "shout" is already registered (a built-in tag or another own tag has this name); '
+                . 'choose another name',
+        );
 
         TemplateTagCollection::createDefault(
             localeHandler: new LocaleHandler(language: null, availableLanguages: new LanguageCollection()),
@@ -119,7 +125,10 @@ final class TemplateTagCollectionTest extends TestCase
     public function testRegisteringAnExistingNameThrows(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageIs('The template tag "text" is already registered (a built-in tag or another own tag has this name); choose another name');
+        $this->expectExceptionMessageIs(
+            'The template tag "text" is already registered (a built-in tag or another own tag has this name); choose '
+                . 'another name',
+        );
 
         $this->createDefault()->with(tag: new TextTag());
     }
@@ -127,7 +136,10 @@ final class TemplateTagCollectionTest extends TestCase
     public function testTheSameNameTwiceInTheConstructorThrows(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageIs('The template tag "shout" is already registered (a built-in tag or another own tag has this name); choose another name');
+        $this->expectExceptionMessageIs(
+            'The template tag "shout" is already registered (a built-in tag or another own tag has this name); '
+                . 'choose another name',
+        );
 
         new TemplateTagCollection(new ShoutTag(), new ShoutTag());
     }
@@ -146,7 +158,11 @@ final class TemplateTagCollectionTest extends TestCase
     public function testNativeTagNamesAreReserved(string $name): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageIs('The tag name "' . $name . '" is reserved for the template engine (`if`, `else` and `for` are compiled by the engine); choose another name');
+        $this->expectExceptionMessageIs(
+            'The tag name "' . $name
+                . '" is reserved for the template engine (`if`, `else` and `for` are compiled by the engine); choose '
+                . 'another name',
+        );
 
         new TemplateTagCollection(new NamedTag(name: $name));
     }

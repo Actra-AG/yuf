@@ -51,7 +51,8 @@ final readonly class ValueFormatter
             $value instanceof TrustedHtml => $value->html,
             $value instanceof Stringable => (string) $value,
             default => throw new TemplateException(
-                reason: 'Cannot output a value of type ' . get_debug_type(value: $value) . ', only text, numbers, booleans and null',
+                reason: 'Cannot output a value of type ' . get_debug_type(value: $value)
+                    . ', only text, numbers, booleans and null',
             ),
         };
     }

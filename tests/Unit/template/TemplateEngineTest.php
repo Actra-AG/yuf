@@ -28,14 +28,15 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 
 /**
- * The new template engine as a whole. The characterization tests (Template*Test in this directory) pin the output that must
- * stay the same, the tests of the single classes pin the details; these tests pin what the new engine adds.
+ * The new template engine as a whole. The characterization tests (Template*Test in this directory) pin the output that
+ * must stay the same, the tests of the single classes pin the details; these tests pin what the new engine adds.
  */
 final class TemplateEngineTest extends TemplateEngineTestCase
 {
     public function testForVariableNeverOverwritesOrRemovesAnOuterValue(): void
     {
-        $source = "{tst:text value='i'}<tst:for value=\"l\" var=\"i\">[{tst:text value='i'}]</tst:for>{tst:text value='i'}";
+        $source = "{tst:text value='i'}<tst:for value=\"l\" var=\"i\">[{tst:text value='i'}]</tst:for>{tst:text "
+            . "value='i'}";
 
         $html = $this->render(source: $source, data: ['l' => [1, 2], 'i' => 'outer']);
 
@@ -57,7 +58,8 @@ final class TemplateEngineTest extends TemplateEngineTestCase
 
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
-            'The template data "i" does not exist. Check that the view provides a replacement with this identifier in ' . $templateFile . ' on line 1',
+            'The template data "i" does not exist. Check that the view provides a replacement with this identifier in '
+                . $templateFile . ' on line 1',
         );
 
         $this->renderFile(templateFile: $templateFile, data: ['l' => [1]]);
@@ -80,7 +82,10 @@ final class TemplateEngineTest extends TemplateEngineTestCase
     #[DataProvider('iterableProvider')]
     public function testForIteratesOver(mixed $value, string $expected): void
     {
-        $html = $this->render(source: '<tst:for value="l" var="i">{tst:text value=\'i\'}</tst:for>', data: ['l' => $value]);
+        $html = $this->render(
+            source: '<tst:for value="l" var="i">{tst:text value=\'i\'}</tst:for>',
+            data: ['l' => $value],
+        );
 
         $this->assertSame($expected, $html);
     }
@@ -102,7 +107,8 @@ final class TemplateEngineTest extends TemplateEngineTestCase
 
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
-            'The value "l" of type ' . $type . ' cannot be used in a for tag, it must be an array or an object in ' . $templateFile . ' on line 2',
+            'The value "l" of type ' . $type . ' cannot be used in a for tag, it must be an array or an object in '
+                . $templateFile . ' on line 2',
         );
 
         $this->renderFile(templateFile: $templateFile, data: ['l' => $value]);
@@ -114,7 +120,8 @@ final class TemplateEngineTest extends TemplateEngineTestCase
 
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
-            'The template data "l" does not exist. Check that the view provides a replacement with this identifier in ' . $templateFile . ' on line 3',
+            'The template data "l" does not exist. Check that the view provides a replacement with this identifier in '
+                . $templateFile . ' on line 3',
         );
 
         $this->renderFile(templateFile: $templateFile);
@@ -131,7 +138,8 @@ final class TemplateEngineTest extends TemplateEngineTestCase
         $replacements->addHtmlDataObjectCollection(identifier: 'items', htmlDataObjectCollection: $collection);
 
         $html = $this->render(
-            source: '<tst:for value="items" var="item">{tst:text value=\'item.name\'}|{tst:text value=\'item.link\'}</tst:for>',
+            source: '<tst:for value="items" var="item">{tst:text value=\'item.name\'}|{tst:text value=\'item.link\'}'
+                . '</tst:for>',
             data: $replacements,
         );
 
@@ -150,7 +158,9 @@ final class TemplateEngineTest extends TemplateEngineTestCase
 
     public function testComparisonErrorHasTheLineOfTheIfTag(): void
     {
-        $templateFile = $this->writeTemplate(source: "a\n<tst:if compare=\"v\" operator=\"gt\" against=\"1\">x</tst:if>");
+        $templateFile = $this->writeTemplate(
+            source: "a\n<tst:if compare=\"v\" operator=\"gt\" against=\"1\">x</tst:if>",
+        );
 
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
@@ -165,7 +175,8 @@ final class TemplateEngineTest extends TemplateEngineTestCase
         $replacements = new HtmlReplacementCollection();
         $replacements->addHtml(identifier: 'empty', html: '');
         $replacements->addHtml(identifier: 'text', html: 'abc');
-        $source = '<tst:if compare="empty" against="">E</tst:if><tst:if compare="text" operator="in" against="x abc">I</tst:if><tst:if compare="text" against="true">T</tst:if>';
+        $source = '<tst:if compare="empty" against="">E</tst:if><tst:if compare="text" operator="in" against="x '
+            . 'abc">I</tst:if><tst:if compare="text" against="true">T</tst:if>';
 
         $this->assertSame('EIT', $this->render(source: $source, data: $replacements));
     }
@@ -175,7 +186,8 @@ final class TemplateEngineTest extends TemplateEngineTestCase
         $object = (object) ['items' => ['a', 'b'], 'enabled' => true];
 
         $html = $this->render(
-            source: '<tst:if compare="o.enabled" against="true"><tst:for value="o.items" var="i">{tst:text value=\'i\'}</tst:for></tst:if>',
+            source: '<tst:if compare="o.enabled" against="true"><tst:for value="o.items" var="i">{tst:text '
+                . 'value=\'i\'}</tst:for></tst:if>',
             data: ['o' => $object],
         );
 
@@ -232,7 +244,8 @@ final class TemplateEngineTest extends TemplateEngineTestCase
         $this->assertSame(
             'AB|X AB Y|HI',
             $this->render(
-                source: "{tst:shout value='v'}|<tst:shout>x {tst:text value='v'} y</tst:shout>|<tst:shout>hi</tst:shout>",
+                source: "{tst:shout value='v'}|<tst:shout>x {tst:text value='v'} y</tst:shout>|<tst:shout>hi"
+                    . '</tst:shout>',
                 data: ['v' => 'ab'],
             ),
         );
@@ -240,7 +253,9 @@ final class TemplateEngineTest extends TemplateEngineTestCase
 
     public function testRenderingTwiceWithOtherDataGivesIndependentResults(): void
     {
-        $templateFile = $this->writeTemplate(source: "<tst:for value=\"l\" var=\"i\">{tst:text value='i'}</tst:for>{tst:text value='o'}");
+        $templateFile = $this->writeTemplate(
+            source: "<tst:for value=\"l\" var=\"i\">{tst:text value='i'}</tst:for>{tst:text value='o'}",
+        );
 
         $first = $this->renderFile(templateFile: $templateFile, data: ['l' => [1, 2], 'o' => 'A']);
         $second = $this->renderFile(templateFile: $templateFile, data: ['l' => [3], 'o' => 'B']);
@@ -268,7 +283,9 @@ final class TemplateEngineTest extends TemplateEngineTestCase
             );
 
             $html = $engine->render(
-                templateFile: $workDirectory->writeTemplate(source: "{yuf:text value='x'}<yuf:text value=\"x\"/>{tst:text value='x'}"),
+                templateFile: $workDirectory->writeTemplate(
+                    source: "{yuf:text value='x'}<yuf:text value=\"x\"/>{tst:text value='x'}",
+                ),
                 data: new TemplateData(values: ['x' => 'v']),
             );
 
@@ -295,7 +312,10 @@ final class TemplateEngineTest extends TemplateEngineTestCase
             $this->assertSame('first', $engine->render(templateFile: $templateFile, data: new TemplateData()));
             $this->assertFileExists($cache->getCompiledFile(templateFile: $templateFile));
             // The compiled file runs in a static closure and only uses the runtime
-            $this->assertStringNotContainsString('$this', (string) file_get_contents(filename: $cache->getCompiledFile(templateFile: $templateFile)));
+            $this->assertStringNotContainsString(
+                '$this',
+                (string) file_get_contents(filename: $cache->getCompiledFile(templateFile: $templateFile)),
+            );
 
             // A changed template with an old modification time is not compiled again: the cache is used
             file_put_contents(filename: $templateFile, data: 'second');
@@ -329,7 +349,10 @@ final class TemplateEngineTest extends TemplateEngineTestCase
                 $engine->render(templateFile: $templateFile, data: new TemplateData());
                 TemplateEngineTest::fail('The tag is not closed');
             } catch (TemplateException $exception) {
-                $this->assertSame('The tag <tst:if> is not closed in ' . $templateFile . ' on line 1', $exception->getMessage());
+                $this->assertSame(
+                    'The tag <tst:if> is not closed in ' . $templateFile . ' on line 1',
+                    $exception->getMessage(),
+                );
             }
 
             $this->assertFileDoesNotExist($cache->getCompiledFile(templateFile: $templateFile));

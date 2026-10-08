@@ -93,7 +93,10 @@ final readonly class TemplateParser
         if ($inlineName !== null) {
             $builder->addTag(
                 name: $inlineName,
-                attributes: $this->parseAttributes(attributes: $this->groupText(groups: $groups, index: 2) ?? '', quote: "'"),
+                attributes: $this->parseAttributes(
+                    attributes: $this->groupText(groups: $groups, index: 2) ?? '',
+                    quote: "'",
+                ),
                 line: $line,
             );
 

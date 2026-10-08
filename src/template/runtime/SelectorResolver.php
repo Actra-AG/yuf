@@ -42,7 +42,8 @@ final readonly class SelectorResolver
         $name = array_shift(array: $parts);
         if (!$scopes->has(name: $name)) {
             throw new TemplateException(
-                reason: 'The template data "' . $name . '" does not exist. Check that the view provides a replacement with this identifier',
+                reason: 'The template data "' . $name
+                    . '" does not exist. Check that the view provides a replacement with this identifier',
             );
         }
         $value = $this->narrow(value: $scopes->get(name: $name));
@@ -74,8 +75,11 @@ final readonly class SelectorResolver
      *
      * @return TemplateValue
      */
-    private function resolvePart(bool|int|float|string|object|array|null $value, string $part, string $path): bool|int|float|string|object|array|null
-    {
+    private function resolvePart(
+        bool|int|float|string|object|array|null $value,
+        string $part,
+        string $path,
+    ): bool|int|float|string|object|array|null {
         if (is_array(value: $value)) {
             return $this->resolveArrayKey(array: $value, key: $part, path: $path);
         }
@@ -109,8 +113,11 @@ final readonly class SelectorResolver
     /**
      * @return TemplateValue
      */
-    private function resolveObjectMember(object $object, string $name, string $path): bool|int|float|string|object|array|null
-    {
+    private function resolveObjectMember(
+        object $object,
+        string $name,
+        string $path,
+    ): bool|int|float|string|object|array|null {
         if (property_exists(object_or_class: $object, property: $name)) {
             $property = new ReflectionProperty(class: $object, property: $name);
             if ($property->isPublic()) {
@@ -120,7 +127,8 @@ final readonly class SelectorResolver
         $method = $this->findMethod(object: $object, name: $name);
         if ($method === null) {
             throw new TemplateException(
-                reason: 'Cannot read "' . $name . '" of "' . $path . '": no key, public property, getter or method without arguments of this name',
+                reason: 'Cannot read "' . $name . '" of "' . $path
+                    . '": no key, public property, getter or method without arguments of this name',
             );
         }
 

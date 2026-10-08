@@ -40,7 +40,10 @@ final class ValueFormatterTest extends TestCase
         yield 'false' => [false, ''];
         yield 'null' => [null, ''];
         yield 'Stringable' => [new StringableValue(value: '<i>'), '&lt;i&gt;'];
-        yield 'trusted HTML is not escaped again' => [new TrustedHtml(html: '<b>a</b> &amp; "q"'), '<b>a</b> &amp; "q"'];
+        yield 'trusted HTML is not escaped again' => [
+            new TrustedHtml(html: '<b>a</b> &amp; "q"'),
+            '<b>a</b> &amp; "q"',
+        ];
     }
 
     #[DataProvider('escapeProvider')]

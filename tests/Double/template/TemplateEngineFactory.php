@@ -35,7 +35,10 @@ final class TemplateEngineFactory
         array $ownTags = [],
     ): TemplateEngine {
         $tags = TemplateTagCollection::createDefault(
-            localeHandler: $localeHandler ?? new LocaleHandler(language: null, availableLanguages: new LanguageCollection()),
+            localeHandler: $localeHandler ?? new LocaleHandler(
+                language: null,
+                availableLanguages: new LanguageCollection(),
+            ),
             snippetsDirectory: $snippetsDirectory,
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-01-02 03:04:05')),
         );

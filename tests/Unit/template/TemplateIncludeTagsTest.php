@@ -42,7 +42,8 @@ final class TemplateIncludeTagsTest extends TemplateEngineTestCase
     public function testLoadSubTplSeesTheLoopVariable(): void
     {
         $html = $this->render(
-            source: '<tst:for value="l" var="i"><tst:loadSubTpl tplfile="' . TemplateIncludeTagsTest::fixtureDirectory() . 'subLoop.html"/>;</tst:for>',
+            source: '<tst:for value="l" var="i"><tst:loadSubTpl tplfile="' . TemplateIncludeTagsTest::fixtureDirectory()
+                . 'subLoop.html"/>;</tst:for>',
             data: ['l' => [1, 2]],
         );
 
@@ -54,7 +55,9 @@ final class TemplateIncludeTagsTest extends TemplateEngineTestCase
         $templateFile = $this->writeTemplate(source: '<tst:loadSubTpl tplfile="/nonexistent/sub.html"/>');
 
         $this->expectException(TemplateException::class);
-        $this->expectExceptionMessageIs('Template file not found: /nonexistent/sub.html in ' . $templateFile . ' on line 1');
+        $this->expectExceptionMessageIs(
+            'Template file not found: /nonexistent/sub.html in ' . $templateFile . ' on line 1',
+        );
 
         $this->renderFile(templateFile: $templateFile);
     }
@@ -64,7 +67,8 @@ final class TemplateIncludeTagsTest extends TemplateEngineTestCase
         $templateFile = $this->writeTemplate(source: '<tst:loadSubTpl tplfile="{this}"/>');
         $this->expectException(TemplateException::class);
         $this->expectExceptionMessageIs(
-            'The template data "this" does not exist. Check that the view provides a replacement with this identifier in ' . $templateFile . ' on line 1',
+            'The template data "this" does not exist. Check that the view provides a replacement with this '
+                . 'identifier in ' . $templateFile . ' on line 1',
         );
 
         $this->renderFile(templateFile: $templateFile);

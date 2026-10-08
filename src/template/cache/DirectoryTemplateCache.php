@@ -26,7 +26,8 @@ final readonly class DirectoryTemplateCache implements TemplateCache
 
     /**
      * @param string $cacheDirectory Directory for the compiled files
-     * @param string $templateBaseDirectory Templates below it are cached under their relative path, all others under a hash of their path
+     * @param string $templateBaseDirectory Templates below it are cached under their relative path, all others under a
+     *                                      hash of their path
      */
     public function __construct(private string $cacheDirectory, string $templateBaseDirectory)
     {
@@ -86,7 +87,10 @@ final readonly class DirectoryTemplateCache implements TemplateCache
         if (is_dir(filename: $directory)) {
             return;
         }
-        if (!mkdir(directory: $directory, permissions: DirectoryTemplateCache::DIRECTORY_MODE, recursive: true) && !is_dir(filename: $directory)) {
+        if (
+            !mkdir(directory: $directory, permissions: DirectoryTemplateCache::DIRECTORY_MODE, recursive: true)
+            && !is_dir(filename: $directory)
+        ) {
             throw new TemplateException(reason: 'Could not create the template cache directory ' . $directory);
         }
     }
@@ -95,7 +99,10 @@ final readonly class DirectoryTemplateCache implements TemplateCache
     {
         if (str_starts_with(haystack: $templateFile, needle: $this->templateBaseDirectory)) {
             $relativePath = substr(string: $templateFile, offset: strlen(string: $this->templateBaseDirectory));
-            if ($relativePath !== '' && !in_array(needle: '..', haystack: explode(separator: '/', string: $relativePath), strict: true)) {
+            if (
+                $relativePath !== ''
+                && !in_array(needle: '..', haystack: explode(separator: '/', string: $relativePath), strict: true)
+            ) {
                 return $relativePath;
             }
         }
