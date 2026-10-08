@@ -627,3 +627,30 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   with `base64` on the command line.
 - `UPGRADE.md`: `## [v4.55.0]`, README "Sending mail with SMTP". `ddev composer check` green, baseline empty. `example/`
   does not use the mailer.
+
+### Step 15 (v4.56.0) – done
+
+- **New:** `MicrosoftClientCredentialsTokenProvider` (client credentials flow through `CurlClient` and `CurlPostRequest`,
+  form body, token cached in the instance until `expires_in` minus 60 s; `expires_in` as int or digit string, `token_type`
+  must be Bearer; tenant ID checked against `[A-Za-z0-9.-]`), `GraphMailer` (extends `AbstractMailer`), internal
+  `MailerHttpErrorReader` (reads `error` / `error_description` of OAuth and `error.code` / `error.message` of Graph; only
+  strings, whitespace and control characters replaced, cut at 300 characters).
+- **Message:** `headerHasTo()`, `headerHasSubject()` and `headerHasBcc()` are all `true`: Graph takes the recipients of a
+  MIME message from the `To`, `Cc` and `Bcc` headers (there is no envelope; Exchange removes `Bcc` from the delivered
+  message). The envelope sender (`senderEmail` of the mail) is not used, `From` must be the mailbox or a send-as address.
+  The message is `header CRLF CRLF body`, Base64 encoded; `SmtpDataFormatter` is not used (dot stuffing would corrupt it).
+  Content-Type of the request is `text/plain; charset=utf-8` (what `CurlPostRequest::createWithPlainTextBody()` sends).
+- **Size:** the Base64 text is checked against 4 194 304 bytes before the token is asked for; the exception names the limit
+  and says that larger attachments are not supported. The attachments are Base64 in the MIME message and the message again
+  in the request, so about 2 MB of attachments is the maximum (documented). The tests build the real sizes (2.4 MB fails,
+  2.1 MB passes), no configurable limit.
+- **Errors:** 202 is success, everything else (also 200, redirects) a `MailerException` with the HTTP status and the
+  details; transfer failures with the cURL message. The access token goes through `useTokenAuthentication()`: plain HTTP
+  to a host other than localhost or an invalid token throws a `MailerException` with a fixed text (no token). No retry
+  after 401 (a provider that caches a revoked token delivers it until it expires).
+- **Tests:** 20491 -> 20537. New doubles: `ScriptedHttpServer` (+ router `scripted-server.php`: status and body per path
+  from a file, requests recorded in a file, temporary directory removed in the destructor), `AdjustableClock`;
+  `LocalHttpServer` got the optional arguments `script:` and `environment:`, `EchoedRequest::fromJson()`;
+  `scripted-server.php` is allowed to use `$_SERVER` in `phpstan.neon` like `echo-server.php`.
+- `UPGRADE.md`: `## [v4.56.0]`, README "Sending mail with Microsoft 365 (Graph API)" (also the `XOAUTH2` example with the
+  Outlook scope). `ddev composer check` green, baseline empty. `example/` does not use the mailer.

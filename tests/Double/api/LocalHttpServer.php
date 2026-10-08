@@ -22,7 +22,12 @@ final class LocalHttpServer
 
     public readonly int $port;
 
-    public function __construct()
+    /**
+     * @param string $script Router script in this directory
+     * @param array<string, string> $environment Environment variables of the server process (the router script reads
+     *                                           them with `getenv()`)
+     */
+    public function __construct(string $script = 'echo-server.php', array $environment = [])
     {
         $this->port = LocalHttpServer::findFreePort();
         // @phpstan-ignore disallowed.function (starts PHP's built-in web server with fixed arguments, loopback only)
@@ -31,10 +36,11 @@ final class LocalHttpServer
                 PHP_BINARY,
                 '-S',
                 '127.0.0.1:' . $this->port,
-                __DIR__ . '/echo-server.php',
+                __DIR__ . '/' . $script,
             ],
             descriptor_spec: [0 => ['null'], 1 => ['null'], 2 => ['null']],
             pipes: $pipes,
+            env_vars: $environment === [] ? null : $environment,
         );
         if ($process === false) {
             throw new RuntimeException(message: 'The local web server could not be started.');

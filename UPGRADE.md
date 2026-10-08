@@ -4,6 +4,21 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.56.0] – 2026-10-08
+
+New: send mail through the Microsoft Graph API (Microsoft ends basic authentication for SMTP). No existing code is
+affected.
+
+- `GraphMailer` (`senderMailbox:`, `oAuthTokenProvider:`, optional `graphBaseUrl:` and `curlClient:`) sends the MIME
+  message with `POST /users/{mailbox}/sendMail`. It needs the application permission `Mail.Send`; the request is limited
+  to 4 MB (about 2 MB of attachments), a larger message throws a `MailerException` before anything is sent.
+- `MicrosoftClientCredentialsTokenProvider` (`tenantId:`, `clientId:`, `clientSecret:`, optional `scope:`,
+  `authorityUrl:`, `curlClient:`, `clock:`) is an `OAuthTokenProvider` with the OAuth 2.0 client credentials flow and
+  caches the token. With `scope: 'https://outlook.office365.com/.default'` it also serves `SmtpMailer` with `XOAUTH2`.
+- See the README, section "Sending mail with Microsoft 365 (Graph API)".
+
+---
+
 ## [v4.55.0] – 2026-10-08
 
 New: `SmtpMailer` authenticates with `AUTH PLAIN` and `XOAUTH2` besides `AUTH LOGIN`.

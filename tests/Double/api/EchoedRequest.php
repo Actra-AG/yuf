@@ -32,7 +32,16 @@ final readonly class EchoedRequest
         if ($response->rawResponseBody === false) {
             throw new LogicException(message: 'The request failed: ' . $response->errorMessage);
         }
-        $decoded = json_decode(json: $response->rawResponseBody, associative: true, flags: JSON_THROW_ON_ERROR);
+
+        return EchoedRequest::fromJson(json: $response->rawResponseBody);
+    }
+
+    /**
+     * @param string $json The JSON object of an echoed request
+     */
+    public static function fromJson(string $json): EchoedRequest
+    {
+        $decoded = json_decode(json: $json, associative: true, flags: JSON_THROW_ON_ERROR);
         if (
             !is_array(value: $decoded)
             || !array_key_exists(key: 'method', array: $decoded)

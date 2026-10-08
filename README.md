@@ -708,6 +708,59 @@ $mailer = new SmtpMailer(
 
 Passwords and tokens are neither written to `$mailer->log` (`AUTH ... (hidden)`) nor put into exception messages.
 
+## Sending mail with Microsoft 365 (Graph API)
+
+Microsoft ends basic authentication (user name and password) for SMTP. `GraphMailer` sends through the Microsoft Graph
+API instead (`POST /users/{mailbox}/sendMail` with the MIME message that yuf builds, so HTML, attachments and headers
+work as with `SmtpMailer`). `MicrosoftClientCredentialsTokenProvider` gets the access token with the OAuth 2.0 client
+credentials flow (no user) and keeps it until one minute before it expires, so use one instance for all mails.
+
+Register an app in Microsoft Entra ID with a client secret and the **application** permission `Mail.Send` for Microsoft
+Graph (admin consent). Without further steps this allows the app to send as every mailbox of the tenant: restrict it to
+the mailboxes it needs with an application access policy in Exchange Online. The address of the `From` header of a mail
+must be the mailbox of the mailer or an address that this mailbox may send as.
+
+```php
+$tokenProvider = new MicrosoftClientCredentialsTokenProvider(
+    tenantId: $core->environmentSettings->getString(key: 'mailer.tenantId'),
+    clientId: $core->environmentSettings->getString(key: 'mailer.clientId'),
+    clientSecret: $core->environmentSettings->getString(key: 'mailer.clientSecret'),
+);
+$mailer = new GraphMailer(
+    serverAddress: '192.0.2.1',
+    senderMailbox: 'noreply@example.com', // user ID or user principal name
+    oAuthTokenProvider: $tokenProvider,
+);
+```
+
+- Graph answers `202 Accepted` before the delivery: a later bounce is not reported. Any other answer throws a
+  `MailerException` with the HTTP status and the `error.code` / `error.message` of Graph; exception messages never
+  contain the client secret or a token.
+- The request is limited to 4 MB by Graph. The message is sent as Base64 text and its attachments are Base64 encoded in
+  the message already, so attachments of about 2 MB are the maximum. A larger message throws a `MailerException`
+  before anything is sent; larger attachments (upload sessions) are not supported.
+- The `Bcc` recipients are read from the `Bcc` header of the message (Exchange removes it from the delivered mail).
+
+The same token provider serves `SmtpMailer` with `XOAUTH2` (Microsoft 365 SMTP, `smtp.office365.com`). The scope
+differs, the app needs the permission `SMTP.SendAsApp` of Office 365 Exchange Online, and its service principal must be
+registered in Exchange Online (`New-ServicePrincipal`) and have full access to the mailbox (`Add-MailboxPermission`):
+
+```php
+$tokenProvider = new MicrosoftClientCredentialsTokenProvider(
+    tenantId: $core->environmentSettings->getString(key: 'mailer.tenantId'),
+    clientId: $core->environmentSettings->getString(key: 'mailer.clientId'),
+    clientSecret: $core->environmentSettings->getString(key: 'mailer.clientSecret'),
+    scope: 'https://outlook.office365.com/.default',
+);
+$mailer = new SmtpMailer(
+    serverAddress: '192.0.2.1',
+    hostName: 'smtp.office365.com',
+    smtpUserName: 'noreply@example.com',
+    smtpPassword: '',
+    oAuthTokenProvider: $tokenProvider,
+);
+```
+
 ## Clock
 
 Time-dependent code takes a `actra\yuf\clock\Clock` (`now(): DateTimeImmutable`, the same signature as PSR-20's
