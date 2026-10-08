@@ -11,17 +11,17 @@ namespace actra\yuf\common;
 
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
-use Throwable;
+use RuntimeException;
 
-class LogFile
+final class LogFile
 {
-    /** @var LogFile[] */
-    private static array $openLogFiles = [];
     /** @var resource */
     private $stream;
 
     /**
      * @param string $logDirectory The log directory of the project (`Core::$logDirectory`, with trailing slash)
+     *
+     * @throws RuntimeException If a directory cannot be created or the log file cannot be opened
      */
     public function __construct(
         string $logDirectory,
@@ -29,84 +29,23 @@ class LogFile
         string $logFileName,
         private readonly Clock $clock = new SystemClock(),
     ) {
-        $groupDirectoryPath = LogFile::createDirectoryIfMissing(path: $logDirectory . $group);
-        $dateArr = explode(separator: '-', string: $this->clock->now()->format(format: 'Y-m-d'));
-        $yearDirectoryPath = LogFile::createDirectoryIfMissing(
-            path: $groupDirectoryPath . DIRECTORY_SEPARATOR . $dateArr[0],
-        );
-        $monthDirectoryPath = LogFile::createDirectoryIfMissing(
-            path: $yearDirectoryPath . DIRECTORY_SEPARATOR . $dateArr[1],
-        );
-        $dayDirectoryPath = LogFile::createDirectoryIfMissing(
-            path: $monthDirectoryPath . DIRECTORY_SEPARATOR . $dateArr[2],
-        );
-        $this->stream = fopen(
-            filename: $dayDirectoryPath . DIRECTORY_SEPARATOR . $logFileName . '-' . uniqid(
-                more_entropy: true,
-            ) . '.log',
-            mode: 'a',
-        );
-        LogFile::$openLogFiles[$group . '-' . $logFileName] = $this;
-    }
-
-    private static function createDirectoryIfMissing($path): string
-    {
-        if (!is_dir(filename: $path)) {
-            try {
-                mkdir(directory: $path);
-            } catch (Throwable $throwable) {
-                if (str_contains(
-                    haystack: $throwable->getMessage(),
-                    needle: 'mkdir(): Die Datei existiert bereits',
-                )) {
-                    return $path;
-                }
-                throw $throwable;
-            }
+        $now = $this->clock->now();
+        $dayDirectoryPath = $logDirectory . $group;
+        foreach (['Y', 'm', 'd'] as $format) {
+            LogFile::createDirectoryIfMissing(path: $dayDirectoryPath);
+            $dayDirectoryPath .= DIRECTORY_SEPARATOR . $now->format(format: $format);
         }
-
-        return $path;
-    }
-
-    public static function info(
-        string $logDirectory,
-        string $logFileName,
-        string $message,
-    ): void {
-        LogFile::log(
-            logDirectory: $logDirectory,
-            group: 'info',
-            logFileName: $logFileName,
-            message: $message,
-        );
-    }
-
-    private static function log(
-        string $logDirectory,
-        string $group,
-        string $logFileName,
-        string $message,
-    ): void {
-        if (array_key_exists(
-            key: $group . '-' . $logFileName,
-            array: LogFile::$openLogFiles,
-        )) {
-            $logFile = LogFile::$openLogFiles[$group . '-' . $logFileName];
-        } else {
-            $logFile = new LogFile(
-                logDirectory: $logDirectory,
-                group: $group,
-                logFileName: $logFileName,
-            );
+        LogFile::createDirectoryIfMissing(path: $dayDirectoryPath);
+        $filePath = $dayDirectoryPath . DIRECTORY_SEPARATOR . $logFileName . '-' . uniqid(more_entropy: true) . '.log';
+        $stream = LogFile::openForAppending(filePath: $filePath);
+        if ($stream === false) {
+            throw new RuntimeException(message: 'Cannot open log file "' . $filePath . '".');
         }
-        $logFile->write(line: $message);
+        $this->stream = $stream;
     }
 
     public function write(string $line): void
     {
-        if (!is_resource(value: $this->stream)) {
-            return;
-        }
         $now = $this->clock->now();
         // Eight fractional digits, as before: microseconds plus two zeros
         $timestamp = $now->format(format: 'Y-m-d H:i:s') . ',' . $now->format(format: 'u') . '00';
@@ -116,36 +55,41 @@ class LogFile
         );
     }
 
-    public static function debug(
-        string $logDirectory,
-        string $logFileName,
-        string $message,
-    ): void {
-        LogFile::log(
-            logDirectory: $logDirectory,
-            group: 'debug',
-            logFileName: $logFileName,
-            message: $message,
-        );
-    }
-
-    public static function error(
-        string $logDirectory,
-        string $logFileName,
-        string $message,
-    ): void {
-        LogFile::log(
-            logDirectory: $logDirectory,
-            group: 'error',
-            logFileName: $logFileName,
-            message: $message,
-        );
-    }
-
     public function __destruct()
     {
-        if (is_resource(value: $this->stream)) {
-            fclose(stream: $this->stream);
+        fclose(stream: $this->stream);
+    }
+
+    /**
+     * @throws RuntimeException
+     */
+    private static function createDirectoryIfMissing(string $path): void
+    {
+        if (is_dir(filename: $path)) {
+            return;
+        }
+        // Another process may create the directory in the meantime: only the final state counts
+        set_error_handler(callback: static fn(): bool => true);
+        try {
+            mkdir(directory: $path);
+        } finally {
+            restore_error_handler();
+        }
+        if (!is_dir(filename: $path)) {
+            throw new RuntimeException(message: 'Cannot create log directory "' . $path . '".');
+        }
+    }
+
+    /**
+     * @return resource|false
+     */
+    private static function openForAppending(string $filePath)
+    {
+        set_error_handler(callback: static fn(): bool => true);
+        try {
+            return fopen(filename: $filePath, mode: 'a');
+        } finally {
+            restore_error_handler();
         }
     }
 }

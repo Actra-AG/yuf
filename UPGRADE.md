@@ -4,6 +4,30 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.28.0] – 2026-10-08
+
+### ⚠️ `LogFile` is an instance class only
+
+The static methods `LogFile::info()`, `LogFile::debug()` and `LogFile::error()` and the static registry of open log files
+are removed. `LogFile` is `final`. Constructor, log file path and line format are unchanged.
+
+```php
+// before
+LogFile::info(logDirectory: $logDirectory, logFileName: 'import', message: 'started');
+
+// after
+$logFile = new LogFile(logDirectory: $logDirectory, group: 'info', logFileName: 'import');
+$logFile->write(line: 'started');
+```
+
+The old methods reused one file per group and name within a request. Keep one `LogFile` instance for that and call
+`write()` on it.
+
+`new LogFile(…)` now throws a `RuntimeException` (with the path) if a directory cannot be created or the log file cannot
+be opened. Before, `write()` silently did nothing if the file could not be opened. No code change is needed.
+
+---
+
 ## [v4.27.0] – 2026-10-08
 
 ### Own template tags

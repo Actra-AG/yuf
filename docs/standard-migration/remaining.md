@@ -38,7 +38,6 @@ The plan for the remaining work is [docs/standard-completion/plan.md](../standar
     - session: `AbstractSessionHandler::getSessionHandler()` / `enabled()`, `AuthSession`, `CsrfToken`,
       `FormNameRegistry`;
     - `HttpRequest` and its caches;
-    - `LogFile` (static facade with a registry of open files);
     - `FrameworkDb::getInstance()` (connection pool), `SearchHelper::getInstance()`;
     - identifier registries of `SmartTable`, `TableFilter`, `AbstractTableFilterField`, `SearchHelper`;
     - caches: `PhoneMetaData`, `PhoneParser`, `AbstractCurlRequest`, `DbQueryLogList`;
@@ -76,8 +75,8 @@ The plan for the remaining work is [docs/standard-completion/plan.md](../standar
 
 ## Structure and separation (`php.md`, section 1)
 
-- Session object instead of the static session classes; `HttpRequest` as instance (`HttpRequest::fromGlobals()`);
-  `LogFile` as logger instance (see `plan.md`, "Later").
+- Session object instead of the static session classes; `HttpRequest` as instance (`HttpRequest::fromGlobals()`); see
+  [docs/standard-completion/plan.md](../standard-completion/plan.md). `LogFile` is an instance class since v4.28.0.
 - Logic mixed with I/O, e.g. `HtmlDocument` and `ExceptionHandler` (render and read files), `Core` (reads the env file,
   creates directories).
 

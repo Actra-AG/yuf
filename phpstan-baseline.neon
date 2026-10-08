@@ -559,48 +559,6 @@ parameters:
 			path: src/common/LogFile.php
 
 		-
-			rawMessage: 'Method actra\yuf\common\LogFile::createDirectoryIfMissing() has parameter $path with no type specified.'
-			identifier: missingType.parameter
-			count: 1
-			path: src/common/LogFile.php
-
-		-
-			rawMessage: 'Method actra\yuf\common\LogFile::createDirectoryIfMissing() should return string but returns mixed.'
-			identifier: return.type
-			count: 2
-			path: src/common/LogFile.php
-
-		-
-			rawMessage: Offset 1 might not exist on non-empty-list<string>.
-			identifier: offsetAccess.notFound
-			count: 1
-			path: src/common/LogFile.php
-
-		-
-			rawMessage: Offset 2 might not exist on non-empty-list<string>.
-			identifier: offsetAccess.notFound
-			count: 1
-			path: src/common/LogFile.php
-
-		-
-			rawMessage: 'Parameter $directory of function mkdir expects string, mixed given.'
-			identifier: argument.type
-			count: 1
-			path: src/common/LogFile.php
-
-		-
-			rawMessage: 'Parameter $filename of function is_dir expects string, mixed given.'
-			identifier: argument.type
-			count: 1
-			path: src/common/LogFile.php
-
-		-
-			rawMessage: 'Property actra\yuf\common\LogFile::$stream (resource) does not accept resource|false.'
-			identifier: assign.propertyType
-			count: 1
-			path: src/common/LogFile.php
-
-		-
 			rawMessage: 'Calling isset() is forbidden, compare explicitly: array_key_exists(), !== null or a typed property (see standards/php.md).'
 			identifier: disallowed.isset
 			count: 12

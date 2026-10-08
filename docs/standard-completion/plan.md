@@ -79,3 +79,13 @@ The order of 4–16 may change when a redesign already cleaned an area.
 - Projects that use `LogFile` (`new LogFile(…)` + `write()`): add `logDirectory:` (v4.26.0); nothing else changes.
 
 ## Handover notes
+
+### Step 1 (v4.28.0) – done
+
+- `LogFile` is `final` and an instance class: `info()`, `debug()`, `error()`, `log()` and `$openLogFiles` removed; the
+  class has no static state anymore (only private static helpers).
+- Characterization tests in `tests/Unit/common/LogFileTest.php` passed against the old code before the change.
+- The German `mkdir()` message check is replaced by a locale-independent check (`is_dir()` after `mkdir()`, errors
+  silenced with a temporary error handler, no `@`). Directory or file failure throws a `RuntimeException`; the
+  constructor throws if `fopen()` fails (bug fix). Baseline: 532 -> 525 entries (`uniqid()` entry stays).
+
