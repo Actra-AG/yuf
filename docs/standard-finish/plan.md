@@ -667,3 +667,11 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   former row "404 still an error" of `acceptedRedirectProvider` was removed: PHP turns any status with a `Location`
   header of the router into 302, so it never tested 404 (the evaluator test covers 404 accepted).
 - `UPGRADE.md`: `## [v4.57.0]`. README does not document it. `example/` does not use the Curl client.
+
+### Step 17 – done
+
+- `docs/standard-migration/remaining.md` rewritten to the final state after v4.57.0: follow-up list for
+  `actra/backend` (from the read-only searches of the steps), the standard figures (baseline 0, 3 documented
+  `@phpstan-ignore`, 51 non-final classes = abstract bases / extension points, `Core::$isInitialized` as the only static
+  state), what is not covered by tests (incl. the checks of `GraphMailer` against a real tenant) and the open points.
+  **The plan is complete.**
