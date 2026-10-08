@@ -178,6 +178,10 @@ By default, the view of a request is the class `<viewClassPrefix>\view\<viewGrou
 `viewFactory`; `ViewMap` maps the file name to a closure, so views have any class name and receive their dependencies.
 Only the view of the current request is created; a file without a mapped view is rendered without view.
 
+The class names of `ClassNameViewFactory` are the file names (e.g. `welcome`), so they are lowercase: an allowed
+exception from PascalCase for these view classes, documented in the project. Use `ViewMap` for views with PascalCase
+names or constructor dependencies.
+
 Every view receives the `ViewContext` of the request and passes it to `BaseView::__construct()`. It holds the route
 (`$this->context->route`), the file group and title, the `PathVars` and the `ContentHandler`
 (`$this->context->content->getContentType()`), the `LocaleHandler` (`$this->context->locale`) and the template engine

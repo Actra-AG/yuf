@@ -4,6 +4,13 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.57.3] – 2026-10-08
+
+Documentation only, no code change: the README, section "Views", says that the view classes of `ClassNameViewFactory`
+have the lowercase file name as class name, an allowed exception from PascalCase, and when to use `ViewMap` instead.
+
+---
+
 ## [v4.57.2] – 2026-10-08
 
 Documentation only, no code change: the error message example of "Rules for forms" in the README takes the text from a
