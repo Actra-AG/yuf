@@ -13,7 +13,8 @@ namespace actra\yuf\form;
  * The texts the form code creates itself. Plain text, encoded when it is rendered. The defaults are English,
  * `FormMessages::german()` has the German texts (Sie-form, Swiss spelling). Pass it to `Form(messages: ...)`.
  *
- * Placeholders: `[field]` in `invalidOption`, `[max]` in `tooManyFiles`, `[fileName]` in `duplicateFile`.
+ * Placeholders: `[field]` in `invalidOption`, `[max]` in `tooManyFiles`, `[fileName]` in `duplicateFile`,
+ * `[maxSize]` in `fileExceedsMaxSize`.
  */
 final readonly class FormMessages
 {
@@ -32,6 +33,8 @@ final readonly class FormMessages
         public string $fileIncomplete = 'The file was uploaded incompletely:',
         public string $fileTooBig = 'The file was too big:',
         public string $fileTechnicalError = 'A technical error occurred while uploading the file:',
+        public string $fileExceedsMaxSize = 'The file is larger than [maxSize]:',
+        public string $fileTypeNotAllowed = 'The type of the file is not allowed:',
         public string $tooManyFiles = 'Only [max] file(s) allowed.',
         public string $duplicateFile = 'A file named "[fileName]" has already been uploaded.',
     ) {}
@@ -53,6 +56,8 @@ final readonly class FormMessages
             fileIncomplete: 'Die Datei wurde unvollständig hochgeladen:',
             fileTooBig: 'Die Datei war zu gross:',
             fileTechnicalError: 'Es ist ein technischer Fehler beim Hochladen der Datei aufgetreten:',
+            fileExceedsMaxSize: 'Die Datei ist grösser als [maxSize]:',
+            fileTypeNotAllowed: 'Der Dateityp ist nicht erlaubt:',
             tooManyFiles: 'Nur [max] Datei(en) möglich.',
             duplicateFile: 'Es wurde bereits eine Datei mit dem Dateinamen "[fileName]" hochgeladen.',
         );

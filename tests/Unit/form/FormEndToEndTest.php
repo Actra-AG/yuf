@@ -32,7 +32,9 @@ use actra\yuf\form\FormOptions;
 use actra\yuf\form\rule\IntegerMinRule;
 use actra\yuf\form\rule\MinLengthRule;
 use actra\yuf\form\settings\PasswordPurposeEnum;
+use actra\yuf\form\upload\UploadFileType;
 use actra\yuf\html\HtmlText;
+use actra\yuf\tests\Double\form\FixedFileTypeDetector;
 use actra\yuf\tests\Double\form\FormContextFactory;
 use actra\yuf\tests\Double\form\InMemoryFileUploadStorage;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
@@ -171,6 +173,8 @@ final class FormEndToEndTest extends TestCase
             label: $this->text('Attachment'),
             maxFileUploadCount: 2,
             storage: $this->storage,
+            allowedFileTypes: [UploadFileType::pdf()],
+            fileTypeDetector: new FixedFileTypeDetector(defaultType: 'application/pdf'),
         );
 
         foreach (

@@ -19,6 +19,7 @@ use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\model\UploadedFile;
+use actra\yuf\form\upload\UploadFileType;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\FormContextFactory;
 use actra\yuf\tests\Double\form\InMemoryFileUploadStorage;
@@ -130,7 +131,12 @@ final class AttributeEscapingTest extends TestCase
             'ptr1',
             new UploadedFile(name: 'first.txt', type: 'text/plain', size: 1, path: '/tmp/yuf-test/a'),
         );
-        $field = new FileField(name: 'f"g', label: $this->label(), storage: $storage);
+        $field = new FileField(
+            name: 'f"g',
+            label: $this->label(),
+            storage: $storage,
+            allowedFileTypes: [UploadFileType::plainText()],
+        );
         $field->validate(input: FormInput::fromArray(data: ['f"g_UID' => 'ptr1']));
 
         $html = $field->getHtmlTag()->render();

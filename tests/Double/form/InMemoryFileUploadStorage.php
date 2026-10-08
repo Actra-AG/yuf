@@ -77,7 +77,7 @@ final class InMemoryFileUploadStorage implements FileUploadStorage
     }
 
     #[Override]
-    public function store(string $pointer, UploadInput $upload): ?UploadedFile
+    public function store(string $pointer, UploadInput $upload, string $detectedType): ?UploadedFile
     {
         if ($this->failStoring) {
             return null;
@@ -86,7 +86,7 @@ final class InMemoryFileUploadStorage implements FileUploadStorage
 
         return new UploadedFile(
             name: $upload->name,
-            type: $upload->type,
+            type: $detectedType,
             size: $upload->size,
             path: 'memory://' . $pointer . '/' . ++$this->counter,
         );

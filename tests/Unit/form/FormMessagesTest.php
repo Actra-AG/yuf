@@ -34,6 +34,8 @@ final class FormMessagesTest extends TestCase
         $this->assertSame('The file was uploaded incompletely:', $messages->fileIncomplete);
         $this->assertSame('The file was too big:', $messages->fileTooBig);
         $this->assertSame('A technical error occurred while uploading the file:', $messages->fileTechnicalError);
+        $this->assertSame('The file is larger than [maxSize]:', $messages->fileExceedsMaxSize);
+        $this->assertSame('The type of the file is not allowed:', $messages->fileTypeNotAllowed);
         $this->assertSame('Only [max] file(s) allowed.', $messages->tooManyFiles);
         $this->assertSame('A file named "[fileName]" has already been uploaded.', $messages->duplicateFile);
     }
@@ -62,6 +64,8 @@ final class FormMessagesTest extends TestCase
             'Es ist ein technischer Fehler beim Hochladen der Datei aufgetreten:',
             $messages->fileTechnicalError,
         );
+        $this->assertSame('Die Datei ist grösser als [maxSize]:', $messages->fileExceedsMaxSize);
+        $this->assertSame('Der Dateityp ist nicht erlaubt:', $messages->fileTypeNotAllowed);
         $this->assertSame('Nur [max] Datei(en) möglich.', $messages->tooManyFiles);
         $this->assertSame(
             'Es wurde bereits eine Datei mit dem Dateinamen "[fileName]" hochgeladen.',

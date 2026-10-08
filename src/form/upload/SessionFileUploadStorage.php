@@ -108,7 +108,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
     }
 
     #[Override]
-    public function store(string $pointer, UploadInput $upload): ?UploadedFile
+    public function store(string $pointer, UploadInput $upload, string $detectedType): ?UploadedFile
     {
         if (!is_uploaded_file(filename: $upload->tmpName)) {
             return null;
@@ -133,7 +133,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
             return null;
         }
 
-        return new UploadedFile(name: $upload->name, type: $upload->type, size: $upload->size, path: $path);
+        return new UploadedFile(name: $upload->name, type: $detectedType, size: $upload->size, path: $path);
     }
 
     #[Override]

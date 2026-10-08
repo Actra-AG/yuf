@@ -15,15 +15,23 @@ use actra\yuf\form\FormRenderer;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\form\model\UploadInput;
 use actra\yuf\form\renderer\FileFieldRenderer;
+use actra\yuf\form\upload\FileTypeDetector;
 use actra\yuf\form\upload\FileUploadStorage;
+use actra\yuf\form\upload\FinfoFileTypeDetector;
+use actra\yuf\form\upload\UploadFileType;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
+use InvalidArgumentException;
 use Override;
 
 /**
  * Uploads one or several files. The value is the list of the files uploaded so far (`getFiles()`, key = hash of the
  * stored path), kept in a `FileUploadStorage` between the requests of the form, so a failed validation does not make
  * the user upload the files again. The field has no setter: files only come in with the request.
+ *
+ * Every upload is checked before it is stored: size (`maxFileSize`) and type. The type is detected from the content
+ * of the file (`FileTypeDetector`), never taken from the client, and must be one of the `allowedFileTypes` together
+ * with the extension of the client file name. `UploadedFile::$type` is the detected type.
  */
 final class FileField extends FormField
 {
@@ -45,16 +53,30 @@ final class FileField extends FormField
      *                                                 `FormMessages::duplicateFile`
      * @param FileUploadStorage $storage Where the files are kept between the requests (the production one is
      *                                   `SessionFileUploadStorage::forHttpRequest()`)
+     * @param list<UploadFileType> $allowedFileTypes The accepted kinds of files (at least one); everything else is
+     *                                               rejected, e.g. `[UploadFileType::pdf(), UploadFileType::jpeg()]`
+     * @param int $maxFileSize The maximal size of one file in bytes (more than 0, 10 MB by default)
+     * @param FileTypeDetector $fileTypeDetector Detects the type of an uploaded file from its content
+     * @throws InvalidArgumentException If `$allowedFileTypes` is empty or `$maxFileSize` is not positive
      */
     public function __construct(
         string $name,
         HtmlText $label,
         FileUploadStorage $storage,
+        public readonly array $allowedFileTypes,
         ?HtmlText $requiredError = null,
         public private(set) int $maxFileUploadCount = 1,
         private readonly ?HtmlText $tooManyFilesErrMsg = null,
         private readonly ?HtmlText $alreadyExistsErrorMessage = null,
+        private readonly int $maxFileSize = 10 * 1024 * 1024,
+        private readonly FileTypeDetector $fileTypeDetector = new FinfoFileTypeDetector(),
     ) {
+        if ($this->allowedFileTypes === []) {
+            throw new InvalidArgumentException(message: 'A file field needs at least one allowed file type.');
+        }
+        if ($this->maxFileSize < 1) {
+            throw new InvalidArgumentException(message: 'The maximal file size must be more than 0 bytes.');
+        }
         if ($this->maxFileUploadCount < 1) {
             $this->maxFileUploadCount = 1; // Silent correction
         }
@@ -229,12 +251,61 @@ final class FileField extends FormField
 
             return null;
         }
-        $file = $this->storage->store(pointer: $this->uniqueSessFileStorePointer, upload: $upload);
+        if ($upload->size > $this->maxFileSize) {
+            $this->addFileError(
+                message: str_replace(
+                    search: '[maxSize]',
+                    replace: FileField::formatSize(bytes: $this->maxFileSize),
+                    subject: $this->messages->fileExceedsMaxSize,
+                ),
+                fileName: $upload->name,
+            );
+
+            return null;
+        }
+        $detectedType = $this->fileTypeDetector->detectMimeType(path: $upload->tmpName);
+        if ($detectedType === null || !$this->isTypeAllowed(detectedType: $detectedType, fileName: $upload->name)) {
+            $this->addFileError(message: $this->messages->fileTypeNotAllowed, fileName: $upload->name);
+
+            return null;
+        }
+        $file = $this->storage->store(
+            pointer: $this->uniqueSessFileStorePointer,
+            upload: $upload,
+            detectedType: $detectedType,
+        );
         if ($file === null) {
             $this->addFileError(message: $this->messages->fileTechnicalError, fileName: $upload->name);
         }
 
         return $file;
+    }
+
+    private function isTypeAllowed(string $detectedType, string $fileName): bool
+    {
+        return array_any(
+            array: $this->allowedFileTypes,
+            callback: static fn(UploadFileType $type): bool => $type->accepts(
+                detectedMimeType: $detectedType,
+                fileName: $fileName,
+            ),
+        );
+    }
+
+    /**
+     * A size in a readable unit (binary, 1 KB = 1024 bytes), e.g. `10 MB`, `1.5 KB`, `512 bytes`, `1 byte`.
+     */
+    private static function formatSize(int $bytes): string
+    {
+        foreach (['GB' => 1024 ** 3, 'MB' => 1024 ** 2, 'KB' => 1024] as $unit => $factor) {
+            if ($bytes >= $factor) {
+                $number = number_format(num: $bytes / $factor, decimals: 1, thousands_separator: '');
+
+                return rtrim(string: rtrim(string: $number, characters: '0'), characters: '.') . ' ' . $unit;
+            }
+        }
+
+        return $bytes . ($bytes === 1 ? ' byte' : ' bytes');
     }
 
     private function getUploadErrorMessage(int $error): string

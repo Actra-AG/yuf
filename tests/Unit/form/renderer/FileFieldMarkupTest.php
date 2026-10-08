@@ -14,6 +14,7 @@ use actra\yuf\form\component\field\FileField;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\form\model\UploadedFile;
+use actra\yuf\form\upload\UploadFileType;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\FormContextFactory;
 use actra\yuf\tests\Double\form\InMemoryFileUploadStorage;
@@ -23,7 +24,8 @@ use PHPUnit\Framework\TestCase;
 /**
  * The HTML of the file field. The expected strings were rendered by yuf v3.3.2 for the same state (the uploads that
  * need no file system access: errors, removing and keeping files), with the German texts (`FormMessages::german()`).
- * The only change on purpose: the text of the remove button comes from `FormMessages::removeFile`.
+ * The changes on purpose: the text of the remove button comes from `FormMessages::removeFile`, and the input has an
+ * `accept` attribute with the extensions of the allowed types (v4.43.0; `.txt` in these tests).
  */
 final class FileFieldMarkupTest extends TestCase
 {
@@ -92,6 +94,7 @@ final class FileFieldMarkupTest extends TestCase
             tooManyFilesErrMsg: $tooManyFilesErrMsg,
             alreadyExistsErrorMessage: $alreadyExistsErrorMessage,
             storage: $this->createStorage(withFirstFile: $withFirstFile),
+            allowedFileTypes: [UploadFileType::plainText()],
         );
         $form->addField(formField: $field);
 
@@ -114,7 +117,7 @@ final class FileFieldMarkupTest extends TestCase
             '<form method="post" action="?{form}" enctype="multipart/form-data"><dl><dt>'
               . '<label for="file">File<span class="required">*</span><i class="label-info">(max. 3)</i></label>'
               . '</dt><dd class="has-error"><div class="fileupload-enhanced" data-max-files="3">'
-              . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
+              . '<input type="file" name="file[]" id="file" accept=".txt" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
               . '<input type="hidden" name="file_UID" value="ptr1"></div>'
               . '<div class="form-input-error" id="file-error" role="alert" aria-live="assertive">Req</div></dd>'
@@ -131,7 +134,7 @@ final class FileFieldMarkupTest extends TestCase
               . '</dt><dd><div class="fileupload-enhanced" data-max-files="2"><ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
               . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
-              . '</li></ul><input type="file" name="file[]" id="file" multiple>'
+              . '</li></ul><input type="file" name="file[]" id="file" accept=".txt" multiple>'
               . '<input type="hidden" name="file_UID" value="ptr1"></div></dd></dl></form>',
         ];
         yield 'too_big' => [
@@ -147,7 +150,7 @@ final class FileFieldMarkupTest extends TestCase
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
               . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
-              . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
+              . '<input type="file" name="file[]" id="file" accept=".txt" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
               . '<input type="hidden" name="file_UID" value="ptr1"></div>'
               . '<div class="form-input-error" id="file-error" role="alert" aria-live="assertive">Die Datei war zu '
@@ -167,7 +170,7 @@ final class FileFieldMarkupTest extends TestCase
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
               . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
-              . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
+              . '<input type="file" name="file[]" id="file" accept=".txt" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
               . '<input type="hidden" name="file_UID" value="ptr1"></div>'
               . '<div class="form-input-error" id="file-error" role="alert" aria-live="assertive">Die Datei war zu '
@@ -187,7 +190,7 @@ final class FileFieldMarkupTest extends TestCase
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
               . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
-              . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
+              . '<input type="file" name="file[]" id="file" accept=".txt" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
               . '<input type="hidden" name="file_UID" value="ptr1"></div>'
               . '<div class="form-input-error" id="file-error" role="alert" aria-live="assertive">Die Datei wurde '
@@ -207,7 +210,7 @@ final class FileFieldMarkupTest extends TestCase
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
               . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
-              . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
+              . '<input type="file" name="file[]" id="file" accept=".txt" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
               . '<input type="hidden" name="file_UID" value="ptr1"></div>'
               . '<div class="form-input-error" id="file-error" role="alert" aria-live="assertive">Es ist ein '
@@ -227,7 +230,7 @@ final class FileFieldMarkupTest extends TestCase
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
               . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
-              . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
+              . '<input type="file" name="file[]" id="file" accept=".txt" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
               . '<input type="hidden" name="file_UID" value="ptr1"></div>'
               . '<div class="form-input-error" id="file-error" role="alert" aria-live="assertive">Es ist ein '
@@ -245,7 +248,7 @@ final class FileFieldMarkupTest extends TestCase
               . '</dt><dd><div class="fileupload-enhanced" data-max-files="2"><ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
               . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
-              . '</li></ul><input type="file" name="file[]" id="file" multiple>'
+              . '</li></ul><input type="file" name="file[]" id="file" accept=".txt" multiple>'
               . '<input type="hidden" name="file_UID" value="ptr1"></div></dd></dl></form>',
         ];
         yield 'empty_file' => [
@@ -261,7 +264,7 @@ final class FileFieldMarkupTest extends TestCase
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
               . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
-              . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
+              . '<input type="file" name="file[]" id="file" accept=".txt" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
               . '<input type="hidden" name="file_UID" value="ptr1"></div>'
               . '<div class="form-input-error" id="file-error" role="alert" aria-live="assertive">Die Datei war '
@@ -281,7 +284,7 @@ final class FileFieldMarkupTest extends TestCase
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
               . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
-              . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
+              . '<input type="file" name="file[]" id="file" accept=".txt" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
               . '<input type="hidden" name="file_UID" value="ptr1"></div>'
               . '<div class="form-input-error" id="file-error" role="alert" aria-live="assertive">Es wurde bereits '
@@ -301,7 +304,7 @@ final class FileFieldMarkupTest extends TestCase
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
               . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
-              . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
+              . '<input type="file" name="file[]" id="file" accept=".txt" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
               . '<input type="hidden" name="file_UID" value="ptr1"></div>'
               . '<div class="form-input-error" id="file-error" role="alert" aria-live="assertive">Dup '
@@ -321,7 +324,7 @@ final class FileFieldMarkupTest extends TestCase
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
               . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
-              . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
+              . '<input type="file" name="file[]" id="file" accept=".txt" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
               . '<input type="hidden" name="file_UID" value="ptr1"></div>'
               . '<div class="form-input-error" id="file-error" role="alert" aria-live="assertive">Nur 3 Datei(en) '
@@ -341,7 +344,7 @@ final class FileFieldMarkupTest extends TestCase
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
               . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
               . '</li></ul>'
-              . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
+              . '<input type="file" name="file[]" id="file" accept=".txt" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
               . '<input type="hidden" name="file_UID" value="ptr1"></div>'
               . '<div class="form-input-error" id="file-error" role="alert" aria-live="assertive">Max <b>3</b>'
@@ -356,7 +359,7 @@ final class FileFieldMarkupTest extends TestCase
             '<form method="post" action="?{form}" enctype="multipart/form-data"><dl><dt>'
               . '<label for="file">File<span class="required">*</span><i class="label-info">(max. 3)</i></label>'
               . '</dt><dd class="has-error"><div class="fileupload-enhanced" data-max-files="3">'
-              . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
+              . '<input type="file" name="file[]" id="file" accept=".txt" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
               . '<input type="hidden" name="file_UID" value="ptr1"></div>'
               . '<div class="form-input-error" id="file-error" role="alert" aria-live="assertive">Req</div></dd>'
@@ -373,7 +376,7 @@ final class FileFieldMarkupTest extends TestCase
               . '</dt><dd><div class="fileupload-enhanced" data-max-files="2"><ul class="fileupload-list"><li>'
               . '<span>first.txt</span> <button type="submit" name="file_removeAttachment" '
               . 'value="6c6357ee2f6f54e95ccddc8cb628dd952c3e15037c1a7d08c0a3a172d42a3ded">löschen</button>'
-              . '</li></ul><input type="file" name="file[]" id="file" multiple>'
+              . '</li></ul><input type="file" name="file[]" id="file" accept=".txt" multiple>'
               . '<input type="hidden" name="file_UID" value="ptr1"></div></dd></dl></form>',
         ];
         yield 'mixed_errors' => [
@@ -389,7 +392,7 @@ final class FileFieldMarkupTest extends TestCase
             '<form method="post" action="?{form}" enctype="multipart/form-data"><dl><dt>'
               . '<label for="file">File<span class="required">*</span><i class="label-info">(max. 5)</i></label>'
               . '</dt><dd class="has-error"><div class="fileupload-enhanced" data-max-files="5">'
-              . '<input type="file" name="file[]" id="file" multiple aria-invalid="true" '
+              . '<input type="file" name="file[]" id="file" accept=".txt" multiple aria-invalid="true" '
               . 'aria-describedby="file-error">'
               . '<input type="hidden" name="file_UID" value="ptr1"></div>'
               . '<div class="form-input-error" id="file-error" role="alert" aria-live="assertive">Die Datei war zu '
@@ -422,6 +425,7 @@ final class FileFieldMarkupTest extends TestCase
             requiredError: HtmlText::fromHtml(html: 'Req'),
             maxFileUploadCount: $maxFileUploadCount,
             storage: $storage,
+            allowedFileTypes: [UploadFileType::plainText()],
         );
         $field->messages = FormMessages::german();
         $field->validate(input: $this->request(['file_UID' => FileFieldMarkupTest::POINTER]));
@@ -438,7 +442,7 @@ final class FileFieldMarkupTest extends TestCase
             . '</li><li>'
             . '<span>&lt;b&gt;second&lt;/b&gt;.pdf</span> <button type="submit" name="file_removeAttachment" '
             . 'value="92711c2008e55b0066ef9f6fd5ff97c453af6d9f684fa612081597b204458156">löschen</button>'
-            . '</li></ul><input type="file" name="file[]" id="file">'
+            . '</li></ul><input type="file" name="file[]" id="file" accept=".txt">'
             . '<input type="hidden" name="file_UID" value="ptr1"></div>',
             $this->createFieldWithTwoFiles(maxFileUploadCount: 3)->render(),
         );
@@ -453,7 +457,7 @@ final class FileFieldMarkupTest extends TestCase
             . '</li><li>'
             . '<span>&lt;b&gt;second&lt;/b&gt;.pdf</span> <button type="submit" name="file_removeAttachment" '
             . 'value="92711c2008e55b0066ef9f6fd5ff97c453af6d9f684fa612081597b204458156">löschen</button>'
-            . '</li></ul><input type="file" name="file[]" id="file">'
+            . '</li></ul><input type="file" name="file[]" id="file" accept=".txt">'
             . '<input type="hidden" name="file_UID" value="ptr1"></div>',
             $this->createFieldWithTwoFiles(maxFileUploadCount: 2)->render(),
         );
@@ -472,7 +476,8 @@ final class FileFieldMarkupTest extends TestCase
             . '<span>&lt;b&gt;second&lt;/b&gt;.pdf</span> <button type="submit" name="file_removeAttachment" '
             . 'value="92711c2008e55b0066ef9f6fd5ff97c453af6d9f684fa612081597b204458156">löschen</button>'
             . '</li></ul>'
-            . '<input type="file" name="file[]" id="file" aria-invalid="true" aria-describedby="file-error">'
+            . '<input type="file" name="file[]" id="file" accept=".txt" aria-invalid="true" '
+            . 'aria-describedby="file-error">'
             . '<input type="hidden" name="file_UID" value="ptr1"></div>',
             $field->render(),
         );
@@ -485,6 +490,7 @@ final class FileFieldMarkupTest extends TestCase
             label: HtmlText::fromHtml(html: 'File'),
             maxFileUploadCount: $maxFileUploadCount,
             storage: new InMemoryFileUploadStorage(),
+            allowedFileTypes: [UploadFileType::plainText()],
         );
     }
 
@@ -493,7 +499,7 @@ final class FileFieldMarkupTest extends TestCase
         $field = $this->createEmptyField(maxFileUploadCount: 1);
 
         $this->assertSame(
-            '<div class="fileupload" data-max-files="1"><input type="file" name="file[]" id="file">'
+            '<div class="fileupload" data-max-files="1"><input type="file" name="file[]" id="file" accept=".txt">'
             . '<input type="hidden" name="file_UID" value="' . $field->uniqueSessFileStorePointer . '"></div>',
             $field->render(),
         );
@@ -504,10 +510,38 @@ final class FileFieldMarkupTest extends TestCase
         $field = $this->createEmptyField(maxFileUploadCount: 3);
 
         $this->assertSame(
-            '<div class="fileupload-enhanced" data-max-files="3"><input type="file" name="file[]" id="file" multiple>'
+            '<div class="fileupload-enhanced" data-max-files="3">'
+            . '<input type="file" name="file[]" id="file" accept=".txt" multiple>'
             . '<input type="hidden" name="file_UID" value="' . $field->uniqueSessFileStorePointer . '"></div>',
             $field->render(),
         );
+    }
+
+    public function testAcceptAttributeListsTheExtensionsOfAllAllowedTypes(): void
+    {
+        $field = new FileField(
+            name: 'file',
+            label: HtmlText::fromHtml(html: 'File'),
+            storage: new InMemoryFileUploadStorage(),
+            allowedFileTypes: [UploadFileType::pdf(), UploadFileType::jpeg(), UploadFileType::png()],
+        );
+
+        $this->assertStringContainsString(
+            '<input type="file" name="file[]" id="file" accept=".pdf,.jpg,.jpeg,.png">',
+            $field->render(),
+        );
+    }
+
+    public function testAcceptAttributeListsAnExtensionOnlyOnce(): void
+    {
+        $field = new FileField(
+            name: 'file',
+            label: HtmlText::fromHtml(html: 'File'),
+            storage: new InMemoryFileUploadStorage(),
+            allowedFileTypes: [UploadFileType::plainText(), UploadFileType::csv(), UploadFileType::plainText()],
+        );
+
+        $this->assertStringContainsString(' accept=".txt,.csv">', $field->render());
     }
 
     public function testRemoveButtonUsesTheEnglishDefaultText(): void

@@ -389,7 +389,7 @@ final class SessionFileUploadStorageTest extends TestCase
         file_put_contents(filename: $tmpName, data: 'content');
         $upload = new UploadInput(name: 'a.txt', tmpName: $tmpName, type: 'text/plain', error: 0, size: 7);
 
-        $file = $this->createStorage()->store(pointer: 'ptr', upload: $upload);
+        $file = $this->createStorage()->store(pointer: 'ptr', upload: $upload, detectedType: 'text/plain');
 
         $this->assertNull($file);
         $this->assertFileExists($tmpName);

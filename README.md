@@ -18,7 +18,7 @@ required for all setups.
 
 - PHP 8.5 or higher
 - Common PHP extensions: `mbstring`, `openssl`, `pdo`, `intl`, `bcmath`, `simplexml`, `dom`, `iconv`, `curl`, `libxml`,
-  `ctype`
+  `ctype`, `fileinfo`
 
 ### Installation
 
@@ -597,8 +597,13 @@ must be unique (see [Session](#session)).
 `FileField` keeps uploaded files in a `FileUploadStorage` (the production one is
 `SessionFileUploadStorage::forHttpRequest(session:, httpRequest:)`: session and temp directory); the CSRF field gets its
 token from the `CsrfTokenSource` of the `FormContext` (`SessionCsrfTokenSource` on the session, none without session).
-The storage is a required argument of the field. Code that upgrades from v3 finds the changes in
-[UPGRADE.md](UPGRADE.md).
+The storage is a required argument of the field. So is the allow-list `allowedFileTypes:` (`UploadFileType::pdf()`,
+`jpeg()`, `png()`, `gif()`, `webp()`, `plainText()`, `csv()`, `docx()`, `xlsx()`, `pptx()`, `zip()`, or
+`new UploadFileType(mimeTypes:, extensions:)`; no SVG, it can carry scripts). Every upload is checked before it is
+stored: `maxFileSize:` (bytes, 10 MB by default) and the type, which is detected from the file content (`finfo`, never
+taken from the client) and has to fit the extension of the file name. `UploadedFile::$type` is the detected type.
+`FileFieldRenderer` renders an `accept` attribute with the allowed extensions. Code that upgrades from v3 finds the
+changes in [UPGRADE.md](UPGRADE.md).
 
 ## Clock
 

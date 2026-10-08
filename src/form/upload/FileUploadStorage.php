@@ -32,9 +32,12 @@ interface FileUploadStorage
     /**
      * Takes over the uploaded file of the current request.
      *
+     * @param string $detectedType The MIME type found in the content of the file; it becomes `UploadedFile::$type`
+     *                             (the type the client sent is not used)
+     *
      * @return ?UploadedFile `null` if the file is not an uploaded file of this request or cannot be stored
      */
-    public function store(string $pointer, UploadInput $upload): ?UploadedFile;
+    public function store(string $pointer, UploadInput $upload, string $detectedType): ?UploadedFile;
 
     /**
      * Removes the stored file (nothing happens if it is gone already).

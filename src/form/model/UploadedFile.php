@@ -11,8 +11,9 @@ namespace actra\yuf\form\model;
 
 /**
  * A file that was uploaded with a form and is kept in a `FileUploadStorage` until the form is processed.
- * Replaces `FileDataModel` (`tmp_name` is `path` now). `name` and `type` are what the browser sent: never use
- * them as a file system path and do not trust the type. `path` is the location of the stored copy.
+ * Replaces `FileDataModel` (`tmp_name` is `path` now). `name` is what the browser sent: never use it as a file system
+ * path. `type` is the MIME type detected from the content of the file (not the one the browser sent). `path` is the
+ * location of the stored copy.
  */
 final readonly class UploadedFile
 {

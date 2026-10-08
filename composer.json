@@ -25,7 +25,8 @@
     "ext-curl": "*",
     "actra/autoloader": "^1.1",
     "ext-libxml": "*",
-    "ext-ctype": "*"
+    "ext-ctype": "*",
+    "ext-fileinfo": "*"
   },
   "require-dev": {
     "actra/coding-standard": "^1.3.0",

@@ -13,7 +13,9 @@ use actra\yuf\form\component\field\FileField;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\form\model\UploadedFile;
+use actra\yuf\form\upload\UploadFileType;
 use actra\yuf\html\HtmlText;
+use actra\yuf\tests\Double\form\FixedFileTypeDetector;
 use actra\yuf\tests\Double\form\InMemoryFileUploadStorage;
 use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -28,24 +30,34 @@ use stdClass;
 final class FileFieldValueTest extends TestCase
 {
     private InMemoryFileUploadStorage $storage;
+    private FixedFileTypeDetector $detector;
 
     #[Override]
     protected function setUp(): void
     {
         $this->storage = new InMemoryFileUploadStorage();
+        $this->detector = new FixedFileTypeDetector(defaultType: 'text/plain');
     }
 
+    /**
+     * @param ?list<UploadFileType> $allowedFileTypes Plain text by default
+     */
     private function createField(
         int $maxFileUploadCount = 3,
         ?HtmlText $requiredError = null,
         ?FormMessages $messages = null,
+        ?array $allowedFileTypes = null,
+        int $maxFileSize = 10 * 1024 * 1024,
     ): FileField {
         $field = new FileField(
             name: 'file',
             label: HtmlText::fromHtml(html: 'File'),
+            storage: $this->storage,
+            allowedFileTypes: $allowedFileTypes ?? [UploadFileType::plainText()],
             requiredError: $requiredError,
             maxFileUploadCount: $maxFileUploadCount,
-            storage: $this->storage,
+            maxFileSize: $maxFileSize,
+            fileTypeDetector: $this->detector,
         );
         if ($messages !== null) {
             $field->messages = $messages;
@@ -134,6 +146,7 @@ final class FileFieldValueTest extends TestCase
             name: 'my[file]-x',
             label: HtmlText::fromHtml(html: 'File'),
             storage: $this->storage,
+            allowedFileTypes: [UploadFileType::plainText()],
         );
 
         $this->assertMatchesRegularExpression('/^[a-zA-Z\d_]+$/', $field->uniqueSessFileStorePointer);
@@ -203,13 +216,13 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $field->validate(input: $this->request($this->uploads(names: ['../../etc/passwd'])));
+        $field->validate(input: $this->request($this->uploads(names: ['../../etc/passwd.txt'])));
 
         $files = array_values(array: $field->getFiles());
         $this->assertArrayHasKey(0, $files);
         $file = $files[0];
         $this->assertStringNotContainsString('passwd', $file->path);
-        $this->assertSame('../../etc/passwd', $file->name);
+        $this->assertSame('../../etc/passwd.txt', $file->name);
     }
 
     public function testEntryWithoutAFileIsIgnored(): void
@@ -358,6 +371,7 @@ final class FileFieldValueTest extends TestCase
             maxFileUploadCount: 1,
             tooManyFilesErrMsg: HtmlText::fromHtml(html: 'At most <b>[max]</b>'),
             storage: $this->storage,
+            allowedFileTypes: [UploadFileType::plainText()],
         );
 
         $errors = $this->errorsOf(field: $field, inputData: $this->uploads(names: ['a.txt', 'b.txt']));
@@ -397,6 +411,7 @@ final class FileFieldValueTest extends TestCase
             maxFileUploadCount: 3,
             alreadyExistsErrorMessage: HtmlText::fromHtml(html: 'Twice <i>[fileName]</i>'),
             storage: $this->storage,
+            allowedFileTypes: [UploadFileType::plainText()],
         );
         $this->storage->preload($field->uniqueSessFileStorePointer, $this->storedFile(name: '<x>.txt'));
 

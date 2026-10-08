@@ -4,6 +4,57 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.43.0] – 2026-10-08
+
+`FileField` checks type and size of every upload before it is stored. Search your project for `new FileField(`,
+`implements FileUploadStorage`, `->store(`, `UploadedFile` (the `type`) and tests or CSS that rely on the exact markup
+of the file input.
+
+### ⚠️ `FileField`: `allowedFileTypes` is required, `maxFileSize` is new
+
+| Before | After |
+|:--|:--|
+| `new FileField(name: 'cv', label: $label, storage: $storage)` accepted every file | `new FileField(name: 'cv', label: $label, storage: $storage, allowedFileTypes: [UploadFileType::pdf()])`; the argument is required (a non-empty list of `UploadFileType`, otherwise `InvalidArgumentException`) |
+| No size check (only `upload_max_filesize` of PHP) | `maxFileSize:` in bytes, default `10 * 1024 * 1024`, must be more than 0 (otherwise `InvalidArgumentException`); a larger file is rejected with `FormMessages::fileExceedsMaxSize` |
+| The type was what the browser sent | The type is detected from the file content (`finfo`, `FileTypeDetector`); an upload is accepted if the detected MIME type and the extension of the file name (lower case, after the last dot; no extension = rejected) belong to the same `UploadFileType`. Rejected: `FormMessages::fileTypeNotAllowed` |
+
+`UploadFileType` has the named constructors `pdf()`, `jpeg()` (`jpg`, `jpeg`), `png()`, `gif()`, `webp()`,
+`plainText()` (`txt`), `csv()` (`text/csv` or `text/plain`, libmagic reports either), `docx()`, `xlsx()`, `pptx()` (the
+Office type or `application/zip`, if the container is not recognised) and `zip()`. There is none for SVG (scripts, XSS
+risk when the file is served again); build other types with `new UploadFileType(mimeTypes: [...], extensions: [...])`
+(lower case, extensions without dot).
+
+Migration: pass the types the field really needs. `ext-fileinfo` is a requirement of the library now. The new messages
+(`fileExceedsMaxSize` with the placeholder `[maxSize]`, e.g. "10 MB"; `fileTypeNotAllowed`) are in `FormMessages` and
+`FormMessages::german()`; the file name is appended like for the other file errors. `FileField` takes an optional
+`fileTypeDetector:` (`FileTypeDetector`, default `FinfoFileTypeDetector`) for tests.
+
+### ⚠️ `UploadedFile::$type` is the detected type
+
+| Before | After |
+|:--|:--|
+| `UploadedFile::$type` was the MIME type the browser sent | `UploadedFile::$type` is the MIME type detected from the content (e.g. `application/pdf`) |
+
+### ⚠️ `FileUploadStorage::store()` has a new argument
+
+| Before | After |
+|:--|:--|
+| `store(string $pointer, UploadInput $upload): ?UploadedFile` | `store(string $pointer, UploadInput $upload, string $detectedType): ?UploadedFile` |
+
+Migration: own storages (and test doubles) add the argument and use `$detectedType` as the `type` of the returned
+`UploadedFile` instead of `$upload->type`. `SessionFileUploadStorage` does that and still names the stored file after
+the temporary name PHP gave to it.
+
+### ⚠️ `FileFieldRenderer`: `accept` attribute
+
+| Before | After |
+|:--|:--|
+| `<input type="file" name="file[]" id="file">` | `<input type="file" name="file[]" id="file" accept=".pdf,.jpg,.jpeg">` (the extensions of all allowed types, each once, after `id`) |
+
+The attribute only narrows the file dialog of the browser; the check happens on the server.
+
+---
+
 ## [v4.42.0] – 2026-10-08
 
 `ErrorHandler` respects `error_reporting()`, and `defaultErrorReporting` in the environment file is optional. Search

@@ -80,6 +80,9 @@ final class FileFieldRenderer extends FormRenderer
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: HtmlTagAttribute::fromText(name: 'id', text: $fileField->id),
         );
+        $inputTag->addHtmlTagAttribute(
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'accept', text: $this->getAcceptValue()),
+        );
         if ($stillAllowedToUploadCount > 1) {
             $inputTag->addHtmlTagAttribute(
                 htmlTagAttribute: HtmlTagAttribute::fromName(name: 'multiple'),
@@ -106,5 +109,21 @@ final class FileFieldRenderer extends FormRenderer
         );
         $divFileUpload->addTag(htmlTag: $hiddenField);
         $this->setHtmlTag(htmlTag: $divFileUpload);
+    }
+
+    /**
+     * The extensions of all allowed types, e.g. `.pdf,.jpg,.jpeg`. Only a hint for the file dialog of the browser, the
+     * check happens on the server.
+     */
+    private function getAcceptValue(): string
+    {
+        $extensions = [];
+        foreach ($this->fileField->allowedFileTypes as $fileType) {
+            foreach ($fileType->extensions as $extension) {
+                $extensions['.' . $extension] = true;
+            }
+        }
+
+        return implode(separator: ',', array: array_keys(array: $extensions));
     }
 }

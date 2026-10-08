@@ -49,7 +49,7 @@ each small enough to release on its own. `actra/backend` follows when the plan i
    `png()`, … decided in the step) and `maxFileSize:` (bytes, default 10 MB, > 0). A pure `UploadTypeChecker` (or
    similar) decides with the detected MIME type (`finfo` on the temporary file, behind a small `FileTypeDetector`
    interface so tests need no real upload) and the extension of the client name (lower case); the client MIME type is
-   ignored. New messages in `FormMessages` (`fileTypeNotAllowed`, `fileTooLarge`, with placeholders), checked before
+   ignored. New messages in `FormMessages` (`fileTypeNotAllowed`, `fileExceedsMaxSize`, with placeholders), checked before
    `store()`. `UploadedFile::$type` is the detected type. `composer.json`: `ext-fileinfo`. `example/` has no upload
    (check). Also check `SessionFileUploadStorage::store()`: keep the stored file name made from the PHP temp name.
 
@@ -126,4 +126,30 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   handler with `@`; `EnvironmentSettingsTest`: default and explicit value; the "missing" case of the key was removed
   from the data provider). `error_reporting()` and handlers are restored in every test.
 - `ddev composer check` green, baseline empty, `example/` answers 200.
+- Open: none.
+
+### Step 2 (v4.43.0) – done
+
+- New in `src/form/upload/`: `UploadFileType` (readonly: `list<string> $mimeTypes`, `list<string> $extensions`, both
+  non-empty and validated in the constructor, lower case, extensions without dot; `accepts(detectedMimeType, fileName)`
+  is the pure decision), `FileTypeDetector` (interface) and `FinfoFileTypeDetector` (`FILEINFO_MIME_TYPE`; `null` for a
+  missing or unreadable file). No separate `UploadTypeChecker`: `UploadFileType::accepts()` is enough.
+- `finfo` (libmagic 5.46, DDEV) reports: pdf `application/pdf`, jpeg `image/jpeg`, png `image/png`, gif `image/gif`,
+  webp `image/webp`, svg `image/svg+xml`, txt `text/plain`, csv `text/csv` for a regular CSV but `text/plain` for
+  `;`-separated or quoted ones, docx / xlsx / pptx their `application/vnd.openxmlformats-officedocument.*` type (when
+  `[Content_Types].xml` is the first entry; otherwise libmagic says `application/zip`), zip `application/zip`.
+  Decision: an entry has several MIME types. `csv()` = `text/csv` + `text/plain`; `docx()`, `xlsx()`, `pptx()` = own type
+  + `application/zip`. The extension has to fit in every case. No `svg()` (XSS), documented in the PHPDoc.
+- `FileField`: required `allowedFileTypes:` (after `storage:`), `maxFileSize:` (default 10 MB, > 0),
+  `fileTypeDetector:` (default `FinfoFileTypeDetector`); `InvalidArgumentException` for an empty list and a size < 1.
+  Order in `acceptUpload()`: upload error, duplicate, empty, too large (before the detector is asked), type, `store()`.
+  A file that cannot be examined (`null`) counts as "type not allowed". `FormMessages::fileExceedsMaxSize` (`[maxSize]`,
+  binary units: `10 MB`, `1.5 KB`, `512 bytes`) and `fileTypeNotAllowed`, English and German.
+- `FileUploadStorage::store()` got `string $detectedType`; `SessionFileUploadStorage` uses it as `UploadedFile::$type` and
+  still names the file after the PHP temp name. `FileFieldRenderer` renders `accept=".pdf,.jpg"` after `id`.
+- `composer.json`: `ext-fileinfo` in `require` (README requirements list too). `example/` has no upload.
+- Tests: 12057 -> 12134 (`UploadFileTypeTest`, `FinfoFileTypeDetectorTest` with real files, `FileFieldUploadCheckTest`,
+  doubles `FixedFileTypeDetector` and an adapted `InMemoryFileUploadStorage`, renderer and message tests; existing
+  tests got `allowedFileTypes` and the `accept` attribute in the expected markup).
+- `ddev composer check` green, baseline empty.
 - Open: none.
