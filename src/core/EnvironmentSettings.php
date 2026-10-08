@@ -15,11 +15,11 @@ use UnexpectedValueException;
 
 /**
  * The settings of the environment file (`.env.php`, returns an array), checked once when `Core` starts:
- * `defaultErrorReporting` (int), `defaultTimeZone` (string), `allowedDomains` (list of host names),
- * `logEmailRecipient` (string, may be empty), `debug` (bool) and `robots` (string) are typed properties. All keys
- * of the file (also the own keys of a project, used as given, e.g. `mailer.hostname`) are read with `getString()`,
- * `getInt()`, `getBool()` and `getStringList()`, which throw an `UnexpectedValueException` for a missing key or a
- * wrong type.
+ * `defaultErrorReporting` (int, optional, default `E_ALL`), `defaultTimeZone` (string), `allowedDomains` (list of
+ * host names), `logEmailRecipient` (string, may be empty), `debug` (bool) and `robots` (string) are typed properties.
+ * All keys of the file (also the own keys of a project, used as given, e.g. `mailer.hostname`) are read with
+ * `getString()`, `getInt()`, `getBool()` and `getStringList()`, which throw an `UnexpectedValueException` for a
+ * missing key or a wrong type.
  */
 final readonly class EnvironmentSettings
 {
@@ -45,7 +45,11 @@ final readonly class EnvironmentSettings
     public static function fromArray(array $values): EnvironmentSettings
     {
         return new EnvironmentSettings(
-            errorReporting: EnvironmentSettings::readInteger(values: $values, key: 'defaultErrorReporting'),
+            errorReporting: EnvironmentSettings::readOptionalInteger(
+                values: $values,
+                key: 'defaultErrorReporting',
+                default: E_ALL,
+            ),
             timeZone: EnvironmentSettings::readTimeZone(values: $values, key: 'defaultTimeZone'),
             allowedDomains: EnvironmentSettings::readStringList(values: $values, key: 'allowedDomains'),
             logEmailRecipient: EnvironmentSettings::readString(values: $values, key: 'logEmailRecipient'),
@@ -119,6 +123,18 @@ final readonly class EnvironmentSettings
         }
 
         return $value;
+    }
+
+    /**
+     * @param array<array-key, mixed> $values
+     */
+    private static function readOptionalInteger(array $values, string $key, int $default): int
+    {
+        if (!array_key_exists(key: $key, array: $values)) {
+            return $default;
+        }
+
+        return EnvironmentSettings::readInteger(values: $values, key: $key);
     }
 
     /**

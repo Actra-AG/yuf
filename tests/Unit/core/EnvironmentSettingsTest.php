@@ -118,12 +118,28 @@ final class EnvironmentSettingsTest extends TestCase
         $this->assertSame([], $settings->allowedDomains);
     }
 
+    public function testErrorReportingDefaultsToAll(): void
+    {
+        $values = $this->createValues();
+        unset($values['defaultErrorReporting']);
+
+        $this->assertSame(E_ALL, EnvironmentSettings::fromArray(values: $values)->errorReporting);
+    }
+
+    public function testErrorReportingIsReadFromTheArray(): void
+    {
+        $settings = EnvironmentSettings::fromArray(
+            values: $this->createValues(['defaultErrorReporting' => E_ALL & ~E_DEPRECATED]),
+        );
+
+        $this->assertSame(E_ALL & ~E_DEPRECATED, $settings->errorReporting);
+    }
+
     /**
      * @return iterable<string, array{string, string}>
      */
     public static function missingKeyProvider(): iterable
     {
-        yield 'error reporting' => ['defaultErrorReporting', 'int'];
         yield 'time zone' => ['defaultTimeZone', 'string'];
         yield 'domains' => ['allowedDomains', 'list of strings'];
         yield 'mail recipient' => ['logEmailRecipient', 'string'];

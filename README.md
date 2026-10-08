@@ -59,7 +59,7 @@ the key if a setting is missing or has the wrong type. `Core` reads these keys:
 
 | Key                     | Type           | Meaning                                               |
 |:------------------------|:---------------|:------------------------------------------------------|
-| `defaultErrorReporting` | `int`          | `error_reporting()` level, e.g. `E_ALL`               |
+| `defaultErrorReporting` | `int`          | Optional, default `E_ALL`: `error_reporting()` level  |
 | `defaultTimeZone`       | `string`       | PHP time zone, e.g. `Europe/Zurich`                   |
 | `allowedDomains`        | `list<string>` | Host names the application answers to (else 404)      |
 | `logEmailRecipient`     | `string`       | Mail address of new errors, empty for no mails        |

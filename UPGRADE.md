@@ -4,6 +4,25 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.42.0] – 2026-10-08
+
+`ErrorHandler` respects `error_reporting()`, and `defaultErrorReporting` in the environment file is optional. Search
+your project for `@` operators, `error_reporting(` and `defaultErrorReporting`.
+
+### ⚠️ PHP errors: the level counts
+
+| Before | After |
+|:--|:--|
+| Every PHP error threw a `PhpException`, regardless of `error_reporting()` and of the `@` operator | Only errors that `error_reporting()` includes throw a `PhpException` (deprecations too); other errors, also those silenced with `@`, are left to PHP's standard handling |
+| `ErrorHandler::handlePhpError()` returned `never` | `ErrorHandler::handlePhpError()` returns `bool`: `false` for an unreported level, never `true` |
+| `defaultErrorReporting` was required | `defaultErrorReporting` is optional, default `E_ALL` (an invalid type still throws) |
+
+Migration: nothing to do for projects that report `E_ALL` and do not use `@`. Code that relied on `@` throwing anyway
+must check the result itself (e.g. `file_get_contents()` returns `false`). A lower `defaultErrorReporting`, e.g.
+`E_ALL & ~E_DEPRECATED`, now silences those levels instead of throwing; remove the key to report everything.
+
+---
+
 ## [v4.41.0] – 2026-10-08
 
 Area release for `src/form/` (the last step of the standard completion plan): `HtmlTagAttribute` gets named
