@@ -4,6 +4,14 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.57.2] – 2026-10-08
+
+Documentation only, no code change: the error message example of "Rules for forms" in the README takes the text from a
+message with a named placeholder instead of a hard-coded, concatenated text (`standards/i18n.md` of the coding standard
+v1.4.0).
+
+---
+
 ## [v4.57.1] – 2026-10-08
 
 Documentation only, no code change: the README has a section "Rules for forms" (form messages of the route language,

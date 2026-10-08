@@ -663,7 +663,9 @@ $password = new PasswordField(
     purpose: PasswordPurposeEnum::CURRENT,
 );
 $recipients->addEachRule(formRule: new ValidEmailAddressRule(errorMessage: $invalidAddress)); // TextAreaField
-$name->addError(errorMessage: HtmlText::fromText(text: 'The user "' . $userName . '" already exists.'));
+// $messages->userExists: 'The user "[name]" already exists.'
+$userExists = strtr(string: $messages->userExists, from: ['[name]' => $userName]);
+$name->addError(errorMessage: HtmlText::fromText(text: $userExists));
 ```
 
 ## Phone numbers
