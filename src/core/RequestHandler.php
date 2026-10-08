@@ -20,20 +20,16 @@ final class RequestHandler
     public readonly array $pathParts;
     public readonly int $countPathParts;
     public readonly RouteCollection $defaultRoutesByLanguage;
-    // Set by resolveRoute()
-    public private(set) Route $route; // @phpstan-ignore property.uninitialized
+    /**
+     * The language of the request: the first available language, after `resolveRoute()` the language of the route if
+     * it has one. Stays as far as resolved when `resolveRoute()` throws, so error pages use it.
+     */
     public private(set) ?Language $language = null;
-    // Set by resolveRoute()
-    public private(set) string $fileTitle; // @phpstan-ignore property.uninitialized
-    // Set by resolveRoute()
-    public private(set) string $fileExtension; // @phpstan-ignore property.uninitialized
+    /**
+     * The requested file name: the last path part, after `resolveRoute()` the resolved file name. Stays as far as
+     * resolved when `resolveRoute()` throws, so error pages use it.
+     */
     public private(set) ?string $fileName = null;
-    public private(set) ?string $fileGroup = null;
-    /** @var array<string, string> */
-    public private(set) array $routeVariables = [];
-    // Set by resolveRoute()
-    /** @var list<string> */
-    public private(set) array $pathVars; // @phpstan-ignore property.uninitialized
     private bool $routeResolved = false;
 
     /**
@@ -69,7 +65,7 @@ final class RequestHandler
      * @throws NotFoundException if the domain is not allowed, the path is invalid or no route matches
      * @throws LogicException if called twice
      */
-    public function resolveRoute(): void
+    public function resolveRoute(): ResolvedRoute
     {
         if ($this->routeResolved) {
             throw new LogicException(message: 'The route is already resolved');
@@ -82,23 +78,28 @@ final class RequestHandler
         )) {
             throw new NotFoundException();
         }
-        $this->route = $this->initRoute();
-        $forceFileGroup = $this->route->forceFileGroup;
-        if ($forceFileGroup !== null && $forceFileGroup !== '') {
-            $this->fileGroup = $forceFileGroup;
+        $pathMatch = $this->initRoute();
+        $route = $pathMatch->route;
+        $fileGroup = $pathMatch->fileGroup;
+        if ($pathMatch->fileName !== null) {
+            $this->fileName = $pathMatch->fileName;
         }
-        $forceFileName = $this->route->forceFileName;
+        $forceFileGroup = $route->forceFileGroup;
+        if ($forceFileGroup !== null && $forceFileGroup !== '') {
+            $fileGroup = $forceFileGroup;
+        }
+        $forceFileName = $route->forceFileName;
         if ($forceFileName !== null && $forceFileName !== '') {
             $this->fileName = $forceFileName;
         }
-        $routeLanguage = $this->route->language;
+        $routeLanguage = $route->language;
         if ($routeLanguage !== null) {
             $this->language = $routeLanguage;
             // Only a route with an explicit language tells the language of the user
             $this->rememberPreferredLanguage(language: $routeLanguage);
         }
         $requestedFileName = $this->fileName ?? '';
-        $fileName = (trim(string: $requestedFileName) === '') ? $this->route->defaultFileName : $requestedFileName;
+        $fileName = (trim(string: $requestedFileName) === '') ? $route->defaultFileName : $requestedFileName;
         $dotPos = strripos(haystack: $fileName, needle: '.');
         if ($dotPos === false) {
             $length = strlen(string: $fileName);
@@ -107,19 +108,24 @@ final class RequestHandler
             $length = $dotPos;
             $fileExtension = substr(string: $fileName, offset: $length + 1);
         }
-        $fnArr = substr(string: $fileName, offset: 0, length: $length)
+        $pathVars = substr(string: $fileName, offset: 0, length: $length)
                 |> (fn($x) => explode(separator: '-', string: $x))
                 |> (fn($x) => str_replace(search: '__DASH__', replace: '-', subject: $x));
         $this->fileName = $fileName;
-        $this->fileTitle = $fnArr[0];
-        $this->pathVars = $fnArr;
-        $this->fileExtension = $fileExtension;
-        if (
-            $this->route->acceptedExtension !== null
-            && $this->fileExtension !== $this->route->acceptedExtension
-        ) {
+        if ($route->acceptedExtension !== null && $fileExtension !== $route->acceptedExtension) {
             throw new NotFoundException();
         }
+
+        return new ResolvedRoute(
+            route: $route,
+            language: $this->language,
+            fileName: $fileName,
+            fileGroup: $fileGroup,
+            fileTitle: $pathVars[0],
+            fileExtension: $fileExtension,
+            routeVariables: $pathMatch->routeVariables,
+            pathVars: $pathVars,
+        );
     }
 
     private function rememberPreferredLanguage(Language $language): void
@@ -184,11 +190,11 @@ final class RequestHandler
         return $defaultRoutes;
     }
 
-    private function initRoute(): Route
+    private function initRoute(): RoutePathMatch
     {
-        $route = $this->findRouteOfPath();
-        if ($route !== null) {
-            return $route;
+        $pathMatch = $this->findRouteOfPath();
+        if ($pathMatch !== null) {
+            return $pathMatch;
         }
         if ($this->httpRequest->getUri() === '/') {
             HttpResponse::redirectAndExit(
@@ -202,10 +208,10 @@ final class RequestHandler
     }
 
     /**
-     * The route of the requested directory or path pattern (`/shop/${fileGroup}/${fileName}`); the variables of the
-     * pattern are set as a side effect.
+     * The route of the requested directory or path pattern (`/shop/${fileGroup}/${fileName}`) with the variables of
+     * the pattern.
      */
-    private function findRouteOfPath(): ?Route
+    private function findRouteOfPath(): ?RoutePathMatch
     {
         $requestedDirectories = '/';
         foreach (array_slice(array: $this->pathParts, offset: 1, length: max(0, $this->countPathParts - 2)) as $part) {
@@ -215,7 +221,7 @@ final class RequestHandler
         foreach ($this->routeCollection->routes as $route) {
             $routePath = $route->path;
             if ($routePath === $requestedDirectories) {
-                return $route;
+                return new RoutePathMatch(route: $route);
             }
             if (preg_match_all(
                 pattern: '#\${(.*?)}#',
@@ -232,28 +238,29 @@ final class RequestHandler
             ) === 0) {
                 continue;
             }
+            $fileName = null;
+            $fileGroup = null;
+            $routeVariables = [];
             foreach ($variableMatches[1] as $index => $variableName) {
-                $this->setPathVariable(
-                    name: $variableName,
-                    value: array_key_exists(key: $index + 1, array: $valueMatches) ? $valueMatches[$index + 1] : '',
-                );
+                $value = array_key_exists(key: $index + 1, array: $valueMatches) ? $valueMatches[$index + 1] : '';
+                if ($variableName === 'fileName') {
+                    $fileName = $value;
+                } elseif ($variableName === 'fileGroup') {
+                    $fileGroup = $value;
+                } else {
+                    $routeVariables[$variableName] = $value;
+                }
             }
 
-            return $route;
+            return new RoutePathMatch(
+                route: $route,
+                fileName: $fileName,
+                fileGroup: $fileGroup,
+                routeVariables: $routeVariables,
+            );
         }
 
         return null;
-    }
-
-    private function setPathVariable(string $name, string $value): void
-    {
-        if ($name === 'fileName') {
-            $this->fileName = $value;
-        } elseif ($name === 'fileGroup') {
-            $this->fileGroup = $value;
-        } else {
-            $this->routeVariables[$name] = $value;
-        }
     }
 
     /**
@@ -290,13 +297,6 @@ final class RequestHandler
         }
 
         return $defaultRoutesByLanguage->getFirstRoute();
-    }
-
-    public function getPathVar(int $nr): ?string
-    {
-        $pathVars = $this->pathVars;
-
-        return array_key_exists(key: $nr, array: $pathVars) ? trim(string: $pathVars[$nr]) : null;
     }
 
     public function getLanguageRoot(): string

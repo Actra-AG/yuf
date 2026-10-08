@@ -4,6 +4,40 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.49.0] – 2026-10-08
+
+`RequestHandler::resolveRoute()` returns its result instead of filling properties. Search your project for
+`resolveRoute(`, `processRequest(` and `->fileTitle`, `->fileExtension`, `->fileGroup`, `->routeVariables`,
+`->pathVars`, `->route` or `getPathVar(` on a `RequestHandler`.
+
+### ⚠️ `resolveRoute()` returns a `ResolvedRoute`
+
+The new `final readonly` class `actra\yuf\core\ResolvedRoute` holds everything that depends on the route. The
+properties `route`, `fileTitle`, `fileExtension`, `fileGroup`, `routeVariables` and `pathVars` of `RequestHandler` are
+removed (before the call they were uninitialized and threw an `Error` when read). `fileName` and `language` stay on
+`RequestHandler` as the state of the request so far (the exception handler needs them for error pages if the route
+cannot be resolved), and `ResolvedRoute` has the final values.
+
+| Before | After |
+|:--|:--|
+| `$requestHandler->resolveRoute();` then `$requestHandler->route` | `$resolvedRoute = $requestHandler->resolveRoute();` then `$resolvedRoute->route` |
+| `$requestHandler->fileTitle` / `->fileExtension` / `->fileGroup` | `$resolvedRoute->fileTitle` / `->fileExtension` / `->fileGroup` |
+| `$requestHandler->routeVariables` / `->pathVars` | `$resolvedRoute->routeVariables` / `->pathVars` |
+| `$requestHandler->fileName` after `resolveRoute()` | `$resolvedRoute->fileName` (`$requestHandler->fileName` is the same value) |
+| `$requestHandler->language` after `resolveRoute()` | `$resolvedRoute->language` (`$requestHandler->language` is the same value) |
+| `$requestHandler->getPathVar(nr: 1)` | `new PathVars(values: $resolvedRoute->pathVars)->get(nr: 1)` |
+
+### ⚠️ `ContentHandler::processRequest()` takes the `ResolvedRoute`
+
+| Before | After |
+|:--|:--|
+| `processRequest(requestHandler: $requestHandler, localeHandler: …)` | `processRequest(resolvedRoute: $resolvedRoute, localeHandler: …)` |
+
+Only `Core` calls it. Views get the same values as before through `ViewContext` (`route`, `fileGroup`, `fileTitle`,
+`pathVars`) and `BaseView::getPathVar()`; nothing changes for them.
+
+---
+
 ## [v4.48.0] – 2026-10-08
 
 `SearchHelper` had two purposes and is split. Search your project for `SearchHelper`.

@@ -81,7 +81,7 @@ final class ContentHandler
      * @throws LogicException if called twice
      */
     public function processRequest(
-        RequestHandler $requestHandler,
+        ResolvedRoute $resolvedRoute,
         LocaleHandler $localeHandler,
         TemplateEngine $templateEngine,
         HttpRequest $httpRequest,
@@ -96,19 +96,19 @@ final class ContentHandler
             throw new LogicException(message: 'The request is already processed.');
         }
         $this->isProcessed = true;
-        $language = $requestHandler->language;
+        $language = $resolvedRoute->language;
         $this->htmlDocumentSettings = new HtmlDocumentSettings(
-            viewDirectory: $requestHandler->route->viewDirectory,
-            fileGroup: $requestHandler->fileGroup,
-            fileTitle: $requestHandler->fileTitle,
-            fileName: $requestHandler->fileName,
+            viewDirectory: $resolvedRoute->route->viewDirectory,
+            fileGroup: $resolvedRoute->fileGroup,
+            fileTitle: $resolvedRoute->fileTitle,
+            fileName: $resolvedRoute->fileName,
             languageCode: $language === null ? '' : $language->code,
             copyright: $copyright,
             robots: $robots,
         );
         $this->templateEngine = $templateEngine;
         $this->formContext = $formContext;
-        $route = $requestHandler->route;
+        $route = $resolvedRoute->route;
         if ($route->viewCallback !== null) {
             $this->setContent(contentString: ($route->viewCallback)());
             return;
@@ -118,7 +118,7 @@ final class ContentHandler
         ob_implicit_flush(enable: false);
         try {
             $route->loadLocalizedText(
-                fileTitle: $requestHandler->fileTitle,
+                fileTitle: $resolvedRoute->fileTitle,
                 localeHandler: $localeHandler,
             );
             $context = new ViewContext(
@@ -128,9 +128,9 @@ final class ContentHandler
                 authSession: $session === null ? null : new AuthSession(session: $session),
                 formContext: $formContext,
                 route: $route,
-                fileGroup: $requestHandler->fileGroup,
-                fileTitle: $requestHandler->fileTitle,
-                pathVars: new PathVars(values: $requestHandler->pathVars),
+                fileGroup: $resolvedRoute->fileGroup,
+                fileTitle: $resolvedRoute->fileTitle,
+                pathVars: new PathVars(values: $resolvedRoute->pathVars),
                 content: $this,
                 locale: $localeHandler,
                 templateEngine: $templateEngine,

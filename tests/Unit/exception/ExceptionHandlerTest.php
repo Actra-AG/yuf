@@ -313,20 +313,34 @@ final class ExceptionHandlerTest extends TestCase
     private function createRequestHandler(
         string $requestUri = '/en/nope.html',
         ?Language $language = null,
+        ?Language $otherLanguage = null,
     ): RequestHandler {
         $language ??= new Language(code: 'en', locale: 'C');
-        $route = new Route(
-            path: '/en/',
-            viewDirectory: $this->workDirectory->templateDirectory,
-            defaultFileName: 'index.html',
-            isDefaultForLanguage: true,
-            language: $language,
-        );
+        $languages = [$language];
+        $routes = [
+            new Route(
+                path: '/' . $language->code . '/',
+                viewDirectory: $this->workDirectory->templateDirectory,
+                defaultFileName: 'index.html',
+                isDefaultForLanguage: true,
+                language: $language,
+            ),
+        ];
+        if ($otherLanguage !== null) {
+            $languages[] = $otherLanguage;
+            $routes[] = new Route(
+                path: '/' . $otherLanguage->code . '/',
+                viewDirectory: $this->workDirectory->templateDirectory,
+                defaultFileName: 'index.html',
+                isDefaultForLanguage: true,
+                language: $otherLanguage,
+            );
+        }
 
         return new RequestHandler(
             httpRequest: HttpRequestFactory::create(uri: $requestUri),
-            routeCollection: new RouteCollection(routes: [$route]),
-            availableLanguages: new LanguageCollection(languages: [$language]),
+            routeCollection: new RouteCollection(routes: $routes),
+            availableLanguages: new LanguageCollection(languages: $languages),
             allowedDomains: ['example.com'],
             session: null,
         );
@@ -535,6 +549,30 @@ final class ExceptionHandlerTest extends TestCase
         $this->assertStringContainsString('<html lang="en" class="notFound">', $content);
         $this->assertStringContainsString('<p id="root">/en/</p>', $content);
         $this->assertStringContainsString('<p id="file">nope.html</p>', $content);
+        $this->assertSame('en', $response->getHeader(key: 'Content-Language'));
+    }
+
+    public function testPageOfAResolvedRequestHasTheLanguageRootAndFileOfTheRoute(): void
+    {
+        $german = new Language(code: 'de', locale: 'C');
+        $english = new Language(code: 'en', locale: 'C');
+        $handler = $this->register(
+            context: $this->createContext(availableLanguages: new LanguageCollection(languages: [$german, $english])),
+        );
+        $requestHandler = $this->createRequestHandler(
+            requestUri: '/en/',
+            language: $german,
+            otherLanguage: $english,
+        );
+        $handler->setRequestHandler(requestHandler: $requestHandler);
+        $requestHandler->resolveRoute();
+
+        $response = $handler->createResponse(throwable: new NotFoundException());
+
+        $content = self::content(response: $response);
+        $this->assertStringContainsString('<html lang="en" class="notFound">', $content);
+        $this->assertStringContainsString('<p id="root">/en/</p>', $content);
+        $this->assertStringContainsString('<p id="file">index.html</p>', $content);
         $this->assertSame('en', $response->getHeader(key: 'Content-Language'));
     }
 

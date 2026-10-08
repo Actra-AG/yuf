@@ -373,23 +373,23 @@ final class Core
             responseSender: $this->responseSender,
         );
         $exceptionHandler->setRequestHandler(requestHandler: $requestHandler);
-        $requestHandler->resolveRoute();
+        $resolvedRoute = $requestHandler->resolveRoute();
         $localeHandler = new LocaleHandler(
-            language: $requestHandler->language,
+            language: $resolvedRoute->language,
             availableLanguages: $this->availableLanguages,
         );
         $localeHandler->applySystemLocale();
         $templateEngine = $this->createTemplateEngine(localeHandler: $localeHandler);
-        $defaultContentType = $requestHandler->route->defaultContentType;
+        $defaultContentType = $resolvedRoute->route->defaultContentType;
         if ($defaultContentType === null) {
             throw new LogicException(
-                message: 'The route "' . $requestHandler->route->path . '" has no default content type.',
+                message: 'The route "' . $resolvedRoute->route->path . '" has no default content type.',
             );
         }
         $contentHandler = new ContentHandler(contentType: $defaultContentType, cspNonce: $cspNonce);
         $exceptionHandler->setContentHandler(contentHandler: $contentHandler);
         $contentHandler->processRequest(
-            requestHandler: $requestHandler,
+            resolvedRoute: $resolvedRoute,
             localeHandler: $localeHandler,
             templateEngine: $templateEngine,
             httpRequest: $this->httpRequest,
@@ -407,7 +407,7 @@ final class Core
         $this->httpResponse = new ContentResponseFactory(
             httpRequest: $this->httpRequest,
             cspPolicySettings: $this->cspPolicySettings,
-            language: $requestHandler->language,
+            language: $resolvedRoute->language,
         )->create(contentHandler: $contentHandler);
 
         return $this->httpResponse;

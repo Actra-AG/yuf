@@ -17,6 +17,7 @@ use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\RequestHandler;
+use actra\yuf\core\ResolvedRoute;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
@@ -78,7 +79,7 @@ final class ContentHandlerTest extends TestCase
         );
     }
 
-    private function createResolvedRequestHandler(Route $route, HttpRequest $httpRequest): RequestHandler
+    private function createResolvedRoute(Route $route, HttpRequest $httpRequest): ResolvedRoute
     {
         $requestHandler = new RequestHandler(
             httpRequest: $httpRequest,
@@ -88,9 +89,7 @@ final class ContentHandlerTest extends TestCase
             session: null,
             responseSender: new RecordingResponseSender(),
         );
-        $requestHandler->resolveRoute();
-
-        return $requestHandler;
+        return $requestHandler->resolveRoute();
     }
 
     private function processRequest(
@@ -104,7 +103,7 @@ final class ContentHandlerTest extends TestCase
     ): void {
         $httpRequest ??= HttpRequestFactory::create();
         $handler->processRequest(
-            requestHandler: $this->createResolvedRequestHandler(route: $route, httpRequest: $httpRequest),
+            resolvedRoute: $this->createResolvedRoute(route: $route, httpRequest: $httpRequest),
             localeHandler: new LocaleHandler(language: null, availableLanguages: new LanguageCollection()),
             templateEngine: TemplateEngineFactory::create(
                 cacheDirectory: $this->workDirectory->appDirectory . 'cache/',

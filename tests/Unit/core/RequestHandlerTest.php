@@ -11,6 +11,7 @@ namespace actra\yuf\tests\Unit\core;
 
 use actra\yuf\core\Language;
 use actra\yuf\core\LanguageCollection;
+use actra\yuf\core\PathVars;
 use actra\yuf\core\RequestHandler;
 use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
@@ -24,14 +25,23 @@ use PHPUnit\Framework\TestCase;
  */
 final class RequestHandlerTest extends TestCase
 {
-    private function createRoute(string $path, ?Language $language = null, bool $isDefaultForLanguage = false): Route
-    {
+    private function createRoute(
+        string $path,
+        ?Language $language = null,
+        bool $isDefaultForLanguage = false,
+        ?string $acceptedExtension = null,
+        ?string $forceFileGroup = null,
+        ?string $forceFileName = null,
+    ): Route {
         return new Route(
             path: $path,
             viewDirectory: '/tmp/views/',
             defaultFileName: 'index.html',
             isDefaultForLanguage: $isDefaultForLanguage,
             language: $language,
+            acceptedExtension: $acceptedExtension,
+            forceFileGroup: $forceFileGroup,
+            forceFileName: $forceFileName,
         );
     }
 
@@ -91,15 +101,15 @@ final class RequestHandlerTest extends TestCase
             routeCollection: new RouteCollection(routes: [$route]),
         );
 
-        $handler->resolveRoute();
+        $resolved = $handler->resolveRoute();
 
-        $this->assertSame($route, $handler->route);
+        $this->assertSame($route, $resolved->route);
         $this->assertSame('detail-12-a__DASH__b.html', $handler->fileName);
-        $this->assertSame('detail', $handler->fileTitle);
-        $this->assertSame('html', $handler->fileExtension);
-        $this->assertSame(['detail', '12', 'a-b'], $handler->pathVars);
-        $this->assertSame('12', $handler->getPathVar(nr: 1));
-        $this->assertNull($handler->getPathVar(nr: 3));
+        $this->assertSame('detail-12-a__DASH__b.html', $resolved->fileName);
+        $this->assertSame('detail', $resolved->fileTitle);
+        $this->assertSame('html', $resolved->fileExtension);
+        $this->assertSame(['detail', '12', 'a-b'], $resolved->pathVars);
+        $this->assertSame('12', new PathVars(values: $resolved->pathVars)->get(nr: 1));
     }
 
     public function testResolveRouteUsesTheDefaultFileNameAndTheRouteLanguage(): void
@@ -112,11 +122,13 @@ final class RequestHandlerTest extends TestCase
             availableLanguages: new LanguageCollection(languages: [$german, $english]),
         );
 
-        $handler->resolveRoute();
+        $resolved = $handler->resolveRoute();
 
         $this->assertSame($english, $handler->language);
+        $this->assertSame($english, $resolved->language);
         $this->assertSame('index.html', $handler->fileName);
-        $this->assertSame('index', $handler->fileTitle);
+        $this->assertSame('index.html', $resolved->fileName);
+        $this->assertSame('index', $resolved->fileTitle);
     }
 
     public function testResolveRouteThrowsForAnUnknownRoute(): void
@@ -207,8 +219,138 @@ final class RequestHandlerTest extends TestCase
             routeCollection: new RouteCollection(routes: [$this->createRoute(path: '/')]),
         );
 
-        $handler->resolveRoute();
+        $resolved = $handler->resolveRoute();
 
         $this->assertSame('detail-5.html', $handler->fileName);
+        $this->assertSame('detail-5.html', $resolved->fileName);
+    }
+
+    public function testResolveRouteTakesTheVariablesOfAPathPattern(): void
+    {
+        $route = $this->createRoute(path: '/shop/${fileGroup}/${fileName}/${id}');
+        $handler = $this->createRequestHandler(
+            requestUri: '/shop/books/detail-7.html/42',
+            routeCollection: new RouteCollection(routes: [$route]),
+        );
+
+        $resolved = $handler->resolveRoute();
+
+        $this->assertSame($route, $resolved->route);
+        $this->assertSame('books', $resolved->fileGroup);
+        $this->assertSame('detail-7.html', $handler->fileName);
+        $this->assertSame('detail-7.html', $resolved->fileName);
+        $this->assertSame('detail', $resolved->fileTitle);
+        $this->assertSame(['id' => '42'], $resolved->routeVariables);
+    }
+
+    public function testResolveRouteWithoutPathPatternHasNoGroupAndNoVariables(): void
+    {
+        $handler = $this->createRequestHandler(
+            requestUri: '/index.html',
+            routeCollection: new RouteCollection(routes: [$this->createRoute(path: '/')]),
+        );
+
+        $resolved = $handler->resolveRoute();
+
+        $this->assertNull($resolved->fileGroup);
+        $this->assertSame([], $resolved->routeVariables);
+    }
+
+    public function testResolveRouteLetsTheRouteForceTheFileGroupAndTheFileName(): void
+    {
+        $handler = $this->createRequestHandler(
+            requestUri: '/x/other.html',
+            routeCollection: new RouteCollection(
+                routes: [$this->createRoute(path: '/x/', forceFileGroup: 'forced', forceFileName: 'fixed-1.php')],
+            ),
+        );
+
+        $resolved = $handler->resolveRoute();
+
+        $this->assertSame('forced', $resolved->fileGroup);
+        $this->assertSame('fixed-1.php', $handler->fileName);
+        $this->assertSame('fixed-1.php', $resolved->fileName);
+        $this->assertSame('fixed', $resolved->fileTitle);
+        $this->assertSame('php', $resolved->fileExtension);
+    }
+
+    public function testResolveRouteWithoutExtensionHasAnEmptyFileExtension(): void
+    {
+        $handler = $this->createRequestHandler(
+            requestUri: '/detail',
+            routeCollection: new RouteCollection(routes: [$this->createRoute(path: '/')]),
+        );
+
+        $resolved = $handler->resolveRoute();
+
+        $this->assertSame('detail', $handler->fileName);
+        $this->assertSame('detail', $resolved->fileName);
+        $this->assertSame('', $resolved->fileExtension);
+    }
+
+    public function testResolveRouteAcceptsTheAcceptedExtension(): void
+    {
+        $handler = $this->createRequestHandler(
+            requestUri: '/index.json',
+            routeCollection: new RouteCollection(
+                routes: [$this->createRoute(path: '/', acceptedExtension: 'json')],
+            ),
+        );
+
+        $resolved = $handler->resolveRoute();
+
+        $this->assertSame('json', $resolved->fileExtension);
+    }
+
+    public function testAnExtensionThatIsNotAcceptedIsNotFoundButTheResolvedStateStaysForTheErrorPage(): void
+    {
+        $german = new Language(code: 'de', locale: 'de_CH.UTF-8');
+        $english = new Language(code: 'en', locale: 'en_US.UTF-8');
+        $handler = $this->createRequestHandler(
+            requestUri: '/en/',
+            routeCollection: new RouteCollection(
+                routes: [
+                    $this->createRoute(path: '/de/', language: $german, isDefaultForLanguage: true),
+                    $this->createRoute(
+                        path: '/en/',
+                        language: $english,
+                        isDefaultForLanguage: true,
+                        acceptedExtension: 'json',
+                    ),
+                ],
+            ),
+            availableLanguages: new LanguageCollection(languages: [$german, $english]),
+        );
+        try {
+            $handler->resolveRoute();
+            self::fail('NotFoundException expected');
+        } catch (NotFoundException) {
+        }
+
+        $this->assertSame($english, $handler->language);
+        $this->assertSame('index.html', $handler->fileName);
+        $this->assertSame('/en/', $handler->getLanguageRoot());
+    }
+
+    public function testTheLanguageOfTheErrorPageIsTheInitialOneForARouteWithoutLanguage(): void
+    {
+        $german = new Language(code: 'de', locale: 'de_CH.UTF-8');
+        $handler = $this->createRequestHandler(
+            requestUri: '/other/x.html',
+            routeCollection: new RouteCollection(
+                routes: [
+                    $this->createRoute(path: '/de/', language: $german, isDefaultForLanguage: true),
+                    $this->createRoute(path: '/other/'),
+                ],
+            ),
+            availableLanguages: new LanguageCollection(languages: [$german]),
+        );
+
+        $resolved = $handler->resolveRoute();
+
+        $this->assertSame($german, $handler->language);
+        $this->assertSame($german, $resolved->language);
+        $this->assertSame('x.html', $handler->fileName);
+        $this->assertSame('/de/', $handler->getLanguageRoot());
     }
 }

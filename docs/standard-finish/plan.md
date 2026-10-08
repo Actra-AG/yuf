@@ -370,3 +370,26 @@ each small enough to release on its own. `actra/backend` follows when the plan i
 - `UPGRADE.md`: `## [v4.48.0]` with the before/after table.
 - `ddev composer check` green, baseline empty, `example/` answers 200.
 - Open: none.
+
+### Step 8 (v4.49.0) – done
+
+- New `final readonly` `ResolvedRoute` (`route`, `language`, `fileName`, `fileGroup`, `fileTitle`, `fileExtension`,
+  `routeVariables`, `pathVars`: all values that `resolveRoute()` set before). `RequestHandler::resolveRoute()` returns it;
+  `route`, `fileTitle`, `fileExtension`, `fileGroup`, `routeVariables`, `pathVars` and `getPathVar()` are removed from
+  `RequestHandler`, the four `@phpstan-ignore property.uninitialized` are gone (none left in `src/`).
+- Decision: `RequestHandler` keeps `language` and `fileName` (`public private(set)`, both have a value before
+  resolving) as the state of the request so far. Reason: with an unknown route or an extension that is not accepted
+  `resolveRoute()` throws, and the error page then used the language of the route and the resolved file name that were
+  already set (the extension case). A `?ResolvedRoute` kept on the handler would be `null` in exactly that case and
+  change the page. `ExceptionHandler` is unchanged. Characterization tests (written first, green before the change):
+  extension not accepted keeps language / file name / language root, route without language, forced file group / name,
+  path pattern variables, no extension, accepted extension; `ExceptionHandlerTest`: error page after resolving.
+- New `@internal` `RoutePathMatch` (route + variables of the path pattern) replaces the side effects of
+  `findRouteOfPath()` / `setPathVariable()` (they wrote `fileName`, `fileGroup`, `routeVariables` into the handler).
+- `Core::prepareHttpResponse()` and `ContentHandler::processRequest(resolvedRoute:, …)` use the `ResolvedRoute`.
+  `getPathVar()` removed: `PathVars` (already used for views) does the same. `PathVars` PHPDoc adapted.
+- `example/` and README did not use the removed properties. `UPGRADE.md`: `## [v4.49.0]`.
+- Tests: 12230 -> 12238 (8 characterization tests added, no assertion removed; existing ones read the
+  `ResolvedRoute`).
+- `ddev composer check` green, baseline empty, `example/` checked (200 / 404 / 303).
+- Open: none.

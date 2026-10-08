@@ -19,12 +19,12 @@ use actra\yuf\form\AmountParser;
 final readonly class PathVars
 {
     /**
-     * @param array<int, string> $values Path variable number => raw value, as in `RequestHandler::$pathVars`.
+     * @param array<int, string> $values Path variable number => raw value, as in `ResolvedRoute::$pathVars`.
      */
     public function __construct(private array $values) {}
 
     /**
-     * Same as `RequestHandler::getPathVar()`: the trimmed value, `null` if missing.
+     * The trimmed value, `null` if missing.
      */
     public function get(int $nr): ?string
     {
