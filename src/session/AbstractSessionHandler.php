@@ -14,37 +14,34 @@ use actra\yuf\clock\SystemClock;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\exception\UnauthorizedException;
 use LogicException;
+use Override;
+use RuntimeException;
 use SessionHandler;
+use SessionUpdateTimestampHandlerInterface;
 use Throwable;
 use UnexpectedValueException;
 
-abstract class AbstractSessionHandler extends SessionHandler
+/**
+ * Extension point: starts the PHP session of the request with the security settings of yuf and protects it: the session
+ * is bound to the remote address and the user agent of the client that created it, expires after `maxLifeTime` without
+ * activity, and gets a new ID every 30 minutes. A session that fails one of the first two checks is replaced by a new,
+ * empty one (the data of the old session is never handed to another client). A project class extends it to store the
+ * sessions elsewhere than in files (`executePreStartActions()`); `FileSessionHandler` is the standard.
+ *
+ * The session cookie is `Secure` (so sessions need HTTPS), `HttpOnly` and `SameSite` (`Strict`, or `Lax` with
+ * `SessionSettings::$isSameSiteStrict = false`); the session ID is only read from the cookie, never from the request
+ * input, and PHP's strict mode rejects IDs this server did not issue (`validateId()`: PHP ignores the strict mode of a
+ * handler that cannot tell whether an ID exists, so a handler has to implement `sessionExists()`).
+ */
+abstract class AbstractSessionHandler extends SessionHandler implements SessionUpdateTimestampHandlerInterface
 {
     private const string SESSION_CREATED_INDICATOR = 'sessionCreated';
     private const string TRUSTED_REMOTE_ADDRESS_INDICATOR = 'trustedRemoteAddress';
     private const string TRUSTED_USER_AGENT_INDICATOR = 'trustedUserAgent';
     private const string LAST_ACTIVITY_INDICATOR = 'lastActivity';
-    public private(set) ?string $name = null {
-        get {
-            if ($this->name === null) {
-                $this->name = AbstractSessionHandler::readSessionName();
-            }
-
-            return $this->name;
-        }
-    }
-    public private(set) ?string $fingerprint = null {
-        get {
-            if ($this->fingerprint === null) {
-                $this->fingerprint = hash(
-                    algo: 'sha256',
-                    data: $this->getId() . $this->clientUserAgent,
-                );
-            }
-
-            return $this->fingerprint;
-        }
-    }
+    private const int ID_REGENERATION_INTERVAL_IN_SECONDS = 1800;
+    /** Characters PHP accepts in a session ID, at most 256 of them. */
+    private const string VALID_SESSION_ID_PATTERN = '/^[A-Za-z0-9,-]{1,256}$/D';
     private int $currentTime;
     private ?string $id = null;
     private string $clientRemoteAddress;
@@ -65,58 +62,46 @@ abstract class AbstractSessionHandler extends SessionHandler
     private function start(): void
     {
         $sessionSettings = $this->sessionSettings;
-        $this->setDefaultConfigurationOptions(
-            gcDivisor: $sessionSettings->gcDivisor,
-            maxLifeTime: $sessionSettings->maxLifeTime,
-            gcProbability: $sessionSettings->gcProbability,
-        );
+        $this->setDefaultConfigurationOptions(sessionSettings: $sessionSettings);
         $this->setDefaultSecuritySettings(isSameSiteStrict: $sessionSettings->isSameSiteStrict);
         $this->setSessionName(individualName: $sessionSettings->individualName);
         $this->executePreStartActions();
-        session_set_save_handler( // Named parameters are not supported for alternative prototypes: https://github.com/php/php-src/issues/17263
-            $this,
-            true,
-        );
-        try {
-            session_start(options: [
-                'use_strict_mode' => true,
-            ]);
-        } catch (Throwable $throwable) {
-            if (str_contains(haystack: $throwable->getMessage(), needle: 'Permission denied')) {
-                throw new UnauthorizedException();
-            }
-            throw $throwable;
-        }
+        // Named parameters are not supported for alternative prototypes: https://github.com/php/php-src/issues/17263
+        session_set_save_handler($this, true);
+        $this->startNativeSession();
         if (!$this->isSessionCreated()) {
-            $this->initDefaultSessionData(destroyCurrentSessionData: false);
-        } elseif ($this->getTrustedRemoteAddress() !== $this->clientRemoteAddress || $this->getTrustedUserAgent(
-        ) !== $this->clientUserAgent) {
-            $this->initDefaultSessionData(destroyCurrentSessionData: true);
-        } elseif ($this->isSessionExpired()) {
+            $this->initDefaultSessionData();
+        } elseif (!$this->isTrustedClient() || $this->isSessionExpired()) {
             // Real session lifetime and regeneration after maxLifeTime
-            // See: http://stackoverflow.com/questions/520237/how-do-i-expire-a-php-session-after-30-minutes/1270960#1270960
-            $this->initDefaultSessionData(destroyCurrentSessionData: true);
-        } elseif ($this->isSessionOlderThan30Minutes()) {
+            // See: https://stackoverflow.com/a/1270960
+            $this->replaceSession();
+        } elseif ($this->isSessionOlderThanRegenerationInterval()) {
             $this->regenerateId();
         }
 
         $this->setLastAction();
     }
 
-    private function setDefaultConfigurationOptions(
-        ?int $gcDivisor,
-        ?int $maxLifeTime,
-        ?int $gcProbability,
-    ): void {
-        if ($gcDivisor !== null) {
-            ini_set(option: 'session.gc_divisor', value: $gcDivisor);
+    private function startNativeSession(): void
+    {
+        try {
+            session_start(options: [
+                'use_strict_mode' => true,
+            ]);
+        } catch (Throwable $throwable) {
+            // The session file belongs to another user of the server: not a session of this client
+            if (str_contains(haystack: $throwable->getMessage(), needle: 'Permission denied')) {
+                throw new UnauthorizedException();
+            }
+            throw $throwable;
         }
-        if ($maxLifeTime !== null) {
-            ini_set(option: 'session.gc_maxlifetime', value: $maxLifeTime);
-        }
-        if ($gcProbability !== null) {
-            ini_set(option: 'session.gc_probability', value: $gcProbability);
-        }
+    }
+
+    private function setDefaultConfigurationOptions(SessionSettings $sessionSettings): void
+    {
+        ini_set(option: 'session.gc_divisor', value: $sessionSettings->gcDivisor);
+        ini_set(option: 'session.gc_maxlifetime', value: $sessionSettings->maxLifeTime);
+        ini_set(option: 'session.gc_probability', value: $sessionSettings->gcProbability);
     }
 
     private function setDefaultSecuritySettings(bool $isSameSiteStrict): void
@@ -130,6 +115,9 @@ abstract class AbstractSessionHandler extends SessionHandler
         ini_set(option: 'session.cookie_httponly', value: true);
         // Prevent session fixation; very recommended
         ini_set(option: 'session.use_strict_mode', value: true);
+        // The session ID is never accepted from the URL or the request input, and never put into URLs
+        ini_set(option: 'session.use_only_cookies', value: true);
+        ini_set(option: 'session.use_trans_sid', value: false);
 
         // Prevent cross-domain information leakage
         // See https://www.thinktecture.com/de/identity/samesite/samesite-in-a-nutshell/ for further explanations
@@ -138,88 +126,122 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     private function setSessionName(string $individualName): void
     {
-        // The session ID is only read from the cookie, never from the request input (prevents session fixation)
         if ($individualName !== '') {
             session_name(name: $individualName);
         }
 
         // Just generate a new session id if current from cookie contains illegal characters
-        // Inspired from http://stackoverflow.com/questions/32898857/session-start-issues-regarding-illegal-characters-empty-session-id-and-failed
+        // Inspired from https://stackoverflow.com/q/32898857
         $sessionName = AbstractSessionHandler::readSessionName();
         $sessionId = $this->httpRequest->getCookie(name: $sessionName);
         if ($sessionId === null) {
             return;
         }
-        if (!$this->checkSessionIdAgainstSidBitsPerChar(
-            sessionId: $sessionId,
-            sidBitsPerChar: (int) ini_get(option: 'session.sid_bits_per_character'),
-        )) {
+        if (preg_match(pattern: AbstractSessionHandler::VALID_SESSION_ID_PATTERN, subject: $sessionId) !== 1) {
             // `session_start()` reads the session ID from `$_COOKIE` itself: the invalid one has to go from there
             unset($_COOKIE[$sessionName]);
         }
     }
 
     /**
-     * Checks session id against valid characters based on the session.sid_bits_per_character ini setting
-     * (http://php.net/manual/en/session.configuration.php#ini.session.sid-bits-per-character)
-     *
-     * @param string $sessionId The session id to check (for example, cookie or get value)
-     * @param int $sidBitsPerChar The session.sid_bits_per_character value (4, 5 or 6)
-     *
-     * @return bool Returns true if session_id is valid or false if not
+     * Runs before the PHP session is started, e.g. to set the save handler options of a project handler.
      */
-    protected function checkSessionIdAgainstSidBitsPerChar(string $sessionId, int $sidBitsPerChar): bool
+    abstract protected function executePreStartActions(): void;
+
+    /**
+     * Whether a session with this ID exists in the storage. An ID that does not exist is replaced by a new one
+     * (session fixation: nobody can choose the ID of a session).
+     */
+    abstract protected function sessionExists(string $id): bool;
+
+    #[Override]
+    public function validateId(string $id): bool
     {
-        if ($sidBitsPerChar === 4 && preg_match(pattern: '/^[a-f\d]+$/', subject: $sessionId) === 0) {
-            return false;
-        }
-
-        if ($sidBitsPerChar === 5 && preg_match(pattern: '/^[a-v\d]+$/', subject: $sessionId) === 0) {
-            return false;
-        }
-
-        if ($sidBitsPerChar === 6 && preg_match(pattern: '/^[A-Za-z\d\-,]+$/i', subject: $sessionId) === 0) {
-            return false;
-        }
-
-        return true;
+        return preg_match(pattern: AbstractSessionHandler::VALID_SESSION_ID_PATTERN, subject: $id) === 1
+            && $this->sessionExists(id: $id);
     }
 
-    abstract protected function executePreStartActions(): void;
+    #[Override]
+    public function updateTimestamp(string $id, string $data): bool
+    {
+        return $this->write(id: $id, data: $data);
+    }
 
     private function isSessionCreated(): bool
     {
         return $this->readHandlerValue(key: AbstractSessionHandler::SESSION_CREATED_INDICATOR) !== null;
     }
 
-    private function initDefaultSessionData(bool $destroyCurrentSessionData): void
+    /**
+     * A session without trusted address or user agent counts as untrusted.
+     */
+    private function isTrustedClient(): bool
     {
-        if ($destroyCurrentSessionData) {
-            try {
-                if (ini_get(option: 'session.use_cookies')) {
-                    $params = session_get_cookie_params();
-                    setcookie(
-                        AbstractSessionHandler::readSessionName(),
-                        '',
-                        $this->currentTime - 42000,
-                        $params['path'],
-                        $params['domain'],
-                        $params['secure'],
-                        $params['httponly'],
-                    );
-                }
-                session_destroy();
-                session_start(options: [
-                    'use_strict_mode' => true,
-                ]);
-                session_regenerate_id(delete_old_session: true);
-                $this->id = AbstractSessionHandler::readSessionId();
-            } catch (Throwable $throwable) {
-                if (!str_contains(haystack: $throwable->getMessage(), needle: 'Session object destruction failed')) {
-                    throw $throwable;
-                }
+        return $this->readHandlerValue(key: AbstractSessionHandler::TRUSTED_REMOTE_ADDRESS_INDICATOR)
+            === $this->clientRemoteAddress
+            && $this->readHandlerValue(key: AbstractSessionHandler::TRUSTED_USER_AGENT_INDICATOR)
+            === $this->clientUserAgent;
+    }
+
+    /**
+     * Throws away the data and the ID of the session (untrusted client or expired session) and starts a new one.
+     *
+     * @throws RuntimeException if the ID of the session could not be changed
+     */
+    private function replaceSession(): void
+    {
+        $oldId = AbstractSessionHandler::readSessionId();
+        $this->expireSessionCookie();
+        // Whatever happens next: the data of the old session is gone
+        $_SESSION = [];
+        $this->ignoreDestructionFailure(action: static fn(): bool => session_destroy());
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            $this->startNativeSession();
+        }
+        $this->ignoreDestructionFailure(action: static fn(): bool => session_regenerate_id(delete_old_session: true));
+        $this->id = AbstractSessionHandler::readSessionId();
+        if ($this->id === $oldId) {
+            throw new RuntimeException(message: 'The session could not be replaced by a new one.');
+        }
+        $this->initDefaultSessionData();
+    }
+
+    private function expireSessionCookie(): void
+    {
+        if (ini_get(option: 'session.use_cookies') !== '1') {
+            return;
+        }
+        $params = session_get_cookie_params();
+        setcookie(
+            AbstractSessionHandler::readSessionName(),
+            '',
+            $this->currentTime - 42000,
+            $params['path'],
+            $params['domain'],
+            $params['secure'],
+            $params['httponly'],
+        );
+    }
+
+    /**
+     * A session whose storage is already gone (e.g. collected by the garbage collection in the meantime) cannot be
+     * destroyed, which PHP reports as a warning. The session is replaced anyway.
+     *
+     * @param callable(): bool $action
+     */
+    private function ignoreDestructionFailure(callable $action): void
+    {
+        try {
+            $action();
+        } catch (Throwable $throwable) {
+            if (!str_contains(haystack: $throwable->getMessage(), needle: 'Session object destruction failed')) {
+                throw $throwable;
             }
         }
+    }
+
+    private function initDefaultSessionData(): void
+    {
         $this->setSessionCreated();
         $this->setTrustedRemoteAddress();
         $this->setTrustedUserAgent();
@@ -238,7 +260,7 @@ abstract class AbstractSessionHandler extends SessionHandler
         );
     }
 
-    public function setTrustedUserAgent(): void
+    private function setTrustedUserAgent(): void
     {
         $this->writeHandlerValue(
             key: AbstractSessionHandler::TRUSTED_USER_AGENT_INDICATOR,
@@ -268,19 +290,21 @@ abstract class AbstractSessionHandler extends SessionHandler
         return $trustedUserAgent;
     }
 
+    /**
+     * A session without a (readable) time of the last activity counts as expired.
+     */
     private function isSessionExpired(): bool
     {
         $lastActivity = $this->readHandlerValue(key: AbstractSessionHandler::LAST_ACTIVITY_INDICATOR);
 
-        return (
-            is_int(value: $lastActivity)
-            && ($this->currentTime - $lastActivity > $this->sessionSettings->maxLifeTime)
-        );
+        return !is_int(value: $lastActivity)
+            || $this->currentTime - $lastActivity > $this->sessionSettings->maxLifeTime;
     }
 
-    private function isSessionOlderThan30Minutes(): bool
+    private function isSessionOlderThanRegenerationInterval(): bool
     {
-        return ($this->currentTime - $this->getSessionCreated() > 1800);
+        return $this->currentTime - $this->getSessionCreated()
+            > AbstractSessionHandler::ID_REGENERATION_INTERVAL_IN_SECONDS;
     }
 
     public function getSessionCreated(): int
@@ -293,6 +317,9 @@ abstract class AbstractSessionHandler extends SessionHandler
         return $sessionCreated;
     }
 
+    /**
+     * Gives the session a new ID and deletes the old session (on login, logout and privilege changes).
+     */
     public function regenerateId(): void
     {
         session_regenerate_id(delete_old_session: true);
@@ -383,21 +410,27 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     public function changeCookieSameSiteToLax(): void
     {
-        if ((session_status() === PHP_SESSION_ACTIVE)) {
-            // Prevent from "Session cookie parameters cannot be changed when a session is active" exception
-            session_write_close();
-        }
-        session_set_cookie_params(['samesite' => 'Lax']);
-        session_start();
+        $this->changeCookieSameSite(sameSite: 'Lax');
     }
 
+    /**
+     * For the return of an identity provider (form post from another site): the cookie must be sent along.
+     */
     public function changeCookieSameSiteToNone(): void
     {
-        if ((session_status() === PHP_SESSION_ACTIVE)) {
+        $this->changeCookieSameSite(sameSite: 'None');
+    }
+
+    /**
+     * @param 'Lax'|'None' $sameSite
+     */
+    private function changeCookieSameSite(string $sameSite): void
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
             // Prevent from "Session cookie parameters cannot be changed when a session is active" exception
             session_write_close();
         }
-        session_set_cookie_params(['samesite' => 'None']);
+        session_set_cookie_params(['samesite' => $sameSite]);
         session_start();
     }
 }

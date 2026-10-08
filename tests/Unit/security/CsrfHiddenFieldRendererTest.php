@@ -40,4 +40,24 @@ final class CsrfHiddenFieldRendererTest extends TestCase
     {
         $this->assertSame('', CsrfHiddenFieldRenderer::render(csrfTokenSource: null));
     }
+
+    public function testTokenIsHtmlEncoded(): void
+    {
+        $html = CsrfHiddenFieldRenderer::render(
+            csrfTokenSource: new InMemoryCsrfTokenSource(token: '"><script>alert(1)</script>'),
+        );
+
+        $this->assertSame(
+            '<input type="hidden" name="csrftoken" value="&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;">',
+            $html,
+        );
+    }
+
+    public function testBase64TokenIsRenderedAsItIs(): void
+    {
+        $this->assertSame(
+            '<input type="hidden" name="csrftoken" value="ab+/cd==">',
+            CsrfHiddenFieldRenderer::render(csrfTokenSource: new InMemoryCsrfTokenSource(token: 'ab+/cd==')),
+        );
+    }
 }

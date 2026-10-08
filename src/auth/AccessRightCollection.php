@@ -9,20 +9,27 @@ declare(strict_types=1);
 
 namespace actra\yuf\auth;
 
-class AccessRightCollection
+/**
+ * The access rights of a user or the rights a view requires. Rights are free strings of the project; the only right
+ * yuf knows is `ACCESS_DO_PASSWORD_LOGIN`.
+ */
+final class AccessRightCollection
 {
     public const string ACCESS_DO_PASSWORD_LOGIN = 'doPasswordLogin';
 
-    /** @var string[] */
+    /** @var list<string> */
     private array $accessRights = [];
 
-    protected function __construct() {}
+    private function __construct() {}
 
     public static function createEmpty(): AccessRightCollection
     {
         return new AccessRightCollection();
     }
 
+    /**
+     * @param list<string> $input
+     */
     public static function createFromStringArray(array $input): AccessRightCollection
     {
         $accessRightCollection = new AccessRightCollection();
@@ -42,12 +49,12 @@ class AccessRightCollection
     {
         return array_any(
             $accessRightCollection->listAccessRights(),
-            fn($accessRight) => $this->hasAccessRight(accessRight: $accessRight),
+            fn(string $accessRight): bool => $this->hasAccessRight(accessRight: $accessRight),
         );
     }
 
     /**
-     * @return string[]
+     * @return list<string>
      */
     public function listAccessRights(): array
     {
@@ -61,6 +68,6 @@ class AccessRightCollection
 
     public function isEmpty(): bool
     {
-        return (count(value: $this->accessRights) === 0);
+        return $this->accessRights === [];
     }
 }

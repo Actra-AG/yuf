@@ -66,7 +66,7 @@ too large.
 7. `db` (51), done in v4.34.0.
 8. `table` (37) and `pagination` (3), done in v4.35.0.
 9. `mailer` (33, full standard; characterization tests of the MIME output first), done in v4.36.0.
-10. `auth` (26), `security` (0) and the rest of `session` (2).
+10. `auth` (26), `security` (0) and the rest of `session` (2), done in v4.37.0.
 11. `api` (27).
 12. `html` (25) and `layout` (0, `final` only).
 13. `exception` (10) and `datacheck` (13).
@@ -420,6 +420,84 @@ too large.
   `actra/backend` (`Mailer::sendTextMail()`): it still builds `SmtpMailer` without `serverAddress` (needs
   `HttpRequest::getServerAddress()` since v4.29.0) and passes `new SMTPMailer(...)` (class name case); nothing else of
   this release affects it (`TextMail` and `SmtpMailer` with default arguments).
+
+### Step 10 (v4.37.0) – done
+
+- Area `auth`, `security` and `session`. Baseline 103 -> 75 (all 26 entries of `src/auth/` and 2 of `src/session/` removed,
+  no new entry). Tests 10905 -> 11080. Details and before/after in `UPGRADE.md`.
+- **Characterization first** (passed against the old code before the change): `PasswordTest` (salt, SHA-256, valid /
+  invalid, unicode, empty), `AccessRightCollectionTest`, `MicrosoftIdTokenTest` (with a generated RSA key and a
+  self-signed certificate, `TestJwtIssuer`, no network: valid token, tampered payload, other key, `none` / HS256 / RS512,
+  missing `kid`, expired, `nbf`, `aud`, `tid`, `nonce`, private key in the key set, broken certificate chain), more
+  `AuthenticatorTest` cases (wrong password counting, lock-out also with the right password, inactive, no password right,
+  IP whitelist in and out, token login without password check, failed credential check of the project),
+  `UnauthorizedExceptionsTest`, `AuthResultEnumTest` (stored values), more `CspPolicySettingsTest` cases (default policy,
+  nonce rules, empty directives), and `AbstractSessionHandlerTest` in separate processes (other address, other user
+  agent, expired session, 30 minutes regeneration, invalid session ID characters, cookie flags, `regenerateId()`, the
+  SameSite switch). The tests of fixes (strict mode, fixation, rehash, key cache, ...) came with the fixes.
+- **final / extension points:** extension points (documented in the class comment): `AuthUser`, `Authenticator`,
+  `MicrosoftAuthenticator`, `AuthWebToken`, `AbstractSessionHandler`. No cleaner way than subclassing was found for
+  `AuthUser` / `Authenticator` (backend loads its user from the database and writes its own login log in the `db…()`
+  and `logAuthResult()` hooks; composition would be a redesign of both with a repository interface, to decide when
+  backend follows). Everything else `final`; `@internal`: `AuthSessionKeyEnum`, `CachedKeySet`, `JsonWebKeySetParser`,
+  `LoginAttempt`, `MicrosoftLoginUri`, `MicrosoftTenantId`.
+- **Enums:** none new. `AuthResultEnum` / `AuthMethodEnum` existed (values pinned by a test, they are stored in the login
+  log of the projects). `AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN` stays a constant (rights are an open set of the
+  project). The SameSite value is the literal type `'Lax'|'None'` of a private method (three values, never a parameter).
+- **Static:** no static property in the three areas. Static stays only for pure functions: `Password::generateNew()` and
+  `spendVerificationTime()` (functions of their arguments), `CsrfHiddenFieldRenderer::render()`,
+  `JsonWebKeySetParser::parse()`, `MicrosoftLoginUri::create()`, `MicrosoftTenantId::assertValid()`,
+  `IdTokenTimeClaimsValidator` (instance), `AuthWebToken::decodeJsonObject()`.
+- **Security review, fixed (with tests):**
+  1. *Passwords* were a salted SHA-256 (fast hash): `password_hash()` Argon2id now, legacy passwords verified with
+     `hash_equals()` and upgraded at the login (`AuthUser::rehashPassword()`, new abstract `dbUpdatePassword()`); a login
+     for an unknown user spends the time of a verification against a dummy hash.
+  2. *Session fixation:* `use_strict_mode` has no effect for a `SessionHandler` subclass without `validateId()` (PHP then
+     treats every ID as valid, checked with a probe: a well-formed unknown cookie ID was kept). `AbstractSessionHandler`
+     implements `SessionUpdateTimestampHandlerInterface` with the abstract `sessionExists()`. `AuthSession::logIn()` did
+     not regenerate the ID: it does now.
+  3. *Session replacement* (other client or expired): the old data is removed before anything else, an unchanged ID is an
+     error, missing handler data counts as untrusted (fail closed); `use_only_cookies` / `use_trans_sid` set.
+  4. *JWT:* algorithm fixed to RS256 (checked: `none`, HS256, RS512, lower case), `iss` check added, exactly three
+     segments, claims must have the right type, `hash_equals()` for `aud` / `tid` / `iss` / `nonce`, invalid JSON is an
+     `UnauthorizedException`; the key cache is per tenant, written atomically with 0600, replaced only by a key set that
+     parses, refreshed at most every 5 minutes; the download uses verified HTTPS without redirects, timeout and size
+     limit; the tenant ID is validated (URL and file name).
+  5. *Logs:* the Microsoft SSO log contained the raw ID token and the nonce: exception class and message only now.
+  6. *CSP:* `Host` header injected into the policy (sanitized); nonce rules unchanged and tested (no `unsafe-inline` /
+     `unsafe-eval` by default). *CSRF:* the hidden field encodes the token; token generation (`random_bytes(32)`) and
+     `hash_equals()` were fine.
+  7. The Microsoft login URL did not encode its parameters.
+- **Security review, not changed (decisions for later):**
+  - `logAuthResult()` receives the session ID (the one before the login, dead after a successful login but live after a
+    failed one) and backend writes it into its login log; security.md asks for no session IDs in logs. Changing the
+    signature breaks backend: replace it by a hash of the ID or drop it when backend follows.
+  - `getUserName()` of the Microsoft token is the `email` claim: an email address is mutable and for multi-tenant apps
+    not verified by Microsoft ("nOAuth"); `oid` / `sub` would be the stable identifier, but backend identifies users by
+    email. The tenant is fixed and checked (`tid`), which limits it to the users of that tenant.
+  - The certificate chain of a key is checked for consistency only (each signed by the next, root self-signed), not
+    anchored in a trusted root and not for validity dates: the key set is trusted because it comes from Microsoft over
+    verified HTTPS.
+  - The lock-out after `maxAllowedWrongPasswordAttempts` is per user and permanent until the project resets the counter
+    (a lock-out of a known user name by anybody is possible; the unlock is the project's decision). No rate limit per IP.
+  - Sessions are bound to the exact remote address: a user whose address changes (mobile network) loses the session.
+    Unchanged; behind a proxy `REMOTE_ADDR` is the proxy.
+  - `session.cookie_secure` is always on: sessions need HTTPS (also in local development).
+- **Bugs found and fixed:** see "Fixed" in `UPGRADE.md` (fixation, CSP host, broken key cache locked every login, key
+  download on every unknown `kid`, JWT with extra segments accepted, `JsonException` instead of a failed login,
+  `getTrustedRemoteAddress()` throwing for corrupt sessions).
+- **Stays untested:** `MicrosoftKeySetSource::download()` (network), `MicrosoftAuthenticator::redirectToMicrosoftLogin()`
+  (`exit`; the URL is tested through `MicrosoftLoginUri`), the session handler against another storage than files,
+  `session_destroy()` failing ("Session object destruction failed" is ignored as before, the replacement is checked by the
+  ID afterwards), `Password` with the PHP build without Argon2 (`PASSWORD_DEFAULT` branch).
+- **Follow-up in `actra/backend`:** `MyAuthUser` needs `dbUpdatePassword()` (`DbAuthUserRepository::setPassword()` without
+  resetting the attempts) and no `Password::generateNew('unused')` per user load; the password columns need 255
+  characters for the hash and an empty salt; `new Password(salt:, hash:)`, `isValid()` and `generateNew()` keep working;
+  API keys (`DbAuthApiKeyRepository`) should switch from `Password` to the new `SecretTokenHash` (SHA-256 of a 256 bit secret; Argon2id costs one verification per request): re-issue the keys or verify the old `Password` once and store the new hash; its login log keeps working
+  (`logAuthResult()` unchanged).
+- **Open / for later:** `IpValidator` is in `datacheck` (step 13); `UnauthorizedException` in `exception` (step 13);
+  `HttpResponse::redirectAndExit()` is static and exits (step 4 area); `Session` / `NativeSessionStorage` /
+  `ArraySessionStorage` / `SessionStorage` were already clean and only got line breaks.
 
 ### Superglobals rule – done
 

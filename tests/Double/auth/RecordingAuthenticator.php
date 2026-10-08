@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Double\auth;
 
 use actra\yuf\auth\Authenticator;
+use actra\yuf\auth\AuthMethodEnum;
 use actra\yuf\auth\AuthResultEnum;
 use actra\yuf\auth\AuthSession;
 use actra\yuf\auth\AuthUser;
@@ -17,7 +18,7 @@ use actra\yuf\core\HttpRequest;
 use Override;
 
 /**
- * Records the arguments of `logAuthResult()`. Authenticator allows one instance only (see `AuthenticatorTest`).
+ * Records the arguments of `logAuthResult()`.
  */
 final class RecordingAuthenticator extends Authenticator
 {
@@ -30,8 +31,14 @@ final class RecordingAuthenticator extends Authenticator
         HttpRequest $httpRequest,
         AuthSession $authSession,
         private readonly ?AuthUser $authUser,
+        int $maxAllowedWrongPasswordAttempts = 3,
+        private readonly bool $credentialsAreValid = true,
     ) {
-        parent::__construct(httpRequest: $httpRequest, authSession: $authSession, maxAllowedWrongPasswordAttempts: 3);
+        parent::__construct(
+            httpRequest: $httpRequest,
+            authSession: $authSession,
+            maxAllowedWrongPasswordAttempts: $maxAllowedWrongPasswordAttempts,
+        );
     }
 
     #[Override]
@@ -60,6 +67,15 @@ final class RecordingAuthenticator extends Authenticator
     #[Override]
     protected function checkLoginCredentials(AuthUser $authUser): bool
     {
-        return true;
+        if (!$this->credentialsAreValid) {
+            $this->authResult = AuthResultEnum::ERROR_NO_PASSWORD;
+        }
+
+        return $this->credentialsAreValid;
+    }
+
+    public function otpLogin(string $userName): bool
+    {
+        return $this->doLogin(authMethod: AuthMethodEnum::OTP, userName: $userName, passwordToCheck: null);
     }
 }

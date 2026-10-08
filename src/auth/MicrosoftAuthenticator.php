@@ -9,17 +9,28 @@ declare(strict_types=1);
 
 namespace actra\yuf\auth;
 
+use actra\yuf\common\LogFile;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
+use actra\yuf\exception\UnauthorizedException;
 use actra\yuf\session\AbstractSessionHandler;
-use DateTimeImmutable;
+use InvalidArgumentException;
 use LogicException;
+use RuntimeException;
+use SensitiveParameter;
 use Throwable;
 
+/**
+ * Extension point: the login with a Microsoft account (OpenID Connect). A project class extends it, redirects the user
+ * with `redirectToMicrosoftLogin()` and passes the posted ID token to `microsoftIdTokenLogin()`. A token that does not
+ * verify is logged (message of the failure only, never the token or the nonce) and the login fails.
+ */
 abstract class MicrosoftAuthenticator extends Authenticator
 {
-    private const string AUTHORIZE_PATH = 'https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/' . 'authorize';
-
+    /**
+     * @param string $logDirectory The log directory of the project (`Core::$logDirectory`, with trailing slash)
+     * @param string $cacheDirectory A writable directory for the cache of the signing keys of Microsoft
+     */
     protected function __construct(
         HttpRequest $httpRequest,
         AuthSession $authSession,
@@ -35,32 +46,30 @@ abstract class MicrosoftAuthenticator extends Authenticator
         );
     }
 
+    /**
+     * @param string $ssoNonce A random value (for example `bin2hex(random_bytes(16))`) that the project keeps in the
+     *     session until the token comes back
+     *
+     * @throws LogicException if the user is already logged in
+     * @throws InvalidArgumentException if the tenant ID is not a GUID or a domain name
+     */
     protected function redirectToMicrosoftLogin(
         string $tenantId,
         string $clientId,
         string $redirectUri,
+        #[SensitiveParameter]
         string $ssoNonce,
     ): void {
         if ($this->authSession->isLoggedIn()) {
             throw new LogicException(message: 'User is already logged in');
         }
         $this->sessionHandler->changeCookieSameSiteToNone();
-        // See https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-protocols-oidc
         HttpResponse::redirectAndExit(
-            relativeOrAbsoluteUri: str_replace(
-                search: '{tenantId}',
-                replace: $tenantId,
-                subject: MicrosoftAuthenticator::AUTHORIZE_PATH,
-            ) . '?' . implode(
-                separator: '&',
-                array: [
-                    'client_id=' . $clientId,
-                    'response_type=id_token',
-                    'redirect_uri=' . $redirectUri,
-                    'response_mode=form_post',
-                    'scope=openid',
-                    'nonce=' . $ssoNonce,
-                ],
+            relativeOrAbsoluteUri: MicrosoftLoginUri::create(
+                tenantId: $tenantId,
+                clientId: $clientId,
+                redirectUri: $redirectUri,
+                ssoNonce: $ssoNonce,
             ),
             httpRequest: $this->httpRequest,
         );
@@ -69,7 +78,9 @@ abstract class MicrosoftAuthenticator extends Authenticator
     protected function microsoftIdTokenLogin(
         string $tenantId,
         string $clientId,
+        #[SensitiveParameter]
         string $ssoNonce,
+        #[SensitiveParameter]
         string $microsoftIdToken,
     ): bool {
         try {
@@ -80,36 +91,22 @@ abstract class MicrosoftAuthenticator extends Authenticator
                 jwtString: $microsoftIdToken,
                 cacheDirectory: $this->cacheDirectory,
             );
-        } catch (Throwable $throwable) {
-            $this->logException(throwable: $throwable, ssoNonce: $ssoNonce, inputIdTokenString: $microsoftIdToken);
+            // A token without email address is not usable for the login
+            $authWebToken->getUserName();
+        } catch (UnauthorizedException|InvalidArgumentException|RuntimeException $exception) {
+            $this->logFailure(exception: $exception);
             $this->authResult = AuthResultEnum::FAILED_SSO_LOGIN;
 
             return false;
         }
 
-        return $this->authWebTokenLogin(
-            authMethod: AuthMethodEnum::MICROSOFT,
-            authWebToken: $authWebToken,
-        );
+        return $this->authWebTokenLogin(authMethod: AuthMethodEnum::MICROSOFT, authWebToken: $authWebToken);
     }
 
-    private function logException(Throwable $throwable, string $ssoNonce, string $inputIdTokenString): void
+    private function logFailure(Throwable $exception): void
     {
-        $logFile = fopen(filename: $this->logDirectory . 'ssoMicrosoft.log', mode: 'a+');
-        fwrite(
-            stream: $logFile,
-            data: (
-                implode(
-                    separator: PHP_EOL,
-                    array: [
-                        new DateTimeImmutable()->format(format: 'Y-m-d H:i:s') . ' ' . $throwable->getMessage(),
-                        'sso-nonce: ' . $ssoNonce,
-                        $inputIdTokenString,
-                        '------------------------------------------------------------------',
-                    ],
-                ) . PHP_EOL
-            ),
+        new LogFile(logDirectory: $this->logDirectory, group: 'ssoMicrosoft', logFileName: 'ssoMicrosoft')->write(
+            line: $exception::class . ': ' . $exception->getMessage(),
         );
-        fclose(stream: $logFile);
     }
 }

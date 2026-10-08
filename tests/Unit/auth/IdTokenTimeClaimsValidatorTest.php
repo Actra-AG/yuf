@@ -13,6 +13,7 @@ use actra\yuf\auth\IdTokenTimeClaimsValidator;
 use actra\yuf\clock\FixedClock;
 use actra\yuf\exception\UnauthorizedException;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
@@ -109,6 +110,49 @@ final class IdTokenTimeClaimsValidatorTest extends TestCase
         unset($payload->$claim);
 
         $this->expectException(UnauthorizedException::class);
+        $this->createValidator()->assertValid(payload: $payload);
+    }
+
+    /**
+     * @return iterable<string, array{string, mixed}>
+     */
+    public static function nonNumericClaimProvider(): iterable
+    {
+        yield 'nbf as string' => ['nbf', '1799999990'];
+        yield 'iat as string' => ['iat', '1799999990'];
+        yield 'exp as string' => ['exp', '1800003600'];
+        yield 'exp as null' => ['exp', null];
+        yield 'exp as array' => ['exp', [1_800_003_600]];
+        yield 'exp as bool' => ['exp', true];
+    }
+
+    #[DataProvider('nonNumericClaimProvider')]
+    public function testClaimThatIsNoNumberIsRejected(string $claim, mixed $value): void
+    {
+        $now = IdTokenTimeClaimsValidatorTest::NOW;
+        $payload = $this->createPayload(notBefore: $now - 10, issuedAt: $now - 10, expires: $now + 3600);
+        $payload->$claim = $value;
+
+        $this->expectException(UnauthorizedException::class);
+
+        $this->createValidator()->assertValid(payload: $payload);
+    }
+
+    public function testNegativeLeewayIsRefused(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new IdTokenTimeClaimsValidator(leewayInSeconds: -1);
+    }
+
+    public function testClaimsAsFloatsAreAccepted(): void
+    {
+        $this->expectNotToPerformAssertions();
+
+        $now = IdTokenTimeClaimsValidatorTest::NOW;
+        $payload = $this->createPayload(notBefore: $now, issuedAt: $now, expires: $now + 3600);
+        $payload->exp = $now + 3600.5;
+
         $this->createValidator()->assertValid(payload: $payload);
     }
 }

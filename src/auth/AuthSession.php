@@ -21,8 +21,13 @@ final readonly class AuthSession
 {
     public function __construct(private Session $session) {}
 
+    /**
+     * Stores the login in the session and gives the session a new ID (the old session is deleted), so a session ID
+     * the user had before the login (session fixation) is worthless.
+     */
     public function logIn(int $authSessionId): void
     {
+        $this->session->regenerateId();
         $this->session->setSection(
             section: SessionSectionEnum::AUTH,
             data: [

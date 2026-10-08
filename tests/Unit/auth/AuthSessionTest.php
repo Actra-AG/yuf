@@ -54,6 +54,16 @@ final class AuthSessionTest extends TestCase
         );
     }
 
+    public function testLogInRegeneratesTheSessionId(): void
+    {
+        $idBefore = $this->session->getId();
+
+        $this->authSession->logIn(authSessionId: 5);
+
+        $this->assertNotSame($idBefore, $this->session->getId());
+        $this->assertSame('array-session-1', $this->session->getId());
+    }
+
     public function testIsNotLoggedInWithoutLogIn(): void
     {
         $this->assertFalse($this->authSession->isLoggedIn());
@@ -91,7 +101,7 @@ final class AuthSessionTest extends TestCase
             $this->storage->all(),
         );
         $this->assertFalse($this->authSession->isLoggedIn());
-        $this->assertSame('array-session-1', $this->session->getId());
+        $this->assertSame('array-session-2', $this->session->getId());
     }
 
     public function testGetAuthSessionIdAfterLogOutThrows(): void
@@ -161,7 +171,7 @@ final class AuthSessionTest extends TestCase
         $this->assertSame(6, $this->authSession->getAuthSessionId());
     }
 
-    public function testLogOutTwiceRegeneratesTheSessionIdOnce(): void
+    public function testLogOutTwiceRegeneratesTheSessionIdOncePerLogOut(): void
     {
         $this->authSession->logIn(authSessionId: 5);
 
@@ -169,7 +179,7 @@ final class AuthSessionTest extends TestCase
         $this->authSession->logOut();
 
         $this->assertFalse($this->authSession->isLoggedIn());
-        $this->assertSame('array-session-1', $this->session->getId());
+        $this->assertSame('array-session-2', $this->session->getId());
     }
 
     public function testLogInAfterLogOutIsPossible(): void

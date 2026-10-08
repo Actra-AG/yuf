@@ -17,7 +17,8 @@ use InvalidArgumentException;
  * (`Core::$session`, `null` without sessions); views get it as `ViewContext::$session`.
  *
  * Values are strings, numbers, booleans, `null` and arrays of these, nested as deep as needed (no objects, so
- * nothing is (un)serialized with surprises; `set()` checks arrays recursively, the PHPDoc alias cannot express it). The typed getters return `null` for a missing key or a value of another type and never write.
+ * nothing is (un)serialized with surprises; `set()` checks arrays recursively, the PHPDoc alias cannot express it). The
+ * typed getters return `null` for a missing key or a value of another type and never write.
  * The key `yuf` belongs to yuf (see `SessionSectionEnum`).
  *
  * @phpstan-type SessionValue string|int|float|bool|array<array-key, mixed>|null
@@ -112,7 +113,9 @@ final readonly class Session
     {
         $handlerData = $this->getSection(section: SessionSectionEnum::HANDLER);
         $this->storage->replaceAll(
-            data: $handlerData === [] ? [] : [SessionSectionEnum::ROOT_KEY => [SessionSectionEnum::HANDLER->value => $handlerData]],
+            data: $handlerData === []
+                ? []
+                : [SessionSectionEnum::ROOT_KEY => [SessionSectionEnum::HANDLER->value => $handlerData]],
         );
     }
 

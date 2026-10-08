@@ -16,27 +16,48 @@ use Override;
 
 final class TestAuthUser extends AuthUser
 {
+    public int $increaseCalls = 0;
+    public int $confirmCalls = 0;
+    public ?Password $storedPassword = null;
+
     /**
      * @param list<string> $accessRights
+     * @param list<string> $ipWhitelist
      */
-    public static function create(array $accessRights, bool $isActive = true): TestAuthUser
-    {
+    public static function create(
+        array $accessRights,
+        bool $isActive = true,
+        int $wrongPasswordAttempts = 0,
+        array $ipWhitelist = [],
+        ?Password $password = null,
+    ): TestAuthUser {
         return new TestAuthUser(
             id: 1,
             isActive: $isActive,
-            wrongPasswordAttempts: 0,
+            wrongPasswordAttempts: $wrongPasswordAttempts,
             accessRightCollection: AccessRightCollection::createFromStringArray(input: $accessRights),
-            password: Password::generateNew(rawPassword: 'test'),
-            ipWhitelist: [],
+            password: $password ?? Password::generateNew(rawPassword: 'test'),
+            ipWhitelist: $ipWhitelist,
         );
     }
 
     #[Override]
-    protected function dbIncreaseWrongPasswordAttempts(): void {}
+    protected function dbIncreaseWrongPasswordAttempts(): void
+    {
+        $this->increaseCalls++;
+    }
 
     #[Override]
     protected function dbConfirmSuccessfulLogin(): int
     {
+        $this->confirmCalls++;
+
         return 0;
+    }
+
+    #[Override]
+    protected function dbUpdatePassword(Password $newPassword): void
+    {
+        $this->storedPassword = $newPassword;
     }
 }

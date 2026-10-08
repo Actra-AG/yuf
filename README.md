@@ -258,6 +258,25 @@ session themselves. `clearUserData()` removes everything except the section `han
 the preferred language). Call it directly to clear the session without a logout. Data that has to survive a logout
 (e.g. a message for the login page) must be written to the session after `AuthSession::logOut()`.
 
+`AuthSession::logIn()` gives the session a new ID too (session fixation), so a session ID the visitor had before the login
+is worthless. The session handler only accepts session IDs it issued itself (`validateId()`), binds a session to the
+address and user agent of its client and replaces it, empty, if one of them changes or the session is expired.
+
+### Passwords
+
+`Password::generateNew()` hashes with `password_hash()` (Argon2id; `PASSWORD_DEFAULT` without Argon2): store `salt`
+(empty) and `hash` (at least 255 characters). Passwords of the earlier salt-and-SHA-256 format are still verified; the
+`Authenticator` replaces them (and hashes with weaker costs) after a successful password login through
+`AuthUser::rehashPassword()` / `dbUpdatePassword()`. Show one message for every failed login, whether the user name is
+unknown or the password wrong (`Authenticator::$authResult` is for the log, not for the user).
+
+`Password` is for passwords that humans choose. For random secrets the application generates (API keys, reset links,
+remember-me tokens) use `SecretTokenHash`: `SecretTokenHash::generate()` returns the secret (32 random bytes, base64url,
+show it once) and its hash (SHA-256, 64 hex characters, store it); `new SecretTokenHash(hash: $stored)->isValid(secret:
+$given)` checks it with `hash_equals()`. A fast hash is safe because a 256 bit secret cannot be guessed, and an Argon2id
+check on every API request would cost 50 ms and 64 MB; for a password with little entropy a fast hash would be cracked
+quickly. Never use it for something a human types.
+
 Identifiers are session keys: **form names, table identifiers, filter identifiers and the instance names of
 `SearchHelper` must be unique per page.** Two tables with the same identifier share their sorting and page, two forms
 with the same name share the sent indicator. yuf does not check this.

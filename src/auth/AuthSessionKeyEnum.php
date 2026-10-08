@@ -11,6 +11,8 @@ namespace actra\yuf\auth;
 
 /**
  * The keys of the login state in the session (`yuf.auth`).
+ *
+ * @internal
  */
 enum AuthSessionKeyEnum: string
 {

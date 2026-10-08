@@ -11,4 +11,4 @@ namespace actra\yuf\auth;
 
 use actra\yuf\exception\UnauthorizedException;
 
-class UnauthorizedIpAddressException extends UnauthorizedException {}
+final class UnauthorizedIpAddressException extends UnauthorizedException {}

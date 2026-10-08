@@ -4,6 +4,166 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.37.0] – 2026-10-08
+
+Area release for `src/auth/`, `src/security/` and `src/session/`: passwords are hashed with `password_hash()` (Argon2id)
+and old salt-and-SHA-256 passwords are upgraded at the next login, the login gives the session a new ID, the session
+handler finally rejects session IDs it did not issue (PHP's strict mode was a no-op for it), the Microsoft ID token is
+checked more completely (`iss`, strict JWT format, key cache that cannot lock everybody out), and the area is `final`
+(extension points: `AuthUser`, `Authenticator`, `MicrosoftAuthenticator`, `AuthWebToken`, `AbstractSessionHandler`).
+Search your project for `Password`, `->salt`, `createWithSalt`, `HASH_ALGORITHM`, `extends AuthUser`,
+`extends Authenticator`, `extends MicrosoftAuthenticator`, `extends AuthWebToken`, `MicrosoftIdToken`, `jwtArray`,
+`base64Header`, `->secret`, `extends AbstractSessionHandler`, `extends FileSessionHandler`, `->fingerprint`,
+`checkSessionIdAgainstSidBitsPerChar`, `extends AccessRightCollection`, `extends CspPolicySettings`, `new SessionSettings(`
+and `ssoMicrosoft.log`.
+
+### ⚠️ `Password`: `password_hash()` instead of salt and SHA-256
+
+`Password::generateNew()` returns a password with an empty `salt` and an Argon2id hash (`password_hash()`, with
+`PASSWORD_DEFAULT` on a PHP without Argon2) in `hash`: the hash string carries its own salt, algorithm and costs. The
+column for the hash needs at least 255 characters (an Argon2id hash has about 100); the salt column must accept an
+empty string. Existing rows stay valid: a password with a non-empty salt is verified as before (now with
+`hash_equals()`), `Password::isLegacy()` / `needsRehash()` tell that it is outdated, and the `Authenticator` stores a
+new hash after the next successful password login (`AuthUser::rehashPassword()`). Remove `createWithSalt()` and
+`HASH_ALGORITHM` from your code; `Password` is `final readonly`.
+
+| Before | After |
+|:--|:--|
+| `Password::HASH_ALGORITHM` | removed |
+| `Password::createWithSalt(salt: $salt, rawPassword: $raw)` | removed (`new Password(salt:, hash:)` for stored values, `generateNew()` for new ones) |
+| `generateNew()`: random 16 character `salt`, `sha256` hash | empty `salt`, `password_hash()` hash |
+| `isValid()` compared with `===` | `password_verify()` (new) or `hash_equals()` (legacy) |
+| - | `isLegacy()`, `needsRehash()`, `Password::spendVerificationTime()` |
+
+Passwords that are checked often and have high entropy (API keys: `Password::generateNew(rawPassword: $secret)`) now cost
+one Argon2id verification (about 50 ms, 64 MB) per check: use `SecretTokenHash` for them (see below). `MyAuthUser`-like classes that call
+`Password::generateNew(rawPassword: 'unused')` for users without password pay that for every user they load: use a
+constant hash instead.
+
+### `SecretTokenHash` for API keys and other random tokens
+
+New `final readonly` classes `SecretTokenHash` and `GeneratedSecretToken` for secrets the application generates (API keys,
+reset links, remember-me tokens): `SecretTokenHash::generate()` returns a `GeneratedSecretToken` with `$secret` (32
+random bytes, base64url without padding, show it once) and `$hash` (SHA-256 as 64 lowercase hex characters, store
+`$hash->hash`); `new SecretTokenHash(hash: $stored)` restores it (`InvalidArgumentException` for another format) and
+`isValid(secret:)` compares with `hash_equals()`. A fast hash is right for such secrets (high entropy, checked on every
+request); `Password` (Argon2id) stays for passwords that humans choose.
+
+Projects that stored API keys as `Password` (e.g. `actra/backend`: `DbAuthApiKeyRepository`) should switch, because the
+Argon2id check now costs about 50 ms and 64 MB per request. Either re-issue the keys, or migrate on next use: keep the old
+columns, verify a presented key with the old `Password` once, and on success store `SecretTokenHash::fromSecret()` of it
+in a new column and clear the old salt and hash; check the new column first.
+
+### ⚠️ `AuthUser`: persist the upgraded password hash
+
+`AuthUser` has the new abstract method `dbUpdatePassword(Password $newPassword): void` (store `salt` and `hash`; do not
+reset the wrong password attempts). The protected `changePassword()` is removed (it only changed the property, without
+persisting); `rehashPassword(string $rawPassword)` replaces it and is called by the `Authenticator`. `$ipWhitelist` is a
+`list<string>`.
+
+Before:
+
+```php
+final class MyAuthUser extends AuthUser
+{
+    protected function dbIncreaseWrongPasswordAttempts(): void { /* ... */ }
+    protected function dbConfirmSuccessfulLogin(): int { /* ... */ }
+}
+```
+
+After:
+
+```php
+final class MyAuthUser extends AuthUser
+{
+    protected function dbIncreaseWrongPasswordAttempts(): void { /* ... */ }
+    protected function dbConfirmSuccessfulLogin(): int { /* ... */ }
+
+    protected function dbUpdatePassword(Password $newPassword): void
+    {
+        // UPDATE auth_user SET passwordSalt=?, passwordHash=? WHERE ID=?
+    }
+}
+```
+
+### ⚠️ `AuthWebToken` and `MicrosoftIdToken`
+
+`AuthWebToken` (extension point for other identity providers) no longer exposes the raw segments: `jwtArray`,
+`base64Header`, `base64Payload`, `base64Secret`, `secret` and `jwtString` are removed; subclasses have the protected
+`encodedHeader`, `encodedPayload` and `signature` (the decoded signature), `header` and `payload` stay public. The
+protected `jsonDecode()` is now `decodeJsonObject()`. A malformed token (not exactly three segments, invalid base64url,
+invalid JSON, JSON that is no object) throws an `UnauthorizedException` (before: a token with more than three segments was
+accepted by ignoring the rest, invalid JSON threw a `JsonException`). `getUserName()` throws an `UnauthorizedException`
+when the token has no `email`.
+
+`MicrosoftIdToken` is `final`; `parseKeySet()` is removed. New constructor argument `keySetSource:` (default: Microsoft
+over HTTPS, a `JsonWebKeySetSource` for tests). Changes in the checks and the key cache:
+
+- The claim `iss` must be `https://login.microsoftonline.com/<tenant>/v2.0` (new check; `aud`, `tid` and `nonce` as
+  before, compared with `hash_equals()`, and they must be strings; the time claims must be numbers).
+- The tenant ID must be a GUID or a domain name (`InvalidArgumentException`), because it goes into a URL and a file name.
+- The key cache is `ssoMicrosoftKeys-<tenantId>.json` in the cache directory (before: `ssoMicrosoftKeys.json`, shared by
+  all tenants). The old file can be deleted; the first login downloads the keys again.
+- The key set is only written to the cache if it parses, atomically and with mode 0600. An unknown key ID triggers a
+  download at most every 5 minutes. The download verifies certificate and host name, does not follow redirects and has a
+  timeout and a size limit.
+
+### ⚠️ `MicrosoftAuthenticator`
+
+`microsoftIdTokenLogin()` and `redirectToMicrosoftLogin()` have the same signatures. The log of failed token checks moved
+to `LogFile` (`<logDirectory>ssoMicrosoft/Y/m/d/ssoMicrosoft-<time>-<random>.log`, before: one file
+`<logDirectory>ssoMicrosoft.log`) and contains the exception class and message only: the raw ID token, the nonce and the
+email are no longer written (a token in a log file is a credential until it expires). The login redirect URL encodes its
+parameters (`redirect_uri` was inserted as it was). Only expected failures (`UnauthorizedException`,
+`InvalidArgumentException`, `RuntimeException`) fail the login; a `TypeError` is a bug and propagates.
+
+### ⚠️ `AuthSession::logIn()` regenerates the session ID
+
+`logIn()` gives the session a new ID and deletes the old session (before: the ID stayed, so an ID known to an attacker
+before the login stayed valid: session fixation). A project that stored the session ID (`getSessionId()`) before the
+login must read it again. The ID written to the log of the login attempt is the one before the login.
+
+### ⚠️ Session handler
+
+- `AbstractSessionHandler` implements `SessionUpdateTimestampHandlerInterface`: `validateId()` lets PHP's strict mode work.
+  **PHP ignores the strict mode for a handler that cannot tell whether an ID exists**, so before this release any
+  well-formed session ID in the cookie (set by an attacker as cookie on a sibling domain) was accepted as the session ID.
+  Now a subclass has to implement the new abstract method `sessionExists(string $id): bool` (`FileSessionHandler` checks
+  the session file).
+- Removed: the public properties `$name` and `$fingerprint` (nothing read them), `setTrustedUserAgent()` is private, the
+  protected `checkSessionIdAgainstSidBitsPerChar()` is replaced by a fixed check of the characters PHP accepts in an ID
+  (the ini setting `session.sid_bits_per_character` is deprecated). `getTrustedRemoteAddress()`, `getTrustedUserAgent()`,
+  `getSessionCreated()`, `getId()`, `regenerateId()` and `changeCookieSameSiteTo…()` stay.
+- `session.use_only_cookies=1` and `session.use_trans_sid=0` are set (the ID never comes from the URL or the request).
+- A session without a time of last activity, without trusted address or without trusted user agent is replaced by a new
+  one (before: it was kept, or `getTrustedRemoteAddress()` threw an `UnexpectedValueException` on every request). When a
+  session is replaced, the old data is removed first; if the ID could not be changed, a `RuntimeException` is thrown instead
+  of continuing with the ID of the untrusted session.
+- `FileSessionHandler` is `final`; it creates the save path with mode 0700 (before: 0777 minus umask) and throws a
+  `RuntimeException` if that fails. `SessionSettings` is `final` and rejects a lifetime below one second and a negative
+  garbage collection probability or a divisor below one (`InvalidArgumentException`).
+
+### ⚠️ `final` classes, new internal classes
+
+`AccessRightCollection` (private constructor, `list<string>`), `UnauthorizedAccessRightException`,
+`UnauthorizedIpAddressException`, `Password`, `MicrosoftIdToken`, `IdTokenTimeClaimsValidator` (the leeway must not be
+negative), `CspPolicySettings`, `FileSessionHandler` and `SessionSettings` are `final`. Nothing in `actra/backend` extends
+them. `AuthSessionKeyEnum` is `@internal`. New: the interface `JsonWebKeySetSource` and `MicrosoftKeySetSource`, and the
+`@internal` classes `CachedKeySet`, `JsonWebKeySetParser`, `LoginAttempt`, `MicrosoftLoginUri`, `MicrosoftTenantId`.
+
+### Fixed
+
+- Session fixation through the cookie (see above) and through the login (the ID is regenerated).
+- The CSP header put the host of the request into the policy as it was: a `Host` header with `;` or spaces could add
+  directives. A host with other characters than letters, digits, `.`, `:`, `-`, `[` and `]` becomes `invalid.invalid`.
+- `CsrfHiddenFieldRenderer` now HTML-encodes the token (the base64 tokens of `SessionCsrfTokenSource` are unchanged).
+- A broken key cache file (e.g. an HTML error page from a failed download) made every Microsoft login fail until the file
+  was deleted by hand; it is replaced by a new download now. A token with an unknown key ID made the server download the
+  key set on every request.
+- A wrong password for an unknown user was answered faster than one for a known user (user enumeration by response time):
+  the check is done against a dummy hash now.
+- The login of a user with an outdated hash upgrades it; a failed login never touches the stored password.
+
 ## [v4.36.0] – 2026-10-08
 
 Area release for `src/mailer/` (derived from PHPMailer, the licence notices and `gpl-3.0.txt` / `lgpl-3.0.txt` are

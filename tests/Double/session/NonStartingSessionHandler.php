@@ -29,6 +29,12 @@ final class NonStartingSessionHandler extends AbstractSessionHandler
     protected function executePreStartActions(): void {}
 
     #[Override]
+    protected function sessionExists(string $id): bool
+    {
+        return false;
+    }
+
+    #[Override]
     public function getId(): string
     {
         return 'native-test-session-' . $this->regenerations;

@@ -19,13 +19,13 @@ The plan for the remaining work is [docs/standard-completion/plan.md](../standar
 - `src/phone/` (port of libphonenumber, done in v4.33.0) and `src/mailer/` (derived from PHPMailer, license notices kept, done in v4.36.0) are brought to
   the full standard like own code, with characterization tests first.
 
-## PHPStan baseline: 103 entries
+## PHPStan baseline: 75 entries
 
-State after v4.36.0 (532 at v4.27.0, 447 at v4.30.0, 375 at v4.31.0, 307 at v4.32.0, 229 at v4.33.0, 176 at v4.34.0, 136 at v4.35.0; v4.36.0 removed `mailer` 33).
+State after v4.37.0 (532 at v4.27.0, 447 at v4.30.0, 375 at v4.31.0, 307 at v4.32.0, 229 at v4.33.0, 176 at v4.34.0, 136 at v4.35.0, 103 at v4.36.0; v4.37.0 removed `auth` 26 and `session` 2).
 
-- By area: `api` 27, `auth` 26, `html` 25, `datacheck` 13, `exception` 10, `session` 2. `core`, `Core.php`,
-  `request`, `response`, `common`, `phone`, `db`, `table`, `pagination`, `mailer`, `security`, `src/form/` and
-  `src/template/` have none.
+- By area: `api` 27, `html` 25, `datacheck` 13, `exception` 10. `core`, `Core.php`,
+  `request`, `response`, `common`, `phone`, `db`, `table`, `pagination`, `mailer`, `auth`, `security`, `session`,
+  `src/form/` and `src/template/` have none.
 - Most frequent identifiers (counted with `count:` at v4.33.0, 250 errors in 229 entries): `argument.type` 64,
   `missingType.iterableValue` 62, `offsetAccess.notFound` 20, `return.type` 13, `disallowed.isset` 10, `binaryOp.invalid` 8,
   `method.nonObject` 7, `assign.propertyType` 5, `if.condNotBoolean` 5, `missingType.parameter` 5, `disallowed.switch` 5,
@@ -56,7 +56,7 @@ State after v4.36.0 (532 at v4.27.0, 447 at v4.30.0, 375 at v4.31.0, 307 at v4.3
 
 ## Types (`php.md`, section 3)
 
-- About 84 `class` declarations are not `final` (searched after v4.36.0; `core`, `Core.php`, `request`, `response`, `common`, `phone`, `db`, `table`, `pagination` and `mailer` are done; `AbstractMail` and `AbstractMailer` stay documented extension points; `FrameworkDb`, `DbResultTable`, `SmartTable`, `AbstractTableColumn`, `TableHeadRenderer`, `TableFilter` and `AbstractTableFilterField` stay documented extension points). Some are intended extension points (views, forms, fields, columns, exception
+- About 76 `class` declarations are not `final` (searched after v4.37.0; `core`, `Core.php`, `request`, `response`, `common`, `phone`, `db`, `table`, `pagination`, `mailer`, `auth`, `security` and `session` are done; `AbstractMail` and `AbstractMailer` stay documented extension points; `AuthUser`, `Authenticator`, `MicrosoftAuthenticator`, `AuthWebToken` and `AbstractSessionHandler` are documented extension points; `FrameworkDb`, `DbResultTable`, `SmartTable`, `AbstractTableColumn`, `TableHeadRenderer`, `TableFilter` and `AbstractTableFilterField` stay documented extension points). Some are intended extension points (views, forms, fields, columns, exception
   handler); every class needs a review (`final`, or documented extension point, or `@internal`).
 - `mixed` in own code: about 15 (e.g. `TableItem::getRawValue()`, documented as the values of any data source); `Core::config()` was removed in v4.31.0; `common` keeps only
   `JsonUtils::convertToJsonString(mixed)` and the narrowed JSON/XML data.

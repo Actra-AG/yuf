@@ -10,8 +10,10 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\auth;
 
 use actra\yuf\auth\AccessRightCollection;
+use actra\yuf\auth\AuthMethodEnum;
 use actra\yuf\auth\AuthResultEnum;
 use actra\yuf\auth\AuthSession;
+use actra\yuf\auth\Password;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\tests\Double\auth\RecordingAuthenticator;
@@ -159,5 +161,258 @@ final class AuthenticatorTest extends TestCase
         $this->assertNotSame($first, $second);
         $this->assertFalse($first->passwordLogin(userName: 'user', inputPassword: 'wrong'));
         $this->assertFalse($second->passwordLogin(userName: 'user', inputPassword: 'wrong'));
+    }
+
+    private function getFirstLoggedResult(RecordingAuthenticator $authenticator): ?AuthResultEnum
+    {
+        $first = array_first(array: $authenticator->loggedResults);
+
+        return $first === null ? null : $first['authResult'];
+    }
+
+    private function createAuthenticator(
+        ?TestAuthUser $authUser,
+        string $remoteAddress = '203.0.113.5',
+        int $maxAllowedWrongPasswordAttempts = 3,
+        bool $credentialsAreValid = true,
+    ): RecordingAuthenticator {
+        return new RecordingAuthenticator(
+            httpRequest: HttpRequestFactory::create(remoteAddress: $remoteAddress),
+            authSession: $this->authSession,
+            authUser: $authUser,
+            maxAllowedWrongPasswordAttempts: $maxAllowedWrongPasswordAttempts,
+            credentialsAreValid: $credentialsAreValid,
+        );
+    }
+
+    public function testWrongPasswordIsCountedAndLogged(): void
+    {
+        $authUser = TestAuthUser::create(accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN]);
+        $authenticator = $this->createAuthenticator(authUser: $authUser);
+
+        $this->assertFalse($authenticator->passwordLogin(userName: 'user', inputPassword: 'wrong'));
+
+        $this->assertSame(AuthResultEnum::ERROR_WRONG_PASSWORD, $authenticator->authResult);
+        $this->assertSame(1, $authUser->increaseCalls);
+        $this->assertSame(1, $authUser->wrongPasswordAttempts);
+        $this->assertSame(0, $authUser->confirmCalls);
+        $this->assertFalse($this->authSession->isLoggedIn());
+        $this->assertSame(
+            AuthResultEnum::ERROR_WRONG_PASSWORD,
+            $this->getFirstLoggedResult(authenticator: $authenticator),
+        );
+    }
+
+    public function testSuccessfulLoginResetsTheWrongPasswordAttempts(): void
+    {
+        $authUser = TestAuthUser::create(
+            accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN],
+            wrongPasswordAttempts: 2,
+        );
+        $authenticator = $this->createAuthenticator(authUser: $authUser);
+
+        $this->assertTrue($authenticator->passwordLogin(userName: 'user', inputPassword: 'test'));
+
+        $this->assertSame(0, $authUser->wrongPasswordAttempts);
+        $this->assertSame(1, $authUser->confirmCalls);
+    }
+
+    public function testUserWithTooManyWrongAttemptsIsLockedOutEvenWithTheRightPassword(): void
+    {
+        $authUser = TestAuthUser::create(
+            accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN],
+            wrongPasswordAttempts: 3,
+        );
+        $authenticator = $this->createAuthenticator(authUser: $authUser);
+
+        $this->assertFalse($authenticator->passwordLogin(userName: 'user', inputPassword: 'test'));
+
+        $this->assertSame(AuthResultEnum::ERROR_OUT_TRIED, $authenticator->authResult);
+        $this->assertSame(0, $authUser->increaseCalls);
+        $this->assertFalse($this->authSession->isLoggedIn());
+    }
+
+    public function testUserBelowTheLimitCanLogIn(): void
+    {
+        $authUser = TestAuthUser::create(
+            accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN],
+            wrongPasswordAttempts: 2,
+        );
+
+        $authenticator = $this->createAuthenticator(authUser: $authUser);
+
+        $this->assertTrue($authenticator->passwordLogin(userName: 'user', inputPassword: 'test'));
+    }
+
+    public function testInactiveUserIsRejectedEvenWithTheRightPassword(): void
+    {
+        $authUser = TestAuthUser::create(
+            accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN],
+            isActive: false,
+        );
+        $authenticator = $this->createAuthenticator(authUser: $authUser);
+
+        $this->assertFalse($authenticator->passwordLogin(userName: 'user', inputPassword: 'test'));
+
+        $this->assertSame(AuthResultEnum::ERROR_INACTIVE, $authenticator->authResult);
+        $this->assertSame(0, $authUser->increaseCalls);
+    }
+
+    public function testUserWithoutPasswordLoginRightIsRejected(): void
+    {
+        $authenticator = $this->createAuthenticator(authUser: TestAuthUser::create(accessRights: ['other']));
+
+        $this->assertFalse($authenticator->passwordLogin(userName: 'user', inputPassword: 'test'));
+
+        $this->assertSame(AuthResultEnum::ERROR_NO_PASSWORD_LOGIN_ACTIVE, $authenticator->authResult);
+    }
+
+    public function testIpAddressOutsideTheWhitelistIsRejected(): void
+    {
+        $authUser = TestAuthUser::create(
+            accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN],
+            ipWhitelist: ['198.51.100.0/24'],
+        );
+        $authenticator = $this->createAuthenticator(authUser: $authUser, remoteAddress: '203.0.113.5');
+
+        $this->assertFalse($authenticator->passwordLogin(userName: 'user', inputPassword: 'test'));
+
+        $this->assertSame(AuthResultEnum::ERROR_IP_NOT_ALLOWED, $authenticator->authResult);
+        $this->assertSame(0, $authUser->increaseCalls);
+    }
+
+    public function testIpAddressInsideTheWhitelistCanLogIn(): void
+    {
+        $authUser = TestAuthUser::create(
+            accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN],
+            ipWhitelist: ['198.51.100.0/24'],
+        );
+        $authenticator = $this->createAuthenticator(authUser: $authUser, remoteAddress: '198.51.100.77');
+
+        $this->assertTrue($authenticator->passwordLogin(userName: 'user', inputPassword: 'test'));
+    }
+
+    public function testLoginWithoutPasswordCheckNeedsNoPasswordRight(): void
+    {
+        $authenticator = $this->createAuthenticator(authUser: TestAuthUser::create(accessRights: []));
+
+        $this->assertTrue($authenticator->otpLogin(userName: 'user'));
+
+        $this->assertSame(AuthResultEnum::SUCCESSFUL_OTP_LOGIN, $authenticator->authResult);
+        $this->assertTrue($this->authSession->isLoggedIn());
+    }
+
+    public function testLoginWithoutPasswordCheckIsStillLockedOut(): void
+    {
+        $authenticator = $this->createAuthenticator(
+            authUser: TestAuthUser::create(accessRights: [], wrongPasswordAttempts: 3),
+        );
+
+        $this->assertFalse($authenticator->otpLogin(userName: 'user'));
+
+        $this->assertSame(AuthResultEnum::ERROR_OUT_TRIED, $authenticator->authResult);
+    }
+
+    public function testFailedCredentialCheckOfTheProjectIsLoggedWithItsResult(): void
+    {
+        $authenticator = $this->createAuthenticator(
+            authUser: TestAuthUser::create(accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN]),
+            credentialsAreValid: false,
+        );
+
+        $this->assertFalse($authenticator->passwordLogin(userName: 'user', inputPassword: 'test'));
+
+        $this->assertSame(
+            AuthResultEnum::ERROR_NO_PASSWORD,
+            $this->getFirstLoggedResult(authenticator: $authenticator),
+        );
+    }
+
+    public function testEveryAuthMethodHasItsSuccessResult(): void
+    {
+        $this->assertSame(AuthResultEnum::SUCCESSFUL_PASSWORD_LOGIN, AuthMethodEnum::PASSWORD->getSuccessAuthResult());
+        $this->assertSame(AuthResultEnum::SUCCESSFUL_SSO_LOGIN, AuthMethodEnum::SSO->getSuccessAuthResult());
+        $this->assertSame(AuthResultEnum::SUCCESSFUL_OTP_LOGIN, AuthMethodEnum::OTP->getSuccessAuthResult());
+        $this->assertSame(
+            AuthResultEnum::SUCCESSFUL_MICROSOFT_LOGIN,
+            AuthMethodEnum::MICROSOFT->getSuccessAuthResult(),
+        );
+    }
+
+    public function testLegacyPasswordIsRehashedAfterASuccessfulLogin(): void
+    {
+        $legacy = new Password(salt: 'abcdefghijklmnop', hash: hash(algo: 'sha256', data: 'abcdefghijklmnoptest'));
+        $authUser = TestAuthUser::create(
+            accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN],
+            password: $legacy,
+        );
+        $authenticator = $this->createAuthenticator(authUser: $authUser);
+
+        $this->assertTrue($authenticator->passwordLogin(userName: 'user', inputPassword: 'test'));
+
+        $this->assertNotNull($authUser->storedPassword);
+        $this->assertFalse($authUser->storedPassword->isLegacy());
+        $this->assertTrue($authUser->storedPassword->isValid(rawPassword: 'test'));
+        $this->assertSame($authUser->storedPassword, $authUser->password);
+    }
+
+    public function testLegacyPasswordIsNotRehashedAfterAWrongPassword(): void
+    {
+        $legacy = new Password(salt: 'abcdefghijklmnop', hash: hash(algo: 'sha256', data: 'abcdefghijklmnoptest'));
+        $authUser = TestAuthUser::create(
+            accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN],
+            password: $legacy,
+        );
+
+        $authenticator = $this->createAuthenticator(authUser: $authUser);
+
+        $this->assertFalse($authenticator->passwordLogin(userName: 'user', inputPassword: 'x'));
+
+        $this->assertNull($authUser->storedPassword);
+        $this->assertSame($legacy, $authUser->password);
+    }
+
+    public function testCurrentPasswordIsNotRehashed(): void
+    {
+        $authUser = TestAuthUser::create(accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN]);
+
+        $authenticator = $this->createAuthenticator(authUser: $authUser);
+
+        $this->assertTrue($authenticator->passwordLogin(userName: 'user', inputPassword: 'test'));
+
+        $this->assertNull($authUser->storedPassword);
+    }
+
+    public function testLoginWithoutPasswordCheckDoesNotRehash(): void
+    {
+        $legacy = new Password(salt: 'abcdefghijklmnop', hash: hash(algo: 'sha256', data: 'abcdefghijklmnoptest'));
+        $authUser = TestAuthUser::create(accessRights: [], password: $legacy);
+
+        $this->assertTrue($this->createAuthenticator(authUser: $authUser)->otpLogin(userName: 'user'));
+
+        $this->assertNull($authUser->storedPassword);
+    }
+
+    public function testSuccessfulLoginGivesTheSessionANewId(): void
+    {
+        $authenticator = $this->createAuthenticator(
+            authUser: TestAuthUser::create(accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN]),
+        );
+
+        $authenticator->passwordLogin(userName: 'user', inputPassword: 'test');
+
+        $this->assertSame('array-session-1', $this->authSession->getSessionId());
+        $this->assertSame('array-session', array_first(array: $authenticator->loggedResults)['sessionId'] ?? null);
+    }
+
+    public function testFailedLoginKeepsTheSessionId(): void
+    {
+        $authenticator = $this->createAuthenticator(
+            authUser: TestAuthUser::create(accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN]),
+        );
+
+        $authenticator->passwordLogin(userName: 'user', inputPassword: 'wrong');
+
+        $this->assertSame('array-session', $this->authSession->getSessionId());
     }
 }

@@ -17,8 +17,10 @@ use actra\yuf\session\Session;
 use actra\yuf\session\SessionSettings;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use DateTimeImmutable;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 /**
  * Session handler: the data of a started session (`yuf.handler`) and the protection against session fixation. What
@@ -208,6 +210,508 @@ final class AbstractSessionHandlerTest extends TestCase
 
         $this->assertFalse($isLoggedIn);
         $this->assertSame(1_790_000_200, $sessionCreated);
+    }
+
+    /**
+     * @return iterable<string, array{string, string, int}>
+     */
+    public static function untrustedClientProvider(): iterable
+    {
+        yield 'other remote address' => ['192.0.2.99', 'Browser', 1_790_000_200];
+        yield 'other user agent' => ['192.0.2.1', 'Other Browser', 1_790_000_200];
+        yield 'expired session' => ['192.0.2.1', 'Browser', 1_790_000_000 + 3601 + 100];
+    }
+
+    /**
+     * A session that is used from another address or user agent, or that is expired, is replaced: no data of the
+     * old session is kept, the session ID changes and the handler data describes the new client.
+     */
+    #[DataProvider('untrustedClientProvider')]
+    #[RunInSeparateProcess]
+    public function testSessionOfAnUntrustedClientOrAnExpiredSessionIsReplaced(
+        string $remoteAddress,
+        string $userAgent,
+        int $now,
+    ): void {
+        $savePath = $this->createSessionSavePath();
+        $this->writeExistingSession(savePath: $savePath, lastActivity: 1_790_000_100);
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        $httpRequest = HttpRequestFactory::create(
+            remoteAddress: $remoteAddress,
+            headers: ['User-Agent' => $userAgent],
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
+        );
+
+        try {
+            $sessionHandler = new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable(datetime: '@' . $now)),
+            );
+            $sessionId = $sessionHandler->getId();
+            $session = $_SESSION;
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertNotSame(AbstractSessionHandlerTest::COOKIE_SESSION_ID, $sessionId);
+        $this->assertSame(
+            [
+                'yuf' => [
+                    'handler' => [
+                        'sessionCreated' => $now,
+                        'trustedRemoteAddress' => $remoteAddress,
+                        'trustedUserAgent' => $userAgent,
+                        'lastActivity' => $now,
+                    ],
+                ],
+            ],
+            $session,
+        );
+    }
+
+    /**
+     * After 30 minutes the session ID is regenerated (against stolen IDs), the data is kept.
+     */
+    #[RunInSeparateProcess]
+    public function testSessionOlderThanThirtyMinutesGetsANewIdAndKeepsItsData(): void
+    {
+        $savePath = $this->createSessionSavePath();
+        $this->writeExistingSession(savePath: $savePath, lastActivity: 1_790_001_900);
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        $httpRequest = HttpRequestFactory::create(
+            headers: ['User-Agent' => 'Browser'],
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
+        );
+
+        try {
+            $sessionHandler = new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable(datetime: '@1790001801')),
+            );
+            $sessionId = $sessionHandler->getId();
+            $session = $_SESSION;
+            $oldSessionFileExists = file_exists(
+                filename: $savePath . DIRECTORY_SEPARATOR . 'sess_' . AbstractSessionHandlerTest::COOKIE_SESSION_ID,
+            );
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertNotSame(AbstractSessionHandlerTest::COOKIE_SESSION_ID, $sessionId);
+        $this->assertFalse($oldSessionFileExists);
+        $this->assertSame(
+            [
+                'yuf' => [
+                    'handler' => [
+                        'sessionCreated' => 1_790_001_801,
+                        'trustedRemoteAddress' => '192.0.2.1',
+                        'trustedUserAgent' => 'Browser',
+                        'lastActivity' => 1_790_001_801,
+                    ],
+                    'tables' => ['items' => []],
+                ],
+            ],
+            $session,
+        );
+    }
+
+    #[RunInSeparateProcess]
+    public function testSessionYoungerThanThirtyMinutesKeepsItsId(): void
+    {
+        $savePath = $this->createSessionSavePath();
+        $this->writeExistingSession(savePath: $savePath, lastActivity: 1_790_001_000);
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        $httpRequest = HttpRequestFactory::create(
+            headers: ['User-Agent' => 'Browser'],
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
+        );
+
+        try {
+            $sessionHandler = new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable(datetime: '@1790001800')),
+            );
+            $sessionId = $sessionHandler->getId();
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertSame(AbstractSessionHandlerTest::COOKIE_SESSION_ID, $sessionId);
+    }
+
+    /**
+     * Regression test for session fixation: PHP ignores the strict mode of a handler without `validateId()`, so a
+     * well-formed session ID that this server never issued (set by an attacker as cookie) was accepted as it was.
+     */
+    #[RunInSeparateProcess]
+    public function testUnknownSessionIdOfTheCookieIsReplaced(): void
+    {
+        $savePath = $this->createSessionSavePath();
+        $unknownSessionId = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = $unknownSessionId;
+        $httpRequest = HttpRequestFactory::create(
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => $unknownSessionId],
+        );
+
+        try {
+            $sessionHandler = new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+            );
+            $sessionId = $sessionHandler->getId();
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertNotSame($unknownSessionId, $sessionId);
+    }
+
+    #[RunInSeparateProcess]
+    public function testOnlyExistingSessionsAreValidIds(): void
+    {
+        $savePath = $this->createSessionSavePath();
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        $httpRequest = HttpRequestFactory::create(
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
+        );
+
+        try {
+            $sessionHandler = new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+            );
+            $existing = $sessionHandler->validateId(id: AbstractSessionHandlerTest::REQUESTED_SESSION_ID);
+            $unknown = $sessionHandler->validateId(id: 'bbbbbbbbbbbbbbbbbbbbbbbb');
+            $path = $sessionHandler->validateId(id: '../' . AbstractSessionHandlerTest::REQUESTED_SESSION_ID);
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertTrue($existing);
+        $this->assertFalse($unknown);
+        $this->assertFalse($path);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function invalidSessionIdProvider(): iterable
+    {
+        yield 'path' => ['../../etc/passwd'];
+        yield 'space' => ['abc def'];
+        yield 'umlaut' => ['abcäöü'];
+        yield 'upper case with default characters' => ['ABCDEF0123456789'];
+    }
+
+    /**
+     * An invalid session ID in the cookie is ignored (PHP would warn), the user gets a new session.
+     */
+    #[DataProvider('invalidSessionIdProvider')]
+    #[RunInSeparateProcess]
+    public function testInvalidSessionIdOfTheCookieIsReplaced(string $invalidSessionId): void
+    {
+        $savePath = $this->createSessionSavePath();
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = $invalidSessionId;
+        $httpRequest = HttpRequestFactory::create(
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => $invalidSessionId],
+        );
+
+        try {
+            $sessionHandler = new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+            );
+            $sessionId = $sessionHandler->getId();
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertNotSame($invalidSessionId, $sessionId);
+        $this->assertMatchesRegularExpression('/^[a-v0-9]+$|^[a-f0-9]+$/', $sessionId);
+    }
+
+    /**
+     * @return iterable<string, array{bool, string}>
+     */
+    public static function sameSiteProvider(): iterable
+    {
+        yield 'strict' => [true, 'Strict'];
+        yield 'lax' => [false, 'Lax'];
+    }
+
+    #[DataProvider('sameSiteProvider')]
+    #[RunInSeparateProcess]
+    public function testSessionCookieIsSecureHttpOnlyAndSameSite(bool $isSameSiteStrict, string $expectedSameSite): void
+    {
+        $savePath = $this->createSessionSavePath();
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        $httpRequest = HttpRequestFactory::create(
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
+        );
+
+        try {
+            new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                    isSameSiteStrict: $isSameSiteStrict,
+                ),
+                defaultSavePath: '/not/used',
+            );
+            $parameters = session_get_cookie_params();
+            $useStrictMode = ini_get(option: 'session.use_strict_mode');
+            $useOnlyCookies = ini_get(option: 'session.use_only_cookies');
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertTrue($parameters['secure']);
+        $this->assertTrue($parameters['httponly']);
+        $this->assertSame($expectedSameSite, $parameters['samesite']);
+        $this->assertSame('1', $useStrictMode);
+        $this->assertSame('1', $useOnlyCookies);
+    }
+
+    #[RunInSeparateProcess]
+    public function testRegenerateIdGivesANewIdAndDeletesTheOldSession(): void
+    {
+        $savePath = $this->createSessionSavePath();
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        $httpRequest = HttpRequestFactory::create(
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
+        );
+
+        try {
+            $sessionHandler = new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable(datetime: '@1790000000')),
+            );
+            $sessionHandler->regenerateId();
+            $newId = $sessionHandler->getId();
+            $oldSessionFileExists = file_exists(
+                filename: $savePath . DIRECTORY_SEPARATOR . 'sess_' . AbstractSessionHandlerTest::COOKIE_SESSION_ID,
+            );
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertNotSame(AbstractSessionHandlerTest::COOKIE_SESSION_ID, $newId);
+        $this->assertFalse($oldSessionFileExists);
+    }
+
+    #[RunInSeparateProcess]
+    public function testSameSiteCanBeChangedForTheRestOfTheRequest(): void
+    {
+        $savePath = $this->createSessionSavePath();
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        $httpRequest = HttpRequestFactory::create(
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
+        );
+
+        try {
+            $sessionHandler = new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+            );
+            $sessionHandler->changeCookieSameSiteToNone();
+            $none = session_get_cookie_params();
+            $sessionHandler->changeCookieSameSiteToLax();
+            $lax = session_get_cookie_params();
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertSame('None', $none['samesite']);
+        $this->assertTrue($none['secure']);
+        $this->assertSame('Lax', $lax['samesite']);
+        $this->assertTrue($lax['secure']);
+    }
+
+    /**
+     * A session of the same client without the time of the last activity or without the trusted client is not
+     * trusted: it is replaced (fail closed).
+     *
+     * @return iterable<string, array{array<string, mixed>}>
+     */
+    public static function incompleteHandlerDataProvider(): iterable
+    {
+        yield 'no last activity' => [
+            ['sessionCreated' => 1_790_000_000, 'trustedRemoteAddress' => '192.0.2.1', 'trustedUserAgent' => 'Browser'],
+        ];
+        yield 'no trusted remote address' => [
+            ['sessionCreated' => 1_790_000_000, 'trustedUserAgent' => 'Browser', 'lastActivity' => 1_790_000_100],
+        ];
+        yield 'no trusted user agent' => [
+            ['sessionCreated' => 1_790_000_000, 'trustedRemoteAddress' => '192.0.2.1', 'lastActivity' => 1_790_000_100],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $handlerData
+     */
+    #[DataProvider('incompleteHandlerDataProvider')]
+    #[RunInSeparateProcess]
+    public function testSessionWithIncompleteHandlerDataIsReplaced(array $handlerData): void
+    {
+        $savePath = $this->createSessionSavePath();
+        file_put_contents(
+            filename: $savePath . DIRECTORY_SEPARATOR . 'sess_' . AbstractSessionHandlerTest::COOKIE_SESSION_ID,
+            data: AbstractSessionHandlerTest::serialized(
+                data: ['yuf' => ['handler' => $handlerData, 'auth' => ['isLoggedIn' => true, 'authSessionId' => 5]]],
+            ),
+        );
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        $httpRequest = HttpRequestFactory::create(
+            headers: ['User-Agent' => 'Browser'],
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
+        );
+
+        try {
+            $sessionHandler = new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable(datetime: '@1790000200')),
+            );
+            $sessionId = $sessionHandler->getId();
+            $session = $_SESSION;
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertNotSame(AbstractSessionHandlerTest::COOKIE_SESSION_ID, $sessionId);
+        $this->assertSame(
+            [
+                'yuf' => [
+                    'handler' => [
+                        'sessionCreated' => 1_790_000_200,
+                        'trustedRemoteAddress' => '192.0.2.1',
+                        'trustedUserAgent' => 'Browser',
+                        'lastActivity' => 1_790_000_200,
+                    ],
+                ],
+            ],
+            $session,
+        );
+    }
+
+    /**
+     * The save path is created with mode 0700 (only the web server user may read the sessions).
+     */
+    #[RunInSeparateProcess]
+    public function testMissingSavePathIsCreatedForTheOwnerOnly(): void
+    {
+        $savePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-session-test-' . bin2hex(string: random_bytes(length: 8))
+            . DIRECTORY_SEPARATOR . 'nested';
+        $httpRequest = HttpRequestFactory::create();
+
+        try {
+            new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+            );
+            $permissions = fileperms(filename: $savePath) & 0o777;
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+            rmdir(directory: dirname(path: $savePath));
+        }
+
+        $this->assertSame(0o700, $permissions);
+    }
+
+    #[RunInSeparateProcess]
+    public function testSavePathThatCannotBeCreatedIsReported(): void
+    {
+        $blocker = tempnam(directory: sys_get_temp_dir(), prefix: 'yuf-session-test-');
+        if ($blocker === false) {
+            AbstractSessionHandlerTest::fail('Cannot create a temporary file.');
+        }
+        $httpRequest = HttpRequestFactory::create();
+
+        try {
+            $this->expectException(RuntimeException::class);
+
+            new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(savePath: $blocker . DIRECTORY_SEPARATOR . 'sessions'),
+                defaultSavePath: '/not/used',
+            );
+        } finally {
+            unlink(filename: $blocker);
+        }
+    }
+
+    private function writeExistingSession(string $savePath, int $lastActivity): void
+    {
+        file_put_contents(
+            filename: $savePath . DIRECTORY_SEPARATOR . 'sess_' . AbstractSessionHandlerTest::COOKIE_SESSION_ID,
+            data: AbstractSessionHandlerTest::serialized(data: [
+                'yuf' => [
+                    'handler' => [
+                        'sessionCreated' => 1_790_000_000,
+                        'trustedRemoteAddress' => '192.0.2.1',
+                        'trustedUserAgent' => 'Browser',
+                        'lastActivity' => $lastActivity,
+                    ],
+                    'tables' => ['items' => []],
+                ],
+            ]),
+        );
     }
 
     /**
