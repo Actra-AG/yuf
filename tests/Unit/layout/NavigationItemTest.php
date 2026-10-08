@@ -40,7 +40,7 @@ final class NavigationItemTest extends TestCase
         $data = self::item(navKey: 'users', title: 'Users &amp; Groups', href: '/users/?reset')->render(
             activeMainNavigationItem: 'users',
             accessRightCollection: AccessRightCollection::createEmpty(),
-        )->data;
+        )->toTemplateData();
 
         $this->assertSame(
             [
@@ -65,7 +65,7 @@ final class NavigationItemTest extends TestCase
         $data = $parent->render(
             activeMainNavigationItem: 'b',
             accessRightCollection: AccessRightCollection::createEmpty(),
-        )->data;
+        )->toTemplateData();
 
         $this->assertSame('nav-main-sub-toggle active', $data->cssClass);
         $this->assertIsArray($data->subNavigation);
@@ -82,7 +82,7 @@ final class NavigationItemTest extends TestCase
         $data = $parent->render(
             activeMainNavigationItem: 'other',
             accessRightCollection: AccessRightCollection::createEmpty(),
-        )->data;
+        )->toTemplateData();
 
         $this->assertSame('nav-main-sub-toggle', $data->cssClass);
     }
@@ -107,14 +107,14 @@ final class NavigationItemTest extends TestCase
             $parent->render(
                 activeMainNavigationItem: 'a',
                 accessRightCollection: AccessRightCollection::createEmpty(),
-            )->data->cssClass,
+            )->toTemplateData()->cssClass,
         );
         $this->assertSame(
             'off',
             $parent->render(
                 activeMainNavigationItem: 'z',
                 accessRightCollection: AccessRightCollection::createEmpty(),
-            )->data->cssClass,
+            )->toTemplateData()->cssClass,
         );
     }
 
@@ -133,7 +133,7 @@ final class NavigationItemTest extends TestCase
         $data = $parent->render(
             activeMainNavigationItem: 'secret',
             accessRightCollection: AccessRightCollection::createEmpty(),
-        )->data;
+        )->toTemplateData();
 
         $this->assertIsArray($data->subNavigation);
         $this->assertSame(['open'], array_column(array: $data->subNavigation, column_key: 'navKey'));
@@ -201,8 +201,8 @@ final class NavigationItemTest extends TestCase
         );
 
         $this->assertCount(2, $objects->items);
-        $this->assertSame('a', $objects->items[0]->data->navKey);
-        $this->assertSame('c', $objects->items[1]->data->navKey);
+        $this->assertSame('a', $objects->items[0]->toTemplateData()->navKey);
+        $this->assertSame('c', $objects->items[1]->toTemplateData()->navKey);
         $this->assertTrue($collection->isActive);
     }
 

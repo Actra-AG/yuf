@@ -4,6 +4,38 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.50.0] – 2026-10-08
+
+`HtmlDataObject` keeps its values private and copies the data objects that are added to it. Search your project for
+`HtmlDataObject`, `DetailDataObject`, `->data` on such objects (also in tests), and for code that changes a data object
+after it was added to another one. `CsvFile` is unchanged (its class documentation now says that it is a builder).
+
+### ⚠️ `HtmlDataObject::$data` is replaced by `toTemplateData()`
+
+The property `$data` (a shared `stdClass`) is removed. `toTemplateData()` returns a new `stdClass` snapshot with the same
+properties and values (nested data objects as `stdClass`, lists as arrays). Escaping is unchanged (`addText()` escapes,
+`addHtml()` is trusted), so templates render the same HTML. Subclasses keep working: they still call
+`parent::__construct()` and the `add…()` methods.
+
+| Before | After |
+|:--|:--|
+| `$object->data->name` | `$object->toTemplateData()->name` |
+| `$object->data->name = 'x';` (changing a value from outside) | `$object->addHtml(propertyName: 'name', html: 'x');` (or `addText()`) |
+| `$object->data->list = [...]` | `$object->addHtmlDataObjectsArray(propertyName: 'list', htmlDataObjectsArray: [...])` |
+| `$replacements->getArrayObject()['o']` is the same `stdClass` as `$object->data` | it is a snapshot (`assertEquals`, not `assertSame`) |
+
+### ⚠️ Added data objects are copied
+
+`addDataObject()` and `addHtmlDataObjectsArray()` store a copy of the child as it is at that moment. Before, the
+parent held the child's `stdClass`, so later changes of the child changed the parent too, and a child added to two
+parents was shared.
+
+| Before | After |
+|:--|:--|
+| `$parent->addDataObject(propertyName: 'child', htmlDataObject: $child); $child->addHtml(propertyName: 'name', html: 'b');` changed `$parent` too | `$parent` keeps the child as it was added; fill the child first, or add it again after the change |
+
+---
+
 ## [v4.49.0] – 2026-10-08
 
 `RequestHandler::resolveRoute()` returns its result instead of filling properties. Search your project for

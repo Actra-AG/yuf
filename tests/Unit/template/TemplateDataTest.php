@@ -138,7 +138,7 @@ final class TemplateDataTest extends TestCase
         $this->assertArrayHasKey(0, $items);
         $this->assertInstanceOf(stdClass::class, $items[0]);
         $this->assertEquals(new TrustedHtml(html: 'a'), $items[0]->name);
-        $this->assertSame('a', $first->data->name, 'The data object of the caller is not changed');
+        $this->assertSame('a', $first->toTemplateData()->name, 'The data object of the caller is not changed');
     }
 
     public function testEmptyReplacements(): void

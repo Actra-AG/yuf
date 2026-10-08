@@ -393,3 +393,22 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   `ResolvedRoute`).
 - `ddev composer check` green, baseline empty, `example/` checked (200 / 404 / 303).
 - Open: none.
+
+### Step 9 (v4.50.0) – done
+
+- `HtmlDataObject` keeps its values in a private array (`array<string, bool|HtmlDataObject|list<HtmlDataObject>|string|null>`).
+  `addDataObject()` / `addHtmlDataObjectsArray()` store clones (their values are private and never exposed, so a
+  shallow clone is a safe copy at any depth). The public `$data` is removed; `toTemplateData(): stdClass` builds a new
+  snapshot (used by `HtmlReplacement`). The constructor stays (subclasses call `parent::__construct()`).
+- Characterization test first showed the leak (green on the old code), then flipped. New tests: several parents, grandchild,
+  fresh snapshot each time, order and numeric property names. The selector test `std.list.first` now reads
+  `std.list.0.name` (a list of data objects), because `$data` can no longer be changed from outside.
+  Tests: 12238 -> 12243.
+- `CsvFile`: no code change. Rows are private, `addRow()` takes arrays by value, nothing returns them. The class
+  PHPDoc now names it a builder (one file per instance, rows only added).
+- Other projects (read only): no read or write of `->data` on an `HtmlDataObject` found in `backend` (apart from
+  `backend/tests/Unit/libs/common/LanguageSwitcherTest.php` lines 93-95: `$data[1]->data->label|href|isCurrent`),
+  nor in the projects using yuf 4. Subclasses: `drogeriehaas.ch` `GlobalNote`. Other `->data` hits are `FormOptions` /
+  `TableItem`, which are unchanged.
+- `UPGRADE.md`: `## [v4.50.0]`. `ddev composer check` green, baseline empty, `curl https://yuf.ddev.site/` 200.
+- Open: none.

@@ -96,7 +96,10 @@ final class HtmlReplacementCollectionTest extends TestCase
 
         $this->assertTrue($replacements->has(identifier: 'none'));
         $this->assertNull($replacements->get(identifier: 'none'));
-        $this->assertSame(['object' => $object->data, 'none' => null], $replacements->getArrayObject()->getArrayCopy());
+        $this->assertEquals(
+            ['object' => $object->toTemplateData(), 'none' => null],
+            $replacements->getArrayObject()->getArrayCopy(),
+        );
     }
 
     public function testTextCollectionIsRendered(): void
@@ -128,8 +131,8 @@ final class HtmlReplacementCollectionTest extends TestCase
         $replacements->addHtmlDataObjectCollection(identifier: 'items', htmlDataObjectCollection: $collection);
         $replacements->addHtmlDataObjectCollection(identifier: 'none', htmlDataObjectCollection: null);
 
-        $this->assertSame(
-            ['items' => [$first->data, $second->data], 'none' => null],
+        $this->assertEquals(
+            ['items' => [$first->toTemplateData(), $second->toTemplateData()], 'none' => null],
             $replacements->getArrayObject()->getArrayCopy(),
         );
     }
@@ -168,7 +171,10 @@ final class HtmlReplacementCollectionTest extends TestCase
         $this->assertNull(HtmlReplacement::fromBool(bool: null)->getDataForRenderer());
         $this->assertSame(1, HtmlReplacement::fromInt(int: 1)->getDataForRenderer());
         $this->assertSame(1.5, HtmlReplacement::fromFloat(float: 1.5)->getDataForRenderer());
-        $this->assertSame($object->data, HtmlReplacement::fromDataObject(htmlDataObject: $object)->getDataForRenderer());
+        $this->assertEquals(
+            $object->toTemplateData(),
+            HtmlReplacement::fromDataObject(htmlDataObject: $object)->getDataForRenderer(),
+        );
         $this->assertSame(
             'x',
             HtmlReplacement::fromHtmlText(htmlText: HtmlText::fromHtml(html: 'x'))->getDataForRenderer(),

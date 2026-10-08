@@ -151,7 +151,7 @@ final class TemplateEngineTest extends TemplateEngineTestCase
         $item = new HtmlDataObject();
         $item->addHtml(propertyName: 'name', html: '<b>');
 
-        $html = $this->render(source: "{tst:text value='o.name'}", data: ['o' => $item->data]);
+        $html = $this->render(source: "{tst:text value='o.name'}", data: ['o' => $item->toTemplateData()]);
 
         $this->assertSame('&lt;b&gt;', $html);
     }

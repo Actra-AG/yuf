@@ -112,7 +112,7 @@ final class TableFilterFieldsTest extends TestCase
         $rendered = $field->render();
         $this->assertSame(
             '<input type="text" class="text" name="f_name" id="filter-f_name" value="">',
-            $rendered->data->html,
+            $rendered->toTemplateData()->html,
         );
 
         $field->checkInput();
@@ -121,7 +121,7 @@ final class TableFilterFieldsTest extends TestCase
         $this->assertSame('a"<b>', $field->getValue());
         $this->assertSame(
             '<input type="text" class="text highlight" name="f_name" id="filter-f_name" value="a&quot;&lt;b&gt;">',
-            $field->render()->data->html,
+            $field->render()->toTemplateData()->html,
         );
     }
 
@@ -160,7 +160,7 @@ final class TableFilterFieldsTest extends TestCase
             . '<option value="active">Active</option>' . "\n"
             . '<option value="blocked">Blocked</option>' . "\n"
             . '</select>',
-            $field->render()->data->html,
+            $field->render()->toTemplateData()->html,
         );
 
         $field->checkInput();
@@ -172,7 +172,7 @@ final class TableFilterFieldsTest extends TestCase
             . '<option value="active">Active</option>' . "\n"
             . '<option value="blocked" selected>Blocked</option>' . "\n"
             . '</select>',
-            $field->render()->data->html,
+            $field->render()->toTemplateData()->html,
         );
         $condition = $field->getWhereCondition();
         $this->assertSame('status=?', $condition->query);
@@ -286,7 +286,7 @@ final class TableFilterFieldsTest extends TestCase
         );
         $this->assertSame(
             '<input type="text" class="text" name="f_since" id="filter-f_since" value="">',
-            $field->render()->data->html,
+            $field->render()->toTemplateData()->html,
         );
 
         $field->checkInput();
@@ -294,7 +294,7 @@ final class TableFilterFieldsTest extends TestCase
         $this->assertTrue($field->isSelected());
         $this->assertSame(
             '<input type="text" class="text highlight" name="f_since" id="filter-f_since" value="01.03.2026">',
-            $field->render()->data->html,
+            $field->render()->toTemplateData()->html,
         );
     }
 
@@ -351,8 +351,8 @@ final class TableFilterFieldsTest extends TestCase
 
         $rendered = $field->render();
 
-        $this->assertSame('f_name', $rendered->data->identifier);
-        $this->assertTrue($rendered->data->highlight);
-        $this->assertSame('Name', $rendered->data->label);
+        $this->assertSame('f_name', $rendered->toTemplateData()->identifier);
+        $this->assertTrue($rendered->toTemplateData()->highlight);
+        $this->assertSame('Name', $rendered->toTemplateData()->label);
     }
 }

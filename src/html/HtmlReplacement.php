@@ -112,12 +112,12 @@ final readonly class HtmlReplacement
         }
         if ($content instanceof HtmlDataObjectCollection) {
             return array_map(
-                callback: static fn(HtmlDataObject $htmlDataObject): stdClass => $htmlDataObject->data,
+                callback: static fn(HtmlDataObject $htmlDataObject): stdClass => $htmlDataObject->toTemplateData(),
                 array: $content->items,
             );
         }
         if ($content instanceof HtmlDataObject) {
-            return $content->data;
+            return $content->toTemplateData();
         }
 
         return $content;

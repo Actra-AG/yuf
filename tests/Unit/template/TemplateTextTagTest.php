@@ -135,7 +135,7 @@ final class TemplateTextTagTest extends TemplateEngineTestCase
         yield 'ArrayObject key' => ['ao.key', 'ao value'];
         yield 'stdClass property' => ['std.name', 'std name'];
         yield 'nested stdClass' => ['std.child.name', 'child name'];
-        yield 'array inside stdClass' => ['std.list.first', 'first'];
+        yield 'list inside stdClass' => ['std.list.0.name', 'child name'];
         yield 'public property' => ['target.label', 'public label'];
         yield 'getter get' => ['target.title', 'getter title'];
         yield 'getter is' => ['target.enabled', '1'];
@@ -151,7 +151,7 @@ final class TemplateTextTagTest extends TemplateEngineTestCase
         $child = new HtmlDataObject();
         $child->addHtml(propertyName: 'name', html: 'child name');
         $htmlDataObject->addDataObject(propertyName: 'child', htmlDataObject: $child);
-        $htmlDataObject->data->list = ['first' => 'first'];
+        $htmlDataObject->addHtmlDataObjectsArray(propertyName: 'list', htmlDataObjectsArray: [$child]);
         $replacements = new HtmlReplacementCollection();
         $replacements->addDataObject(identifier: 'std', htmlDataObject: $htmlDataObject);
         $data = $replacements->getArrayObject();

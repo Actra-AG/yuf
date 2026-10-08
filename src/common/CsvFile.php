@@ -17,7 +17,10 @@ use InvalidArgumentException;
 use RuntimeException;
 
 /**
- * Collects the rows of a CSV file and writes them to a temporary file or sends them as download.
+ * Builder for one CSV file: collects the rows with `addRow()` (rows are only added, nothing returns or changes them
+ * later; the arrays are values, so changing an array afterwards does not change the row) and writes them to a
+ * temporary file or sends them as download. Use one instance per file; writing does not change the instance, so it
+ * can write the same rows again.
  *
  * Against CSV injection, a text cell that starts with "=", "+", "-", "@", a tab or a carriage return and is no number
  * gets a leading "'", so a spreadsheet application does not run it as formula (OWASP). Numbers and numeric strings
