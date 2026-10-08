@@ -67,8 +67,17 @@ final class CurlErrorEvaluator
         }
 
         return !$acceptRedirectionResponseCode
-            || ($statusCode !== HttpStatusCodeEnum::HTTP_MOVED_PERMANENTLY->value
-                && $statusCode !== HttpStatusCodeEnum::HTTP_SEE_OTHER->value);
+            || !in_array(
+                needle: $statusCode,
+                haystack: [
+                    HttpStatusCodeEnum::HTTP_MOVED_PERMANENTLY->value,
+                    HttpStatusCodeEnum::HTTP_FOUND->value,
+                    HttpStatusCodeEnum::HTTP_SEE_OTHER->value,
+                    HttpStatusCodeEnum::HTTP_TEMPORARY_REDIRECT->value,
+                    HttpStatusCodeEnum::HTTP_PERMANENT_REDIRECT->value,
+                ],
+                strict: true,
+            );
     }
 
     private static function describeCurlError(int $curlErrorCode): string
@@ -93,7 +102,10 @@ final class CurlErrorEvaluator
     {
         return match ($statusCode) {
             HttpStatusCodeEnum::HTTP_MOVED_PERMANENTLY => ' ("moved permanently". Check URL/settings.)',
+            HttpStatusCodeEnum::HTTP_FOUND => ' ("found", temporary redirect. Check URL/settings.)',
             HttpStatusCodeEnum::HTTP_SEE_OTHER => ' ("Redirect". Maybe HTTP-to-HTTPS? Check URL/settings.)',
+            HttpStatusCodeEnum::HTTP_TEMPORARY_REDIRECT => ' ("temporary redirect". Check URL/settings.)',
+            HttpStatusCodeEnum::HTTP_PERMANENT_REDIRECT => ' ("permanent redirect". Check URL/settings.)',
             HttpStatusCodeEnum::HTTP_UNAUTHORIZED => ' ("unauthorized". Check credentials or request format.)',
             HttpStatusCodeEnum::HTTP_NOT_FOUND => ' ("not found" on server)',
             HttpStatusCodeEnum::HTTP_METHOD_NOT_ALLOWED

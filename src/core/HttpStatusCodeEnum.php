@@ -37,6 +37,7 @@ enum HttpStatusCodeEnum: int
     case HTTP_USE_PROXY = 305;
     case HTTP_SWITCH_PROXY = 306;
     case HTTP_TEMPORARY_REDIRECT = 307;
+    case HTTP_PERMANENT_REDIRECT = 308;
 
     // 4xx - Client error
     case HTTP_BAD_REQUEST = 400;

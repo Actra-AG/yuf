@@ -654,3 +654,16 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   `scripted-server.php` is allowed to use `$_SERVER` in `phpstan.neon` like `echo-server.php`.
 - `UPGRADE.md`: `## [v4.56.0]`, README "Sending mail with Microsoft 365 (Graph API)" (also the `XOAUTH2` example with the
   Outlook scope). `ddev composer check` green, baseline empty. `example/` does not use the mailer.
+
+### Step 16 (v4.57.0) – done
+
+- **Change:** `CurlErrorEvaluator::isBadStatusCode()` accepts 301, 302, 303, 307 and 308 with
+  `acceptRedirectionResponseCode()`; 300, 304, 305, 306 and everything from 400 stay errors. `HttpStatusCodeEnum` got
+  `HTTP_PERMANENT_REDIRECT = 308` (302 and 307 existed). `describeStatusCode()` has texts for 302, 307 and 308.
+  `AbstractCurlRequest::acceptRedirectionResponseCode()` PHPDoc updated; `isRedirectionResponseCodeAccepted()` needed
+  no change.
+- **Tests:** 20537 -> 20554, data sets only (evaluator providers over 300-308 with and without acceptance, status
+  texts, `CurlRequestCharacterizationTest` against the local server: 301/302/303/307/308 accepted, 300/304 errors). The
+  former row "404 still an error" of `acceptedRedirectProvider` was removed: PHP turns any status with a `Location`
+  header of the router into 302, so it never tested 404 (the evaluator test covers 404 accepted).
+- `UPGRADE.md`: `## [v4.57.0]`. README does not document it. `example/` does not use the Curl client.

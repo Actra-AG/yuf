@@ -97,8 +97,9 @@ abstract class AbstractCurlRequest
     }
 
     /**
-     * Redirects are never followed. By default, every status code of 300 or more is an error; this accepts 301 and
-     * 303 as an answer (the target is in the `Location` header of the response).
+     * Redirects are never followed. By default, every status code of 300 or more is an error; this accepts 301, 302,
+     * 303, 307 and 308 as an answer (the target is in the `Location` header of the response). Other 3xx codes
+     * (e.g. 300 and 304) stay errors.
      */
     public function acceptRedirectionResponseCode(): void
     {

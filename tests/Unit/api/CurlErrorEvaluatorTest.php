@@ -30,7 +30,10 @@ final class CurlErrorEvaluatorTest extends TestCase
             'no status (HEAD of a local file, not an HTTP response)' => [0, false],
             'status 600 is no HTTP status' => [600, false],
             'accepted 301' => [301, true],
+            'accepted 302' => [302, true],
             'accepted 303' => [303, true],
+            'accepted 307' => [307, true],
+            'accepted 308' => [308, true],
         ];
     }
 
@@ -48,9 +51,17 @@ final class CurlErrorEvaluatorTest extends TestCase
         return [
             'status 301' => [301, false],
             'status 302' => [302, false],
-            '302 accepted does not count' => [302, true],
+            'status 303' => [303, false],
             'status 304' => [304, false],
-            '307 accepted does not count' => [307, true],
+            'status 305' => [305, false],
+            'status 306' => [306, false],
+            'status 307' => [307, false],
+            'status 308' => [308, false],
+            'status 300' => [300, false],
+            '300 accepted does not count' => [300, true],
+            '304 accepted does not count' => [304, true],
+            '305 accepted does not count' => [305, true],
+            '306 accepted does not count' => [306, true],
             'status 400' => [400, false],
             '404 accepted does not count' => [404, true],
             '418 (not in the enum of status codes)' => [418, false],
@@ -210,6 +221,9 @@ final class CurlErrorEvaluatorTest extends TestCase
         return [
             'status 301' => [301, ' ("moved permanently". Check URL/settings.)'],
             'status 303' => [303, ' ("Redirect". Maybe HTTP-to-HTTPS? Check URL/settings.)'],
+            'status 302' => [302, ' ("found", temporary redirect. Check URL/settings.)'],
+            'status 307' => [307, ' ("temporary redirect". Check URL/settings.)'],
+            'status 308' => [308, ' ("permanent redirect". Check URL/settings.)'],
             'status 401' => [401, ' ("unauthorized". Check credentials or request format.)'],
             'status 404' => [404, ' ("not found" on server)'],
             'status 405' => [405, ' ("method not allowed". Check URL or request format/data.)'],

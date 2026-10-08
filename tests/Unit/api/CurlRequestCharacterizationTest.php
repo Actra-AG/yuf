@@ -335,8 +335,9 @@ final class CurlRequestCharacterizationTest extends TestCase
             'status 503' => [503, ''],
             'status 301' => [301, ' ("moved permanently". Check URL/settings.)'],
             'status 303' => [303, ' ("Redirect". Maybe HTTP-to-HTTPS? Check URL/settings.)'],
-            'status 302' => [302, ''],
-            'status 307' => [307, ''],
+            'status 302' => [302, ' ("found", temporary redirect. Check URL/settings.)'],
+            'status 307' => [307, ' ("temporary redirect". Check URL/settings.)'],
+            'status 308' => [308, ' ("permanent redirect". Check URL/settings.)'],
         ];
     }
 
@@ -372,9 +373,11 @@ final class CurlRequestCharacterizationTest extends TestCase
         return [
             '301 accepted' => [301, false],
             '303 accepted' => [303, false],
-            '302 still an error' => [302, true],
-            '307 still an error' => [307, true],
-            '404 still an error' => [404, true],
+            '302 accepted' => [302, false],
+            '307 accepted' => [307, false],
+            '308 accepted' => [308, false],
+            '300 still an error' => [300, true],
+            '304 still an error' => [304, true],
         ];
     }
 

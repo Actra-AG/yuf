@@ -4,6 +4,18 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.57.0] – 2026-10-08
+
+- ⚠️ Behaviour: with `acceptRedirectionResponseCode()` the status codes 302, 307 and 308 are no longer an error (before:
+  only 301 and 303). Redirects are still never followed; the target is in the `Location` header of the response. Code
+  that relied on 302, 307 or 308 being an error must check `$response->responseHttpCode` itself. Without
+  `acceptRedirectionResponseCode()` every status code of 300 or more is still an error, 300, 304, 305 and 306 stay
+  errors in both cases.
+- New: `HttpStatusCodeEnum::HTTP_PERMANENT_REDIRECT` (308). The error texts for 302, 307 and 308 name the redirect.
+  ⚠️ A 308 answer has `CurlResponse::$responseHttpCode` `HTTP_PERMANENT_REDIRECT` now (before: `HTTP_UNKNOWN`).
+
+---
+
 ## [v4.56.0] – 2026-10-08
 
 New: send mail through the Microsoft Graph API (Microsoft ends basic authentication for SMTP). No existing code is
