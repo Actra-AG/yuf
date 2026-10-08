@@ -152,7 +152,9 @@ final class PhoneNumberFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $isValid = $field->validate(input: FormInput::fromArray(data: ['phone' => '044 668 18 00', 'countryCode' => ['x']]));
+        $isValid = $field->validate(
+            input: FormInput::fromArray(data: ['phone' => '044 668 18 00', 'countryCode' => ['x']]),
+        );
 
         $this->assertTrue($isValid);
         $this->assertSame('CH', $field->countryCode);
@@ -179,7 +181,9 @@ final class PhoneNumberFieldValueTest extends TestCase
             countryCodeFieldName: 'country',
         );
 
-        $field->validate(input: FormInput::fromArray(data: ['phone' => '030 123456', 'country' => 'DE', 'countryCode' => 'FR']));
+        $field->validate(
+            input: FormInput::fromArray(data: ['phone' => '030 123456', 'country' => 'DE', 'countryCode' => 'FR']),
+        );
 
         $this->assertSame('DE', $field->countryCode);
     }

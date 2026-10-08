@@ -229,7 +229,9 @@ final class FileFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $valid = $field->validate(input: $this->request($this->uploads(names: [''], errors: [UPLOAD_ERR_NO_FILE], sizes: [0])));
+        $valid = $field->validate(
+            input: $this->request($this->uploads(names: [''], errors: [UPLOAD_ERR_NO_FILE], sizes: [0])),
+        );
 
         $this->assertTrue($valid);
         $this->assertSame([], $field->getFiles());

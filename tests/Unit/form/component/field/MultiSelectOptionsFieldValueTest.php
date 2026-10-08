@@ -209,7 +209,9 @@ final class MultiSelectOptionsFieldValueTest extends TestCase
 
     public function testFieldHasNoSetValue(): void
     {
-        $this->assertFalse(new ReflectionClass(objectOrClass: MultiSelectOptionsField::class)->hasMethod(name: 'setValue'));
+        $this->assertFalse(
+            new ReflectionClass(objectOrClass: MultiSelectOptionsField::class)->hasMethod(name: 'setValue'),
+        );
     }
 
     public function testValueHasChangedIgnoresTheOrder(): void

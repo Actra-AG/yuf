@@ -17,7 +17,8 @@ use Override;
 use RuntimeException;
 
 /**
- * A text input: the value is searched with the search syntax of `SearchQueryBuilder` in the column (an SQL expression of the
+ * A text input: the value is searched with the search syntax of `SearchQueryBuilder` in the column (an SQL expression
+ * of the
  * application, never user input).
  */
 final class TextFilterField extends AbstractTableFilterField

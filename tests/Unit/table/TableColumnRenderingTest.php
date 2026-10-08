@@ -309,17 +309,32 @@ final class TableColumnRenderingTest extends TestCase
     {
         $column = new OptionsColumn(identifier: 'k', label: 'K', options: ['1' => 'One'], isSortable: false);
 
-        $this->assertSame('<td>1.5</td>', $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['k' => 1.5])));
-        $this->assertSame('<td></td>', $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['k' => null])));
-        $this->assertSame('<td>One</td>', $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['k' => 1])));
+        $this->assertSame(
+            '<td>1.5</td>',
+            $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['k' => 1.5])),
+        );
+        $this->assertSame(
+            '<td></td>',
+            $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['k' => null])),
+        );
+        $this->assertSame(
+            '<td>One</td>',
+            $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['k' => 1])),
+        );
     }
 
     public function testFileSizeColumnTakesNumericStrings(): void
     {
         $column = new FileSizeColumn(identifier: 'size', label: 'Size');
 
-        $this->assertSame('<td>1.5 KB</td>', $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['size' => '1536'])));
-        $this->assertSame('<td>1.5 KB</td>', $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['size' => 1536.0])));
+        $this->assertSame(
+            '<td>1.5 KB</td>',
+            $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['size' => '1536'])),
+        );
+        $this->assertSame(
+            '<td>1.5 KB</td>',
+            $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['size' => 1536.0])),
+        );
     }
 
     public function testFileSizeColumnRejectsOtherValues(): void
@@ -335,8 +350,14 @@ final class TableColumnRenderingTest extends TestCase
     {
         $column = new StripHtmlTagsColumn(identifier: 'v', label: 'V');
 
-        $this->assertSame('<td></td>', $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['v' => null])));
-        $this->assertSame('<td>42</td>', $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['v' => 42])));
+        $this->assertSame(
+            '<td></td>',
+            $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['v' => null])),
+        );
+        $this->assertSame(
+            '<td>42</td>',
+            $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['v' => 42])),
+        );
     }
 
     public function testDateColumnNamesTheColumnOfAnInvalidDate(): void

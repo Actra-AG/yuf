@@ -32,7 +32,7 @@ final class LocalTlsServer
     public function __construct()
     {
         $this->certificatePath = $this->createSelfSignedCertificate();
-        // @phpstan-ignore disallowed.function (starts PHP with fixed arguments for a TLS server on the loopback address)
+        // @phpstan-ignore disallowed.function (starts PHP with fixed arguments for a TLS server on loopback)
         $process = proc_open(
             command: [PHP_BINARY, __DIR__ . '/tls-server.php'],
             descriptor_spec: [0 => ['null'], 1 => ['pipe', 'w'], 2 => ['null']],

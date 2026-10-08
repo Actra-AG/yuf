@@ -204,7 +204,10 @@ final class CurlRequestCharacterizationTest extends TestCase
         $request->setHttpHeader(key: 'X-Api-Key', value: 'first');
         $request->setHttpHeader(key: 'X-Api-Key', value: 'second');
 
-        self::assertSame('second', EchoedRequest::fromResponse(response: $request->execute())->header(name: 'X-Api-Key'));
+        self::assertSame(
+            'second',
+            EchoedRequest::fromResponse(response: $request->execute())->header(name: 'X-Api-Key'),
+        );
     }
 
     public function testBearerTokenAuthentication(): void

@@ -486,3 +486,13 @@ each small enough to release on its own. `actra/backend` follows when the plan i
 - `UPGRADE.md`: `## [v4.52.0]`. `ddev composer check` green, baseline empty, `curl https://yuf.ddev.site/` 200.
 - Tests: 12248 -> 12593.
 - Open: none.
+
+### Step 12 (v4.52.1) – done
+
+- Lines longer than 120 characters (counted as characters, `.php` files without `src/phone/data/` and
+  `example/app/cache/`): `src/` 5 -> 0, `tests/` 48 -> 0, `example/` 0 -> 0 (the plan said 3 and 63; the counts
+  above are the measured ones). Wrapped only: named arguments one per line, string concatenation, PHPDoc rewrapped,
+  expected HTML of the data provider `BooleanFieldV3MarkupTest` split into concatenated parts (byte-identical string).
+- Tests: 12596 -> 12596, assertions 23873 -> 23873.
+- `UPGRADE.md`: `## [v4.52.1]`. `ddev composer check` green, baseline empty.
+- Open: none.

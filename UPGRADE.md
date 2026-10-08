@@ -4,6 +4,10 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.52.1] – 2026-10-08
+
+Style only: lines wrapped to 120 characters; no API or behaviour change.
+
 ## [v4.52.0] – 2026-10-08
 
 Small functional gaps closed: stricter validation and a few mistakes that used to pass silently now throw or fail.

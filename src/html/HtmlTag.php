@@ -36,7 +36,8 @@ final class HtmlTag extends HtmlElement
     {
         if (preg_match(pattern: HtmlTag::NAME_PATTERN, subject: $name) !== 1) {
             throw new InvalidArgumentException(
-                message: 'Invalid HTML tag name "' . $name . '": use letters, digits and - only, starting with a letter.',
+                message: 'Invalid HTML tag name "' . $name
+                    . '": use letters, digits and - only, starting with a letter.',
             );
         }
         parent::__construct(name: $name);

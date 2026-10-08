@@ -261,7 +261,9 @@ final class NavigationItemTest extends TestCase
         $this->assertSame($open, $collection->getFirst(accessRightCollection: AccessRightCollection::createEmpty()));
         $this->assertSame(
             $secret,
-            $collection->getFirst(accessRightCollection: AccessRightCollection::createFromStringArray(input: ['admin'])),
+            $collection->getFirst(
+                accessRightCollection: AccessRightCollection::createFromStringArray(input: ['admin']),
+            ),
         );
     }
 

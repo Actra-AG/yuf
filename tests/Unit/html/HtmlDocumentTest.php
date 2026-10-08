@@ -156,7 +156,8 @@ final class HtmlDocumentTest extends TestCase
     {
         $this->writeContent(
             name: 'page.html',
-            source: "<body class=\"{tst:text value='bodyClassName'}\" data-file=\"{tst:text value='requestedFileName'}\">",
+            source: "<body class=\"{tst:text value='bodyClassName'}\""
+                . " data-file=\"{tst:text value='requestedFileName'}\">",
         );
 
         $html = $this->createDocument(fileTitle: 'page', fileName: '"><script>x</script>.html')->render();
@@ -186,7 +187,10 @@ final class HtmlDocumentTest extends TestCase
 
     public function testMissingFileTitleWithoutLanguageGivesEmptyValues(): void
     {
-        $this->writeContent(name: 'page.html', source: "[{tst:text value='language'}][{tst:text value='requestedFileName'}]");
+        $this->writeContent(
+            name: 'page.html',
+            source: "[{tst:text value='language'}][{tst:text value='requestedFileName'}]",
+        );
 
         $this->assertSame('[][]', $this->createDocument(languageCode: '', fileName: null)->render());
     }

@@ -46,8 +46,12 @@ final class AbstractSessionHandlerTest extends TestCase
         $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
         $httpRequest = HttpRequestFactory::create(
             cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
-            queryParameters: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::REQUESTED_SESSION_ID],
-            postParameters: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::REQUESTED_SESSION_ID],
+            queryParameters: [
+                AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::REQUESTED_SESSION_ID,
+            ],
+            postParameters: [
+                AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::REQUESTED_SESSION_ID,
+            ],
         );
 
         try {
@@ -658,7 +662,8 @@ final class AbstractSessionHandlerTest extends TestCase
     #[RunInSeparateProcess]
     public function testMissingSavePathIsCreatedForTheOwnerOnly(): void
     {
-        $savePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-session-test-' . bin2hex(string: random_bytes(length: 8))
+        $savePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-session-test-'
+            . bin2hex(string: random_bytes(length: 8))
             . DIRECTORY_SEPARATOR . 'nested';
         $httpRequest = HttpRequestFactory::create();
 
@@ -1046,9 +1051,11 @@ final class AbstractSessionHandlerTest extends TestCase
      */
     private function createSessionSavePath(): string
     {
-        $savePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-session-test-' . bin2hex(string: random_bytes(length: 8));
+        $savePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-session-test-'
+            . bin2hex(string: random_bytes(length: 8));
         mkdir(directory: $savePath);
-        foreach ([AbstractSessionHandlerTest::COOKIE_SESSION_ID, AbstractSessionHandlerTest::REQUESTED_SESSION_ID] as $sessionId) {
+        $sessionIds = [AbstractSessionHandlerTest::COOKIE_SESSION_ID, AbstractSessionHandlerTest::REQUESTED_SESSION_ID];
+        foreach ($sessionIds as $sessionId) {
             file_put_contents(filename: $savePath . DIRECTORY_SEPARATOR . 'sess_' . $sessionId, data: '');
         }
 

@@ -60,7 +60,8 @@ final class CurlFormEncoder
             is_object(value: $value) => CurlFormEncoder::convertArray(data: get_object_vars(object: $value)),
             is_array(value: $value) => CurlFormEncoder::convertArray(data: $value),
             default => throw new InvalidArgumentException(
-                message: 'Form data may only contain scalars, null, arrays and objects, ' . get_debug_type(value: $value)
+                message: 'Form data may only contain scalars, null, arrays and objects, '
+                . get_debug_type(value: $value)
                 . ' found.',
             ),
         };

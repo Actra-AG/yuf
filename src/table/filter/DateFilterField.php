@@ -19,7 +19,8 @@ use Override;
 /**
  * Accepts the date formats of the input (`2026-03-01`, `2026-3-1`, `01.03.2026`, `1.3.2026`, each optionally with
  * `H:i` or `H:i:s`; the formats of the form `DateField`) and the render format of the field (the value it shows is
- * sent back when the filter form is submitted again). Everything else is invalid, e.g. relative dates (`tomorrow`, `+1 day`), an impossible date (`2026-02-30`)
+ * sent back when the filter form is submitted again). Everything else is invalid, e.g. relative dates (`tomorrow`,
+ * `+1 day`), an impossible date (`2026-02-30`)
  * or a date that does not look exactly like the format (`26-03-01`, `9:05`). Without a time, the time is the start of
  * the day for a field for dates from, otherwise the end of the day.
  */

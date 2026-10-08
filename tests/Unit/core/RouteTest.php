@@ -27,8 +27,14 @@ final class RouteTest extends TestCase
             . bin2hex(string: random_bytes(length: 8)) . DIRECTORY_SEPARATOR;
         $languageDirectory = $this->viewDirectory . 'frontend/language/en/';
         mkdir(directory: $languageDirectory, recursive: true);
-        file_put_contents(filename: $languageDirectory . 'global.lang.php', data: "<?php\n\$txt = ['global' => 'G'];\n");
-        file_put_contents(filename: $languageDirectory . 'detail.lang.php', data: "<?php\n\$txt = ['detail' => 'D'];\n");
+        file_put_contents(
+            filename: $languageDirectory . 'global.lang.php',
+            data: "<?php\n\$txt = ['global' => 'G'];\n",
+        );
+        file_put_contents(
+            filename: $languageDirectory . 'detail.lang.php',
+            data: "<?php\n\$txt = ['detail' => 'D'];\n",
+        );
     }
 
     #[Override]

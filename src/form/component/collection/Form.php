@@ -98,7 +98,8 @@ class Form extends FormCollection
     {
         if (!$this->hasField(name: $name)) {
             throw new LogicException(
-                message: 'Form ' . $this->name . ' has no field ' . $name . ' (it does not exist or is not a FormField).',
+                message: 'Form ' . $this->name . ' has no field ' . $name
+                    . ' (it does not exist or is not a FormField).',
             );
         }
         $this->removeChildComponent(childComponentName: $name);

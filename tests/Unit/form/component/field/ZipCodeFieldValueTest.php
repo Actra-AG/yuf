@@ -152,7 +152,9 @@ final class ZipCodeFieldValueTest extends TestCase
             countryCodeFieldName: 'country',
         );
 
-        $field->validate(input: FormInput::fromArray(data: ['zip' => '12345', 'country' => 'DE', 'countryCode' => 'AT']));
+        $field->validate(
+            input: FormInput::fromArray(data: ['zip' => '12345', 'country' => 'DE', 'countryCode' => 'AT']),
+        );
 
         $this->assertSame('DE', $field->countryCode);
     }
@@ -161,7 +163,9 @@ final class ZipCodeFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['zip' => 'SW1A 1AA', 'countryCode' => 'GB'])));
+        $this->assertTrue(
+            $field->validate(input: FormInput::fromArray(data: ['zip' => 'SW1A 1AA', 'countryCode' => 'GB'])),
+        );
     }
 
     public function testValueIsEmptyStringAfterValidationWithMissingKey(): void

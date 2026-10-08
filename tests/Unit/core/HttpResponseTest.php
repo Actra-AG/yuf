@@ -65,7 +65,10 @@ final class HttpResponseTest extends TestCase
         $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $httpResponse->httpStatusCode);
         $this->assertSame('text/html; charset=utf-8', $httpResponse->getHeader(key: 'Content-Type'));
         $this->assertSame(hash(algo: 'sha256', data: '<p>Test</p>'), $httpResponse->getHeader(key: 'Etag'));
-        $this->assertSame(gmdate(format: 'r', timestamp: HttpResponseTest::NOW), $httpResponse->getHeader(key: 'Last-Modified'));
+        $this->assertSame(
+            gmdate(format: 'r', timestamp: HttpResponseTest::NOW),
+            $httpResponse->getHeader(key: 'Last-Modified'),
+        );
         $this->assertSame('private, must-revalidate', $httpResponse->getHeader(key: 'Cache-Control'));
         $this->assertArrayNotHasKey('Content-Security-Policy', $headers);
         $this->assertArrayNotHasKey('Connection', $headers);
@@ -150,8 +153,14 @@ final class HttpResponseTest extends TestCase
         $this->assertSame('attachment; filename="export.csv"', $httpResponse->getHeader(key: 'Content-Disposition'));
         $this->assertSame('File Transfer', $httpResponse->getHeader(key: 'Content-Description'));
         $this->assertSame('4', $httpResponse->getHeader(key: 'Content-Length'));
-        $this->assertSame(gmdate(format: 'r', timestamp: 1_700_000_000), $httpResponse->getHeader(key: 'Last-Modified'));
-        $this->assertSame(gmdate(format: 'r', timestamp: HttpResponseTest::NOW + 3600), $httpResponse->getHeader(key: 'Expires'));
+        $this->assertSame(
+            gmdate(format: 'r', timestamp: 1_700_000_000),
+            $httpResponse->getHeader(key: 'Last-Modified'),
+        );
+        $this->assertSame(
+            gmdate(format: 'r', timestamp: HttpResponseTest::NOW + 3600),
+            $httpResponse->getHeader(key: 'Expires'),
+        );
     }
 
     public function testFileResponseWithoutDownloadHasNoDisposition(): void
@@ -167,7 +176,10 @@ final class HttpResponseTest extends TestCase
 
         $headers = $httpResponse->listHeaders();
         $this->assertArrayNotHasKey('Content-Disposition', $headers);
-        $this->assertSame(gmdate(format: 'r', timestamp: HttpResponseTest::NOW), $httpResponse->getHeader(key: 'Expires'));
+        $this->assertSame(
+            gmdate(format: 'r', timestamp: HttpResponseTest::NOW),
+            $httpResponse->getHeader(key: 'Expires'),
+        );
     }
 
     public function testFileResponseIsNotModifiedForTheSameModificationTime(): void

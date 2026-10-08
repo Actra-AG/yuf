@@ -40,7 +40,8 @@ final class SessionFileUploadStorageTest extends TestCase
     {
         $this->storage = new ArraySessionStorage();
         $this->session = new Session(storage: $this->storage);
-        $this->rootDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-upload-test-' . bin2hex(string: random_bytes(length: 8));
+        $this->rootDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-upload-test-'
+            . bin2hex(string: random_bytes(length: 8));
         mkdir(directory: $this->rootDirectory);
     }
 

@@ -125,7 +125,9 @@ final class ToggleChildrenTest extends TestCase
         $toggle->addChildField(mainOption: 'a', childField: $childA);
         $toggle->addChildField(mainOption: 'b', childField: $childB);
 
-        $isValid = $toggle->validate(input: FormInput::fromArray(data: ['toggle' => 'b', 'childA' => '', 'childB' => 'ok']));
+        $isValid = $toggle->validate(
+            input: FormInput::fromArray(data: ['toggle' => 'b', 'childA' => '', 'childB' => 'ok']),
+        );
 
         $this->assertTrue($isValid);
         $this->assertSame('ok', $childB->getValueAsString());

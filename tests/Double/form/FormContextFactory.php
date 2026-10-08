@@ -20,8 +20,10 @@ use actra\yuf\tests\Double\core\HttpRequestFactory;
  */
 final class FormContextFactory
 {
-    public static function create(?HttpRequest $httpRequest = null, ?CsrfTokenSource $csrfTokenSource = null): FormContext
-    {
+    public static function create(
+        ?HttpRequest $httpRequest = null,
+        ?CsrfTokenSource $csrfTokenSource = null,
+    ): FormContext {
         return new FormContext(
             httpRequest: $httpRequest ?? HttpRequestFactory::create(),
             csrfTokenSource: $csrfTokenSource,

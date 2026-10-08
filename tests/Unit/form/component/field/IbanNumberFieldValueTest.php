@@ -77,7 +77,9 @@ final class IbanNumberFieldValueTest extends TestCase
     {
         $field = $this->createField();
 
-        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['iban' => 'CH93 0076 2011 6238 5295 8'])));
+        $this->assertFalse(
+            $field->validate(input: FormInput::fromArray(data: ['iban' => 'CH93 0076 2011 6238 5295 8'])),
+        );
     }
 
     public function testEmptyIbanIsValidWithoutRequiredError(): void

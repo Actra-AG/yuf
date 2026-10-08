@@ -29,7 +29,9 @@ final class CurlResponseTest extends TestCase
 
     public function testResponseWithErrorCodeHasErrors(): void
     {
-        self::assertTrue($this->createResponse(body: 'x', errorCode: CurlResponse::ERROR_BAD_HTTP_RESPONSE_CODE)->hasErrors());
+        self::assertTrue(
+            $this->createResponse(body: 'x', errorCode: CurlResponse::ERROR_BAD_HTTP_RESPONSE_CODE)->hasErrors(),
+        );
         self::assertTrue($this->createResponse(body: false, errorCode: CURLE_OPERATION_TIMEOUTED)->hasErrors());
     }
 

@@ -210,7 +210,9 @@ final class FieldRulesTest extends TestCase
     public function testTextAreaLineRuleChecksEveryLine(): void
     {
         $field = new TextAreaField(name: 'lines', label: $this->text('Lines'));
-        $field->addEachRule(formRule: new RegexRule(pattern: '/^[a-z0-9.-]+$/i', errorMessage: $this->text('Bad line')));
+        $field->addEachRule(
+            formRule: new RegexRule(pattern: '/^[a-z0-9.-]+$/i', errorMessage: $this->text('Bad line')),
+        );
 
         $this->assertTrue(
             $this->post(field: $field, data: ['lines' => "ns1.example.com\r\n ns2.example.com \n\n"]),
@@ -336,7 +338,9 @@ final class FieldRulesTest extends TestCase
             formOptions: $this->options(),
             initialValue: null,
         );
-        $field->addRule(formRule: new ValidValueRule(validValues: ['a', 'b'], errorMessage: $this->text('Not allowed')));
+        $field->addRule(
+            formRule: new ValidValueRule(validValues: ['a', 'b'], errorMessage: $this->text('Not allowed')),
+        );
 
         $this->assertTrue($this->post(field: $field, data: ['select' => 'a']));
         $this->assertTrue($this->post(field: $field, data: ['select' => '']));

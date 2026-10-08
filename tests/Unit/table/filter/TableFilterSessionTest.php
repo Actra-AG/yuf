@@ -67,7 +67,13 @@ final class TableFilterSessionTest extends TestCase
      * @param array<string, string> $query
      * @param array<string, string> $post
      *
-     * @return array{filter: TableFilter, table: DbResultTable, text: TextFilterField, options: OptionsFilterField, date: DateFilterField}
+     * @return array{
+     *     filter: TableFilter,
+     *     table: DbResultTable,
+     *     text: TextFilterField,
+     *     options: OptionsFilterField,
+     *     date: DateFilterField,
+     * }
      */
     private function request(
         RequestMethodEnum $method = RequestMethodEnum::GET,
@@ -145,7 +151,13 @@ final class TableFilterSessionTest extends TestCase
      *
      * @param array<string, string> $values field identifier => value
      *
-     * @return array{filter: TableFilter, table: DbResultTable, text: TextFilterField, options: OptionsFilterField, date: DateFilterField}
+     * @return array{
+     *     filter: TableFilter,
+     *     table: DbResultTable,
+     *     text: TextFilterField,
+     *     options: OptionsFilterField,
+     *     date: DateFilterField,
+     * }
      */
     private function submit(
         array $values,

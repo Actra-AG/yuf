@@ -385,7 +385,8 @@ final class SpecialFieldRenderersTest extends TestCase
         $this->assertFalse($isValid);
         $this->assertSame(
             '<form method="post" action="?' . $formName . '"><p class="form-error" role="alert"'
-            . ' aria-live="assertive"><strong>Das Formular konnte wegen eines technischen Problems (ungültiges CSRF-Token)'
+            . ' aria-live="assertive"><strong>Das Formular konnte wegen eines technischen Problems'
+            . ' (ungültiges CSRF-Token)'
             . ' nicht übermittelt werden. Bitte versuchen Sie es erneut.</strong></p>'
             . '<input type="hidden" name="csrftoken" value="tok+en/1=">'
             . '<dl><dt><label for="phone">Phone<span class="required">*</span></label></dt><dd>'
