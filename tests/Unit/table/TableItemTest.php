@@ -13,6 +13,7 @@ use actra\yuf\db\DbRowValueException;
 use actra\yuf\table\TableItem;
 use actra\yuf\tests\Double\db\StatusEnum;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use UnexpectedValueException;
 
@@ -91,6 +92,24 @@ final class TableItemTest extends TestCase
         $this->expectException(UnexpectedValueException::class);
         $this->expectExceptionMessageIsOrContains('Column "list" holds a array');
         TableItemTest::tableItem(values: ['list' => [1]])->renderValue(name: 'list');
+    }
+
+    public function testMissingColumnOfRawValueNamesTheColumns(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageIsOrContains('The row has no column "nope", it has: ID, name.');
+        TableItemTest::tableItem(values: ['ID' => 1, 'name' => 'x'])->getRawValue(name: 'nope');
+    }
+
+    public function testScalarValue(): void
+    {
+        $tableItem = TableItemTest::tableItem(values: ['i' => 1, 's' => 'a', 'n' => null, 'f' => 1.5, 'b' => false]);
+
+        $this->assertSame(1, $tableItem->getScalarValue(name: 'i'));
+        $this->assertSame('a', $tableItem->getScalarValue(name: 's'));
+        $this->assertNull($tableItem->getScalarValue(name: 'n'));
+        $this->assertSame(1.5, $tableItem->getScalarValue(name: 'f'));
+        $this->assertFalse($tableItem->getScalarValue(name: 'b'));
     }
 
     /**

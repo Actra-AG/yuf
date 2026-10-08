@@ -19,6 +19,7 @@ use actra\yuf\table\renderer\TableHeadRenderer;
 use actra\yuf\table\table\DbResultTable;
 use actra\yuf\table\table\SmartTable;
 use actra\yuf\table\TableItemCollection;
+use actra\yuf\table\TableSortDirectionEnum;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
 use Override;
@@ -110,14 +111,20 @@ final class DbResultTableSessionTest extends TestCase
         return is_array(value: $state) ? $state : [];
     }
 
-    private function sortParameter(string $column, string $direction, string $identifier = DbResultTableSessionTest::ID): string
-    {
+    private function sortParameter(
+        string $column,
+        string $direction,
+        string $identifier = DbResultTableSessionTest::ID,
+    ): string {
         return $identifier . '|' . $column . '|' . $direction;
     }
 
     public function testStorageLayoutIsOneArrayPerTableInTheTablesSection(): void
     {
-        $this->request(query: ['sort' => $this->sortParameter(column: 'name', direction: 'DESC'), 'page' => '3|' . DbResultTableSessionTest::ID]);
+        $this->request(query: [
+            'sort' => $this->sortParameter(column: 'name', direction: 'DESC'),
+            'page' => '3|' . DbResultTableSessionTest::ID,
+        ]);
 
         $this->assertSame(
             [
@@ -158,7 +165,7 @@ final class DbResultTableSessionTest extends TestCase
         $table = $this->request();
 
         $this->assertSame('id', $table->getCurrentSortColumn());
-        $this->assertSame('ASC', $table->getCurrentSortDirection());
+        $this->assertSame(TableSortDirectionEnum::ASC, $table->getCurrentSortDirection());
     }
 
     public function testDefaultSortColumnAndItsDirectionAreUsedWithoutChoice(): void
@@ -177,7 +184,7 @@ final class DbResultTableSessionTest extends TestCase
         $table->fillBySelectQuery();
 
         $this->assertSame('score', $table->getCurrentSortColumn());
-        $this->assertSame('DESC', $table->getCurrentSortDirection());
+        $this->assertSame(TableSortDirectionEnum::DESC, $table->getCurrentSortDirection());
     }
 
     public function testChosenSortingIsRememberedForTheNextRequests(): void
@@ -188,9 +195,9 @@ final class DbResultTableSessionTest extends TestCase
         $afterwards = $this->request();
 
         $this->assertSame('name', $next->getCurrentSortColumn());
-        $this->assertSame('DESC', $next->getCurrentSortDirection());
+        $this->assertSame(TableSortDirectionEnum::DESC, $next->getCurrentSortDirection());
         $this->assertSame('name', $afterwards->getCurrentSortColumn());
-        $this->assertSame('DESC', $afterwards->getCurrentSortDirection());
+        $this->assertSame(TableSortDirectionEnum::DESC, $afterwards->getCurrentSortDirection());
     }
 
     public function testNewSortingReplacesTheRememberedOne(): void
@@ -200,7 +207,7 @@ final class DbResultTableSessionTest extends TestCase
         $table = $this->request(query: ['sort' => $this->sortParameter(column: 'created', direction: 'ASC')]);
 
         $this->assertSame('created', $table->getCurrentSortColumn());
-        $this->assertSame('ASC', $table->getCurrentSortDirection());
+        $this->assertSame(TableSortDirectionEnum::ASC, $table->getCurrentSortDirection());
     }
 
     public function testInvalidSortingKeepsTheRememberedOne(): void
@@ -219,7 +226,7 @@ final class DbResultTableSessionTest extends TestCase
             $table = $this->request(query: ['sort' => $invalidSorting]);
 
             $this->assertSame('name', $table->getCurrentSortColumn(), $invalidSorting);
-            $this->assertSame('DESC', $table->getCurrentSortDirection(), $invalidSorting);
+            $this->assertSame(TableSortDirectionEnum::DESC, $table->getCurrentSortDirection(), $invalidSorting);
         }
     }
 
@@ -231,9 +238,9 @@ final class DbResultTableSessionTest extends TestCase
         $next = $this->request();
 
         $this->assertSame('id', $reset->getCurrentSortColumn());
-        $this->assertSame('ASC', $reset->getCurrentSortDirection());
+        $this->assertSame(TableSortDirectionEnum::ASC, $reset->getCurrentSortDirection());
         $this->assertSame('id', $next->getCurrentSortColumn());
-        $this->assertSame('ASC', $next->getCurrentSortDirection());
+        $this->assertSame(TableSortDirectionEnum::ASC, $next->getCurrentSortDirection());
     }
 
     public function testResetWinsOverASortingOfTheSameRequest(): void
@@ -243,7 +250,7 @@ final class DbResultTableSessionTest extends TestCase
         );
 
         $this->assertSame('id', $table->getCurrentSortColumn());
-        $this->assertSame('ASC', $table->getCurrentSortDirection());
+        $this->assertSame(TableSortDirectionEnum::ASC, $table->getCurrentSortDirection());
     }
 
     public function testFindKeepsTheChosenSorting(): void
@@ -298,7 +305,10 @@ final class DbResultTableSessionTest extends TestCase
 
     public function testStateIsKeptPerTable(): void
     {
-        $this->request(query: ['sort' => $this->sortParameter(column: 'name', direction: 'DESC'), 'page' => '3|' . DbResultTableSessionTest::ID]);
+        $this->request(query: [
+            'sort' => $this->sortParameter(column: 'name', direction: 'DESC'),
+            'page' => '3|' . DbResultTableSessionTest::ID,
+        ]);
 
         $other = $this->request(identifier: 'otherItems');
 
@@ -309,7 +319,10 @@ final class DbResultTableSessionTest extends TestCase
 
     public function testStateOfAnotherSessionStartsFromTheDefaults(): void
     {
-        $this->request(query: ['sort' => $this->sortParameter(column: 'name', direction: 'DESC'), 'page' => '3|' . DbResultTableSessionTest::ID]);
+        $this->request(query: [
+            'sort' => $this->sortParameter(column: 'name', direction: 'DESC'),
+            'page' => '3|' . DbResultTableSessionTest::ID,
+        ]);
         $this->storage->replaceAll(data: []);
 
         $table = $this->request();
@@ -335,7 +348,7 @@ final class DbResultTableSessionTest extends TestCase
         $table = $this->request();
 
         $this->assertSame('created', $table->getCurrentSortColumn());
-        $this->assertSame('ASC', $table->getCurrentSortDirection());
+        $this->assertSame(TableSortDirectionEnum::ASC, $table->getCurrentSortDirection());
         $this->assertSame(7, $table->getCurrentPaginationPage());
     }
 
@@ -364,7 +377,7 @@ final class DbResultTableSessionTest extends TestCase
         $table = $this->createTable(identifier: DbResultTableSessionTest::ID);
 
         $this->assertSame('id', $table->getCurrentSortColumn());
-        $this->assertSame('ASC', $table->getCurrentSortDirection());
+        $this->assertSame(TableSortDirectionEnum::ASC, $table->getCurrentSortDirection());
         $this->assertSame(1, $table->getCurrentPaginationPage());
         $this->assertSame([], $this->storage->all());
     }
@@ -384,14 +397,17 @@ final class DbResultTableSessionTest extends TestCase
         );
 
         $this->assertNull($table->getCurrentSortColumn());
-        $this->assertSame('ASC', $table->getCurrentSortDirection());
+        $this->assertSame(TableSortDirectionEnum::ASC, $table->getCurrentSortDirection());
     }
 
     public function testStateIsNotReadFromThePostedData(): void
     {
         $table = $this->createTable(
             identifier: DbResultTableSessionTest::ID,
-            post: ['sort' => $this->sortParameter(column: 'name', direction: 'DESC'), 'page' => '3|' . DbResultTableSessionTest::ID],
+            post: [
+                'sort' => $this->sortParameter(column: 'name', direction: 'DESC'),
+                'page' => '3|' . DbResultTableSessionTest::ID,
+            ],
         );
 
         $table->fillBySelectQuery();

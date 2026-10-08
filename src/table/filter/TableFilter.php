@@ -23,21 +23,25 @@ use actra\yuf\table\TableSessionState;
 use actra\yuf\template\TemplateEngine;
 
 /**
- * The identifier of a filter and the identifiers of its fields must be unique per page (they are the keys of the
- * state in the session). Without CSRF token source (no session), the input is accepted without token.
+ * Extension point (the protected methods can be overridden): the filter form above a `DbResultTable`. The identifier
+ * of a filter and the identifiers of its fields must be unique per page (they are the keys of the state in the
+ * session). Without CSRF token source (no session), the input is accepted without token.
  */
 class TableFilter
 {
     public private(set) bool $filtersApplied = false;
-    /** @var AbstractTableFilterField[] $allFilterFields */
+    /** @var array<string, AbstractTableFilterField> */
     public private(set) array $allFilterFields = [];
-    /** @var AbstractTableFilterField[] $primaryFields */
+    /** @var list<AbstractTableFilterField> */
     private array $primaryFields = [];
-    /** @var AbstractTableFilterField[] $secondaryFields */
+    /** @var list<AbstractTableFilterField> */
     private array $secondaryFields = [];
     private readonly TableSessionState $state;
 
     /**
+     * @param string $resetParameter Name of the query parameter that resets the filter
+     * @param string $submitButtonLabel Text, encoded when rendered
+     * @param string $resetLinkLabel Text, encoded when rendered
      * @param Session $session Keeps the values of the filter fields (`ViewContext::$session`)
      * @param ?CsrfTokenSource $csrfTokenSource Protects the filter form (`ViewContext::$formContext`); `null` without
      *                                          session: the input is accepted without token
@@ -132,6 +136,7 @@ class TableFilter
     }
 
     /**
+     * @param list<string> $whereConds
      * @param list<float|int|string|null> $params
      */
     private function addWhereConditionsToSelectQuery(
@@ -139,12 +144,14 @@ class TableFilter
         array $whereConds,
         array $params,
     ): void {
-        foreach ($whereConds as $key => $val) {
-            $whereConds[$key] = '(' . $val . ')';
-        }
-
         $dbResultTable->dbQuery->addWherePart(
-            wherePart: implode(separator: ' AND ', array: $whereConds),
+            wherePart: implode(
+                separator: ' AND ',
+                array: array_map(
+                    callback: static fn(string $whereCondition): string => '(' . $whereCondition . ')',
+                    array: $whereConds,
+                ),
+            ),
             parameters: $params,
         );
     }
@@ -169,7 +176,7 @@ class TableFilter
         $replacements->addBool(identifier: 'showLegend', booleanValue: $this->showLegend);
         $replacements->addHtml(
             identifier: 'formAction',
-            html: '?' . $this->identifier . '&' . DbResultTable::PARAM_FIND,
+            html: '?' . urlencode(string: $this->identifier) . '&' . DbResultTable::PARAM_FIND,
         );
         $replacements->addHtml(
             identifier: 'csrfField',
@@ -201,14 +208,12 @@ class TableFilter
         } else {
             $replacements->addBool(identifier: 'hasSecondaryFilters', booleanValue: false);
         }
-        $replacements->addHtml(identifier: 'resetHref', html: '?' . $this->resetParameter);
-        $replacements->addHtml(identifier: 'submitButtonLabel', html: $this->submitButtonLabel);
-        $replacements->addHtml(identifier: 'resetLinkLabel', html: $this->resetLinkLabel);
-
-        $individualHtmlSnippetPath = $this->individualHtmlSnippetPath;
+        $replacements->addHtml(identifier: 'resetHref', html: '?' . urlencode(string: $this->resetParameter));
+        $replacements->addText(identifier: 'submitButtonLabel', text: $this->submitButtonLabel);
+        $replacements->addText(identifier: 'resetLinkLabel', text: $this->resetLinkLabel);
 
         return new HtmlSnippet(
-            htmlSnippetFilePath: $individualHtmlSnippetPath === null ? __DIR__ . DIRECTORY_SEPARATOR . 'tableFilter.html' : $individualHtmlSnippetPath,
+            htmlSnippetFilePath: $this->individualHtmlSnippetPath ?? __DIR__ . DIRECTORY_SEPARATOR . 'tableFilter.html',
             replacements: $replacements,
         )->render(templateEngine: $templateEngine);
     }

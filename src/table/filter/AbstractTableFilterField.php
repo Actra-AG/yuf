@@ -17,7 +17,8 @@ use actra\yuf\session\SessionSectionEnum;
 use actra\yuf\table\TableSessionState;
 
 /**
- * The identifier of the field is `<filter identifier>_<field identifier>` and must be unique per page.
+ * Extension point: a project extends this class for its own field types. The identifier of the field is
+ * `<filter identifier>_<field identifier>` and must be unique per page.
  */
 abstract class AbstractTableFilterField
 {
@@ -43,7 +44,7 @@ abstract class AbstractTableFilterField
     public function render(): HtmlDataObject
     {
         $field = new HtmlDataObject();
-        $field->addHtml(propertyName: 'identifier', html: $this->identifier);
+        $field->addText(propertyName: 'identifier', text: $this->identifier);
         $field->addBooleanValue(
             propertyName: 'highlight',
             booleanValue: $this->isSelected() && !$this->highlightFieldIfSelected,

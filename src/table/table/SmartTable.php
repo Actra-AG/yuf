@@ -15,8 +15,13 @@ use actra\yuf\table\TableItem;
 use actra\yuf\table\TableItemCollection;
 use LogicException;
 
-// Can be extended or used directly to render a table with data from different sources.
-// The identifier must be unique per page (it is the key of the table state in the session).
+/**
+ * Extension point: used directly it renders a table with data from any source, `DbResultTable` extends it. The
+ * identifier must be unique per page (it is the key of the table state in the session).
+ *
+ * The HTML properties are templates of the application with the placeholders of the constants; the content of the
+ * cells is inserted into them in one pass, so a value is never read as placeholder.
+ */
 class SmartTable
 {
     public const string TOTAL_AMOUNT = '[totalAmount]';
@@ -28,15 +33,20 @@ class SmartTable
     public const string TOTAL_AMOUNT_MESSAGE_PLACEHOLDER = '[TOTAL_AMOUNT_MESSAGE]';
     public const string AMOUNT = '[AMOUNT]';
     public string $noDataHtml = '<p class="no-entry">Es wurden keine Einträge gefunden.</p>';
-    public string $totalAmountHtml = '<p class="search-result">' . SmartTable::TOTAL_AMOUNT_MESSAGE_PLACEHOLDER . '</p>';
-    public string $fullHtml = '<div class="table-meta table-meta-header">' . SmartTable::TOTAL_AMOUNT . '</div><div class="table-wrap">' . SmartTable::TABLE . '</div>';
-    public string $tableHtml = '<thead>' . SmartTable::TABLE_HEADER . '</thead><tbody>' . SmartTable::TABLE_BODY . '</tbody>';
+    public string $totalAmountHtml = '<p class="search-result">'
+        . SmartTable::TOTAL_AMOUNT_MESSAGE_PLACEHOLDER . '</p>';
+    public string $fullHtml = '<div class="table-meta table-meta-header">'
+        . SmartTable::TOTAL_AMOUNT . '</div><div class="table-wrap">' . SmartTable::TABLE . '</div>';
+    public string $tableHtml = '<thead>'
+        . SmartTable::TABLE_HEADER . '</thead><tbody>' . SmartTable::TABLE_BODY . '</tbody>';
     public string $oddRowHtml = '<tr>' . SmartTable::CELLS . '</tr>';
     public string $evenRowHtml = '<tr>' . SmartTable::CELLS . '</tr>';
-    public string $totalAmountMessage_oneResult = 'Es wurde <strong>1</strong> Resultat gefunden.';
-    public string $totalAmountMessage_numResults = 'Es wurden <strong>' . SmartTable::AMOUNT . '</strong> Resultate gefunden.';
-    /** @var AbstractTableColumn[] */
+    public string $totalAmountMessageOneResult = 'Es wurde <strong>1</strong> Resultat gefunden.';
+    public string $totalAmountMessageNumResults = 'Es wurden <strong>'
+        . SmartTable::AMOUNT . '</strong> Resultate gefunden.';
+    /** @var array<string, AbstractTableColumn> */
     public private(set) array $columns = [];
+    /** @var list<string> */
     private array $cssClasses = ['table'];
 
     public function __construct(
@@ -73,15 +83,51 @@ class SmartTable
     public function render(): string
     {
         $totalAmountOfItems = $this->getTotalAmount();
-        if ($totalAmountOfItems === 1) {
-            $totalAmountMessage = $this->totalAmountMessage_oneResult;
-        } else {
-            $totalAmountMessage = str_replace(
-                search: SmartTable::AMOUNT,
-                replace: number_format(num: $totalAmountOfItems, thousands_separator: '\''),
-                subject: $this->totalAmountMessage_numResults,
-            );
+        $totalAmountMessage = $this->renderTotalAmountMessage(totalAmount: $totalAmountOfItems);
+        $placeholders = [
+            SmartTable::TOTAL_AMOUNT => strtr(
+                string: $this->totalAmountHtml,
+                from: [SmartTable::TOTAL_AMOUNT_MESSAGE_PLACEHOLDER => $totalAmountMessage],
+            ),
+            SmartTable::TABLE => $this->renderTable(),
+        ] + $this->getTemplatePlaceholders();
+
+        return strtr(
+            string: $totalAmountOfItems === 0 ? $this->noDataHtml : $this->fullHtml,
+            from: $placeholders,
+        );
+    }
+
+    public function getTotalAmount(): int
+    {
+        return $this->tableItemCollection->count();
+    }
+
+    /**
+     * More placeholders for `fullHtml` and `noDataHtml` (placeholder => HTML). Called by `render()` after the total
+     * amount is known; the values are not searched for placeholders.
+     *
+     * @return array<string, string>
+     */
+    protected function getTemplatePlaceholders(): array
+    {
+        return [];
+    }
+
+    private function renderTotalAmountMessage(int $totalAmount): string
+    {
+        if ($totalAmount === 1) {
+            return $this->totalAmountMessageOneResult;
         }
+
+        return strtr(
+            string: $this->totalAmountMessageNumResults,
+            from: [SmartTable::AMOUNT => number_format(num: $totalAmount, thousands_separator: '\'')],
+        );
+    }
+
+    private function renderTable(): string
+    {
         $bodyArr = [];
         $rowNumber = 0;
         foreach ($this->tableItemCollection->list() as $tableItem) {
@@ -90,64 +136,26 @@ class SmartTable
             foreach ($this->columns as $abstractTableColumn) {
                 $cells[] = $abstractTableColumn->renderCell(tableItem: $tableItem);
             }
-            $rowHtml = (($rowNumber % 2) === 0) ? $this->evenRowHtml : $this->oddRowHtml;
-            $bodyArr[] = str_replace(
-                search: SmartTable::CELLS,
-                replace: implode(separator: PHP_EOL, array: $cells),
-                subject: $rowHtml,
+            $bodyArr[] = strtr(
+                string: ($rowNumber % 2) === 0 ? $this->evenRowHtml : $this->oddRowHtml,
+                from: [SmartTable::CELLS => implode(separator: PHP_EOL, array: $cells)],
             );
         }
-        $tableAttributes = ['table'];
-        if (count(value: $this->cssClasses) > 0) {
-            $tableAttributes[] = 'class="' . implode(separator: ' ', array: $this->cssClasses) . '"';
-        }
-        $tableHtml = str_replace(
-            search: [
-                SmartTable::TABLE_HEADER,
-                SmartTable::TABLE_BODY,
+        $tableHtml = strtr(
+            string: $this->tableHtml,
+            from: [
+                SmartTable::TABLE_HEADER => $this->tableHeadRenderer->render(smartTable: $this),
+                SmartTable::TABLE_BODY => implode(separator: PHP_EOL, array: $bodyArr),
             ],
-            replace: [
-                $this->tableHeadRenderer->render(smartTable: $this),
-                implode(separator: PHP_EOL, array: $bodyArr),
-            ],
-            subject: $this->tableHtml,
         );
 
-        $placeholders = [
-            SmartTable::TOTAL_AMOUNT => str_replace(
-                search: SmartTable::TOTAL_AMOUNT_MESSAGE_PLACEHOLDER,
-                replace: $totalAmountMessage,
-                subject: $this->totalAmountHtml,
-            ),
-            SmartTable::TABLE => implode(
-                separator: PHP_EOL,
-                array: [
-                    '<' . implode(
-                        separator: ' ',
-                        array: $tableAttributes,
-                    ) . '>',
-                    $tableHtml,
-                    '</table>',
-                ],
-            ),
-        ];
-
-        $srcArr = array_keys(array: $placeholders);
-        $rplArr = array_values(array: $placeholders);
-
-        return ($totalAmountOfItems === 0) ? str_replace(
-            search: $srcArr,
-            replace: $rplArr,
-            subject: $this->noDataHtml,
-        ) : str_replace(
-            search: $srcArr,
-            replace: $rplArr,
-            subject: $this->fullHtml,
+        return implode(
+            separator: PHP_EOL,
+            array: [
+                '<table class="' . implode(separator: ' ', array: $this->cssClasses) . '">',
+                $tableHtml,
+                '</table>',
+            ],
         );
-    }
-
-    public function getTotalAmount(): int
-    {
-        return $this->tableItemCollection->count();
     }
 }

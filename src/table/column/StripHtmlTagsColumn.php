@@ -13,13 +13,19 @@ use actra\yuf\html\HtmlEncoder;
 use actra\yuf\table\TableItem;
 use Override;
 
-class StripHtmlTagsColumn extends AbstractTableColumn
+/**
+ * The text of a value that holds HTML: tags removed, the rest encoded.
+ */
+final class StripHtmlTagsColumn extends AbstractTableColumn
 {
     #[Override]
     protected function renderCellValue(TableItem $tableItem): string
     {
-        $strippedTags = strip_tags(string: $tableItem->getRawValue(name: $this->identifier));
+        $value = $tableItem->getScalarValue(name: $this->identifier);
+        if ($value === null) {
+            return '';
+        }
 
-        return HtmlEncoder::encodeKeepQuotes(value: $strippedTags);
+        return HtmlEncoder::encodeKeepQuotes(value: strip_tags(string: (string) $value));
     }
 }

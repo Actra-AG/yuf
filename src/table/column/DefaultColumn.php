@@ -12,7 +12,10 @@ namespace actra\yuf\table\column;
 use actra\yuf\table\TableItem;
 use Override;
 
-class DefaultColumn extends AbstractTableColumn
+/**
+ * The value of the column as encoded text.
+ */
+final class DefaultColumn extends AbstractTableColumn
 {
     public bool $renderNewLines = true;
 

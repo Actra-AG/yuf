@@ -10,13 +10,20 @@ declare(strict_types=1);
 namespace actra\yuf\table\column;
 
 use actra\yuf\table\TableItem;
+use Closure;
 use Override;
 
-class CallbackColumn extends AbstractTableColumn
+/**
+ * The callback returns the HTML of the cell as it is output: it must encode values (`TableItem::renderValue()` does).
+ */
+final class CallbackColumn extends AbstractTableColumn
 {
-    /** @var callable */
-    private $callbackFunction;
+    /** @var Closure(TableItem): string */
+    private readonly Closure $callbackFunction;
 
+    /**
+     * @param callable(TableItem): string $callbackFunction
+     */
     public function __construct(
         string $identifier,
         string $label,
@@ -24,7 +31,7 @@ class CallbackColumn extends AbstractTableColumn
         bool $isSortable = false,
         bool $sortAscendingByDefault = true,
     ) {
-        $this->callbackFunction = $callbackFunction;
+        $this->callbackFunction = Closure::fromCallable(callback: $callbackFunction);
         parent::__construct(
             identifier: $identifier,
             label: $label,
@@ -36,9 +43,6 @@ class CallbackColumn extends AbstractTableColumn
     #[Override]
     protected function renderCellValue(TableItem $tableItem): string
     {
-        return call_user_func(
-            $this->callbackFunction,
-            $tableItem,
-        ); // TODO: Named parameters not working in PHP 8.0
+        return ($this->callbackFunction)($tableItem);
     }
 }

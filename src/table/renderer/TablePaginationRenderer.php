@@ -13,8 +13,12 @@ use actra\yuf\pagination\Pagination;
 use actra\yuf\table\table\DbResultTable;
 use actra\yuf\template\TemplateEngine;
 
-readonly class TablePaginationRenderer
+final readonly class TablePaginationRenderer
 {
+    /**
+     * @param string $previousTitle Text, encoded when rendered
+     * @param string $nextTitle Text, encoded when rendered
+     */
     public function __construct(
         public ?string $individualHtmlSnippetPath = null,
         public string $previousTitle = 'Previous',

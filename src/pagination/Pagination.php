@@ -14,13 +14,23 @@ use actra\yuf\html\HtmlDataObjectCollection;
 use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\html\HtmlSnippet;
 use actra\yuf\template\TemplateEngine;
+use InvalidArgumentException;
 
 /**
- * Provides a Pagination function for usage on the whole project
- * Like: << 1 2 ... 5 6 7 8 ... 23 24 25 >>
+ * Provides a pagination for lists, like: << 1 2 ... 5 6 7 8 ... 23 24 25 >>
+ *
+ * Static because it is a pure function of its arguments: it keeps no state and reads nothing but the snippet.
  */
-class Pagination
+final class Pagination
 {
+    /**
+     * @param string $listIdentifier Identifies the list in the `page` parameter (`?page=<number>|<identifier>`)
+     * @param array<string, string> $additionalLinkParameters Added to every link; names and values are URL encoded
+     * @param int $beforeAfter Pages shown before and after the current one
+     * @param int $startEnd Pages shown after the first and before the last page
+     *
+     * @return string Empty if everything fits on one page
+     */
     public static function render(
         string $listIdentifier,
         int $totalAmount,
@@ -34,93 +44,96 @@ class Pagination
         string $nextTitle = 'Next',
         ?string $individualHtmlSnippetPath = null,
     ): string {
+        Pagination::assertNotNegative(name: 'beforeAfter', value: $beforeAfter);
+        Pagination::assertNotNegative(name: 'startEnd', value: $startEnd);
+        if ($entriesPerPage < 1) {
+            throw new InvalidArgumentException(
+                message: 'Entries per page must be at least 1, ' . $entriesPerPage . ' given.',
+            );
+        }
         if ($totalAmount <= $entriesPerPage) {
             return '';
         }
         $firstPage = 1;
-        $modulo = ($totalAmount % $entriesPerPage);
-        $maxPage = (($totalAmount - ($modulo)) / $entriesPerPage) + ($modulo === 0 ? 0 : 1);
+        $maxPage = intdiv(num1: $totalAmount - 1, num2: $entriesPerPage) + 1;
+        $getLinkTarget = static fn(int $pageNumber): string => LinkQuery::create(
+            name: 'page',
+            value: $pageNumber . '|' . urlencode(string: $listIdentifier),
+            additionalParameters: $additionalLinkParameters,
+        );
         $pages = new HtmlDataObjectCollection();
-        for ($page = $firstPage; $page <= $maxPage; $page++) {
-            if (
-                $page === $firstPage
-                || $page === $currentPage
-                || $page === $maxPage
-                || ($page <= $firstPage + $startEnd)
-                || ($page >= $maxPage - $startEnd)
-                || ($page < $currentPage && $page >= ($currentPage - $beforeAfter))
-                || ($page > $currentPage && $page <= ($currentPage + $beforeAfter))
-            ) {
-                $pageObject = new HtmlDataObject();
-                $pageObject->addBooleanValue(
-                    propertyName: 'groupPreviousPages',
-                    booleanValue: ($page === ($maxPage - $startEnd) && $currentPage < $maxPage - ($beforeAfter + 1) - $startEnd),
-                );
-                $pageObject->addBooleanValue(
-                    propertyName: 'isCurrentPage',
-                    booleanValue: ($page === $currentPage),
-                );
-                $pageObject->addHtml(
-                    propertyName: 'number',
-                    html: (string) $page,
-                );
-                $pageObject->addHtml(
-                    propertyName: 'href',
-                    html: Pagination::getLinkTarget(
-                        listIdentifier: $listIdentifier,
-                        pageNumber: $page,
-                        additionalLinkParameters: $additionalLinkParameters,
-                    ),
-                );
-                $pageObject->addBooleanValue(
-                    propertyName: 'groupNextPages',
-                    booleanValue: ($page === ($firstPage + $startEnd) && $currentPage > $firstPage + ($beforeAfter + 1) + $startEnd),
-                );
-                $pages->add(htmlDataObject: $pageObject);
-            }
+        $visiblePages = Pagination::listVisiblePages(
+            maxPage: $maxPage,
+            currentPage: $currentPage,
+            beforeAfter: $beforeAfter,
+            startEnd: $startEnd,
+        );
+        foreach ($visiblePages as $page) {
+            $pageObject = new HtmlDataObject();
+            $pageObject->addBooleanValue(
+                propertyName: 'groupPreviousPages',
+                booleanValue: $page === $maxPage - $startEnd
+                    && $currentPage < $maxPage - ($beforeAfter + 1) - $startEnd,
+            );
+            $pageObject->addBooleanValue(propertyName: 'isCurrentPage', booleanValue: $page === $currentPage);
+            $pageObject->addHtml(propertyName: 'number', html: (string) $page);
+            $pageObject->addHtml(propertyName: 'href', html: $getLinkTarget(pageNumber: $page));
+            $pageObject->addBooleanValue(
+                propertyName: 'groupNextPages',
+                booleanValue: $page === $firstPage + $startEnd
+                    && $currentPage > $firstPage + ($beforeAfter + 1) + $startEnd,
+            );
+            $pages->add(htmlDataObject: $pageObject);
         }
         $replacements = new HtmlReplacementCollection();
         $replacements->addText(identifier: 'previousTitle', text: $previousTitle);
         $replacements->addHtml(
             identifier: 'previousPageHref',
-            html: ($currentPage === $firstPage) ? '' : Pagination::getLinkTarget(
-                listIdentifier: $listIdentifier,
-                pageNumber: $currentPage - 1,
-                additionalLinkParameters: $additionalLinkParameters,
-            ),
+            html: $currentPage <= $firstPage ? '' : $getLinkTarget(pageNumber: min($currentPage - 1, $maxPage)),
         );
         $replacements->addHtmlDataObjectCollection(identifier: 'pages', htmlDataObjectCollection: $pages);
         $replacements->addText(identifier: 'nextTitle', text: $nextTitle);
         $replacements->addHtml(
             identifier: 'nextPageHref',
-            html: ($currentPage === $maxPage) ? '' : Pagination::getLinkTarget(
-                listIdentifier: $listIdentifier,
-                pageNumber: $currentPage + 1,
-                additionalLinkParameters: $additionalLinkParameters,
-            ),
+            html: $currentPage >= $maxPage ? '' : $getLinkTarget(pageNumber: $currentPage + 1),
         );
 
         return new HtmlSnippet(
-            htmlSnippetFilePath: $individualHtmlSnippetPath === null ? __DIR__ . DIRECTORY_SEPARATOR . 'pagination.html' : $individualHtmlSnippetPath,
+            htmlSnippetFilePath: $individualHtmlSnippetPath ?? __DIR__ . DIRECTORY_SEPARATOR . 'pagination.html',
             replacements: $replacements,
         )->render(templateEngine: $templateEngine);
     }
 
-    private static function getLinkTarget(
-        string $listIdentifier,
-        int $pageNumber,
-        array $additionalLinkParameters,
-    ): string {
-        $getAttributes = [];
-        foreach (
-            array_merge(
-                ['page' => $pageNumber . '|' . $listIdentifier],
-                $additionalLinkParameters,
-            ) as $key => $val
-        ) {
-            $getAttributes[] = $key . '=' . $val;
+    /**
+     * The pages that get a link: the first and the last page and `$startEnd` pages next to them, the current page
+     * and `$beforeAfter` pages on each side of it.
+     *
+     * @return list<int>
+     */
+    private static function listVisiblePages(int $maxPage, int $currentPage, int $beforeAfter, int $startEnd): array
+    {
+        $pages = [];
+        $ranges = [
+            [1, 1 + $startEnd],
+            [$maxPage - $startEnd, $maxPage],
+            [$currentPage - $beforeAfter, $currentPage + $beforeAfter],
+        ];
+        foreach ($ranges as [$from, $to]) {
+            for ($page = max($from, 1); $page <= min($to, $maxPage); $page++) {
+                $pages[$page] = $page;
+            }
         }
+        ksort(array: $pages);
 
-        return '?' . implode(separator: '&', array: $getAttributes);
+        return array_values(array: $pages);
+    }
+
+    private static function assertNotNegative(string $name, int $value): void
+    {
+        if ($value < 0) {
+            throw new InvalidArgumentException(
+                message: 'The argument ' . $name . ' must not be negative, ' . $value . ' given.',
+            );
+        }
     }
 }

@@ -9,20 +9,18 @@ declare(strict_types=1);
 
 namespace actra\yuf\table;
 
-class TableItemCollection
+final class TableItemCollection
 {
-    /** @var TableItem[] */
+    /** @var list<TableItem> */
     private array $items = [];
-    private int $amount = 0;
 
     public function add(TableItem $tableItem): void
     {
         $this->items[] = $tableItem;
-        $this->amount++;
     }
 
     /**
-     * @return TableItem[]
+     * @return list<TableItem>
      */
     public function list(): array
     {
@@ -31,6 +29,6 @@ class TableItemCollection
 
     public function count(): int
     {
-        return $this->amount;
+        return count(value: $this->items);
     }
 }

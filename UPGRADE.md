@@ -4,6 +4,195 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.35.0] – 2026-10-08
+
+Area release for `src/table/` and `src/pagination/`: sort directions as enum, `final` classes, escaped labels, URL
+encoded link parameters, no state in the head renderer, typed columns. The extension points of the area are
+`DbResultTable`, `SmartTable`, `AbstractTableColumn`, `TableHeadRenderer`, `TableFilter` and `AbstractTableFilterField`
+(documented in their class comments); everything else is `final`. Search your project for `SORT_ASC`, `SORT_DESC`,
+`OPPOSITE_SORT_DIRECTION`, `getCurrentSortDirection(`, `isOrderAble`, `orderAscending`, `totalAmountMessage_`,
+`additionalLinkParameters`, `renderColumnHead(`, `renderActionLinks(`, `FilterOption(`, `OptionsColumn(`,
+`new TableHelper`, `extends ... Column`, `extends TextFilterField` and for `Pagination::render(`.
+
+### ⚠️ Sort direction is `TableSortDirectionEnum`
+
+`TableHelper::SORT_ASC`, `SORT_DESC` and `OPPOSITE_SORT_DIRECTION` are removed, `DbResultTable::getCurrentSortDirection()`
+returns the enum. The values in the sort links (`?sort=<table>|<column>|ASC`) and in the session are unchanged.
+
+Before:
+
+```php
+if ($table->getCurrentSortDirection() === TableHelper::SORT_DESC) {
+    $opposite = TableHelper::OPPOSITE_SORT_DIRECTION[$table->getCurrentSortDirection()];
+}
+```
+
+After:
+
+```php
+if ($table->getCurrentSortDirection() === TableSortDirectionEnum::DESC) {
+    $opposite = $table->getCurrentSortDirection()->opposite();
+}
+```
+
+### ⚠️ `OptionsColumn` and `TableHelper::createOptionsColumn()`: argument names, encoded labels
+
+The arguments are named like the ones of every other column (`isSortable`, `sortAscendingByDefault`). The labels of the
+options are text now and encoded; HTML is given as `HtmlText::fromHtml()`. The type of the options is
+`array<int|string, HtmlText|string>`. A value of the column that is no key renders as encoded text as before; a column
+value of another type than `int` / `string` (e.g. `float`, `bool`) no longer crashes `array_key_exists()`.
+
+Before:
+
+```php
+new OptionsColumn(
+    identifier: 'status',
+    label: 'Status',
+    options: ['active' => '<b>Active</b>', 'blocked' => 'Blocked'],
+    isOrderAble: true,
+    orderAscending: false,
+);
+```
+
+After:
+
+```php
+new OptionsColumn(
+    identifier: 'status',
+    label: 'Status',
+    options: ['active' => HtmlText::fromHtml(html: '<b>Active</b>'), 'blocked' => 'Blocked'],
+    isSortable: true,
+    sortAscendingByDefault: false,
+);
+```
+
+### ⚠️ `ActionsColumn`: labels are encoded, `renderActionLinks()` is gone
+
+The `label` of `addEditActionLink()` and `addDeleteLink()` is text and encoded (`<b>Edit</b>` shows the tags). The link
+target and the `linkHtml` of `addIndividualActionLink()` stay HTML of the application (never user input); `[column]`
+placeholders are still replaced by the encoded value of the row. Use an individual link for a label with HTML.
+The protected method `renderActionLinks()` is removed, the class is `final`.
+
+Before:
+
+```php
+$actionsColumn->addEditActionLink(linkTarget: 'edit/[ID]/', label: '<i class="icon"></i> Edit');
+```
+
+After:
+
+```php
+$actionsColumn->addIndividualActionLink(
+    identifier: ActionsColumn::EDIT,
+    linkHtml: '<a href="edit/[ID]/" class="edit"><i class="icon"></i> Edit</a>',
+);
+```
+
+### ⚠️ `FilterOption`: encoded label, `label` is an `HtmlText`
+
+The `label` argument accepts `string` (text, encoded, also the `value` attribute) or `HtmlText`; the property `$label` is
+an `HtmlText` (before: `string`). `OptionsFilterField` takes `list<FilterOption>` (the runtime `LogicException` for other
+elements is gone, PHPStan checks it), throws an `InvalidArgumentException` for two options with the same identifier or a
+`defaultValue` that is no option, and forgets a stored option that does not exist anymore (before: `getWhereCondition()`
+failed with an undefined offset and the page stayed broken until the session ended). The button labels of `TableFilter`
+(`submitButtonLabel`, `resetLinkLabel`) are text and encoded.
+
+Before:
+
+```php
+new FilterOption(identifier: 'new', label: '<b>New</b>', whereCondition: $condition);
+```
+
+After:
+
+```php
+new FilterOption(identifier: 'new', label: HtmlText::fromHtml(html: '<b>New</b>'), whereCondition: $condition);
+```
+
+### ⚠️ Link parameters are URL encoded where the link is built
+
+`DbResultTable::addAdditionalLinkParameter()` keeps names and values as given (before: it encoded them, so
+`DbResultTable::$additionalLinkParameters` held the encoded values); the sort links and `Pagination::render()` encode
+them (`http_build_query()`). The `|` separators and `&` of the links are unchanged. The identifiers of table and column
+in the sort links and the list identifier in the page links are URL encoded too (no change for `[A-Za-z0-9_]`). A
+parameter named like the own one (`page` in the page links, `sort` in the sort links) is ignored (before it replaced
+the page number). If you call `Pagination::render()` yourself with values that are already encoded, pass them as they
+are now.
+
+Before:
+
+```php
+Pagination::render(..., additionalLinkParameters: ['q' => urlencode($query)]); // href="?page=2|list&q=..." unencoded otherwise
+```
+
+After:
+
+```php
+Pagination::render(..., additionalLinkParameters: ['q' => $query]);
+```
+
+### ⚠️ `TableHeadRenderer::renderColumnHead()` gets the table, `SortableTableHeadRenderer` has no state
+
+`renderColumnHead()` has a second argument `SmartTable $smartTable` (the renderer no longer remembers the table in a
+property: it was uninitialized without `render()` and shared between tables). The cell around the content is
+`renderHeadCell(columnCssClasses:, contentHtml:)` now. `SortableTableHeadRenderer` is `final` (configure it through its
+public properties), `TableHeadRenderer` is a documented extension point.
+
+Before:
+
+```php
+protected function renderColumnHead(AbstractTableColumn $abstractTableColumn): string
+```
+
+After:
+
+```php
+protected function renderColumnHead(AbstractTableColumn $abstractTableColumn, SmartTable $smartTable): string
+```
+
+### ⚠️ `SmartTable`: renamed properties
+
+`$totalAmountMessage_oneResult` is `$totalAmountMessageOneResult`, `$totalAmountMessage_numResults` is
+`$totalAmountMessageNumResults`.
+
+### ⚠️ `final` classes and removed protected members
+
+`final` now: `TableHelper`, `TableItem`, `TableItemCollection`, `Pagination`, `TablePaginationRenderer`,
+`SortableTableHeadRenderer`, `ActionsColumn`, `BooleanColumn`, `CallbackColumn`, `DateColumn`, `DefaultColumn`,
+`FileSizeColumn`, `OptionsColumn`, `StripHtmlTagsColumn`, `FilterOption`, `TextFilterField`, `DateFilterField`,
+`OptionsFilterField` (their `protected` properties and `setValue()` are `private`). A project with its own column type
+extends `AbstractTableColumn`. Nothing in `actra/backend` extends one of them.
+
+### ⚠️ Missing column and invalid values throw
+
+`TableItem::getRawValue()` of a column the row does not have throws an `InvalidArgumentException` naming the columns of
+the row (before: PHP warning and `null`, so an exception through the error handler). `TableItem::getScalarValue()` is new
+(a scalar or `null`, else `UnexpectedValueException`). `DateColumn` throws an `UnexpectedValueException` for a value that
+is no date (before: `DateMalformedStringException`). `DbResultTable` and `Pagination::render()` throw an
+`InvalidArgumentException` for less than one item per page (before: a `DivisionByZeroError` or a broken query).
+
+### Fixed
+
+- `TableHelper::createTable()` without `tableHeadRenderer:` threw a `TypeError`: it takes the plain
+  `TableHeadRenderer` now.
+- Page links: `Pagination::render()` put values of `additionalLinkParameters` unencoded and unescaped into the `href`
+  (an HTML attribute); the links are built with `http_build_query()` now. The links of a current page beyond the last
+  page (a stored page of a result that got smaller) no longer lead to pages that do not exist (previous goes to the last
+  page, next is disabled); a current page below 1 has no previous link. The list of pages is no longer built by a loop
+  over all pages (millions of entries).
+- Cell values and filter values that look like placeholders (`[pagination]`, `[filter]`, `[footer]`) were replaced by
+  the pagination or filter HTML of the `DbResultTable`: all placeholders are replaced in one pass over the template now.
+- `?page=` with a number whose offset does not fit into an integer ended in a `TypeError`: such a page is ignored.
+- `ActionsColumn`: a value that contains the placeholder of another column (`[secret]`) got it replaced by that column
+  (one pass now); a hide value (`hideValue`) is compared with the text of the column, so a number column (`ID` = `42`
+  with `hideValue: '42'`) hides the delete link (before: the link stayed because `42 === '42'` is false); columns that
+  hold arrays are skipped instead of crashing.
+- `FileSizeColumn` threw a `TypeError` for numeric strings (a `BIGINT` as the database delivers it) and says which
+  column holds something else; `StripHtmlTagsColumn` threw a `TypeError` for `NULL` and numbers (empty cell and text).
+- The filter fields encode the identifier in the `name` / `id` attributes and the date value; `DateFilterField` throws a
+  `LogicException` (not an error about `null`) when asked for a condition without a date; `TextFilterField` throws when
+  the column expression cannot be normalized; the filter form action and reset link encode the identifiers.
+
 ## [v4.34.0] – 2026-10-08
 
 Area release for `src/db/`: no static state (connection pool, duplicate check of the settings and query log are gone),

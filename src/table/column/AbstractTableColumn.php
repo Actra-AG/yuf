@@ -12,10 +12,19 @@ namespace actra\yuf\table\column;
 use actra\yuf\common\StringUtils;
 use actra\yuf\table\TableItem;
 
+/**
+ * Extension point: a column type of a project extends this class and renders the content of one cell (HTML, so it must
+ * encode values: `TableItem::renderValue()` does).
+ *
+ * `$label` is HTML as it is output in the table head (a text of the application, never user input).
+ */
 abstract class AbstractTableColumn
 {
+    /** @var list<string> */
     public private(set) array $columnCssClasses = [];
+    /** @var list<string> */
     public private(set) array $cellCssClasses = [];
+    /** Set by the table the column is added to. */
     public ?string $tableIdentifier = null;
 
     public function __construct(
@@ -71,5 +80,8 @@ abstract class AbstractTableColumn
         );
     }
 
+    /**
+     * @return string HTML, output as it is
+     */
     abstract protected function renderCellValue(TableItem $tableItem): string;
 }

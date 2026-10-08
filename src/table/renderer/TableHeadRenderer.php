@@ -12,6 +12,9 @@ namespace actra\yuf\table\renderer;
 use actra\yuf\table\column\AbstractTableColumn;
 use actra\yuf\table\table\SmartTable;
 
+/**
+ * Extension point: a project overrides `renderColumnHead()` to change the head cell of a column.
+ */
 class TableHeadRenderer
 {
     protected bool $addColumnScopeAttribute = true;
@@ -21,7 +24,10 @@ class TableHeadRenderer
         $columns = [];
 
         foreach ($smartTable->columns as $abstractTableColumn) {
-            $columns[] = $this->renderColumnHead($abstractTableColumn);
+            $columns[] = $this->renderColumnHead(
+                abstractTableColumn: $abstractTableColumn,
+                smartTable: $smartTable,
+            );
         }
 
         return implode(separator: PHP_EOL, array: [
@@ -31,17 +37,28 @@ class TableHeadRenderer
         ]);
     }
 
-    protected function renderColumnHead(AbstractTableColumn $abstractTableColumn): string
+    protected function renderColumnHead(AbstractTableColumn $abstractTableColumn, SmartTable $smartTable): string
     {
-        $columnCssClasses = $abstractTableColumn->columnCssClasses;
+        return $this->renderHeadCell(
+            columnCssClasses: $abstractTableColumn->columnCssClasses,
+            contentHtml: $abstractTableColumn->label,
+        );
+    }
+
+    /**
+     * @param list<string> $columnCssClasses
+     * @param string $contentHtml HTML, output as it is
+     */
+    protected function renderHeadCell(array $columnCssClasses, string $contentHtml): string
+    {
         $attributesArr = ['th'];
         if ($this->addColumnScopeAttribute) {
             $attributesArr[] = 'scope="col"';
         }
-        if (count(value: $columnCssClasses) > 0) {
+        if ($columnCssClasses !== []) {
             $attributesArr[] = 'class="' . implode(separator: ' ', array: $columnCssClasses) . '"';
         }
 
-        return '<' . implode(separator: ' ', array: $attributesArr) . '>' . $abstractTableColumn->label . '</th>';
+        return '<' . implode(separator: ' ', array: $attributesArr) . '>' . $contentHtml . '</th>';
     }
 }

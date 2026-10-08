@@ -14,10 +14,15 @@ use actra\yuf\db\DbQueryData;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
 use Override;
+use RuntimeException;
 
-class TextFilterField extends AbstractTableFilterField
+/**
+ * A text input: the value is searched with the search syntax of `SearchHelper` in the column (an SQL expression of the
+ * application, never user input).
+ */
+final class TextFilterField extends AbstractTableFilterField
 {
-    protected string $value = '';
+    private string $value = '';
 
     public function __construct(
         TableFilter $parentFilter,
@@ -55,13 +60,15 @@ class TextFilterField extends AbstractTableFilterField
     #[Override]
     public function getWhereCondition(): DbQueryData
     {
-        return SearchHelper::createSqlFilters(filterArr: [
-            preg_replace(
-                pattern: '!\s+!',
-                replacement: ' ',
-                subject: $this->dataTableColumnReference,
-            ) => $this->value,
-        ]);
+        $column = preg_replace(pattern: '!\s+!', replacement: ' ', subject: $this->dataTableColumnReference);
+        if ($column === null) {
+            throw new RuntimeException(
+                message: 'The column of the filter field ' . $this->identifier . ' cannot be normalized: '
+                . preg_last_error_msg(),
+            );
+        }
+
+        return SearchHelper::createSqlFilters(filterArr: [$column => $this->value]);
     }
 
     public function getValue(): string
@@ -69,7 +76,7 @@ class TextFilterField extends AbstractTableFilterField
         return $this->value;
     }
 
-    protected function setValue(string $value): void
+    private function setValue(string $value): void
     {
         $this->value = $value;
         $this->saveToSession(index: $this->identifier, value: $value);
@@ -86,12 +93,10 @@ class TextFilterField extends AbstractTableFilterField
             $classes[] = 'highlight';
         }
 
-        return '<input type="text" class="' . implode(
-            separator: ' ',
-            array: $classes,
-        ) . '" name="' . $this->identifier . '" id="filter-' . $this->identifier . '" value="' . HtmlEncoder::encode(
-            value: $this->value,
-        ) . '">';
+        $identifier = HtmlEncoder::encode(value: $this->identifier);
+
+        return '<input type="text" class="' . implode(separator: ' ', array: $classes) . '" name="' . $identifier
+            . '" id="filter-' . $identifier . '" value="' . HtmlEncoder::encode(value: $this->value) . '">';
     }
 
     #[Override]

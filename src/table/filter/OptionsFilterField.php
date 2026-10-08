@@ -10,16 +10,25 @@ declare(strict_types=1);
 namespace actra\yuf\table\filter;
 
 use actra\yuf\db\DbQueryData;
+use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
+use InvalidArgumentException;
 use LogicException;
 use Override;
 
-class OptionsFilterField extends AbstractTableFilterField
+/**
+ * A drop-down of options. The selected option is only taken from the posted value if it is one of the options; the
+ * empty value (`''`) means that no option is selected and the filter is not applied.
+ */
+final class OptionsFilterField extends AbstractTableFilterField
 {
     public private(set) string $selectedValue = '';
-    /** @var FilterOption[] */
+    /** @var array<string, FilterOption> */
     private readonly array $filterOptions;
 
+    /**
+     * @param list<FilterOption> $filterOptions
+     */
     public function __construct(
         TableFilter $parentFilter,
         string $filterFieldIdentifier,
@@ -37,10 +46,19 @@ class OptionsFilterField extends AbstractTableFilterField
         );
         $finalOptions = [];
         foreach ($filterOptions as $filterOption) {
-            if (!($filterOption instanceof FilterOption)) {
-                throw new LogicException(message: 'Option must be an instance of FilterOption');
+            if (array_key_exists(key: $filterOption->identifier, array: $finalOptions)) {
+                throw new InvalidArgumentException(
+                    message: 'The filter field ' . $this->identifier . ' has the option "'
+                    . $filterOption->identifier . '" twice.',
+                );
             }
             $finalOptions[$filterOption->identifier] = $filterOption;
+        }
+        if ($defaultValue !== '' && !array_key_exists(key: $defaultValue, array: $finalOptions)) {
+            throw new InvalidArgumentException(
+                message: 'The default value "' . $defaultValue . '" of the filter field ' . $this->identifier
+                . ' is none of its options: ' . implode(separator: ', ', array: array_keys(array: $finalOptions)) . '.',
+            );
         }
         $this->filterOptions = $finalOptions;
     }
@@ -48,7 +66,9 @@ class OptionsFilterField extends AbstractTableFilterField
     #[Override]
     public function init(): void
     {
-        $this->selectedValue = (string) $this->getFromSession(index: $this->identifier);
+        $storedValue = (string) $this->getFromSession(index: $this->identifier);
+        // An option that does not exist anymore (the options changed since the session was started) selects nothing
+        $this->selectedValue = array_key_exists(key: $storedValue, array: $this->filterOptions) ? $storedValue : '';
     }
 
     #[Override]
@@ -75,13 +95,20 @@ class OptionsFilterField extends AbstractTableFilterField
     #[Override]
     public function getWhereCondition(): DbQueryData
     {
+        if (!array_key_exists(key: $this->selectedValue, array: $this->filterOptions)) {
+            throw new LogicException(
+                message: 'The filter field ' . $this->identifier . ' has no selected option, so it has no condition: '
+                . 'ask isSelected() first.',
+            );
+        }
+
         return $this->filterOptions[$this->selectedValue]->whereCondition;
     }
 
     #[Override]
     protected function renderField(): string
     {
-        $filterName = $this->identifier;
+        $filterName = HtmlEncoder::encode(value: $this->identifier);
         $htmlArr = [];
         $classes = [];
         if (

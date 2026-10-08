@@ -18,6 +18,7 @@ use actra\yuf\session\Session;
 use actra\yuf\session\SessionSectionEnum;
 use actra\yuf\table\column\DefaultColumn;
 use actra\yuf\table\table\DbResultTable;
+use actra\yuf\table\TableSortDirectionEnum;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
 use Override;
@@ -74,7 +75,7 @@ final class DbResultTableRequestTest extends TestCase
         $table->fillBySelectQuery();
 
         $this->assertSame('id', $table->getCurrentSortColumn());
-        $this->assertSame('ASC', $table->getCurrentSortDirection());
+        $this->assertSame(TableSortDirectionEnum::ASC, $table->getCurrentSortDirection());
         $this->assertSame(1, $table->getCurrentPaginationPage());
     }
 
@@ -87,7 +88,7 @@ final class DbResultTableRequestTest extends TestCase
         $table->fillBySelectQuery();
 
         $this->assertSame('name', $table->getCurrentSortColumn());
-        $this->assertSame('DESC', $table->getCurrentSortDirection());
+        $this->assertSame(TableSortDirectionEnum::DESC, $table->getCurrentSortDirection());
     }
 
     public function testSortingOfAPostRequestBodyIsIgnored(): void
@@ -190,7 +191,7 @@ final class DbResultTableRequestTest extends TestCase
         $table->fillBySelectQuery();
 
         $this->assertSame('id', $table->getCurrentSortColumn());
-        $this->assertSame('ASC', $table->getCurrentSortDirection());
+        $this->assertSame(TableSortDirectionEnum::ASC, $table->getCurrentSortDirection());
     }
 
     public function testSortingOfAPreviousRequestStaysInTheSession(): void
@@ -205,6 +206,6 @@ final class DbResultTableRequestTest extends TestCase
         $table->fillBySelectQuery();
 
         $this->assertSame('name', $table->getCurrentSortColumn());
-        $this->assertSame('DESC', $table->getCurrentSortDirection());
+        $this->assertSame(TableSortDirectionEnum::DESC, $table->getCurrentSortDirection());
     }
 }

@@ -12,6 +12,7 @@ namespace actra\yuf\table;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
+use actra\yuf\html\HtmlText;
 use actra\yuf\session\Session;
 use actra\yuf\table\column\ActionsColumn;
 use actra\yuf\table\column\CallbackColumn;
@@ -26,20 +27,16 @@ use actra\yuf\table\table\DbResultTable;
 use actra\yuf\table\table\SmartTable;
 use actra\yuf\template\TemplateEngine;
 
-class TableHelper
+/**
+ * Short ways to create tables and columns. Static because the methods are pure factories without state.
+ */
+final class TableHelper
 {
-    public const string SORT_ASC = 'ASC';
-    public const string SORT_DESC = 'DESC';
-    public const array OPPOSITE_SORT_DIRECTION = [
-        TableHelper::SORT_ASC => TableHelper::SORT_DESC,
-        TableHelper::SORT_DESC => TableHelper::SORT_ASC,
-    ];
-
     public static function createTable(string $identifier, ?TableHeadRenderer $tableHeadRenderer = null): SmartTable
     {
         return new SmartTable(
             identifier: $identifier,
-            tableHeadRenderer: $tableHeadRenderer,
+            tableHeadRenderer: $tableHeadRenderer ?? new TableHeadRenderer(),
             tableItemCollection: new TableItemCollection(),
         );
     }
@@ -114,22 +111,28 @@ class TableHelper
         );
     }
 
+    /**
+     * @param array<int|string, HtmlText|string> $options Value of the column => label (text, or `HtmlText`)
+     */
     public static function createOptionsColumn(
         string $identifier,
         string $label,
         array $options,
-        bool $isOrderAble,
-        bool $orderAscending = true,
+        bool $isSortable,
+        bool $sortAscendingByDefault = true,
     ): OptionsColumn {
         return new OptionsColumn(
             identifier: $identifier,
             label: $label,
             options: $options,
-            isOrderAble: $isOrderAble,
-            orderAscending: $orderAscending,
+            isSortable: $isSortable,
+            sortAscendingByDefault: $sortAscendingByDefault,
         );
     }
 
+    /**
+     * @param callable(TableItem): string $callbackFunction Returns the HTML of the cell, see `CallbackColumn`
+     */
     public static function createCallbackColumn(
         string $identifier,
         string $label,

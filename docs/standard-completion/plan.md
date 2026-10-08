@@ -64,7 +64,7 @@ too large.
 5. `common` (68), done in v4.32.0.
 6. `phone` (78, full standard; characterization tests first), done in v4.33.0.
 7. `db` (51), done in v4.34.0.
-8. `table` (39) and `pagination` (3).
+8. `table` (37) and `pagination` (3), done in v4.35.0.
 9. `mailer` (33, full standard; characterization tests of the MIME output first).
 10. `auth` (26), `security` (0) and the rest of `session` (2).
 11. `api` (27).
@@ -295,6 +295,60 @@ too large.
 - **Open / for later:** `actra/backend` still uses `DbSettingsModel`, `FrameworkDB` and `new DB(dbSettingsModel: ...)`; when
   it follows: `DbSettings` without `identifier`, `new DB(connectionParameters: DbConnectionParameters::forMysql(...))`,
   `lastInsertId()` -> `getLastInsertId()`, `ExecuteAndFetch` -> `executeAndFetch`. `AmountParser` (`form`) is used by `DbRow`.
+
+### Step 8 (v4.35.0) – done
+
+- Area `table` and `pagination`. Baseline 176 -> 136 (all 37 entries of `src/table/` and 3 of `src/pagination/` removed, no new
+  entry). Tests 10563 -> 10653. Details and before/after in `UPGRADE.md`.
+- **Characterization first** (passed against the old code before the change): `tests/Unit/pagination/PaginationTest`
+  (page lists for many positions, links, titles, exact markup in `tests/Fixture/table/`), `SmartTableTest` (head, rows,
+  odd/even, empty, one/many results, thousands separator, replaced templates, duplicate column), `DbResultTableRenderTest`
+  (on the SQLite database of step 7: exact markup with filter, pagination and sort links; sorting, user sorting replaces
+  the order of the query, page 2 with count query, `limitToOnePage`, empty table with and without filter, sort link
+  classes of the head renderer, filter conditions), `TableFilterFieldsTest` (text / date / options field: markup,
+  conditions, `FilterOption`), more cases in `TableColumnRenderingTest` (`ActionsColumn`), `TableHelperTest`,
+  `TableItemCollectionTest`. The new tests of the fixes were written after the change.
+- **final / extension points:** extension points (documented in the class comment): `DbResultTable` (backend extends it:
+  its constructor, the public HTML templates and the `PARAM_*` / `FILTER` constants stay), `SmartTable`,
+  `AbstractTableColumn`, `TableHeadRenderer`, `TableFilter` (protected `reset()` / `checkInput()` / `applyFilters()` and
+  the session accessors), `AbstractTableFilterField`. Everything else `final` (list in `UPGRADE.md`). No cleaner way
+  than subclassing was found for `DbResultTable`: backend passes its own query and columns and overrides `render()`.
+- **Static:** `Pagination` stays a static class (`final`): `render()` is a pure function of its arguments (it keeps no
+  state and reads nothing but the snippet; the template engine is an argument). `TableHelper` stays static (pure
+  factories). `LinkQuery` (`@internal`) builds the query string of page and sort links. No static property in the area.
+- **Enum:** `TableSortDirectionEnum` (`ASC` / `DESC`, `opposite()`, `fromAscending()`, `isAscending()`) replaces the
+  `TableHelper` constants. Not an enum: `ActionsColumn::EDIT` / `DELETE` (keys of an open set of individual links),
+  `SmartTable` placeholders (strings of templates).
+- **`mixed`:** only `TableItem::getRawValue()` / `$data` (the values of any data source, documented); the columns narrow
+  with the new `TableItem::getScalarValue()`.
+- **Security findings:** (1) `Pagination::render()` put `additionalLinkParameters` unencoded into an HTML attribute
+  (`"` broke out of the `href`; the table encoded them on `addAdditionalLinkParameter()`, direct callers did not): all
+  link parameters are encoded at the place the link is built. (2) `OptionsColumn` labels, `ActionsColumn` labels and
+  `FilterOption` labels / values were output unescaped: text is encoded now, HTML is explicit (`HtmlText::fromHtml()` or
+  `linkHtml`). `ActionsColumn` link targets, individual links, column labels (`AbstractTableColumn::$label`) and the HTML
+  templates / classes of `SmartTable` and `SortableTableHeadRenderer` stay trusted HTML of the application (documented in
+  the class comments). (3) Placeholders: values in cells and filter fields were searched for `[pagination]` etc. and
+  replaced by markup: one pass over the template now. (4) The sort column of the request is checked against the sortable
+  columns of the table (whitelist, unchanged) and direction through the enum; the order column is validated again by
+  `DbQuery`. (5) `?page=` beyond an integer offset crashed: ignored. (6) The CSRF check of the filter (POST + token of
+  the session; reset parameter without token) is unchanged and covered by tests.
+- **Bugs found and fixed:** see "Fixed" in `UPGRADE.md` (`createTable()` without renderer, pagination links beyond the last
+  page, delete link hidden by a number, placeholder replaced twice in `ActionsColumn`, `FileSizeColumn` with numeric
+  strings, `StripHtmlTagsColumn` with `NULL`, stale stored option of `OptionsFilterField` broke the page for the session).
+- **HTML output:** unchanged for the usual input (checked by the exact-markup tests). Differences only where the old
+  output was broken or unsafe: encoded labels (see above); `&` in links is still
+  unescaped `&` (safe, because all values are URL encoded), the pagination markup beyond the last page.
+  Not changed (still as before): the column class `sort` is added twice to sortable columns
+  (`class="sort sort"`; the class name of the column and of the renderer, both default `sort`).
+- **Stays untested:** the custom snippet path of `TableFilter` / `Pagination` beyond the default snippets (the engine
+  is tested elsewhere); `DbResultTable` against MySQL (SQLite runs the generated SQL); `BooleanColumn` with the strings
+  `'1'` / `'0'` (rendered as text as before: with emulated prepared statements a `TINYINT` arrives as string; decide
+  with backend whether it should map to the labels).
+- **Open / for later:** `TableFilter::addPrimaryField()` accepts the same field identifier twice (the later replaces the
+  earlier in `allFilterFields` only); `DateFilterField` accepts everything `new DateTimeImmutable()` accepts, including
+  relative formats (`tomorrow`): harmless for a filter, a stricter format would be a behaviour change; `actra/backend`
+  uses the removed `totalAmountMessage_*` names and the pre-4.29 `DbResultTable` constants (it follows with its own
+  task).
 
 ### Superglobals rule – done
 

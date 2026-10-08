@@ -10,14 +10,16 @@ declare(strict_types=1);
 namespace actra\yuf\table\filter;
 
 use actra\yuf\db\DbQueryData;
+use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
+use DateMalformedStringException;
 use DateTimeImmutable;
+use LogicException;
 use Override;
-use Throwable;
 
-class DateFilterField extends AbstractTableFilterField
+final class DateFilterField extends AbstractTableFilterField
 {
-    protected private(set) ?DateTimeImmutable $value = null;
+    private ?DateTimeImmutable $value = null;
 
     public function __construct(
         TableFilter $parentFilter,
@@ -67,7 +69,7 @@ class DateFilterField extends AbstractTableFilterField
             }
             $this->value = $dateTimeObject;
             $this->saveToSession(index: $this->identifier, value: $dateTimeObject->format(format: 'Y-m-d H:i:s'));
-        } catch (Throwable) {
+        } catch (DateMalformedStringException) {
             $this->reset();
         }
     }
@@ -82,6 +84,13 @@ class DateFilterField extends AbstractTableFilterField
     #[Override]
     public function getWhereCondition(): DbQueryData
     {
+        if ($this->value === null) {
+            throw new LogicException(
+                message: 'The filter field ' . $this->identifier . ' has no date, so it has no condition: '
+                . 'ask isSelected() first.',
+            );
+        }
+
         return new DbQueryData(
             query: $this->dataTableColumnReference . ($this->dateMustBeSameOrLater ? '>=' : '<=') . '?',
             params: [$this->value->format(format: 'Y-m-d H:i:s')],
@@ -99,10 +108,11 @@ class DateFilterField extends AbstractTableFilterField
             $classes[] = 'highlight';
         }
 
-        return '<input type="text" class="' . implode(
-            separator: ' ',
-            array: $classes,
-        ) . '" name="' . $this->identifier . '" id="filter-' . $this->identifier . '" value="' . ($this->value === null ? '' : $this->value->format(format: $this->renderFormat)) . '">';
+        $identifier = HtmlEncoder::encode(value: $this->identifier);
+        $value = $this->value === null ? '' : $this->value->format(format: $this->renderFormat);
+
+        return '<input type="text" class="' . implode(separator: ' ', array: $classes) . '" name="' . $identifier
+            . '" id="filter-' . $identifier . '" value="' . HtmlEncoder::encode(value: $value) . '">';
     }
 
     #[Override]
