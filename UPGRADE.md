@@ -4,6 +4,194 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.32.0] – 2026-10-08
+
+### Class files with the right case
+
+`CsvFile`, `SimpleXmlExtended`, `FrameworkDb` and `SmtpMailer` were renamed in v4.18.0, but their files kept the old
+case in the repository (`CSVFile.php`, `SimpleXMLExtended.php`, `FrameworkDB.php`, `SMTPMailer.php`). On a
+case-sensitive file system (Linux) the autoloader of v4.18.0 to v4.31.0 does not find these four classes. The files
+have the right names now. No code change needed.
+
+Area release for `src/common/`: `final` classes, strict types instead of `mixed` and `false`, no SQL built from search
+text, protection against CSV injection and path traversal, error codes of the email validation as enum. Search your
+project for `getBooleanQuery(`, `addWildcardToString(`, `utf8Encode`, `new CsvFile(`, `lastErrorCode`, `->addArray(`,
+`->addXml(`, `FileHandler::getExtension(`, `StringUtils::` with the named arguments listed below, and for `extends` of
+the classes in the list of final classes.
+
+### ⚠️ `SearchHelper::getBooleanQuery()` and `addWildcardToString()` are removed
+
+Both were deprecated since v4.6.0. `getBooleanQuery()` put the search words into the SQL (a `?` in the search text broke
+the query, `%` and `_` were wildcards, field names were not checked); `addWildcardToString()` did not escape `%` and
+`_`. The replacements bind every user value as parameter:
+
+Before:
+
+```php
+$dbQuery->addWherePart(
+    wherePart: $searchForm->searchHelper->getBooleanQuery(
+        spaceSeparatedFieldNames: 'person.firstName person.lastName',
+        queryText: $searchQuery,
+    ),
+    parameters: [],
+);
+```
+
+After:
+
+```php
+$data = SearchHelper::createBooleanQuery(
+    spaceSeparatedFieldNames: 'person.firstName person.lastName',
+    queryText: $searchQuery,
+);
+$dbQuery->addWherePart(wherePart: $data->query, parameters: $data->params);
+```
+
+`addWildcardToString($text)` is replaced by `createSqlFilters()` (table filters), `createSqlSearch()` (words over
+columns) or `createBooleanQuery()`; none of them needs a wildcard added by hand.
+
+### ⚠️ `CsvFile`: formula protection, renamed argument, `final`
+
+A text cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return and is no number now gets a leading `'`, so
+a spreadsheet application does not run it as formula (OWASP, CSV injection). Numbers and numeric strings (`-5`, `+5`,
+`1e3`) are written as they are. This applies to the headers, too.
+
+Before: `=SUM(A1:A2)` is written as `=SUM(A1:A2)`; `+41 79 000 00 00` as `"+41 79 000 00 00"`.
+
+After: `'=SUM(A1:A2)` and `"'+41 79 000 00 00"`.
+
+`new CsvFile(…, protectAgainstFormulas: false)` switches it off for data that is known to be safe. The argument
+`utf8Encode` (it only wrote the byte order mark) is renamed:
+
+```php
+// Before
+new CsvFile(fileName: 'export.csv', headersList: $headers, utf8Encode: false);
+// After
+new CsvFile(fileName: 'export.csv', headersList: $headers, addByteOrderMark: false);
+```
+
+`CsvFile` is `final`. The cells are typed (`array<array-key, bool|float|int|string|null>`), so a cell with an object or
+array no longer reaches `fputcsv()` untyped. `delimiter` and `enclosure` must be one character each (an
+`InvalidArgumentException` in the constructor; before, `fputcsv()` failed with a `ValueError` when the file was written).
+`createTemporaryFile()` creates the file readable by the owner only (mode 0600, via `tempnam()`), still in the temporary
+directory with the suffix `.csv`, and throws a `RuntimeException` if the file cannot be written (before the errors were
+ignored or a `TypeError`). `pushDownloadAndExit()` removes the temporary file at the end of the script (before, every
+download left a copy of the data in the temporary directory). `stringToArray()` trims the first line, too (a `\r` of a
+Windows line ending stayed in the last cell of the header row).
+
+### ⚠️ `StringUtils`: parameter names and exceptions
+
+Parameters named `$str`, `$newStr`, `$tokens` and the like are renamed (named arguments), `final`:
+
+| Before | After |
+|:-------|:------|
+| `afterFirst(str:, after:)`, `beforeFirst(str:, before:)`, `beforeLast(str:, before:)`, `afterLast(str:, after:)` | `…(string:, …)` |
+| `between(str:, start:, end:)` | `between(string:, start:, end:)` |
+| `insertBeforeLast(str:, beforeLast:, newStr:)` | `insertBeforeLast(string:, beforeLast:, newString:)` |
+| `tokenize(stringToSplit:, tokenToSplitString:)` | `tokenize(string:, delimiters:)` |
+| `explode(tokens:, str:)` | `explode(separators:, string:)` |
+
+`utf8ToPunycodeEmail()` and `punycodeToUtf8Email()` throw an `InvalidArgumentException` if the domain cannot be
+converted (before: an address without domain, `user@`, or a `ValueError` for an empty domain). `explode()` throws an
+`InvalidArgumentException` for an empty separator (was a `ValueError`). `tokenize()` and `explode()` return `list<string>`;
+`tokenize()` no longer uses the process-wide state of `strtok()`.
+
+Bug fixes (results change only for the inputs that were wrong before):
+
+- `between()` returns `null` if `$start` is not contained (it returned text after a wrong position).
+- `insertBeforeLast()` returns the string unchanged if the delimiter is not contained (it appended the new text and the
+  delimiter).
+- `breakUp()` cuts within the first `$atIndex` characters (it always used 50).
+- `formatBytes(0.5)` gives `0.5 B` (a warning and `512 ` before); the unit is found without floating-point rounding.
+- `randomString()` returns exactly the required length (3 or 4 characters minimum before: `randomString(1, true)` had
+  three) and shuffles with `random_int()` instead of `str_shuffle()` (a predictable generator).
+
+`urlify()` still depends on the locale of the PHP process for characters like `ü` (`iconv` transliteration).
+
+### ⚠️ `FileHandler`
+
+- `FileHandler::getExtension()` returns `string` (was `false|string`, but never `false`). A name without a dot gives an
+  empty string; before it returned the name without its first character (`README` gave `EADME`).
+
+  ```php
+  // Before
+  $extension = FileHandler::getExtension(filename: $name);
+  $contentType = ContentType::createFromFileExtension($extension === false ? '' : $extension);
+  // After
+  $contentType = ContentType::createFromFileExtension(FileHandler::getExtension(filename: $name));
+  ```
+- `FileHandler::removeFile()` throws an `InvalidArgumentException` if `$token` contains other characters than letters,
+  digits, `.`, `_` and `-`, or the extension of `$filename` other characters than letters and digits (before, a token or
+  file name with `../` removed files outside of `$directory`). The directory may be given with or without trailing
+  separator, a directory is never removed.
+- `renderFileSize()` of a directory gives `0 KB` (it gave the size of the directory entry).
+- `FileHandler` is `final readonly`.
+
+### ⚠️ `ValidatedEmailAddress`: error codes as enum, resolver
+
+- `lastErrorCode` is a `?EmailAddressErrorEnum` (before a string, and reading it without an error was an `Error`: the
+  property was uninitialized); `lastErrorMessage` is `''` without an error; `validatedValue` is `''` for an invalid
+  syntax (before uninitialized). The values of the enum are the old codes.
+
+  ```php
+  // Before
+  if ($address->lastErrorCode === 'noDnsRecords') { … }
+  // After
+  if ($address->lastErrorCode === EmailAddressErrorEnum::NO_DNS_RECORDS) { … }
+  ```
+
+  | Before | After |
+  |:-------|:------|
+  | `'emptyValue'`, `'atCharacterError'`, `'invalidDomainName'` | `EMPTY_VALUE`, `AT_CHARACTER`, `INVALID_DOMAIN_NAME` |
+  | `'invalidSyntax'`, `'invalidCharacters'` | `INVALID_SYNTAX`, `INVALID_CHARACTERS` |
+  | `'dns_get_record'`, `'noDnsRecords'`, `'fsockopen'`, `'notResolvable'` | `DNS_GET_RECORD`, `NO_DNS_RECORDS`, `FSOCKOPEN`, `NOT_RESOLVABLE` |
+
+- The DNS and port 25 check moved into the interface `MailDomainResolver` (default `SystemMailDomainResolver`, passed as
+  second constructor argument `mailDomainResolver:`), so the check is testable and a project can replace it.
+  `SystemMailDomainResolver` does not connect to addresses of private and reserved ranges any more (an entered domain
+  could point to the internal network): such a domain without MX record is `NOT_RESOLVABLE`. New classes:
+  `EmailAddressErrorEnum`, `EmailAddressError`, `MailDomainResolver`, `SystemMailDomainResolver`.
+- `ValidatedEmailAddress` is `final`.
+- Bug fix: an address without domain (`anna@`) no longer throws a `ValueError` (a server error in a form), it is
+  invalid with `INVALID_DOMAIN_NAME`.
+
+### ⚠️ `SimpleXmlExtended`
+
+- `addArray()` and `addXml()` return `void` (they always returned `true`). `addCdata()` takes
+  `string|int|float|bool|null`. `addArray()` throws an `InvalidArgumentException` for a value that is no text, number,
+  boolean, `null`, array or object (a resource; before it failed with a `TypeError` or wrote garbage).
+- `SimpleXmlExtended` is `final`.
+- Bug fixes: `convertXmlToArray()` no longer raises PHP warnings for invalid XML (it returns `false`, as before), does
+  not load network resources, and converts every empty element below the root to `''` (the first empty child stayed
+  `[]`); `addArray(includeNull: false)` also leaves out `null` in nested arrays.
+
+### `JsonUtils`
+
+- `JsonUtils` is `final`. `decodeFile()` throws a `RuntimeException` (was `Exception`) for a missing or unreadable file.
+  `decodeJsonString()` and `decodeFile()` throw an `UnexpectedValueException` for JSON that is neither object nor array
+  (`"text"`, `5`, `null`; was a `TypeError`).
+- `minify()` removes all whitespace outside of strings: the part after the last string, comment or line break kept its
+  whitespace before. A `//` comment at the end of the text without line break is removed (its text was kept, which made
+  the JSON invalid). No code change needed.
+
+### `UrlHelper`, `LogFile`, other classes
+
+- `UrlHelper` is `final`. `generateAbsoluteUri()` throws an `InvalidArgumentException` for a URI that cannot be parsed
+  (was a `TypeError`) and gives `//host/path` the protocol of the request (`https://host/path`; before unchanged). It
+  does **not** check the target: never pass an unchecked value from the user to `HttpResponse::redirectAndExit()` (open
+  redirect), allow only relative paths or whitelisted hosts.
+- `LogFile` files are named `<name>-<His>-<16 hex characters>.log` (before `<name>-<uniqid>.log`; `uniqid()` is not
+  random enough and the names did not sort).
+- `SearchHelper` is `final`; the column names of `createSqlSearch()` and the field names of `createBooleanQuery()` are
+  matched with the end of the string only (`"name\n"` was valid); `checkDate()` catches only an invalid date.
+- `BooleanSearchOperatorEnum` is `@internal`. `TimeOfDay` and `CountryCodeEnum` are unchanged.
+
+### ⚠️ `final` classes
+
+`CsvFile`, `FileHandler`, `JsonUtils`, `SearchHelper`, `SimpleXmlExtended`, `StringUtils`, `UrlHelper` and
+`ValidatedEmailAddress` are `final`. Nothing in `actra/backend` extends them. `MailDomainResolver` is the only extension
+point of the area.
+
 ## [v4.31.0] – 2026-10-08
 
 Area release for `Core`, `src/core/`, `src/request/` and `src/response/`: typed environment settings, an interface for

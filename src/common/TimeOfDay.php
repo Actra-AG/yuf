@@ -42,7 +42,11 @@ final readonly class TimeOfDay
             return null;
         }
 
-        return new TimeOfDay(hour: (int) $matches[1], minute: (int) $matches[2], second: (int) ($matches[3] ?? 0));
+        return new TimeOfDay(
+            hour: (int) $matches[1],
+            minute: (int) $matches[2],
+            second: array_key_exists(key: 3, array: $matches) ? (int) $matches[3] : 0,
+        );
     }
 
     /**

@@ -192,6 +192,7 @@ final class SearchHelperFilterTest extends TestCase
             'expression' => [['CONCAT(a, b)']],
             'placeholder' => [['a?']],
             'backtick injection' => [['`a` OR 1=1']],
+            'trailing line break' => [["name\n"]],
         ];
     }
 
@@ -209,5 +210,32 @@ final class SearchHelperFilterTest extends TestCase
             valueSource: InputSourceEnum::POST,
             session: new Session(storage: new ArraySessionStorage()),
         )->createSqlSearch(string: 'foo', columns: $columns);
+    }
+
+    /**
+     * @return array<string, array{string, ?string}>
+     */
+    public static function dateProvider(): array
+    {
+        return [
+            'german date' => ['07.03.2026', '2026-03-07'],
+            'iso date' => ['2026-03-07', '2026-03-07'],
+            'empty' => ['', null],
+            'text' => ['not a date', null],
+            'impossible date' => ['2026-02-30', null],
+        ];
+    }
+
+    #[DataProvider('dateProvider')]
+    public function testCheckDate(string $date, ?string $expected): void
+    {
+        $result = SearchHelper::create(
+            instanceName: 'test',
+            httpRequest: HttpRequestFactory::create(),
+            valueSource: InputSourceEnum::POST,
+            session: new Session(storage: new ArraySessionStorage()),
+        )->checkDate(date: $date);
+
+        $this->assertSame($expected, $result?->format(format: 'Y-m-d'));
     }
 }

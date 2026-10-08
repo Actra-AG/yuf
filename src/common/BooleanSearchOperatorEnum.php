@@ -11,6 +11,8 @@ namespace actra\yuf\common;
 
 /**
  * Operators of the boolean search text understood by SearchHelper::createBooleanQuery().
+ *
+ * @internal Part of the search text parser, not meant for use in projects
  */
 enum BooleanSearchOperatorEnum: string
 {

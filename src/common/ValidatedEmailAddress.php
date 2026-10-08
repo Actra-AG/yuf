@@ -9,32 +9,76 @@ declare(strict_types=1);
 
 namespace actra\yuf\common;
 
-use Throwable;
-
-class ValidatedEmailAddress
+/**
+ * An email address, normalized (no invisible characters, lower case, punycode domain) and checked for its syntax;
+ * on request also for a domain that can receive mail.
+ */
+final class ValidatedEmailAddress
 {
+    private const string ADDITIONAL_SYNTAX_PATTERN = '/^[a-zA-Z0-9.!#$%&\'*+=?^_`{|}~]'
+        . '[a-zA-Z0-9.!#$%&\'*+\-=?^_`{|}~]*@'
+        . '(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9]|[a-zA-Z0-9][-a-zA-Z0-9]*[a-zA-Z0-9])\.)+'
+        . '[a-zA-Z0-9][-a-zA-Z0-9]*[a-zA-Z0-9]$/';
+
+    /** The normalized address, an empty string if the syntax is not valid */
     public readonly string $validatedValue;
     public readonly bool $isValidSyntax;
-    public readonly string $lastErrorCode;
-    public readonly string $lastErrorMessage;
-    private readonly string $sanitizedValue;
+    /** Why the syntax is not valid, or why the domain is not resolvable (after `isResolvable()`) */
+    public private(set) ?EmailAddressErrorEnum $lastErrorCode = null;
+    public private(set) string $lastErrorMessage = '';
     private readonly string $domain;
     private ?bool $isResolvable = null;
 
-    public function __construct(string $emailAddress)
-    {
-        $this->sanitizedValue = mb_strtolower(
-            string: $this->silentlyReplaceInvalidWhitespaces(
-                emailAddress: $emailAddress,
-            ),
+    public function __construct(
+        string $emailAddress,
+        private readonly MailDomainResolver $mailDomainResolver = new SystemMailDomainResolver(),
+    ) {
+        $sanitizedValue = mb_strtolower(
+            string: ValidatedEmailAddress::removeInvalidWhitespaces(emailAddress: $emailAddress),
         );
-        $this->isValidSyntax = $this->validateSyntax(input: $this->sanitizedValue);
+        $result = ValidatedEmailAddress::validateSyntax(input: $sanitizedValue);
+        if ($result instanceof EmailAddressError) {
+            $this->isValidSyntax = false;
+            $this->validatedValue = '';
+            $this->domain = '';
+            $this->lastErrorCode = $result->code;
+            $this->lastErrorMessage = $result->message;
+
+            return;
+        }
+        $this->isValidSyntax = true;
+        $this->validatedValue = $result['address'];
+        $this->domain = $result['domain'];
     }
 
     /**
-     * An Email address never has spaces/tabs/newlines in it (they might get into that string by c&p error done by users)
+     * @param bool $returnTrueOnDnsGetRecordFailure `true` accepts the address if the DNS lookup itself fails (no
+     *                                              answer of the DNS server), so a faulty network does not reject
+     *                                              valid addresses
      */
-    private function silentlyReplaceInvalidWhitespaces(string $emailAddress): string
+    public function isResolvable(bool $returnTrueOnDnsGetRecordFailure): bool
+    {
+        if (!$this->isValidSyntax) {
+            return false;
+        }
+        if ($this->isResolvable === null) {
+            $problem = $this->mailDomainResolver->findProblem(domain: $this->domain);
+            $this->isResolvable = $problem === null;
+            if ($problem !== null) {
+                $this->lastErrorCode = $problem->code;
+                $this->lastErrorMessage = $problem->message;
+            }
+        }
+
+        return $this->isResolvable
+            || ($returnTrueOnDnsGetRecordFailure && $this->lastErrorCode === EmailAddressErrorEnum::DNS_GET_RECORD);
+    }
+
+    /**
+     * An Email address never has spaces/tabs/newlines in it (they might get into that string by c&p error done by
+     * users).
+     */
+    private static function removeInvalidWhitespaces(string $emailAddress): string
     {
         return trim(
             string: str_replace(
@@ -56,128 +100,46 @@ class ValidatedEmailAddress
     /**
      * We purposely do NOT allow commas/semicolons (preventing "multiple" email address entered, where NOT expected)
      * ':' Will catch "mailto:" copy&paste errors from users, which also result in an invalid email address
+     *
+     * @return array{address: string, domain: string}|EmailAddressError The address with the domain in punycode
      */
-    private function validateSyntax(string $input): bool
+    private static function validateSyntax(string $input): array|EmailAddressError
     {
         if ($input === '') {
-            $this->lastErrorCode = 'emptyValue';
-            $this->lastErrorMessage = 'Empty email address value.';
-
-            return false;
-        }
-        $emailParts = explode(
-            separator: '@',
-            string: $input,
-        );
-        if (count(value: $emailParts) !== 2) {
-            $this->lastErrorCode = 'atCharacterError';
-            $this->lastErrorMessage = 'The email address contains not exactly one at-character (@).';
-
-            return false;
-        }
-        $local = $emailParts[0];
-        $domain = idn_to_ascii(domain: $emailParts[1]);
-        if ($domain === false) {
-            $this->lastErrorCode = 'invalidDomainName';
-            $this->lastErrorMessage = 'The email address contains an invalid domain part.';
-
-            return false;
-        }
-        $input = $local . '@' . $domain;
-        if (filter_var(value: $input, filter: FILTER_VALIDATE_EMAIL) === false) {
-            $this->lastErrorCode = 'invalidSyntax';
-            $this->lastErrorMessage = 'The FILTER_VALIDATE_EMAIL filter returned false due to an invalid syntax.';
-
-            return false;
-        }
-        if (!$this->additionalSyntaxValidation(input: $input)) {
-            $this->lastErrorCode = 'invalidCharacters';
-            $this->lastErrorMessage = 'The additional syntax validation failed.';
-
-            return false;
-        }
-        $this->validatedValue = $input;
-        $this->domain = $domain;
-
-        return true;
-    }
-
-    private function additionalSyntaxValidation(string $input): bool
-    {
-        return (
-            preg_match(
-                pattern: '/^[a-zA-Z0-9.!#$%&\'*+=?^_`{|}~][a-zA-Z0-9.!#$%&\'*+\-=?^_`{|}~]*@(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9]|[a-zA-Z0-9][-a-zA-Z0-9]*[a-zA-Z0-9])\.)+[a-zA-Z0-9][-a-zA-Z0-9]*[a-zA-Z0-9]$/',
-                subject: $input,
-            ) === 1
-        );
-    }
-
-    public function isResolvable(bool $returnTrueOnDnsGetRecordFailure): bool
-    {
-        if (!$this->isValidSyntax) {
-            return false;
-        }
-        if ($this->isResolvable === null) {
-            $this->isResolvable = $this->resolve();
-        }
-        if ($this->isResolvable) {
-            return true;
-        }
-
-        return (
-            $returnTrueOnDnsGetRecordFailure
-            && $this->lastErrorCode === 'dns_get_record'
-        );
-    }
-
-    private function resolve(): bool
-    {
-        $mxRecords = [];
-        if (getmxrr(hostname: $this->domain, hosts: $mxRecords)) {
-            // Currently, we ignore the note from https://www.php.net/manual/en/function.getmxrr:
-            // This function should not be used for the purposes of address verification. Only the mailexchangers found in DNS are returned, however, according
-            // to » RFC 2821 when no mail exchangers are listed, hostname itself should be used as the only mail exchanger with a priority of 0.
-            // TODO: Check a better solution for the future (e.g. dns_get_record with type "MX")? Requires further checking for possible differences.
-            return true;
-        }
-
-        // Port 25 fallback check if there's no MX record (or an error occurred)
-        try {
-            $aRecords = dns_get_record(hostname: $this->domain, type: DNS_A);
-        } catch (Throwable $throwable) {
-            $this->lastErrorCode = 'dns_get_record';
-            $this->lastErrorMessage = $throwable->getMessage();
-
-            return false;
-        }
-        if (count(value: $aRecords) === 0) {
-            $this->lastErrorCode = 'noDnsRecords';
-            $this->lastErrorMessage = 'No A-Records found for the domain';
-
-            return false;
-        }
-        try {
-            $connection = fsockopen(
-                hostname: $aRecords[0]['ip'],
-                port: 25,
-                error_code: $errorCode,
-                error_message: $errorMessage,
-                timeout: 5,
+            return new EmailAddressError(
+                code: EmailAddressErrorEnum::EMPTY_VALUE,
+                message: 'Empty email address value.',
             );
-        } catch (Throwable $throwable) {
-            $this->lastErrorCode = 'fsockopen';
-            $this->lastErrorMessage = $throwable->getMessage();
-
-            return false;
         }
-        if (!is_resource(value: $connection)) {
-            $this->lastErrorCode = 'notResolvable';
-            $this->lastErrorMessage = 'Failed to connect to port 25';
-
-            return false;
+        $emailParts = explode(separator: '@', string: $input);
+        if (count(value: $emailParts) !== 2) {
+            return new EmailAddressError(
+                code: EmailAddressErrorEnum::AT_CHARACTER,
+                message: 'The email address contains not exactly one at-character (@).',
+            );
         }
-        fclose(stream: $connection);
+        [$local, $unicodeDomain] = $emailParts;
+        $domain = $unicodeDomain === '' ? false : idn_to_ascii(domain: $unicodeDomain);
+        if ($domain === false) {
+            return new EmailAddressError(
+                code: EmailAddressErrorEnum::INVALID_DOMAIN_NAME,
+                message: 'The email address contains an invalid domain part.',
+            );
+        }
+        $address = $local . '@' . $domain;
+        if (filter_var(value: $address, filter: FILTER_VALIDATE_EMAIL) === false) {
+            return new EmailAddressError(
+                code: EmailAddressErrorEnum::INVALID_SYNTAX,
+                message: 'The FILTER_VALIDATE_EMAIL filter returned false due to an invalid syntax.',
+            );
+        }
+        if (preg_match(pattern: ValidatedEmailAddress::ADDITIONAL_SYNTAX_PATTERN, subject: $address) !== 1) {
+            return new EmailAddressError(
+                code: EmailAddressErrorEnum::INVALID_CHARACTERS,
+                message: 'The additional syntax validation failed.',
+            );
+        }
 
-        return true;
+        return ['address' => $address, 'domain' => $domain];
     }
 }

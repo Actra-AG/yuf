@@ -36,7 +36,9 @@ final class LogFile
             $dayDirectoryPath .= DIRECTORY_SEPARATOR . $now->format(format: $format);
         }
         LogFile::createDirectoryIfMissing(path: $dayDirectoryPath);
-        $filePath = $dayDirectoryPath . DIRECTORY_SEPARATOR . $logFileName . '-' . uniqid(more_entropy: true) . '.log';
+        // The time sorts the files of a day, the random part keeps files of the same second apart
+        $filePath = $dayDirectoryPath . DIRECTORY_SEPARATOR . $logFileName . '-' . $now->format(format: 'His') . '-'
+            . bin2hex(string: random_bytes(length: 8)) . '.log';
         $stream = LogFile::openForAppending(filePath: $filePath);
         if ($stream === false) {
             throw new RuntimeException(message: 'Cannot open log file "' . $filePath . '".');

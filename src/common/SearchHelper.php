@@ -14,12 +14,16 @@ use actra\yuf\core\InputSourceEnum;
 use actra\yuf\db\DbQueryData;
 use actra\yuf\session\Session;
 use actra\yuf\session\SessionSectionEnum;
+use DateMalformedStringException;
 use DateTime;
 use InvalidArgumentException;
 use NoDiscard;
-use Throwable;
 
-class SearchHelper
+/**
+ * Search forms: remembers the values of the search fields of a user in the session and builds the parameterized SQL
+ * conditions of the search texts. The SQL builders are static on purpose: they are pure and have no state.
+ */
+final class SearchHelper
 {
     public const string PARAM_RESET = 'reset';
     public const string PARAM_FIND = 'find';
@@ -30,7 +34,9 @@ class SearchHelper
     private const string LIKE_PLACEHOLDER = ' LIKE ? ESCAPE \'!\'';
     private const array LIKE_ESCAPE_MAP = ['!' => '!!', '%' => '!%', '_' => '!_'];
     /** An unquoted column name must not consist of digits only; a "?" would be counted as a placeholder. */
-    private const string FIELD_NAME_PATTERN = '/^(`[^`?\s.]+`|[0-9a-z_$]*[a-z_$][0-9a-z_$]*)(\.(`[^`?\s.]+`|[0-9a-z_$]*[a-z_$][0-9a-z_$]*)){0,2}$/i';
+    private const string COLUMN_NAME_PART = '(`[^`?\s.]+`|[0-9a-z_$]*[a-z_$][0-9a-z_$]*)';
+    private const string FIELD_NAME_PATTERN = '/^' . SearchHelper::COLUMN_NAME_PART . '(\.'
+        . SearchHelper::COLUMN_NAME_PART . '){0,2}$/iD';
 
     /**
      * @param string $instanceName The search state of the user is kept in the session below this name; it must be
@@ -226,8 +232,11 @@ class SearchHelper
 
     private static function unquote(string $word): string
     {
-        $quote = $word[0] ?? '';
-        if (strlen(string: $word) < 2 || ($quote !== '"' && $quote !== '\'') || !str_ends_with(haystack: $word, needle: $quote)) {
+        if (strlen(string: $word) < 2) {
+            return $word;
+        }
+        $quote = $word[0];
+        if (($quote !== '"' && $quote !== '\'') || !str_ends_with(haystack: $word, needle: $quote)) {
             return $word;
         }
 
@@ -246,21 +255,11 @@ class SearchHelper
     }
 
     /**
-     * @deprecated "%" and "_" in the string are not escaped and act as wildcards. createSqlFilters() no longer uses it.
-     */
-    public static function addWildcardToString(string $string): string
-    {
-        $string = str_replace(search: ['*'], replace: ['%'], subject: $string);
-        $string = !str_starts_with(haystack: $string, needle: '%') ? '%' . $string : $string;
-
-        return !str_ends_with(haystack: $string, needle: '%') ? $string . '%' : $string;
-    }
-
-    /**
      * Builds a parameterized "WHERE" condition for a boolean search over one or more fields: every word or
      * "quoted phrase" must be contained in at least one of the fields. Words are combined with OR by default;
      * "and", "or" and "not" (or the shorthands "+word" and "-word") before a word change that. The search is
-     * case-insensitive (the words are lowercased). Every character, including "?", "%", "_" and "\", is searched literally.
+     * case-insensitive (the words are lowercased). Every character, including "?", "%", "_" and "\", is searched
+     * literally.
      *
      * Usage: $dbQuery->addWherePart(wherePart: $data->query, parameters: $data->params);
      *
@@ -405,221 +404,6 @@ class SearchHelper
         return $negated ? '(NOT ' . $condition . ')' : $condition;
     }
 
-    /**
-     * @deprecated Use SearchHelper::createBooleanQuery() and pass its params to the query. This method interpolates
-     *             the search words into the SQL: a "?" in the search text breaks DbQuery::addWherePart() (placeholder
-     *             count mismatch), "%" and "_" act as wildcards, and backslashes are removed from the search text.
-     */
-    public function getBooleanQuery(string $spaceSeparatedFieldNames, string $queryText, $splitFields = true): string
-    {
-        $cleanQueryText = $this->cleanQuery(string: $queryText);
-
-        return '(' . $this->createQuery(
-            text: $cleanQueryText,
-            splitFields: $splitFields,
-            spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
-        ) . ')';
-    }
-
-    private function cleanQuery(string $string): string
-    {
-        return strip_tags(string: trim(string: $string));
-    }
-
-    /**
-     * Generates the "WHERE" portion of a query, iterating over every key phrase in the
-     * given search string.  Is safe to link (e.g. with AND) with the output of repeated
-     * calls
-     */
-    private function createQuery(string $text, bool $splitFields, string $spaceSeparatedFieldNames): string
-    {
-        #
-        # We can't trust the user to give us a specific case
-        #
-        mb_internal_encoding(encoding: 'UTF-8');
-        $text = mb_strtolower(string: $text);
-
-        #
-        # Support +keyword -keyword
-        #
-        $text = $this->handleShorthand(text: $text);
-
-        #
-        # Split, but respect quotation
-        #
-        $wordArray = $this->explodeRespectQuotes(line: $text);
-
-        $buffer = '';
-        $output = '';
-
-        #
-        # work through each word (or "quoted phrase") in the text and build the
-        # outer shell of the query, filling the insides via createSubquery()
-        #
-        # "or" is assumed if neither "and" nor "not" is specified
-        #
-        for ($i = 0; $i < count(value: $wordArray); $i++) {
-            $word = trim(string: $wordArray[$i]);
-
-            if ($word === '') {
-                continue;
-            }
-            if ($word === 'and' || $word === 'or' || $word === 'not' and $i > 0) {
-                if ($word === 'not') {
-                    #
-                    # $i++ kicks us to the actual keyword that the 'not' is working against, etc
-                    #
-                    $i++;
-                    if ($i === 1) { #invalid sql syntax to prefix the first check with and/or/not
-                        $buffer = $this->createSubquery(
-                            word: $wordArray[$i],
-                            mode: 'not',
-                            splitFields: $splitFields,
-                            spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
-                        );
-                    } else {
-                        $buffer = ' AND ' . $this->createSubquery(
-                            word: $wordArray[$i],
-                            mode: 'not',
-                            splitFields: $splitFields,
-                            spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
-                        );
-                    }
-                } elseif ($word === 'or') {
-                    $i++;
-                    if ($i === 1) {
-                        $buffer = $this->createSubquery(
-                            word: $wordArray[$i],
-                            mode: '',
-                            splitFields: $splitFields,
-                            spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
-                        );
-                    } else {
-                        $buffer = ' OR ' . $this->createSubquery(
-                            word: $wordArray[$i],
-                            mode: '',
-                            splitFields: $splitFields,
-                            spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
-                        );
-                    }
-                } elseif ($word === 'and') {
-                    $i++;
-                    if ($i === 1) {
-                        $buffer = $this->createSubquery(
-                            word: $wordArray[$i],
-                            mode: '',
-                            splitFields: $splitFields,
-                            spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
-                        );
-                    } else {
-                        $buffer = ' AND ' . $this->createSubquery(
-                            word: $wordArray[$i],
-                            mode: '',
-                            splitFields: $splitFields,
-                            spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
-                        );
-                    }
-                }
-            } elseif ($i === 0) { # 0 instead of 1 here because there was no conditional word to skip and no $i++;
-                $buffer = $this->createSubquery(
-                    word: $wordArray[$i],
-                    mode: '',
-                    splitFields: $splitFields,
-                    spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
-                );
-            } else {
-                $buffer = ' OR ' . $this->createSubquery(
-                    word: $wordArray[$i],
-                    mode: '',
-                    splitFields: $splitFields,
-                    spaceSeparatedFieldNames: $spaceSeparatedFieldNames,
-                );
-            }
-            $output = $output . $buffer;
-        }
-
-        return $output;
-    }
-
-    private function handleShorthand(string $text): string
-    {
-        $text = preg_replace(
-            pattern: '/ \+/',
-            replacement: ' and ',
-            subject: $text,
-        );
-
-        return preg_replace(
-            pattern: '/ -/',
-            replacement: ' not ',
-            subject: $text,
-        );
-    }
-
-    /**
-     * Internal function, used to keep quoted text together when building
-     * the query.  i.e.... [fish and chips and "chipped ham"] syntax
-     * It essentially replaces " " with "~~~~" as long as we aren't within
-     * a set of quotes, in which case " " is retained.  The string is then
-     * split on "~~~~~" with the surviving spaces intact.
-     *
-     *
-     * @return string[]
-     */
-    private function explodeRespectQuotes(string $line): array
-    {
-        $quoteLevel = 0; #keep track if we are in or out of quote-space
-        $buffer = '';
-
-        for ($a = 0; $a < strlen(string: $line); $a++) {
-            if ($line[$a] === '"') {
-                $quoteLevel++;
-                if ($quoteLevel === 2) {
-                    $quoteLevel = 0;
-                }
-            } elseif ($line[$a] === ' ' && $quoteLevel === 0) {
-                $buffer = $buffer . '~~~~'; #Hackish magic key
-            } else {
-                $buffer = $buffer . $line[$a];
-            }
-        }
-        $buffer = str_replace(search: '\\', replace: '', subject: $buffer);
-
-        return explode(separator: '~~~~', string: $buffer);
-    }
-
-    /**
-     * Internal function, used to apply a single keyword against an
-     * arbitrary number of fields in the database in the same fashion.
-     * Works via replacing whitespace rather than iteration
-     */
-    private function createSubquery(
-        string $word,
-        string $mode,
-        bool $splitFields,
-        string $spaceSeparatedFieldNames,
-    ): string {
-        $word = str_replace(search: "'", replace: "\'", subject: $word);
-
-        if ($mode === 'not') {
-            $front = '(NOT (';
-            $glue = " LIKE '%$word%' OR ";
-            $back = " LIKE '%$word%'))";
-        } else {
-            $front = '(';
-            $glue = " LIKE '%$word%' OR ";
-            $back = " LIKE '%$word%')";
-        }
-
-        $text = ($splitFields) ? str_replace(
-            search: ' ',
-            replace: $glue,
-            subject: $spaceSeparatedFieldNames,
-        ) : $spaceSeparatedFieldNames;
-
-        return $front . $text . $back;
-    }
-
     public function checkSearchTerm(string $default = ''): string
     {
         return $this->checkString(fieldName: 'searchterm', default: $default);
@@ -650,7 +434,7 @@ class SearchHelper
         $storedValue = $this->readStoredString(field: $fieldName);
         $value = $this->isSearchRequested() ? $default : $storedValue ?? $default;
         $userInput = $this->readString(fieldName: $fieldName);
-        if ($userInput !== null && array_key_exists($userInput, $array)) {
+        if ($userInput !== null && array_key_exists(key: $userInput, array: $array)) {
             $value = $userInput;
         }
         $this->storeIfChanged(field: $fieldName, value: $value, storedValue: $storedValue ?? $default);
@@ -771,8 +555,7 @@ class SearchHelper
     private function store(string $field, string|array $value): void
     {
         $data = $this->session->getSection(section: SessionSectionEnum::SEARCH);
-        $instanceData = $data[$this->instanceName] ?? null;
-        $instanceData = is_array(value: $instanceData) ? $instanceData : [];
+        $instanceData = $this->readInstanceData(sectionData: $data);
         $instanceData[$field] = $value;
         $data[$this->instanceName] = $instanceData;
         $this->session->setSection(section: SessionSectionEnum::SEARCH, data: $data);
@@ -809,11 +592,30 @@ class SearchHelper
      */
     private function readStored(string $field): string|int|float|bool|array|null
     {
-        $instanceData = $this->session->getSection(section: SessionSectionEnum::SEARCH)[$this->instanceName] ?? null;
+        $instanceData = $this->readInstanceData(
+            sectionData: $this->session->getSection(section: SessionSectionEnum::SEARCH),
+        );
+        if (!array_key_exists(key: $field, array: $instanceData)) {
+            return null;
+        }
+        $value = $instanceData[$field];
 
-        $value = is_array(value: $instanceData) ? ($instanceData[$field] ?? null) : null;
+        return is_scalar(value: $value) || is_array(value: $value) ? $value : null;
+    }
 
-        return $value === null || is_scalar(value: $value) || is_array(value: $value) ? $value : null;
+    /**
+     * @param array<array-key, mixed> $sectionData
+     *
+     * @return array<array-key, mixed> The remembered values of this search form, empty if there are none
+     */
+    private function readInstanceData(array $sectionData): array
+    {
+        if (!array_key_exists(key: $this->instanceName, array: $sectionData)) {
+            return [];
+        }
+        $instanceData = $sectionData[$this->instanceName];
+
+        return is_array(value: $instanceData) ? $instanceData : [];
     }
 
     public function checkDate(string $date): ?DateTime
@@ -828,7 +630,7 @@ class SearchHelper
             }
 
             return $dateTime;
-        } catch (Throwable) {
+        } catch (DateMalformedStringException) {
             return null;
         }
     }

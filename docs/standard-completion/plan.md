@@ -61,7 +61,7 @@ too large.
    masks secrets (decision of the user): request line, host, IP address, user agent, referrer; GET/POST values masked
    for keys like `password`, `token`, `secret`, `csrf`, `key`, `auth`; cookie names only; server variables from an
    allow-list (no environment secrets). The debug page (debug mode only) stays as is.
-5. `common` (68).
+5. `common` (68), done in v4.32.0.
 6. `phone` (78, full standard; characterization tests first).
 7. `db` (51).
 8. `table` (39) and `pagination` (3).
@@ -140,6 +140,67 @@ too large.
   error regardless of `error_reporting()` (unchanged); `RequestHandler` keeps four `@phpstan-ignore property.uninitialized`
   for the properties set by `resolveRoute()` (a split into prepared and resolved handler would remove them);
   `FileHandler::getExtension()` (`common`, step 5) returns `false|string` although it never returns `false`.
+
+### Step 5 (v4.32.0) – done
+
+- Area `common`. Baseline 375 -> 307 (all 68 entries of `src/common/` removed, no new entry). Tests 3262 -> 3528.
+  Details and before/after in `UPGRADE.md`.
+- **Characterization first:** new tests for `StringUtils`, `JsonUtils`, `CsvFile`, `FileHandler`, `SimpleXmlExtended`,
+  `ValidatedEmailAddress`, `UrlHelper` (edge cases), `BooleanSearchOperatorEnum`, `CountryCodeEnum`, `LogFile` (file
+  name), `SearchHelper::checkDate()`. The expected values of the unchanged behaviour were checked against the old code;
+  the buggy behaviour was found while doing so (see below) and fixed with a test.
+- **final / extension points / static:** all classes `final` (`CsvFile`, `FileHandler` (already `readonly`),
+  `JsonUtils`, `SearchHelper`, `SimpleXmlExtended`, `StringUtils`, `UrlHelper`, `ValidatedEmailAddress`); nothing in
+  `actra/backend` extends them. The only extension point is the new interface `MailDomainResolver`. Static stays only for
+  pure, stateless helpers: `StringUtils`, `JsonUtils`, `UrlHelper::generateAbsoluteUri()`, `FileHandler` (`getExtension()`
+  pure; `removeFile()` and `renderFileSize()` read the file system but have no state), `CsvFile::stringToArray()`,
+  `SimpleXmlExtended::convertXmlToArray()`, `SearchHelper::createSqlFilters()` / `createBooleanQuery()` (backend calls
+  `createBooleanQuery()` statically). No static property in `common`.
+- **Enums:** `EmailAddressErrorEnum` (the nine codes of `ValidatedEmailAddress`, values unchanged). `SearchHelper::PARAM_*`
+  stay constants (names of two request parameters, no set of values). `BooleanSearchOperatorEnum` is `@internal`.
+- **`mixed`:** only `JsonUtils::convertToJsonString(mixed)` (any encodable value) and the values of JSON/XML arrays
+  (`array<array-key, mixed>`, narrowed right after decoding: `decodeJsonString()` throws for scalars).
+- **Security findings:**
+  - `SearchHelper`: every user value is a bound parameter (`LIKE ? ESCAPE '!'`, `=?`, `%`/`_`/`!` escaped). Identifiers of
+    `createBooleanQuery()` and `createSqlSearch()` are validated against a whitelist pattern (now with `D`, so a trailing
+    line break is invalid). The column of `createSqlFilters()` is an SQL expression taken over unchanged (checked only
+    for empty and `?`); the contract "never user input" stays documented, the only caller (`TextFilterField`) gets it from
+    the table definition. The deprecated `getBooleanQuery()` interpolated words and field names into SQL: removed.
+  - `CsvFile`: CSV injection decision: strings starting with `=`, `+`, `-`, `@`, tab or CR get a leading `'`, numbers and
+    numeric strings stay (negative numbers from the database are strings); switch `protectAgainstFormulas:`. Temporary
+    file 0600 via `tempnam()`, removed after the download.
+  - `FileHandler::removeFile()` allowed path traversal through token and file name: now whitelisted. `output()` trusts its
+    path (documented, no allowed directory known).
+  - `UrlHelper`: open redirect is not decided here (it builds a URI, it does not know the allowed hosts); documented, the
+    scheme-relative `//host` is no longer passed on as is. Callers that redirect to user input must whitelist (nothing in
+    yuf does).
+  - `ValidatedEmailAddress`/`SystemMailDomainResolver`: the port 25 check connected to any A record of an entered domain
+    (SSRF into the internal network): private and reserved addresses are skipped. `anna@` crashed with a `ValueError`.
+  - `StringUtils::randomString()` shuffled with `str_shuffle()` (backend uses it for tokens): `random_int()` shuffle.
+  - `SimpleXmlExtended::convertXmlToArray()`: no entity substitution (as before), `LIBXML_NONET` added.
+- **Exceptions:** `new Exception()` of `JsonUtils` -> `RuntimeException`; `UnexpectedValueException`,
+  `InvalidArgumentException` and `RuntimeException` elsewhere. `TimeOfDay` keeps `ValueError` for out-of-range parts (the
+  right type for a valid type with an invalid value, tested since v4.25; a change would only be churn).
+- **Found and fixed while characterizing** (details in `UPGRADE.md`): `FileHandler::getExtension('README')` gave `EADME`;
+  `StringUtils::between/insertBeforeLast/breakUp/formatBytes/randomString`; `JsonUtils::minify()` kept comment text at the
+  end and the whitespace after the last token; `SimpleXmlExtended` first empty child and `includeNull` in nested arrays;
+  `CsvFile::stringToArray()` kept `\r` in the header row.
+- **Stays untested:** `SystemMailDomainResolver` (DNS and network; its `ValidatedEmailAddress` logic is tested with
+  `FixedMailDomainResolver`), `CsvFile::pushDownloadAndExit()` and `FileHandler::output()` (`exit`), the
+  transliteration of non-ASCII characters in `StringUtils::urlify()` (depends on the locale of the process), the
+  randomness of `randomString()` / `generateSalt()` (only length and character groups).
+- **Open / for later:**
+  - The Git index has the names `src/common/CSVFile.php` and `src/common/SimpleXMLExtended.php`, the files on disk are
+    `CsvFile.php` and `SimpleXmlExtended.php` (renamed in an earlier release on a case-insensitive file system;
+    `core.ignorecase` hides it). On Linux, the classes `CsvFile` and `SimpleXmlExtended` are not found from a clean
+    checkout: `git mv src/common/CSVFile.php src/common/CsvFile.php` and the same for `SimpleXmlExtended.php` (two
+    steps through a temporary name on macOS).
+  - `SearchHelper` has two purposes (SQL builders of search texts, pure and static; search state in the session). A split
+    (e.g. `SearchSqlBuilder`) would be a breaking change for `SearchHelper::createBooleanQuery()` in `actra/backend`:
+    decide when backend follows. `actra/backend` still calls `SearchHelper::getInstance()` (gone since v4.29.0).
+  - `CountryCodeEnum` is used nowhere and has no behaviour; `AA` and `UR` are no ISO 3166 codes (`UR` is probably a typo
+    for `UY`, which exists). Removing cases is breaking: left as is.
+  - `CsvFile` is mutable (`addRow()`); a builder/immutable variant would be a redesign.
 
 ### Superglobals rule – done
 

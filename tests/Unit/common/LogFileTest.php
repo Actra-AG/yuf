@@ -62,6 +62,35 @@ final class LogFileTest extends TestCase
         $this->assertStringEndsWith('.log', $files[0]);
     }
 
+    public function testFileNameHasTheTimeAndARandomPart(): void
+    {
+        new LogFile(
+            logDirectory: $this->logDirectory,
+            group: 'epp',
+            logFileName: 'job',
+            clock: $this->clock(dateTime: '2026-03-07 08:09:10.123456'),
+        );
+
+        $this->assertMatchesRegularExpression(
+            '/^job-080910-[0-9a-f]{16}\.log$/D',
+            basename(path: $this->onlyFile($this->logDirectory . 'epp/2026/03/07')),
+        );
+    }
+
+    public function testFilesOfTheSameSecondDiffer(): void
+    {
+        for ($index = 0; $index < 2; $index++) {
+            new LogFile(
+                logDirectory: $this->logDirectory,
+                group: 'epp',
+                logFileName: 'job',
+                clock: $this->clock(dateTime: '2026-03-07 08:09:10.123456'),
+            );
+        }
+
+        $this->assertCount(2, $this->files(directory: $this->logDirectory . 'epp/2026/03/07'));
+    }
+
     public function testWritesLineWithTimestamp(): void
     {
         $logFile = new LogFile(

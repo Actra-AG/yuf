@@ -326,7 +326,7 @@ final readonly class HttpRequest
      */
     public function getPath(): string
     {
-        return StringUtils::beforeFirst(str: $this->uri, before: '?');
+        return StringUtils::beforeFirst(string: $this->uri, before: '?');
     }
 
     /**

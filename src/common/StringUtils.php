@@ -9,231 +9,328 @@ declare(strict_types=1);
 
 namespace actra\yuf\common;
 
-class StringUtils
+use InvalidArgumentException;
+
+/**
+ * Stateless string helpers (static on purpose: no state, no dependencies). Positions and lengths are counted in
+ * characters (multibyte safe), unless the method says otherwise.
+ */
+final class StringUtils
 {
     public const string IMPLODE_DEFAULT_SEPARATOR = ''; // https://github.com/php/php-src/issues/10197
 
-    public static function afterFirst(string $str, string $after): string
+    private const string RANDOM_LOWER_CASE_LETTERS = 'abcdefghjkmnpqrstuvwxyz';
+    private const string RANDOM_UPPER_CASE_LETTERS = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+    private const string RANDOM_DIGITS = '23456789';
+    private const string RANDOM_SPECIAL_CHARACTERS = '!@#$%&*?';
+    private const string SALT_CHARACTERS = '`´°+*ç%&/()=?abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        . '1234567890üöä!£{}éèà[]¢|¬§°#@¦';
+    private const array BYTE_UNITS = ['B', 'KB', 'MB', 'GB', 'TB'];
+
+    /**
+     * @return string What follows the first `$after`, an empty string if it is not contained
+     */
+    public static function afterFirst(string $string, string $after): string
     {
-        $posFrom = mb_strpos($str, $after);
-        if ($posFrom === false) {
+        $position = mb_strpos(haystack: $string, needle: $after);
+        if ($position === false) {
             return '';
         }
 
-        return mb_substr($str, $posFrom + mb_strlen($after));
+        return mb_substr(string: $string, start: $position + mb_strlen(string: $after));
     }
 
-    public static function beforeFirst(string $str, string $before): string
+    /**
+     * @return string What precedes the first `$before`, the whole string if it is not contained
+     */
+    public static function beforeFirst(string $string, string $before): string
     {
-        $posUntil = mb_strpos($str, $before);
-        if ($posUntil === false) {
-            return $str;
+        $position = mb_strpos(haystack: $string, needle: $before);
+        if ($position === false) {
+            return $string;
         }
 
-        return mb_substr($str, 0, $posUntil);
+        return mb_substr(string: $string, start: 0, length: $position);
     }
 
-    public static function between(string $str, string $start, string $end): ?string
+    /**
+     * @return ?string What lies between the first `$start` and the last `$end` after it, `null` if one of them is
+     *                 not contained
+     */
+    public static function between(string $string, string $start, string $end): ?string
     {
-        $posStart = mb_strpos($str, $start) + mb_strlen($start);
-        $posEnd = mb_strrpos($str, $end, $posStart);
-        if ($posEnd === false) {
+        $startPosition = mb_strpos(haystack: $string, needle: $start);
+        if ($startPosition === false) {
+            return null;
+        }
+        $contentPosition = $startPosition + mb_strlen(string: $start);
+        $endPosition = mb_strrpos(haystack: $string, needle: $end, offset: $contentPosition);
+        if ($endPosition === false) {
             return null;
         }
 
-        return mb_substr($str, $posStart, $posEnd - $posStart);
+        return mb_substr(string: $string, start: $contentPosition, length: $endPosition - $contentPosition);
     }
 
-    public static function insertBeforeLast(string $str, string $beforeLast, string $newStr): string
+    /**
+     * @return string The string with `$newString` inserted before the last `$beforeLast`; unchanged if `$beforeLast`
+     *                is not contained
+     */
+    public static function insertBeforeLast(string $string, string $beforeLast, string $newString): string
     {
-        return StringUtils::beforeLast($str, $beforeLast) . $newStr . $beforeLast . StringUtils::afterLast(
-            $str,
-            $beforeLast,
-        );
-    }
-
-    public static function beforeLast(string $str, string $before): string
-    {
-        $posUntil = mb_strrpos($str, $before);
-        if ($posUntil === false) {
-            return $str;
+        $afterLast = StringUtils::afterLast(string: $string, after: $beforeLast);
+        if ($afterLast === null) {
+            return $string;
         }
 
-        return mb_substr($str, 0, $posUntil);
+        return StringUtils::beforeLast(string: $string, before: $beforeLast) . $newString . $beforeLast . $afterLast;
     }
 
-    public static function afterLast(string $str, string $after): ?string
+    /**
+     * @return string What precedes the last `$before`, the whole string if it is not contained
+     */
+    public static function beforeLast(string $string, string $before): string
     {
-        $posFrom = mb_strrpos($str, $after);
+        $position = mb_strrpos(haystack: $string, needle: $before);
+        if ($position === false) {
+            return $string;
+        }
 
-        if ($posFrom === false) {
+        return mb_substr(string: $string, start: 0, length: $position);
+    }
+
+    /**
+     * @return ?string What follows the last `$after`, `null` if it is not contained
+     */
+    public static function afterLast(string $string, string $after): ?string
+    {
+        $position = mb_strrpos(haystack: $string, needle: $after);
+        if ($position === false) {
             return null;
         }
 
-        return mb_substr($str, $posFrom + mb_strlen($after));
+        return mb_substr(string: $string, start: $position + mb_strlen(string: $after));
     }
 
+    /**
+     * Shortens a sentence longer than `$atIndex` characters at the last space within the first `$atIndex` characters.
+     */
     public static function breakUp(string $sentence, int $atIndex): string
     {
-        if (mb_strlen($sentence) > $atIndex) {
-            return StringUtils::beforeLast(mb_substr($sentence, 0, 50), ' ');
+        if (mb_strlen(string: $sentence) > $atIndex) {
+            return StringUtils::beforeLast(
+                string: mb_substr(string: $sentence, start: 0, length: $atIndex),
+                before: ' ',
+            );
         }
 
         return $sentence;
     }
 
-    public static function tokenize(string $stringToSplit, string $tokenToSplitString): array
+    /**
+     * Splits at every byte of `$delimiters`; empty tokens are left out.
+     *
+     * @return list<string>
+     */
+    public static function tokenize(string $string, string $delimiters): array
     {
-        $tokenArr = [];
-        $tokStr = strtok($stringToSplit, $tokenToSplitString);
-
-        while ($tokStr !== false) {
-            $tokenArr[] = $tokStr;
-
-            $tokStr = strtok($tokenToSplitString);
+        $tokens = [];
+        $length = strlen(string: $string);
+        $position = 0;
+        while ($position < $length) {
+            $position += strspn(string: $string, characters: $delimiters, offset: $position);
+            if ($position >= $length) {
+                break;
+            }
+            $tokenLength = strcspn(string: $string, characters: $delimiters, offset: $position);
+            $tokens[] = substr(string: $string, offset: $position, length: $tokenLength);
+            $position += $tokenLength;
         }
 
-        return $tokenArr;
+        return $tokens;
     }
 
-    public static function explode(string|array $tokens, string $str): array
+    /**
+     * @param string|list<string> $separators One separator or several separators (empty ones are ignored in the list)
+     *
+     * @return list<string>
+     *
+     * @throws InvalidArgumentException If the separator is an empty string
+     */
+    public static function explode(string|array $separators, string $string): array
     {
-        $strToExplode = $str;
-        $explodeStr = $tokens;
-
-        if (is_array($tokens) === true) {
-            $explodeStr = chr(31);
-            $strToExplode = str_replace($tokens, $explodeStr, $str);
+        if ($separators === '') {
+            throw new InvalidArgumentException(message: 'The separator must not be an empty string.');
         }
+        if (is_string(value: $separators)) {
+            return explode(separator: $separators, string: $string);
+        }
+        $unitSeparator = chr(codepoint: 31);
 
-        return explode($explodeStr, $strToExplode);
+        return explode(
+            separator: $unitSeparator,
+            string: str_replace(search: $separators, replace: $unitSeparator, subject: $string),
+        );
     }
 
+    /**
+     * Makes a file name or URL part from a text: transliterated to ASCII (the result depends on the locale of the
+     * process for characters like "ü"), lower case, everything except letters, digits, "." and "-" is replaced.
+     *
+     * @return string "unbenannt" if nothing is left
+     */
     public static function urlify(string $string, string $separator = '-', int $maxLength = 0): string
     {
-        $string = iconv(
-            from_encoding: 'UTF-8',
-            to_encoding: 'ASCII//TRANSLIT',
-            string: $string,
-        );
+        $transliterated = iconv(from_encoding: 'UTF-8', to_encoding: 'ASCII//TRANSLIT', string: $string);
         $string = preg_replace(
-            pattern: '/[^a-zA-Z0-9\-.]/',
+            pattern: ['/[^a-zA-Z0-9\-.]/', '/-+/'],
             replacement: '-',
-            subject: $string,
+            subject: $transliterated === false ? '' : $transliterated,
         );
-        $string = preg_replace(
-            pattern: '/-+/',
-            replacement: '-',
-            subject: $string,
-        );
-        $string = trim(
-            string: $string,
-            characters: '-',
-        );
+        $string = trim(string: $string ?? '', characters: '-');
         if ($separator !== '-') {
-            $string = str_replace(
-                search: '-',
-                replace: $separator,
-                subject: $string,
-            );
+            $string = str_replace(search: '-', replace: $separator, subject: $string);
         }
         if ($string === '') {
             $string = 'unbenannt';
         }
         $string = strtolower(string: $string);
 
-        return $maxLength === 0 ? $string : substr(
-            string: $string,
-            offset: 0,
-            length: $maxLength,
-        );
+        return $maxLength === 0 ? $string : substr(string: $string, offset: 0, length: $maxLength);
     }
 
     public static function emptyToNull(string $string): ?string
     {
-        return ($string === '') ? null : $string;
-    }
-
-    public static function utf8ToPunycodeEmail(string $email): string
-    {
-        $fragments = explode(separator: '@', string: $email);
-        $lastFragment = array_pop(array: $fragments);
-
-        return implode(separator: '@', array: $fragments) . '@' . idn_to_ascii(domain: $lastFragment);
-    }
-
-    public static function punycodeToUtf8Email(string $email): string
-    {
-        $fragments = explode(separator: '@', string: $email);
-        $lastFragment = array_pop(array: $fragments);
-
-        return implode(separator: '@', array: $fragments) . '@' . idn_to_utf8(domain: $lastFragment);
-    }
-
-    public static function formatBytes(int|float $bytes, int $precision = 2): string
-    {
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-
-        $bytes = max($bytes, 0);
-        $pow = floor(num: ($bytes ? log(num: $bytes) : 0) / log(num: 1024));
-        $pow = min($pow, count(value: $units) - 1);
-        $bytes /= 1024 ** $pow;
-
-        return round(num: $bytes, precision: $precision) . ' ' . $units[$pow];
+        return $string === '' ? null : $string;
     }
 
     /**
-     * Generates a random character string of given length, where characters, which could be easily mixed up, were avoided.
-     * Set $cryptoSecurity to true to use a cryptographically secure pseudorandom number generator (random_int):
-     * - https://stackoverflow.com/a/31107425/31107425
-     * - http://stackoverflow.com/a/31284266/2224584
+     * @throws InvalidArgumentException If the domain of the address cannot be converted
+     */
+    public static function utf8ToPunycodeEmail(string $email): string
+    {
+        return StringUtils::convertEmailDomain(
+            email: $email,
+            convert: static fn(string $domain): string|false => idn_to_ascii(domain: $domain),
+        );
+    }
+
+    /**
+     * @throws InvalidArgumentException If the domain of the address cannot be converted
+     */
+    public static function punycodeToUtf8Email(string $email): string
+    {
+        return StringUtils::convertEmailDomain(
+            email: $email,
+            convert: static fn(string $domain): string|false => idn_to_utf8(domain: $domain),
+        );
+    }
+
+    /**
+     * Formats a size with the unit B, KB, MB, GB or TB (1 KB = 1024 B); more than 1024 TB stays in TB.
+     */
+    public static function formatBytes(int|float $bytes, int $precision = 2): string
+    {
+        $value = max($bytes, 0);
+        $unitIndex = 0;
+        while ($value >= 1024 && $unitIndex < count(value: StringUtils::BYTE_UNITS) - 1) {
+            $value /= 1024;
+            $unitIndex++;
+        }
+
+        return round(num: $value, precision: $precision) . ' ' . StringUtils::BYTE_UNITS[$unitIndex];
+    }
+
+    /**
+     * Generates a random string with characters that are hard to mix up (no "0", "1", "i", "l", "o"). With at least
+     * three characters (four with special characters), every group of characters (lower case, upper case, digits,
+     * special characters) is contained. Cryptographically secure (random_int).
      *
-     * @param int $requiredStringLength Required length of the random string
-     * @param bool $noSpecialChars Set to true to only use numbers and letters
+     * @param int $requiredStringLength Length of the string, at least 1
+     * @param bool $noSpecialChars Set to true to only use letters and digits
      */
     public static function randomString(int $requiredStringLength, bool $noSpecialChars): string
     {
-        $requiredStringLength = ($requiredStringLength < 1) ? 1 : $requiredStringLength;
-
+        $requiredStringLength = max($requiredStringLength, 1);
         $characterSets = [
-            'abcdefghjkmnpqrstuvwxyz',
-            'ABCDEFGHJKMNPQRSTUVWXYZ',
-            '23456789',
+            StringUtils::RANDOM_LOWER_CASE_LETTERS,
+            StringUtils::RANDOM_UPPER_CASE_LETTERS,
+            StringUtils::RANDOM_DIGITS,
         ];
         if (!$noSpecialChars) {
-            $characterSets[] = '!@#$%&*?';
+            $characterSets[] = StringUtils::RANDOM_SPECIAL_CHARACTERS;
         }
-
-        $unShuffledRandomString = '';
-        foreach ($characterSets as $characterSet) {
-            $unShuffledRandomString .= $characterSet[random_int(
-                min: 0,
-                max: mb_strlen(string: $characterSet, encoding: '8bit') - 1,
-            )];
-        }
-
         $allCharacters = implode(separator: StringUtils::IMPLODE_DEFAULT_SEPARATOR, array: $characterSets);
-        $currentRandomStringLength = mb_strlen(string: $unShuffledRandomString);
-        while ($currentRandomStringLength < $requiredStringLength) {
-            $unShuffledRandomString .= $allCharacters[random_int(
-                min: 0,
-                max: mb_strlen(string: $allCharacters, encoding: '8bit') - 1,
-            )];
-            $currentRandomStringLength++;
+
+        $characters = '';
+        foreach ($characterSets as $characterSet) {
+            $characters .= StringUtils::pickRandomCharacter(characters: $characterSet);
+        }
+        while (strlen(string: $characters) < $requiredStringLength) {
+            $characters .= StringUtils::pickRandomCharacter(characters: $allCharacters);
         }
 
-        return str_shuffle(string: $unShuffledRandomString);
+        return substr(
+            string: StringUtils::shuffleSecurely(characters: $characters),
+            offset: 0,
+            length: $requiredStringLength,
+        );
     }
 
     public static function generateSalt(int $length = 16): string
     {
-        $chars = '`´°+*ç%&/()=?abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890üöä!£{}éèà[]¢|¬§°#@¦';
-        $charsLength = mb_strlen(string: $chars);
+        $charactersLength = mb_strlen(string: StringUtils::SALT_CHARACTERS);
         $salt = '';
-        for ($i = 0; $i < $length; $i++) {
-            $salt .= mb_substr(string: $chars, start: random_int(min: 0, max: $charsLength - 1), length: 1);
+        for ($index = 0; $index < $length; $index++) {
+            $salt .= mb_substr(
+                string: StringUtils::SALT_CHARACTERS,
+                start: random_int(min: 0, max: $charactersLength - 1),
+                length: 1,
+            );
         }
 
         return $salt;
+    }
+
+    /**
+     * @param callable(string): (string|false) $convert
+     */
+    private static function convertEmailDomain(string $email, callable $convert): string
+    {
+        $fragments = explode(separator: '@', string: $email);
+        $domain = array_pop(array: $fragments);
+        $convertedDomain = $domain === '' ? false : $convert($domain);
+        if ($convertedDomain === false) {
+            throw new InvalidArgumentException(
+                message: 'The domain "' . $domain . '" of the email address cannot be converted.',
+            );
+        }
+
+        return implode(separator: '@', array: $fragments) . '@' . $convertedDomain;
+    }
+
+    /**
+     * @param non-empty-string $characters
+     *
+     * @return non-empty-string
+     */
+    private static function pickRandomCharacter(string $characters): string
+    {
+        return $characters[random_int(min: 0, max: strlen(string: $characters) - 1)];
+    }
+
+    /**
+     * Fisher-Yates shuffle with random_int (str_shuffle() uses a predictable generator).
+     */
+    private static function shuffleSecurely(string $characters): string
+    {
+        for ($index = strlen(string: $characters) - 1; $index > 0; $index--) {
+            $otherIndex = random_int(min: 0, max: $index);
+            $current = $characters[$index];
+            $characters[$index] = $characters[$otherIndex];
+            $characters[$otherIndex] = $current;
+        }
+
+        return $characters;
     }
 }

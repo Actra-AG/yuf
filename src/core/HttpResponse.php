@@ -285,7 +285,7 @@ final class HttpResponse
         }
         $fileName = $individualFileName ?? basename(path: $realPath);
         $extension = FileHandler::getExtension(filename: $fileName);
-        $contentType = ContentType::createFromFileExtension(extension: $extension === false ? '' : $extension);
+        $contentType = ContentType::createFromFileExtension(extension: $extension);
         $forceDownload ??= $contentType->forceDownloadByDefault;
         $httpResponse = new HttpResponse(
             httpRequest: $httpRequest,

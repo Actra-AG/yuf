@@ -19,16 +19,17 @@ The plan for the remaining work is [docs/standard-completion/plan.md](../standar
 - `src/phone/` (port of libphonenumber) and `src/mailer/` (derived from PHPMailer, license notices kept) are brought to
   the full standard like own code, with characterization tests first.
 
-## PHPStan baseline: 375 entries
+## PHPStan baseline: 307 entries
 
-State after v4.31.0 (532 at v4.27.0, 447 at v4.30.0; v4.31.0 removed `core` 47, `Core.php` 18, `request` 5, `response` 2).
+State after v4.32.0 (532 at v4.27.0, 447 at v4.30.0, 375 at v4.31.0; v4.32.0 removed `common` 68).
 
-- By area: `phone` 78, `common` 68, `db` 51, `table` 39, `mailer` 33, `api` 27, `auth` 26, `html` 25, `datacheck` 13,
-  `exception` 10, `pagination` 3, `session` 2. `core`, `Core.php`, `request`, `response`, `security`, `src/form/` and
+- By area: `phone` 78, `db` 51, `table` 39, `mailer` 33, `api` 27, `auth` 26, `html` 25, `datacheck` 13,
+  `exception` 10, `pagination` 3, `session` 2. `core`, `Core.php`, `request`, `response`, `common`, `security`, `src/form/` and
   `src/template/` have none.
-- Most frequent identifiers: `argument.type` 118, `missingType.iterableValue` 99, `offsetAccess.notFound` 46,
-  `return.type` 32, `assign.propertyType` 16, `binaryOp.invalid` 12, `disallowed.isset` 11, `method.nonObject` 11,
-  `offsetAccess.nonOffsetAccessible` 10, `property.nonObject` 10, `missingType.parameter` 9.
+- Most frequent identifiers (counted with `count:`, 344 errors in 307 entries): `argument.type` 96,
+  `missingType.iterableValue` 71, `offsetAccess.notFound` 31, `return.type` 19, `assign.propertyType` 13,
+  `disallowed.isset` 12, `binaryOp.invalid` 9, `method.nonObject` 8, `offsetAccess.nonOffsetAccessible` 7,
+  `property.nonObject` 7, `foreach.nonIterable` 6, `missingType.parameter` 6.
 
 ## Static state (`php.md`, section 1)
 
@@ -50,20 +51,21 @@ State after v4.31.0 (532 at v4.27.0, 447 at v4.30.0; v4.31.0 removed `core` 47, 
 
 ## Explicit comparisons (`php.md`, section 5)
 
-- `isset()` 31, `empty()` 2, loose `==` / `!=` 4, short ternary `?:` 14.
+- `isset()` 12, `empty()` 1, loose `==` / `!=` 1 (searched in `src/` after v4.32.0; `common` is clean).
 
 ## Types (`php.md`, section 3)
 
-- 169 of 288 classes are not `final` (state after v4.31.0; `core`, `Core.php`, `request` and `response` are done). Some are intended extension points (views, forms, fields, columns, exception
+- About 143 `class` declarations are not `final` (searched after v4.32.0; `core`, `Core.php`, `request`, `response` and `common` are done). Some are intended extension points (views, forms, fields, columns, exception
   handler); every class needs a review (`final`, or documented extension point, or `@internal`).
-- `mixed` in own code: about 15 (e.g. `TableItem::getRawValue()`); `Core::config()` was removed in v4.31.0.
+- `mixed` in own code: about 15 (e.g. `TableItem::getRawValue()`); `Core::config()` was removed in v4.31.0; `common` keeps only
+  `JsonUtils::convertToJsonString(mixed)` and the narrowed JSON/XML data.
 - Enums first: fixed sets still as string constants (126 public string/int constants, not all of them fixed sets), e.g.
   `MailerConstants` (`HttpRequest::PROTOCOL_*` became `ProtocolEnum` in v4.29.0).
 - Missing types: see the baseline (`missingType.*`, about 170 entries).
 
 ## Exceptions and style (`php.md`, sections 4 and 6)
 
-- Plain `new Exception(…)` instead of SPL or yuf exceptions: 5 (`form` 2, `mailer` 2, `common` 1; the template engine
+- Plain `new Exception(…)` instead of SPL or yuf exceptions: 4 (`form` 2, `mailer` 2; `common` was cleaned in v4.32.0; the template engine
   throws `TemplateException`; `core` was cleaned in v4.31.0).
 - `switch` instead of `match`: 5.
 - `@` error suppression: 3.

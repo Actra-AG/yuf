@@ -10,12 +10,8 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\common;
 
 use actra\yuf\common\SearchHelper;
-use actra\yuf\core\InputSourceEnum;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\DbQueryData;
-use actra\yuf\session\ArraySessionStorage;
-use actra\yuf\session\Session;
-use actra\yuf\tests\Double\core\HttpRequestFactory;
 use InvalidArgumentException;
 use PDO;
 use PDOStatement;
@@ -196,57 +192,6 @@ final class SearchHelperBooleanQueryTest extends TestCase
             "((2011_module.titel LIKE ? ESCAPE '!' OR `order` LIKE ? ESCAPE '!' OR db.t.c LIKE ? ESCAPE '!'"
             . " OR \$col LIKE ? ESCAPE '!'))",
             $data->query,
-        );
-    }
-
-    /**
-     * @return array<string, array{string}>
-     */
-    public static function legacyQueryProvider(): array
-    {
-        return [
-            'single word' => ['Haas'],
-            'several words' => ['haas kap bar'],
-            'and/or/not' => ['haas and kap or bar not baz'],
-            'shorthands' => ['haas +kap -bar'],
-            'quoted phrase' => ['"haas kap" bar'],
-            'leading operator' => ['not haas'],
-            'leading shorthand' => ['+haas kap'],
-        ];
-    }
-
-    /**
-     * Characterizes that the search semantics did not change: inlining the parameters gives the SQL of the deprecated
-     * getBooleanQuery().
-     */
-    #[DataProvider('legacyQueryProvider')]
-    public function testMatchesDeprecatedGetBooleanQuery(string $queryText): void
-    {
-        $data = SearchHelper::createBooleanQuery(spaceSeparatedFieldNames: 'a.name b.city', queryText: $queryText);
-        $parameters = $data->params;
-        $inlinedQuery = preg_replace_callback(
-            pattern: "/ LIKE \\? ESCAPE '!'/",
-            callback: function () use (&$parameters): string {
-                $parameter = array_shift($parameters);
-                $this->assertIsString($parameter);
-
-                return " LIKE '" . $parameter . "'";
-            },
-            subject: $data->query,
-        );
-
-        $this->assertSame(
-            // @phpstan-ignore method.deprecated (characterization test of the deprecated method)
-            SearchHelper::create(
-                instanceName: 'test',
-                httpRequest: HttpRequestFactory::create(),
-                valueSource: InputSourceEnum::POST,
-                session: new Session(storage: new ArraySessionStorage()),
-            )->getBooleanQuery(
-                spaceSeparatedFieldNames: 'a.name b.city',
-                queryText: $queryText,
-            ),
-            $inlinedQuery,
         );
     }
 
