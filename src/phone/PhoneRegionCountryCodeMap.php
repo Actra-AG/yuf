@@ -6,15 +6,24 @@
  */
 
 declare(strict_types=1);
-/**
- * Adapted work based on https://github.com/giggsey/libphonenumber-for-php , which was published
- * with "Apache License Version 2.0, January 2004" ( http://www.apache.org/licenses/ )
- */
 
 namespace actra\yuf\phone;
 
-class PhoneRegionCountryCodeMap
+/**
+ * Which regions use which country calling code. The first region of a country calling code is its main region; the
+ * region `001` stands for the country calling codes that belong to no region (e.g. 800).
+ *
+ * Adapted work based on https://github.com/giggsey/libphonenumber-for-php , which was published
+ * with "Apache License Version 2.0, January 2004" ( http://www.apache.org/licenses/ )
+ *
+ * @internal
+ */
+final class PhoneRegionCountryCodeMap
 {
+    public const string NON_GEOGRAPHICAL_REGION = '001';
+    private const string UNKNOWN_REGION = 'ZZ';
+
+    /** @var array<int, non-empty-list<string>> */
     private const array COUNTRY_CODE_TO_REGION_CODE_MAP = [
         1
             => [
@@ -917,12 +926,15 @@ class PhoneRegionCountryCodeMap
             ],
     ];
 
+    /**
+     * @return list<string> every region code with phone number metadata, without `001`
+     */
     public static function getSupportedRegions(): array
     {
         $supportedRegions = [];
         foreach (PhoneRegionCountryCodeMap::COUNTRY_CODE_TO_REGION_CODE_MAP as $regionCodes) {
             foreach ($regionCodes as $regionCode) {
-                if ($regionCode !== '001') {
+                if ($regionCode !== PhoneRegionCountryCodeMap::NON_GEOGRAPHICAL_REGION) {
                     $supportedRegions[] = $regionCode;
                 }
             }
@@ -933,20 +945,24 @@ class PhoneRegionCountryCodeMap
 
     public static function countryCodeExists(int $countryCodeToCheck): bool
     {
-        return (array_key_exists(
+        return array_key_exists(
             key: $countryCodeToCheck,
             array: PhoneRegionCountryCodeMap::COUNTRY_CODE_TO_REGION_CODE_MAP,
-        ));
+        );
     }
 
+    /**
+     * The main region of a country calling code; `001` for a non-geographical one, `ZZ` for an unknown one.
+     */
     public static function getRegionCodeForCountryCode(int $countryCallingCode): string
     {
-        $regionCodes = array_key_exists(
+        if (!array_key_exists(
             key: $countryCallingCode,
             array: PhoneRegionCountryCodeMap::COUNTRY_CODE_TO_REGION_CODE_MAP,
-        ) ? PhoneRegionCountryCodeMap::COUNTRY_CODE_TO_REGION_CODE_MAP[$countryCallingCode] : null;
+        )) {
+            return PhoneRegionCountryCodeMap::UNKNOWN_REGION;
+        }
 
-        return $regionCodes === null ? 'ZZ' : $regionCodes[0];
+        return PhoneRegionCountryCodeMap::COUNTRY_CODE_TO_REGION_CODE_MAP[$countryCallingCode][0];
     }
-
 }

@@ -4,6 +4,93 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.33.0] – 2026-10-08
+
+Area release for `src/phone/` (port of libphonenumber, licence notice kept): typed metadata, no static caches, error
+codes and number length results as enums, bug fixes. The consumer API is `PhoneNumber::createFromString()`,
+`PhoneRenderer` and `PhoneParseException`; every other class of `src/phone/` is `@internal` now. Search your project for
+`PhoneParseException::`, `->getCode()` on a `PhoneParseException`, `extends PhoneNumber`, `extends PhoneRenderer`,
+`PhoneValidator`, `PhoneParser`, `PhoneMetaData`, `PhoneMatcher` and `PhoneConstants`.
+
+### ⚠️ `PhoneParseException`: error as enum, `final`, based on `InvalidArgumentException`
+
+The constants of the exception are replaced by `PhoneParseErrorEnum` (same numbers); the exception has the property
+`error`. The error code of a number that is not possible (`createFromString()`) was `-1` without constant, it is
+`PhoneParseErrorEnum::NOT_POSSIBLE` now. `getCode()` still returns the same numbers; `catch (PhoneParseException)` and
+`catch (Exception)` keep working.
+
+Before:
+
+```php
+try {
+    $phoneNumber = PhoneNumber::createFromString(input: $input, defaultCountryCode: 'CH');
+} catch (PhoneParseException $exception) {
+    if ($exception->getCode() === PhoneParseException::EMPTY_STRING) {
+        // ...
+    }
+}
+```
+
+After:
+
+```php
+try {
+    $phoneNumber = PhoneNumber::createFromString(input: $input, defaultCountryCode: 'CH');
+} catch (PhoneParseException $exception) {
+    if ($exception->error === PhoneParseErrorEnum::EMPTY_STRING) {
+        // ...
+    }
+}
+```
+
+| Before                                                         | After                                      |
+|:---------------------------------------------------------------|:-------------------------------------------|
+| `PhoneParseException::EMPTY_STRING` (0)                        | `PhoneParseErrorEnum::EMPTY_STRING`        |
+| `PhoneParseException::INVALID_COUNTRY_CODE` (1)                | `PhoneParseErrorEnum::INVALID_COUNTRY_CODE` |
+| `PhoneParseException::NOT_A_NUMBER` (2)                        | `PhoneParseErrorEnum::NOT_A_NUMBER`        |
+| `PhoneParseException::TOO_SHORT_AFTER_IDD` (3)                 | `PhoneParseErrorEnum::TOO_SHORT_AFTER_IDD` |
+| `PhoneParseException::TOO_SHORT_NSN` (4)                       | `PhoneParseErrorEnum::TOO_SHORT_NSN`       |
+| `PhoneParseException::TOO_LONG` (5)                            | `PhoneParseErrorEnum::TOO_LONG`            |
+| code `-1` (number is not possible for its country)            | `PhoneParseErrorEnum::NOT_POSSIBLE`        |
+
+`new PhoneParseException(message: …, code: …)` is now `new PhoneParseException(message: …, error: …)`.
+
+### ⚠️ `PhoneNumber` and `PhoneRenderer` are `final`; the other classes are `@internal`
+
+`PhoneNumber` (already `readonly`) and `PhoneRenderer` cannot be extended anymore. Their signatures are unchanged:
+`PhoneNumber::createFromString()`, `getNationalSignificantNumber()`, `PhoneRenderer::renderInternalFormat()` and
+`renderInternationalFormat()` keep working as before.
+
+The classes behind them are `final` and `@internal` and changed without further notice:
+
+- `PhoneValidator`: `isPossibleNumber()` is an instance method (`new PhoneValidator(metaDataRepository: …)`);
+  `testNumberLength()` returns `PhoneLengthResultEnum` instead of the int constants `IS_POSSIBLE`, `TOO_SHORT`, `TOO_LONG`,
+  `IS_POSSIBLE_LOCAL_ONLY`, `INVALID_LENGTH` (same numbers as backed values).
+- `PhoneParser::getInstance()`, `PhoneMetaData::getForRegion()` and `getForRegionOrCallingCode()`: no static cache and no
+  singleton anymore. `PhoneMetaDataRepository` loads the metadata and keeps it as long as the repository lives;
+  `PhoneMetaDataLoader` narrows the generated arrays once into the readonly value objects `PhoneMetaData`, `PhoneDesc`
+  and `PhoneFormat`.
+- `PhoneConstants::FROM_NUMBER_WITH_PLUS_SIGN`, `FROM_NUMBER_WITH_IDD`, `FROM_DEFAULT_COUNTRY` are
+  `PhoneCountryCodeSourceEnum`; `PhonePatterns::REGEX_FLAGS` is gone (`PhoneConstants::REGEX_FLAGS`);
+  `PhoneNumberNormalizer` is new (was private in `PhoneParser`).
+
+Use `PhoneNumber::createFromString()` instead of the internal classes. Each call loads the metadata files of the
+regions it needs (plain PHP arrays, OPcache holds them; about 30 µs per call), nothing is cached between calls.
+
+### Bug fixes (no code change needed)
+
+- The internal format lost the Italian leading zero: an Italian landline `02 1234 5678` was rendered as
+  `+39.212345678`, which reads as a different (invalid) number. It is `+39.0212345678` now and parsed back to the same
+  number. `PhoneNumberField` stores that format: values already stored for Italian (and Vatican) landlines are not
+  repaired.
+- Characters at the end of a number that are neither a digit nor a letter were not stripped (the pattern used Java
+  syntax that PCRE does not know). `044 668 18 00;`, `044 668 18 00!`, `044 668 18 00,` and `"044 668 18 00"` are valid
+  numbers now (they were `NOT_A_NUMBER`). The cut position is a character position, so numbers in full-width digits
+  work too.
+- A number with an unknown country calling code in the constructor of `PhoneNumber` crashed the validation with a
+  `TypeError`; it is "not possible" now.
+- After the `＋` (full-width plus) of an unknown country calling code, the error message is the right one.
+
 ## [v4.32.0] – 2026-10-08
 
 ### Class files with the right case

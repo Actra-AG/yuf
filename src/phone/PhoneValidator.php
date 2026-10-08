@@ -6,54 +6,27 @@
  */
 
 declare(strict_types=1);
-/**
- * Adapted work based on https://github.com/giggsey/libphonenumber-for-php , which was published
- * with "Apache License Version 2.0, January 2004" ( http://www.apache.org/licenses/ )
- */
 
 namespace actra\yuf\phone;
 
-class PhoneValidator
+/**
+ * Checks whether a text or a number can be a phone number. The public entry point for consumers is
+ * `PhoneNumber::createFromString()`, which throws for a number that is not possible.
+ *
+ * Adapted work based on https://github.com/giggsey/libphonenumber-for-php , which was published
+ * with "Apache License Version 2.0, January 2004" ( http://www.apache.org/licenses/ )
+ *
+ * @internal
+ */
+final readonly class PhoneValidator
 {
-    /**
-     * The number length matches that of valid numbers for this region
-     */
-    public const int IS_POSSIBLE = 0;
+    public function __construct(private PhoneMetaDataRepository $metaDataRepository) {}
 
     /**
-     * The number is shorter than all valid numbers for this region.
-     */
-    public const int TOO_SHORT = 2;
-
-    /**
-     * The number is longer than all valid numbers for this region.
-     */
-    public const int TOO_LONG = 3;
-
-    /**
-     * The number length matches that of local numbers for this region only (i.e. numbers that may
-     * be able to be dialled within an area, but do not have all the information to be dialled from
-     * anywhere inside or outside the country).
-     */
-    public const int IS_POSSIBLE_LOCAL_ONLY = 4;
-
-    /**
-     * The number is longer than the shortest valid numbers for this region, shorter than the
-     * longest valid numbers for this region, and does not itself have a number length that matches
-     * valid numbers for this region. This can also be returned in the case where
-     * isPossibleNumberForTypeWithReason was called, and there are no numbers of this type at all
-     * for this region.
-     */
-    public const int INVALID_LENGTH = 5;
-
-    /**
-     * Checks to see if the string of characters could possibly be a phone number at all.
-     * At the moment, checks to see that the string begins with at least 2 digits, ignoring any punctuation commonly found in phone numbers.
-     * This method does not require the number to be normalized in advance - but does assume that leading non-number symbols have been removed.
-     *
-     * @param string $number Number to be checked for viability as a phone number
-     *
-     * @return bool true if the number could be a phone number of some sort, otherwise false
+     * Checks to see if the string of characters could possibly be a phone number at all. At the moment, checks to see
+     * that the string begins with at least 2 digits, ignoring any punctuation commonly found in phone numbers. This
+     * method does not require the number to be normalized in advance - but does assume that leading non-number
+     * symbols have been removed.
      */
     public static function isViablePhoneNumber(string $number): bool
     {
@@ -61,76 +34,71 @@ class PhoneValidator
             return false;
         }
 
-        return (preg_match(
-            pattern: PhonePatterns::VALID_PHONE_NUMBER_PATTERN,
-            subject: $number,
-        ) === 1
-        );
+        return preg_match(pattern: PhonePatterns::VALID_PHONE_NUMBER_PATTERN, subject: $number) === 1;
     }
 
     public static function isValidRegionCode(?string $regionCode): bool
     {
-        return $regionCode !== null && in_array($regionCode, PhoneRegionCountryCodeMap::getSupportedRegions(), true);
+        return $regionCode !== null
+            && in_array(
+                needle: $regionCode,
+                haystack: PhoneRegionCountryCodeMap::getSupportedRegions(),
+                strict: true,
+            );
     }
 
-    public static function testNumberLength(string $number, PhoneMetaData $phoneMetaData): int
+    public static function testNumberLength(string $number, PhoneMetaData $phoneMetaData): PhoneLengthResultEnum
     {
-        $descForType = $phoneMetaData->generalDesc;
-        $possibleLengths = (count(
-            $descForType->possibleLength,
-        ) === 0) ? $phoneMetaData->generalDesc->possibleLength : $descForType->possibleLength;
-        $localLengths = $descForType->possibleLengthLocalOnly;
-        if ($possibleLengths[0] === -1) {
-            return PhoneValidator::INVALID_LENGTH;
+        $possibleLengths = $phoneMetaData->generalDesc->possibleLength;
+        if ($possibleLengths === [] || $possibleLengths[0] === -1) {
+            return PhoneLengthResultEnum::INVALID_LENGTH;
         }
         $actualLength = mb_strlen(string: $number);
-        if (in_array(needle: $actualLength, haystack: $localLengths, strict: true)) {
-            return PhoneValidator::IS_POSSIBLE_LOCAL_ONLY;
+        if (in_array(
+            needle: $actualLength,
+            haystack: $phoneMetaData->generalDesc->possibleLengthLocalOnly,
+            strict: true,
+        )) {
+            return PhoneLengthResultEnum::IS_POSSIBLE_LOCAL_ONLY;
         }
-        $minimumLength = (int) reset(array: $possibleLengths);
-        if ($minimumLength === $actualLength) {
-            return PhoneValidator::IS_POSSIBLE;
+        if ($possibleLengths[0] === $actualLength) {
+            return PhoneLengthResultEnum::IS_POSSIBLE;
         }
-        if ($minimumLength > $actualLength) {
-            return PhoneValidator::TOO_SHORT;
+        if ($possibleLengths[0] > $actualLength) {
+            return PhoneLengthResultEnum::TOO_SHORT;
         }
-        if (
-            array_key_exists(key: (count(value: $possibleLengths) - 1), array: $possibleLengths)
-            && $possibleLengths[count(value: $possibleLengths) - 1] < $actualLength
-        ) {
-            return PhoneValidator::TOO_LONG;
+        if (array_last(array: $possibleLengths) < $actualLength) {
+            return PhoneLengthResultEnum::TOO_LONG;
         }
-
-        array_shift(array: $possibleLengths);
 
         return in_array(
             needle: $actualLength,
             haystack: $possibleLengths,
             strict: true,
-        ) ? PhoneValidator::IS_POSSIBLE : PhoneValidator::INVALID_LENGTH;
+        ) ? PhoneLengthResultEnum::IS_POSSIBLE : PhoneLengthResultEnum::INVALID_LENGTH;
     }
 
-    public static function isPossibleNumber(PhoneNumber $phoneNumber): bool
+    /**
+     * Whether the length of the number fits the possible lengths of its country calling code (also the lengths that
+     * are possible within an area only). False for an unknown country calling code.
+     */
+    public function isPossibleNumber(PhoneNumber $phoneNumber): bool
     {
-        $result = PhoneValidator::isPossibleNumberWithReason(phoneNumber: $phoneNumber);
-
-        return ($result === PhoneValidator::IS_POSSIBLE || $result === PhoneValidator::IS_POSSIBLE_LOCAL_ONLY);
-    }
-
-    private static function isPossibleNumberWithReason(PhoneNumber $phoneNumber): int
-    {
-        $nationalNumber = $phoneNumber->getNationalSignificantNumber();
-        $countryCode = $phoneNumber->countryCode;
-        $regionCode = PhoneRegionCountryCodeMap::getRegionCodeForCountryCode(countryCallingCode: $countryCode);
-        // Metadata cannot be null because the country calling code is valid.
-        $phoneMetaData = PhoneMetaData::getForRegionOrCallingCode(
-            countryCallingCode: $countryCode,
-            regionCode: $regionCode,
+        $phoneMetaData = $this->metaDataRepository->getForRegionOrCallingCode(
+            countryCallingCode: $phoneNumber->countryCode,
+            regionCode: PhoneRegionCountryCodeMap::getRegionCodeForCountryCode(
+                countryCallingCode: $phoneNumber->countryCode,
+            ),
         );
-
-        return PhoneValidator::testNumberLength(
-            number: $nationalNumber,
+        if ($phoneMetaData === null) {
+            return false;
+        }
+        $result = PhoneValidator::testNumberLength(
+            number: $phoneNumber->getNationalSignificantNumber(),
             phoneMetaData: $phoneMetaData,
         );
+
+        return $result === PhoneLengthResultEnum::IS_POSSIBLE
+            || $result === PhoneLengthResultEnum::IS_POSSIBLE_LOCAL_ONLY;
     }
 }

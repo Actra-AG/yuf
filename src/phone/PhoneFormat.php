@@ -6,35 +6,25 @@
  */
 
 declare(strict_types=1);
-/**
- * Adapted work based on https://github.com/giggsey/libphonenumber-for-php , which was published
- * with "Apache License Version 2.0, January 2004" ( http://www.apache.org/licenses/ )
- */
 
 namespace actra\yuf\phone;
 
-class PhoneFormat
+/**
+ * A number format of a region: a pattern that splits a national number into groups and how to join the groups.
+ *
+ * Adapted work based on https://github.com/giggsey/libphonenumber-for-php , which was published
+ * with "Apache License Version 2.0, January 2004" ( http://www.apache.org/licenses/ )
+ *
+ * @internal
+ */
+final readonly class PhoneFormat
 {
-    public private(set) ?string $pattern;
-    public private(set) ?string $format;
-    private array $leadingDigitsPattern = [];
-
-    public function __construct(array $input)
-    {
-        $this->pattern = $input['pattern'];
-        $this->format = $input['format'];
-        foreach ($input['leadingDigitsPatterns'] as $leadingDigitsPattern) {
-            $this->leadingDigitsPattern[] = $leadingDigitsPattern;
-        }
-    }
-
-    public function leadingDigitsPatternSize(): int
-    {
-        return count($this->leadingDigitsPattern);
-    }
-
-    public function getLeadingDigitsPattern(int $index): string
-    {
-        return $this->leadingDigitsPattern[$index];
-    }
+    /**
+     * @param list<string> $leadingDigitsPatterns the last one is the most detailed
+     */
+    public function __construct(
+        public string $pattern,
+        public string $format,
+        public array $leadingDigitsPatterns,
+    ) {}
 }

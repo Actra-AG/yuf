@@ -6,27 +6,26 @@
  */
 
 declare(strict_types=1);
-/**
- * Adapted work based on https://github.com/giggsey/libphonenumber-for-php , which was published
- * with "Apache License Version 2.0, January 2004" ( http://www.apache.org/licenses/ )
- */
 
 namespace actra\yuf\phone;
 
-class PhoneDesc
+/**
+ * The national number pattern and the possible lengths of a group of numbers of a region.
+ *
+ * Adapted work based on https://github.com/giggsey/libphonenumber-for-php , which was published
+ * with "Apache License Version 2.0, January 2004" ( http://www.apache.org/licenses/ )
+ *
+ * @internal
+ */
+final readonly class PhoneDesc
 {
-    public private(set) string $nationalNumberPattern = '';
-    public private(set) array $possibleLength;
-    public private(set) array $possibleLengthLocalOnly;
-
-    public function __construct(array $input)
-    {
-        if (array_key_exists(key: 'NationalNumberPattern', array: $input) && trim(
-            string: $input['NationalNumberPattern'],
-        ) !== '') {
-            $this->nationalNumberPattern = $input['NationalNumberPattern'];
-        }
-        $this->possibleLength = $input['PossibleLength'];
-        $this->possibleLengthLocalOnly = $input['PossibleLengthLocalOnly'];
-    }
+    /**
+     * @param list<int> $possibleLength
+     * @param list<int> $possibleLengthLocalOnly
+     */
+    public function __construct(
+        public string $nationalNumberPattern,
+        public array $possibleLength,
+        public array $possibleLengthLocalOnly,
+    ) {}
 }

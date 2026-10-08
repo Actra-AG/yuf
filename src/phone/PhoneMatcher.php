@@ -6,128 +6,120 @@
  */
 
 declare(strict_types=1);
-/**
- * Adapted work based on https://github.com/giggsey/libphonenumber-for-php , which was published
- * with "Apache License Version 2.0, January 2004" ( http://www.apache.org/licenses/ )
- */
 
 namespace actra\yuf\phone;
 
-class PhoneMatcher
+use RuntimeException;
+
+/**
+ * Regular expression matcher with the semantics of the Java `Matcher` the libphonenumber code is written for. The
+ * patterns come from the phone number metadata, never from user input.
+ *
+ * Adapted work based on https://github.com/giggsey/libphonenumber-for-php , which was published
+ * with "Apache License Version 2.0, January 2004" ( http://www.apache.org/licenses/ )
+ *
+ * @internal
+ */
+final class PhoneMatcher
 {
-    private string $pattern;
-    private string $subject;
+    private readonly string $pattern;
+    /** @var list<array{string, int}> the matched text and the character offset of every group */
     private array $groups = [];
 
-    public function __construct(string $pattern, string $subject)
+    public function __construct(string $pattern, private readonly string $subject)
     {
-        $this->pattern = str_replace('/', '\/', $pattern);
-        $this->subject = $subject;
+        $this->pattern = str_replace(search: '/', replace: '\/', subject: $pattern);
     }
 
+    /**
+     * The pattern matches somewhere in the subject.
+     */
     public function find(): bool
     {
-        if (preg_match(
-            pattern: '/' . $this->pattern . '/ui',
-            subject: $this->subject,
-            matches: $groups,
-            flags: PREG_OFFSET_CAPTURE,
-        ) !== 1
-        ) {
-            return false;
-        }
-        foreach ($groups as $group) {
-            $this->groups[] = [
-                $group[0],
-                mb_strlen(string: mb_strcut(string: $this->subject, start: 0, length: $group[1])),
-            ];
-        }
-
-        return true;
+        return $this->match(flags: 'ui');
     }
 
+    /**
+     * The pattern matches at the start of the subject.
+     */
     public function lookingAt(): bool
     {
-        if (preg_match(
-            pattern: '/' . $this->pattern . '/uAi',
-            subject: $this->subject,
-            matches: $groups,
-            flags: PREG_OFFSET_CAPTURE,
-        ) !== 1
-        ) {
-            return false;
-        }
-        foreach ($groups as $group) {
-            $this->groups[] = [
-                $group[0],
-                mb_strlen(string: mb_strcut(string: $this->subject, start: 0, length: $group[1])),
-            ];
-        }
-
-        return true;
+        return $this->match(flags: 'uAi');
     }
 
+    /**
+     * The pattern matches the whole subject.
+     */
     public function matches(): bool
     {
-        if (preg_match(
-            pattern: '/' . $this->pattern . '/uAi',
-            subject: $this->subject,
-            matches: $groups,
-            flags: PREG_OFFSET_CAPTURE,
-        ) !== 1
-            || $groups[0][0] !== $this->subject
-        ) {
-            return false;
-        }
-        foreach ($groups as $group) {
-            $this->groups[] = [
-                $group[0],
-                mb_strlen(string: mb_strcut(string: $this->subject, start: 0, length: $group[1])),
-            ];
-        }
-
-        return true;
+        return $this->match(flags: 'uAi') && $this->group(group: 0) === $this->subject;
     }
 
     public function start(): ?int
     {
-        return isset($this->groups[0]) ? $this->groups[0][1] : null;
+        return $this->groups === [] ? null : $this->groups[0][1];
     }
 
     public function end(): ?int
     {
-        return isset($this->groups[0]) ? ($this->groups[0][1] + mb_strlen(string: $this->groups[0][0])) : null;
+        return $this->groups === [] ? null : ($this->groups[0][1] + mb_strlen(string: $this->groups[0][0]));
     }
 
     public function group(int $group): ?string
     {
-        return (
-            array_key_exists(key: $group, array: $this->groups)
-            && array_key_exists(key: 0, array: $this->groups[$group])
-        ) ? $this->groups[$group][0] : null;
+        return array_key_exists(key: $group, array: $this->groups) ? $this->groups[$group][0] : null;
     }
 
     public function groupCount(): ?int
     {
-        return empty($this->groups) ? null : (count($this->groups) - 1);
+        return $this->groups === [] ? null : (count(value: $this->groups) - 1);
     }
 
     public function replaceFirst(string $replacement): string
     {
-        return preg_replace(
-            pattern: '/' . $this->pattern . '/x',
-            replacement: $replacement,
-            subject: $this->subject,
-            limit: 1,
-        );
+        return $this->replace(replacement: $replacement, limit: 1);
     }
 
     public function replaceAll(string $replacement): string
     {
-        return preg_replace(
+        return $this->replace(replacement: $replacement, limit: -1);
+    }
+
+    private function match(string $flags): bool
+    {
+        $this->groups = [];
+        $groups = [];
+        $result = preg_match(
+            pattern: '/' . $this->pattern . '/' . $flags,
+            subject: $this->subject,
+            matches: $groups,
+            flags: PREG_OFFSET_CAPTURE,
+        );
+        if ($result !== 1) {
+            return false;
+        }
+        foreach ($groups as $group) {
+            $this->groups[] = [
+                $group[0],
+                mb_strlen(string: mb_strcut(string: $this->subject, start: 0, length: $group[1])),
+            ];
+        }
+
+        return true;
+    }
+
+    private function replace(string $replacement, int $limit): string
+    {
+        $result = preg_replace(
             pattern: '/' . $this->pattern . '/x',
             replacement: $replacement,
             subject: $this->subject,
+            limit: $limit,
         );
+        if ($result === null) {
+            throw new RuntimeException(message: 'Replacing in a phone number failed: ' . preg_last_error_msg());
+        }
+
+        return $result;
     }
 }

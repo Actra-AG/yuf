@@ -16,24 +16,24 @@ The plan for the remaining work is [docs/standard-completion/plan.md](../standar
   areas.
 - `final`: every class becomes `final` unless it is a documented extension point (abstract base class or PHPDoc
   "Extension point: …"); inventory first, including what `actra/backend` extends.
-- `src/phone/` (port of libphonenumber) and `src/mailer/` (derived from PHPMailer, license notices kept) are brought to
+- `src/phone/` (port of libphonenumber, done in v4.33.0) and `src/mailer/` (derived from PHPMailer, license notices kept) are brought to
   the full standard like own code, with characterization tests first.
 
-## PHPStan baseline: 307 entries
+## PHPStan baseline: 229 entries
 
-State after v4.32.0 (532 at v4.27.0, 447 at v4.30.0, 375 at v4.31.0; v4.32.0 removed `common` 68).
+State after v4.33.0 (532 at v4.27.0, 447 at v4.30.0, 375 at v4.31.0, 307 at v4.32.0; v4.33.0 removed `phone` 78).
 
-- By area: `phone` 78, `db` 51, `table` 39, `mailer` 33, `api` 27, `auth` 26, `html` 25, `datacheck` 13,
-  `exception` 10, `pagination` 3, `session` 2. `core`, `Core.php`, `request`, `response`, `common`, `security`, `src/form/` and
-  `src/template/` have none.
-- Most frequent identifiers (counted with `count:`, 344 errors in 307 entries): `argument.type` 96,
-  `missingType.iterableValue` 71, `offsetAccess.notFound` 31, `return.type` 19, `assign.propertyType` 13,
-  `disallowed.isset` 12, `binaryOp.invalid` 9, `method.nonObject` 8, `offsetAccess.nonOffsetAccessible` 7,
-  `property.nonObject` 7, `foreach.nonIterable` 6, `missingType.parameter` 6.
+- By area: `db` 51, `table` 39, `mailer` 33, `api` 27, `auth` 26, `html` 25, `datacheck` 13, `exception` 10, `pagination` 3,
+  `session` 2. `core`, `Core.php`, `request`, `response`, `common`, `phone`, `security`, `src/form/` and `src/template/`
+  have none.
+- Most frequent identifiers (counted with `count:`, 250 errors in 229 entries): `argument.type` 64,
+  `missingType.iterableValue` 62, `offsetAccess.notFound` 20, `return.type` 13, `disallowed.isset` 10, `binaryOp.invalid` 8,
+  `method.nonObject` 7, `assign.propertyType` 5, `if.condNotBoolean` 5, `missingType.parameter` 5, `disallowed.switch` 5,
+  `offsetAccess.invalidOffset` 4.
 
 ## Static state (`php.md`, section 1)
 
-- 10 static properties (v4.31.0: `Core::$config`, `Core::$httpResponse` and the registry of `ErrorHandler` are gone, `Core`
+- 7 static properties (v4.33.0: the caches of `PhoneMetaData` and the `PhoneParser` singleton are gone; v4.31.0: `Core::$config`, `Core::$httpResponse` and the registry of `ErrorHandler` are gone, `Core`
   keeps the guard `$isInitialized` because it registers the global autoloader and error handler; v4.29.0: the caches of `HttpRequest`, `RequestBody::$data` and the `SearchHelper` registry are gone;
   v4.30.0: the session holder, `FormNameRegistry`, the identifier registries and the guards of `AuthUser` and `Authenticator`).
 - Kept on purpose so far (see `plan.md`, step 10 "Stays" and "Later"):
@@ -41,7 +41,8 @@ State after v4.32.0 (532 at v4.27.0, 447 at v4.30.0, 375 at v4.31.0; v4.32.0 rem
       the template engine, `HtmlSnippet` and `LogFile` get what they need as arguments; `Core` keeps a private guard
       against a second instance (`$isInitialized`);
     - `FrameworkDb::getInstance()` (connection pool);
-    - caches: `PhoneMetaData`, `PhoneParser`, `AbstractCurlRequest`, `DbQueryLogList`.
+    - caches: `AbstractCurlRequest`, `DbQueryLogList` (`PhoneMetaData` and `PhoneParser` were replaced by the
+      `PhoneMetaDataRepository` instance in v4.33.0).
 - `$GLOBALS`: none (removed in v4.30.0 with `AbstractSessionHandler::enabled()`).
 - `HttpRequest` is an instance since v4.29.0 ([docs/http-request/plan.md](../http-request/plan.md)): the request
   superglobals (`$_GET`, `$_POST`, `$_SERVER`, `$_COOKIE`, `$_FILES`) are only read in `HttpRequest::fromGlobals()`, in
@@ -51,17 +52,17 @@ State after v4.32.0 (532 at v4.27.0, 447 at v4.30.0, 375 at v4.31.0; v4.32.0 rem
 
 ## Explicit comparisons (`php.md`, section 5)
 
-- `isset()` 12, `empty()` 1, loose `==` / `!=` 1 (searched in `src/` after v4.32.0; `common` is clean).
+- `isset()` 10, `empty()` 0, loose `==` / `!=` 1 (searched in `src/` after v4.33.0; `common` and `phone` are clean).
 
 ## Types (`php.md`, section 3)
 
-- About 143 `class` declarations are not `final` (searched after v4.32.0; `core`, `Core.php`, `request`, `response` and `common` are done). Some are intended extension points (views, forms, fields, columns, exception
+- About 130 `class` declarations are not `final` (searched after v4.33.0; `core`, `Core.php`, `request`, `response`, `common` and `phone` are done). Some are intended extension points (views, forms, fields, columns, exception
   handler); every class needs a review (`final`, or documented extension point, or `@internal`).
 - `mixed` in own code: about 15 (e.g. `TableItem::getRawValue()`); `Core::config()` was removed in v4.31.0; `common` keeps only
   `JsonUtils::convertToJsonString(mixed)` and the narrowed JSON/XML data.
 - Enums first: fixed sets still as string constants (126 public string/int constants, not all of them fixed sets), e.g.
   `MailerConstants` (`HttpRequest::PROTOCOL_*` became `ProtocolEnum` in v4.29.0).
-- Missing types: see the baseline (`missingType.*`, about 170 entries).
+- Missing types: see the baseline (`missingType.*`, about 70 entries).
 
 ## Exceptions and style (`php.md`, sections 4 and 6)
 

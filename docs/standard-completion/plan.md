@@ -62,7 +62,7 @@ too large.
    for keys like `password`, `token`, `secret`, `csrf`, `key`, `auth`; cookie names only; server variables from an
    allow-list (no environment secrets). The debug page (debug mode only) stays as is.
 5. `common` (68), done in v4.32.0.
-6. `phone` (78, full standard; characterization tests first).
+6. `phone` (78, full standard; characterization tests first), done in v4.33.0.
 7. `db` (51).
 8. `table` (39) and `pagination` (3).
 9. `mailer` (33, full standard; characterization tests of the MIME output first).
@@ -201,6 +201,54 @@ too large.
   - `CountryCodeEnum` is used nowhere and has no behaviour; `AA` and `UR` are no ISO 3166 codes (`UR` is probably a typo
     for `UY`, which exists). Removing cases is breaking: left as is.
   - `CsvFile` is mutable (`addRow()`); a builder/immutable variant would be a redesign.
+
+### Step 6 (v4.33.0) – done
+
+- Area `phone` (port of libphonenumber; licence notice kept in `src/phone/LICENCE` and in the class docblocks;
+  `src/phone/data/` untouched and still excluded). Baseline 307 -> 229 (all 78 entries of `src/phone/` removed, no new
+  entry). Details and before/after in `UPGRADE.md`.
+- **Characterization first:** `tests/Unit/phone/` (5759 tests) passed against the old code before the change: parsing
+  (national, `+`, `00`, IDD of the default region, brackets, slashes, extensions, RFC 3966, vanity numbers, full-width
+  and Arabic-Indic digits, all error codes), rendering (internal / international, extension prefixes, formats of
+  about 20 regions), the region / country calling code map, length tests per region, `PhoneMatcher`, the metadata, and
+  **every example number of the metadata of every region** (1096 numbers of 245 regions, read from `src/phone/data/`
+  by `PhoneExampleNumbers`; round trips of national, international and E.164-like input). The API has no number types
+  (mobile / fixed line) and no national or E.164 format: it only offers "possible" (length), the internal format
+  (`+41.446681800`) and the international format (`+41 44 668 18 00`); nothing else was added.
+- **API decision:** consumer API is `PhoneNumber::createFromString()` / `getNationalSignificantNumber()`,
+  `PhoneRenderer::renderInternalFormat()` / `renderInternationalFormat()` and `PhoneParseException` +
+  `PhoneParseErrorEnum` (all `final`, signatures unchanged except the exception). Everything else is `final` and
+  `@internal`. `actra/backend` (`DbAuthUser`) and `PhoneNumberField` only use the consumer API: no follow-up needed.
+- **Static state:** `PhoneMetaData::$regionToMetaDataMap`, `$countryCodeToNonGeographicalMetadataMap` and
+  `PhoneParser::$instance` are gone. `PhoneMetaDataRepository` (instance) loads and remembers the metadata of one
+  lifetime; `PhoneMetaDataLoader` narrows the `require`d arrays once into `PhoneMetaData` / `PhoneDesc` / `PhoneFormat`
+  (readonly, `UnexpectedValueException` with the key). The static entry points create one repository per call and load
+  the files they need again (about 30 µs per parse + render, plain arrays, OPcache): nothing is cached between calls, so
+  the entry points stay stateless. If this is ever too slow, pass a repository from a shared service, not a static.
+- **Enums:** `PhoneParseErrorEnum` (values of the old constants and `-1` for "not possible"), `PhoneLengthResultEnum` (the
+  `PhoneValidator` int constants), `PhoneCountryCodeSourceEnum` (the `FROM_*` constants of `PhoneConstants`).
+  `PhoneConstants`, `PhonePatterns` stay constants (regular expression parts, character tables, no fixed sets).
+- **Data files:** `src/phone/data/PhoneNumberMetadata_IT.php` and `_VA.php` refer to `PhoneCountryCodes::IT`, so that class
+  stays (`final`, `@internal`). The values of every constant of `PhoneConstants` and `PhonePatterns` were compared with
+  the old ones (only `UNWANTED_END_CHAR_PATTERN` changed, see below).
+- **Structure:** the 170 lines of `PhoneParser::parse()` are split into small methods; by-reference parameters are
+  return values (array shapes of private methods); the carrier code (never read) is dropped; `PhoneNumberNormalizer` is
+  new. `PhoneRegionCountryCodeMap` is typed (`non-empty-list<string>`).
+- **Bugs found and fixed (with tests, see `UPGRADE.md`):** the internal format dropped the Italian leading zero
+  (`+39.212345678`; `PhoneNumberField` stores that format, so already stored Italian landlines are not repaired); the
+  pattern for unwanted trailing characters used Java syntax (`&&`) that PCRE does not know, so `044 668 18 00;` / `!` /
+  `,` / a closing quote were `NOT_A_NUMBER`; the matcher offsets are character offsets but were used with `substr()`;
+  `isPossibleNumber()` crashed with a `TypeError` for an unknown country calling code.
+- **Quirks of the metadata kept (pinned in `PhoneRegionExampleNumbersTest`):** 11 example numbers of the metadata are not
+  possible for their own region (`NO`/`SJ` `uan`, `CI` mobile, `NE` toll free and premium rate, `CG` mobile, `SZ`, `BZ`,
+  `TO`, `FJ` toll free, `SM` fixed line) and 3 (`MX` mobile, `GA` fixed line and mobile) start with the trunk prefix.
+  An extension is cut after seven digits; a text with three or more letters is read as vanity number (`ext` at the
+  end becomes digits). These are libphonenumber behaviours, not changed.
+- **Stays untested:** the exact content of the 245 metadata files (only through their example numbers),
+  `PhoneMetaDataRepository` with a broken file (the loader is tested with arrays).
+- **Open / for later:** there is no validity check per number type (only length, as before); a real
+  `isValidNumber()` / E.164 / national format would be new features. The country list of `PhoneRegionCountryCodeMap`
+  is rebuilt on each `isValidRegionCode()` call (cheap, 245 entries).
 
 ### Superglobals rule – done
 
