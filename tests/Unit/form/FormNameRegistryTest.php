@@ -14,6 +14,10 @@ use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * Characterization of the static registry before the redesign (docs/session/plan.md, step 1): the registry and these
+ * tests are removed in step 2 (`FormValidateTest` pins the exception of `Form` for a duplicate name too).
+ */
 final class FormNameRegistryTest extends TestCase
 {
     #[Override]

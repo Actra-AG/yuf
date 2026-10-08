@@ -9,15 +9,21 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\session;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\security\CsrfToken;
 use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\session\FileSessionHandler;
 use actra\yuf\session\SessionSettings;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use DateTimeImmutable;
 use Override;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * Session handler (docs/session/plan.md, step 1: characterization of the session behaviour before the redesign):
+ * which keys `clearUserData()` keeps, the data of a started session and the protection against session fixation.
+ */
 final class AbstractSessionHandlerTest extends TestCase
 {
     private const string SESSION_NAME = 'yufTestSession';
@@ -47,6 +53,29 @@ final class AbstractSessionHandlerTest extends TestCase
         AbstractSessionHandler::clearUserData();
 
         $this->assertSame(AbstractSessionHandlerTest::DATA_WITHOUT_USER_DATA, $_SESSION);
+    }
+
+    public function testClearUserDataRemovesTheStateOfTablesFiltersSearchAndUploads(): void
+    {
+        $_SESSION = AbstractSessionHandlerTest::DATA_WITHOUT_USER_DATA;
+        $_SESSION['table'] = ['items' => ['sort_column' => 'name', 'sort_direction' => 'DESC']];
+        $_SESSION['tableFilter'] = ['items' => ['key' => 'value']];
+        $_SESSION['columnFilter'] = ['items_name' => ['items_name' => 'ann']];
+        $_SESSION['searchHelper'] = ['users' => ['status' => 'active']];
+        $_SESSION['uploadPointer'] = [['name' => 'a.txt', 'type' => 'text/plain', 'size' => 7, 'path' => '/tmp/x']];
+
+        AbstractSessionHandler::clearUserData();
+
+        $this->assertSame(AbstractSessionHandlerTest::DATA_WITHOUT_USER_DATA, $_SESSION);
+    }
+
+    public function testClearUserDataKeepsOnlyTheHandlerKeysThatExist(): void
+    {
+        $_SESSION = ['sessionCreated' => 1_790_000_000, 'preferredLanguage' => 'de', 'other' => 'data'];
+
+        AbstractSessionHandler::clearUserData();
+
+        $this->assertSame(['sessionCreated' => 1_790_000_000, 'preferredLanguage' => 'de'], $_SESSION);
     }
 
     public function testClearUserDataKeepsSessionHandlerDataAndLanguage(): void
@@ -98,6 +127,93 @@ final class AbstractSessionHandlerTest extends TestCase
         $this->assertSame(
             [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
             $_COOKIE,
+        );
+    }
+
+    /**
+     * Today's layout of the data of the session handler in a new session: four top-level keys.
+     */
+    #[RunInSeparateProcess]
+    public function testNewSessionStartsWithTheDataOfTheSessionHandler(): void
+    {
+        $savePath = $this->createSessionSavePath();
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        $httpRequest = HttpRequestFactory::create(
+            headers: ['User-Agent' => 'Browser'],
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
+        );
+
+        try {
+            new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable(datetime: '@1790000000')),
+            );
+            $session = $_SESSION;
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertSame(
+            [
+                'sessionCreated' => 1_790_000_000,
+                'trustedRemoteAddress' => '192.0.2.1',
+                'trustedUserAgent' => 'Browser',
+                'lastActivity' => 1_790_000_000,
+            ],
+            $session,
+        );
+    }
+
+    /**
+     * A session of the same client (address and user agent) keeps its data, only `lastActivity` is updated.
+     */
+    #[RunInSeparateProcess]
+    public function testExistingSessionOfTheSameClientKeepsItsData(): void
+    {
+        $savePath = $this->createSessionSavePath();
+        file_put_contents(
+            filename: $savePath . DIRECTORY_SEPARATOR . 'sess_' . AbstractSessionHandlerTest::COOKIE_SESSION_ID,
+            data: 'sessionCreated|i:1790000000;trustedRemoteAddress|s:9:"192.0.2.1";trustedUserAgent|s:7:"Browser";'
+            . 'lastActivity|i:1790000100;preferredLanguage|s:2:"de";table|a:1:{s:5:"items";a:0:{}}',
+        );
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        $httpRequest = HttpRequestFactory::create(
+            headers: ['User-Agent' => 'Browser'],
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
+        );
+
+        try {
+            new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable(datetime: '@1790000200')),
+            );
+            $session = $_SESSION;
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertSame(
+            [
+                'sessionCreated' => 1_790_000_000,
+                'trustedRemoteAddress' => '192.0.2.1',
+                'trustedUserAgent' => 'Browser',
+                'lastActivity' => 1_790_000_200,
+                'preferredLanguage' => 'de',
+                'table' => ['items' => []],
+            ],
+            $session,
         );
     }
 
