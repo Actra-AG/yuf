@@ -25,13 +25,14 @@ final class HiddenFieldRenderer extends FormRenderer
     public function __construct(private readonly InputField $hiddenField) {}
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
         $hiddenField = $this->hiddenField;
-        $this->setHtmlTag(htmlTag: new HtmlTag(name: 'input', selfClosing: true, htmlTagAttributes: [
+
+        return new HtmlTag(name: 'input', selfClosing: true, htmlTagAttributes: [
             HtmlTagAttribute::fromText(name: 'type', text: $hiddenField->inputType->value),
             HtmlTagAttribute::fromText(name: 'name', text: $hiddenField->name),
             HtmlTagAttribute::fromHtml(name: 'value', html: $hiddenField->renderValue()),
-        ]));
+        ]);
     }
 }

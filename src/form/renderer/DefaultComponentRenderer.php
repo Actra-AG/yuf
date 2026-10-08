@@ -20,13 +20,13 @@ final class DefaultComponentRenderer extends FormRenderer
     public function __construct(private readonly FormComponent $formComponent) {}
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
         $componentTag = new HtmlTag($this->formComponent->name, false);
 
         if ($this->formComponent->hasErrors(withChildElements: true)) {
             $componentTag->addHtmlTagAttribute(HtmlTagAttribute::fromText(name: 'class', text: 'has-error'));
         }
-        $this->setHtmlTag($componentTag);
+        return $componentTag;
     }
 }

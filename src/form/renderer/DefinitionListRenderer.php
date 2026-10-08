@@ -24,7 +24,7 @@ final class DefinitionListRenderer extends FormRenderer
     public function __construct(private readonly FormField $formField) {}
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
         $formField = $this->formField;
         $labelAttributes = [HtmlTagAttribute::fromText(name: 'for', text: $formField->name)];
@@ -68,15 +68,13 @@ final class DefinitionListRenderer extends FormRenderer
                 ));
             }
             $defaultFormFieldRenderer = $formField->getDefaultRenderer();
-            $divTag->addTag($defaultFormFieldRenderer->prepareHtmlTag());
+            $divTag->addTag($defaultFormFieldRenderer->createHtmlTag());
 
             FormRenderer::addErrorsToParentHtmlTag($formField, $divTag);
             if ($formField->fieldInfo !== null) {
                 FormRenderer::addFieldInfoToParentHtmlTag($formField, $divTag);
             }
-            $this->setHtmlTag($divTag);
-
-            return;
+            return $divTag;
         }
 
         // Show WITH label, therefore <dl><dt><dd>-Frame is required:
@@ -106,7 +104,7 @@ final class DefinitionListRenderer extends FormRenderer
         }
 
         $defaultFormFieldRenderer = $formField->getDefaultRenderer();
-        $fieldTag = $defaultFormFieldRenderer->prepareHtmlTag();
+        $fieldTag = $defaultFormFieldRenderer->createHtmlTag();
 
         if ($additionalColumnContent !== null) {
             $column1 = new HtmlTag('div', false, [HtmlTagAttribute::fromText(name: 'class', text: 'form-col-1')]);
@@ -129,7 +127,7 @@ final class DefinitionListRenderer extends FormRenderer
         $dlTag = new HtmlTag('dl', false);
         $dlTag->addTag($dtTag);
         $dlTag->addTag($ddTag);
-        $this->setHtmlTag($dlTag);
+        return $dlTag;
     }
 
     public function addHtmlTagBeforeFormField(HtmlTag $htmlTag): void

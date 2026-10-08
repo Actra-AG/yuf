@@ -20,7 +20,7 @@ final class FormInfoRenderer extends FormRenderer
     public function __construct(private readonly FormInfo $formInfo) {}
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
         $formInfo = $this->formInfo;
 
@@ -52,6 +52,6 @@ final class FormInfoRenderer extends FormRenderer
         $dlTag->addTag($dtTag);
         $dlTag->addTag($ddTag);
 
-        $this->setHtmlTag($dlTag);
+        return $dlTag;
     }
 }

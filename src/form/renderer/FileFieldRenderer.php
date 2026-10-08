@@ -24,7 +24,7 @@ final class FileFieldRenderer extends FormRenderer
     public function __construct(private readonly FileField $fileField) {}
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
         $fileField = $this->fileField;
         $alreadyUploadedFiles = $fileField->getFiles();
@@ -108,7 +108,7 @@ final class FileFieldRenderer extends FormRenderer
             htmlTagAttribute: HtmlTagAttribute::fromText(name: 'value', text: $fileField->uniqueSessFileStorePointer),
         );
         $divFileUpload->addTag(htmlTag: $hiddenField);
-        $this->setHtmlTag(htmlTag: $divFileUpload);
+        return $divFileUpload;
     }
 
     /**

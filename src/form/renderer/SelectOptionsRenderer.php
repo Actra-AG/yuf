@@ -21,7 +21,7 @@ final class SelectOptionsRenderer extends FormRenderer
     public function __construct(private readonly SelectOptionsField|MultiSelectOptionsField $selectOptionsField) {}
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
         $selectOptionsField = $this->selectOptionsField;
         $isMultiple = $selectOptionsField->isMultiple();
@@ -95,6 +95,6 @@ final class SelectOptionsRenderer extends FormRenderer
             $optionTag->addText(htmlText: $htmlText);
             $selectTag->addTag(htmlTag: $optionTag);
         }
-        $this->setHtmlTag(htmlTag: $selectTag);
+        return $selectTag;
     }
 }

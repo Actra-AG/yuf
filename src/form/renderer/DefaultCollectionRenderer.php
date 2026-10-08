@@ -20,7 +20,7 @@ final class DefaultCollectionRenderer extends FormRenderer
     public function __construct(private readonly FormCollection $formCollection) {}
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
         $componentTag = new HtmlTag($this->formCollection->name, false);
 
@@ -32,6 +32,6 @@ final class DefaultCollectionRenderer extends FormRenderer
             $componentTag->addTag($childComponent->getHtmlTag());
         }
 
-        $this->setHtmlTag($componentTag);
+        return $componentTag;
     }
 }

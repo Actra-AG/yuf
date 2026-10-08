@@ -4,6 +4,39 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.51.0] – 2026-10-08
+
+Form renderers keep no tag any more, so a component (a field, a form) can be rendered more than once: `render()` and
+`getHtmlTag()` build a new tag on every call. Before, the second call threw `You cannot overwrite an already defined
+Tag-Element`. The HTML output is unchanged. Search your project for `extends FormRenderer`, `extends InputFieldRenderer`,
+`prepare()`, `prepareHtmlTag(`, `setHtmlTag(` and `->getHtmlTag()` on renderers.
+
+### ⚠️ `FormRenderer`: `prepare()` is replaced by `createHtmlTag()`
+
+`prepare(): void`, `prepareHtmlTag()`, `getHtmlTag()` and `setHtmlTag()` are removed. A renderer implements
+`abstract public function createHtmlTag(): HtmlTag`: it builds and returns the tag and stores nothing. The static helpers
+`addErrorsToParentHtmlTag()`, `addFieldInfoToParentHtmlTag()` and `addAriaAttributesToHtmlTag()` stay.
+
+| Before | After |
+|:--|:--|
+| `public function prepare(): void { …; $this->setHtmlTag(htmlTag: $tag); }` | `public function createHtmlTag(): HtmlTag { …; return $tag; }` |
+| `$tag->addTag(htmlTag: $renderer->prepareHtmlTag());` | `$tag->addTag(htmlTag: $renderer->createHtmlTag());` |
+| `$renderer->prepare(); $tag = $renderer->getHtmlTag();` | `$tag = $renderer->createHtmlTag();` |
+| `parent::prepare(); $this->getHtmlTag()->addHtmlTagAttribute(…);` (in an `InputFieldRenderer`) | `$tag = parent::createHtmlTag(); $tag->addHtmlTagAttribute(…); return $tag;` |
+
+A renderer that built its tag from state of its own (a list filled before the call, like
+`DefinitionListRenderer::addHtmlTagBeforeFormField()`) keeps that state and builds a new tag from it on every call.
+Components that override `getHtmlTag()` (`FormComponent::getHtmlTag()` is unchanged) need no change; one that called
+`$this->getDefaultRenderer()->prepareHtmlTag()` calls `createHtmlTag()` now.
+
+### `ToggleField` and `MultiToggleField`
+
+Their shared child methods (`addChildField()`, `addChildComponent()`, `getChildField()`, `getChildComponent()`,
+`setDefaultChildFieldRenderer()`, `$childrenByMainOption`) come from the trait `HasToggleChildren`. The public API and
+the behaviour are unchanged.
+
+---
+
 ## [v4.50.0] – 2026-10-08
 
 `HtmlDataObject` keeps its values private and copies the data objects that are added to it. Search your project for

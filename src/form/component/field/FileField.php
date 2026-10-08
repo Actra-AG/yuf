@@ -163,7 +163,7 @@ final class FileField extends FormField
     }
 
     /**
-     * Referenced usage at `FileFieldRenderer::prepare()`
+     * Referenced usage at `FileFieldRenderer::createHtmlTag()`
      */
     private function readRemoveRequest(FormInput $input): void
     {

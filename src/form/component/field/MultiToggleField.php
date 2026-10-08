@@ -9,15 +9,11 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
-use actra\yuf\form\component\FormField;
-use actra\yuf\form\FormComponent;
-use actra\yuf\form\FormInput;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\ToggleFieldRenderer;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlText;
-use Closure;
 use Override;
 
 /**
@@ -25,11 +21,7 @@ use Override;
  */
 final class MultiToggleField extends MultiOptionsField
 {
-    private readonly ToggleChildren $toggleChildren;
-    /** @var array<int|string, array<int|string, FormComponent>> */
-    public array $childrenByMainOption {
-        get => $this->toggleChildren->getAll();
-    }
+    use HasToggleChildren;
 
     /**
      * @param list<string> $initialValues
@@ -50,7 +42,6 @@ final class MultiToggleField extends MultiOptionsField
             initialValues: $initialValues,
             autoComplete: $autoComplete,
         );
-        $this->toggleChildren = new ToggleChildren(toggleField: $this);
         if ($requiredError !== null) {
             $this->addRequiredRule(errorMessage: $requiredError);
         }
@@ -58,60 +49,13 @@ final class MultiToggleField extends MultiOptionsField
         $this->setRenderer(renderer: $this->getDefaultRenderer());
     }
 
-    public function addChildField(string $mainOption, FormField $childField): void
-    {
-        $this->addChildComponent(mainOption: $mainOption, childComponent: $childField);
-    }
-
-    public function addChildComponent(string $mainOption, FormComponent $childComponent): void
-    {
-        $this->toggleChildren->add(mainOption: $mainOption, childComponent: $childComponent);
-        $childComponent->setParentFormComponent(parentFormComponent: $this);
-    }
-
-    public function getChildField(string $mainOption, string $fieldName): FormField
-    {
-        return $this->toggleChildren->getField(mainOption: $mainOption, fieldName: $fieldName);
-    }
-
-    public function getChildComponent(string $mainOption, string $componentName): FormComponent
-    {
-        return $this->toggleChildren->get(mainOption: $mainOption, componentName: $componentName);
-    }
-
-    /**
-     * @param Closure(FormField): FormRenderer $rendererFactory Creates the renderer for a child field without one
-     */
-    public function setDefaultChildFieldRenderer(Closure $rendererFactory): void
-    {
-        $this->toggleChildren->setDefaultChildFieldRenderer(rendererFactory: $rendererFactory);
-    }
-
     #[Override]
     public function getDefaultRenderer(): FormRenderer
     {
         return new ToggleFieldRenderer(
             toggleField: $this,
-            toggleChildren: $this->toggleChildren,
+            toggleChildren: $this->getToggleChildren(),
             displayLegend: $this->displayLegend,
         );
-    }
-
-    /**
-     * Validates the child fields of the selected options with the same input, after this field is valid.
-     */
-    #[Override]
-    protected function validateChildFields(FormInput $input): void
-    {
-        $this->toggleChildren->validateSelected(input: $input);
-    }
-
-    /**
-     * Validates the child fields of the selected options with their current values, after this field is valid.
-     */
-    #[Override]
-    protected function validateChildFieldsWithCurrentValues(): void
-    {
-        $this->toggleChildren->validateSelectedCurrentValues();
     }
 }

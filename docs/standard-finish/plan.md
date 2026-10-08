@@ -412,3 +412,39 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   `TableItem`, which are unchanged.
 - `UPGRADE.md`: `## [v4.50.0]`. `ddev composer check` green, baseline empty, `curl https://yuf.ddev.site/` 200.
 - Open: none.
+
+### Step 10 (v4.51.0) – done
+
+- **One-phase renderer API:** `FormRenderer::createHtmlTag(): HtmlTag` (abstract, public) replaces `prepare()`,
+  `prepareHtmlTag()`, `getHtmlTag()`, `setHtmlTag()` and the stored `$htmlTag` (no state left in `FormRenderer`; the
+  three static helpers stay). All 17 renderers and the callers (`FormComponent::getHtmlTag()`, `DefinitionListRenderer`,
+  `LegendAndListRenderer`, `BooleanFieldListRenderer`; `DefaultFormRenderer`, `DefaultCollectionRenderer` and
+  `ToggleFieldRenderer` only call `$child->getHtmlTag()`) are adapted. `FormSubHeadline` already overrode `getHtmlTag()`
+  and needed no change. `NumericFieldRenderer`: `$tag = parent::createHtmlTag();` then its attributes, `return $tag;`
+  (the `LogicException` for a missing tag is gone). `InputFieldRenderer` PHPDoc and `FileField` PHPDoc updated.
+  `DefinitionListRenderer::addHtmlTagBeforeFormField()` keeps its list (builder state, read on every call).
+- **Tests:** HTML byte-identical: no existing test was changed and all pass. New `RenderTwiceTest` (5 tests: a form with
+  all kinds of fields incl. toggle children, errors and numeric field rendered twice and `getHtmlTag()` twice; single
+  field twice; renderers return a new tag every time; numeric attributes not doubled). The test was written after the
+  change (the old code throws `You cannot overwrite an already defined Tag-Element` on the second call, as described in
+  the task). `Form::render()` twice is idempotent (the global error is only added once). Tests: 12243 -> 12248.
+- **Toggle fields:** trait `HasToggleChildren` (no `Trait` suffix, names the ability) with `addChildField()`,
+  `addChildComponent()`, `getChildField()`, `getChildComponent()`, `setDefaultChildFieldRenderer()`, the hook
+  `$childrenByMainOption` and the two `validateChildFields…()` overrides. `ToggleChildren` (@internal) stays the
+  implementation. Chosen over delegation because the two classes have different parents (`SingleOptionsField` /
+  `MultiOptionsField`) and the remaining code per class is only the constructor and `getDefaultRenderer()`. The trait
+  creates `ToggleChildren` lazily (`?ToggleChildren` plus private `getToggleChildren()`), because PHPStan reports a
+  readonly property initialised from a trait method and a property hook with `??=` as uninitialised. Public API
+  unchanged.
+- **Other projects (read only, yuf 4: `backend` ^4.10, `drogeriehaas.ch` ^4.7; `yuf-skeleton` `^3.2 || ^4.0` has no hit):**
+  no class extends `FormRenderer` or `InputFieldRenderer` and nobody calls `prepare()`, `setHtmlTag()` or `getHtmlTag()`
+  on a renderer. Callers of `prepareHtmlTag()`: `backend/src/libs/form/component/SearchQueryField.php:34`,
+  `backend/src/libs/form/component/SearchSelectOptionsField.php:24`,
+  `drogeriehaas.ch/app/libs/form/component/SearchQueryField.php:34`,
+  `drogeriehaas.ch/app/libs/form/component/SearchSelectOptionsField.php:25` (all in an overridden `getHtmlTag()`:
+  `$this->getDefaultRenderer()->prepareHtmlTag()` -> `createHtmlTag()`). `drogeriehaas.ch/.../QuillEditorField.php` only
+  uses `FormRenderer::addErrorsToParentHtmlTag()` (unchanged). Those files still use the old
+  `new HtmlTagAttribute(...)` (v4.41.0 change, see its UPGRADE section).
+- `UPGRADE.md`: `## [v4.51.0]`. `ddev composer check` green, baseline empty, `curl https://yuf.ddev.site/` 200 (`example/`
+  renders no form, so no HTML comparison).
+- Open: none.

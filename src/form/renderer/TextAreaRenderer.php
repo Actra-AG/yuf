@@ -21,7 +21,7 @@ final class TextAreaRenderer extends FormRenderer
     public function __construct(private readonly TextAreaField $textAreaField) {}
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
         $textAreaField = $this->textAreaField;
         $textareaTag = new HtmlTag(
@@ -65,6 +65,6 @@ final class TextAreaRenderer extends FormRenderer
             parentHtmlTag: $textareaTag,
         );
         $textareaTag->addText(htmlText: HtmlText::fromHtml(html: $textAreaField->renderValue()));
-        $this->setHtmlTag(htmlTag: $textareaTag);
+        return $textareaTag;
     }
 }

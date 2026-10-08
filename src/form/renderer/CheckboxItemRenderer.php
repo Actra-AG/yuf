@@ -26,7 +26,7 @@ final class CheckboxItemRenderer extends FormRenderer
     public function __construct(private readonly CheckboxOptionsField|BooleanField $checkboxOptionsField) {}
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
         $checkboxOptionsField = $this->checkboxOptionsField;
 
@@ -67,7 +67,7 @@ final class CheckboxItemRenderer extends FormRenderer
             formComponentWithErrors: $checkboxOptionsField,
             parentHtmlTag: $divFormCheck,
         );
-        $this->setHtmlTag(htmlTag: $divFormCheck);
+        return $divFormCheck;
     }
 
     private function getInputTag(): HtmlTag

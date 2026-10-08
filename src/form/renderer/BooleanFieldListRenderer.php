@@ -14,6 +14,7 @@ use actra\yuf\form\component\field\CheckboxOptionsField;
 use actra\yuf\form\component\layout\CheckboxOptionsLayoutEnum;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\FormRenderer;
+use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlText;
 use Override;
 
@@ -32,13 +33,13 @@ final class BooleanFieldListRenderer extends FormRenderer
     ) {}
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
         $optionsField = $this->createOptionsField();
         $renderer = $this->withLegend
             ? new LegendAndListRenderer(optionsField: $optionsField)
             : new CheckboxOptionsRenderer(checkboxOptionsField: $optionsField);
-        $this->setHtmlTag(htmlTag: $renderer->prepareHtmlTag());
+        return $renderer->createHtmlTag();
     }
 
     private function createOptionsField(): CheckboxOptionsField

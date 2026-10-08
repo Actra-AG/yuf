@@ -17,14 +17,14 @@ use Override;
 
 /**
  * Renders an input field. Extension point: `NumericFieldRenderer` extends it; a project can do the same to add
- * attributes to the input tag (`prepare()` and `getHtmlTag()`).
+ * attributes to the input tag (`createHtmlTag()`: call the parent, then add attributes to the returned tag).
  */
 class InputFieldRenderer extends FormRenderer
 {
     public function __construct(private readonly InputField $formField) {}
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
         $formField = $this->formField;
         $inputTag = new HtmlTag(name: 'input', selfClosing: true);
@@ -67,6 +67,6 @@ class InputFieldRenderer extends FormRenderer
             formField: $formField,
             parentHtmlTag: $inputTag,
         );
-        $this->setHtmlTag(htmlTag: $inputTag);
+        return $inputTag;
     }
 }

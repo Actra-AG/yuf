@@ -20,7 +20,7 @@ final class FormControlRenderer extends FormRenderer
     public function __construct(private readonly FormControl $formControl) {}
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
         $formControl = $this->formControl;
 
@@ -42,6 +42,6 @@ final class FormControlRenderer extends FormRenderer
             $divTag->addTag($aTag);
         }
 
-        $this->setHtmlTag($divTag);
+        return $divTag;
     }
 }

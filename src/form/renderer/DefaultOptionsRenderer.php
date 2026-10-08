@@ -25,7 +25,7 @@ abstract class DefaultOptionsRenderer extends FormRenderer
     ) {}
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
         $optionsField = $this->optionsField;
         $options = $optionsField->formOptions->data;
@@ -81,7 +81,7 @@ abstract class DefaultOptionsRenderer extends FormRenderer
             $liTag->addTag(htmlTag: $labelTag);
         }
 
-        $this->setHtmlTag(htmlTag: $ulTag);
+        return $ulTag;
     }
 
     public static function createUlTag(OptionsField $optionsField): HtmlTag

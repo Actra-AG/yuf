@@ -10,8 +10,8 @@ declare(strict_types=1);
 namespace actra\yuf\form\renderer;
 
 use actra\yuf\form\component\field\NumericField;
+use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
-use LogicException;
 use Override;
 
 /**
@@ -27,13 +27,9 @@ final class NumericFieldRenderer extends InputFieldRenderer
     }
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
-        parent::prepare();
-        $inputTag = $this->getHtmlTag();
-        if ($inputTag === null) {
-            throw new LogicException(message: 'The input tag is missing after InputFieldRenderer::prepare().');
-        }
+        $inputTag = parent::createHtmlTag();
         $inputTag->addHtmlTagAttribute(
             htmlTagAttribute: HtmlTagAttribute::fromText(name: 'inputmode', text: 'numeric'),
         );
@@ -43,6 +39,8 @@ final class NumericFieldRenderer extends InputFieldRenderer
                 text: '\d{' . $this->getDigitQuantifier() . '}',
             ),
         );
+
+        return $inputTag;
     }
 
     private function getDigitQuantifier(): string

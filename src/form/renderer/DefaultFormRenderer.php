@@ -21,7 +21,7 @@ final class DefaultFormRenderer extends FormRenderer
     public function __construct(private readonly Form $form) {}
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
         $form = $this->form;
         $attributes = [
@@ -55,7 +55,7 @@ final class DefaultFormRenderer extends FormRenderer
             }
             $htmlTag->addTag(htmlTag: $childComponent->getHtmlTag());
         }
-        $this->setHtmlTag(htmlTag: $htmlTag);
+        return $htmlTag;
     }
 
     private function renderErrors(HtmlTag $parentTag): void

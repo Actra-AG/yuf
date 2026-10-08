@@ -19,7 +19,7 @@ use LogicException;
 
 /**
  * The child components of a toggle field per main option (the option that shows them). Shared by `ToggleField` and
- * `MultiToggleField` by composition; `ToggleFieldRenderer` renders them.
+ * `MultiToggleField` through the trait `HasToggleChildren`; `ToggleFieldRenderer` renders them.
  *
  * @internal
  */

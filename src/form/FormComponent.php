@@ -73,7 +73,7 @@ abstract class FormComponent extends HtmlElement
         $renderer = $this->getRenderer(setDefaultIfNull: true)
             ?? throw new LogicException(message: 'The component ' . $this->name . ' has no renderer.');
 
-        return $renderer->prepareHtmlTag();
+        return $renderer->createHtmlTag();
     }
 
     /**

@@ -21,7 +21,7 @@ final class LegendAndListRenderer extends FormRenderer
     public function __construct(private readonly OptionsField $optionsField) {}
 
     #[Override]
-    public function prepare(): void
+    public function createHtmlTag(): HtmlTag
     {
         $optionsField = $this->optionsField;
         $fieldsetTag = LegendAndListRenderer::createFieldsetTag(optionsField: $optionsField);
@@ -35,7 +35,7 @@ final class LegendAndListRenderer extends FormRenderer
             );
         }
         $defaultFormFieldRenderer = $optionsField->getDefaultRenderer();
-        $fieldsetTag->addTag(htmlTag: $defaultFormFieldRenderer->prepareHtmlTag());
+        $fieldsetTag->addTag(htmlTag: $defaultFormFieldRenderer->createHtmlTag());
         FormRenderer::addErrorsToParentHtmlTag(
             formComponentWithErrors: $optionsField,
             parentHtmlTag: $fieldsetTag,
@@ -46,7 +46,7 @@ final class LegendAndListRenderer extends FormRenderer
                 parentHtmlTag: $fieldsetTag,
             );
         }
-        $this->setHtmlTag(htmlTag: $fieldsetTag);
+        return $fieldsetTag;
     }
 
     public static function createFieldsetTag(OptionsField $optionsField): HtmlTag
