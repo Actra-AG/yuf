@@ -56,7 +56,7 @@ final class TableFilterCsrfTest extends TestCase
             dbResultTable: new FixedPageDbResultTable(
                 identifier: $identifier . 'Table',
                 db: TableFilterCsrfTest::createStub(FrameworkDb::class),
-                dbQuery: TableFilterCsrfTest::createStub(DbQuery::class),
+                dbQuery: DbQuery::createFromSqlQuery(query: 'SELECT id FROM item'),
                 templateEngine: TemplateEngineFactory::create(
                     cacheDirectory: sys_get_temp_dir() . '/yuf-table-filter-test/',
                     templateBaseDirectory: sys_get_temp_dir() . '/',

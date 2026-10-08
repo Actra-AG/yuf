@@ -4,6 +4,152 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.34.0] – 2026-10-08
+
+Area release for `src/db/`: no static state (connection pool, duplicate check of the settings and query log are gone),
+validated settings, typed parameters (`list<float|int|string|null>`), `final` classes, no bound values in exception
+messages, `DbQuery` throws `InvalidArgumentException`. `FrameworkDb` stays the extension point of the area. Search your
+project for `FrameworkDb::getInstance(`, `new DbSettings(`, `identifier:`, `extends FrameworkDb`, `lastInsertId(`,
+`ExecuteAndFetch(`, `DbQueryLogList`, `getQueryLog(`, `createInQuery(`, `prepare(`, `prepareSelect(`, `new DbSelectStmt(`,
+`DbQuery::SORT_`, `DbRuntimeException`, `extends DbQuery` and for the types `DbRuntimeException`, `DbQuery`,
+`DbSelectStmt`, `DbSettings` in `extends`.
+
+### ⚠️ `FrameworkDb`: no connection pool, constructor takes connection parameters
+
+`FrameworkDb::getInstance()` and the static registry per identifier are removed, the constructor is public and takes
+`DbConnectionParameters` (the MySQL settings are converted with `DbConnectionParameters::forMysql()`). One object is one
+connection: create it once and pass it on, or keep it in an accessor of your own, as `actra/backend` does with
+`DB::get()`. A second connection to the same database is possible now (before, the second `new` with the same
+identifier threw a `LogicException`).
+
+Before:
+
+```php
+$db = FrameworkDb::getInstance(dbSettings: $dbSettings);
+
+class DB extends FrameworkDb
+{
+    public static function get(): DB
+    {
+        return DB::$instance ??= new DB(dbSettings: $dbSettings);
+    }
+}
+```
+
+After:
+
+```php
+$db = new FrameworkDb(connectionParameters: DbConnectionParameters::forMysql(dbSettings: $dbSettings));
+
+class DB extends FrameworkDb
+{
+    public static function get(): DB
+    {
+        return DB::$instance ??= new DB(
+            connectionParameters: DbConnectionParameters::forMysql(dbSettings: $dbSettings),
+        );
+    }
+}
+```
+
+A project that wants several named connections holds its own `array<string, FrameworkDb>`. Tests can connect to an
+in-memory database: `new FrameworkDb(connectionParameters: new DbConnectionParameters(dsn: 'sqlite::memory:'))`.
+
+### ⚠️ `DbSettings`: `final readonly`, no `identifier`, validated
+
+The argument `identifier` and the static check for duplicate identifiers are removed (the identifier only served the
+connection pool). The values are validated and an `InvalidArgumentException` (before: `LogicException`, which it
+extends) names the wrong setting: host name and database name must not be empty or contain `;` or control characters
+(they end up in the DSN), the charset only letters, digits and `_` (`utf-8` is still rejected with the old message), the
+time names language must look like a MySQL locale (`de_CH`, `sr_RS@latin`) or be `null`. The init command quotes the
+locale: `SET lc_time_names='de_CH', sql_safe_updates=1`. `sqlSafeUpdates` stays on by default.
+
+Before:
+
+```php
+new DbSettings(identifier: 'main', hostName: $host, databaseName: $name, userName: $user, password: $password);
+```
+
+After:
+
+```php
+new DbSettings(hostName: $host, databaseName: $name, userName: $user, password: $password);
+```
+
+### ⚠️ `FrameworkDb::lastInsertId()` throws, `getLastInsertId()` returns the `int`
+
+The override `lastInsertId(): int` broke the contract of `PDO::lastInsertId(): string|false`. `lastInsertId()` now
+throws a `LogicException` that names the replacement, so every old call fails at its first use instead of silently
+getting a `string`. The new `getLastInsertId(): int` throws an `UnexpectedValueException` if the driver returns
+something else than an integer.
+
+Before: `$id = $db->lastInsertId();` (`int`). After: `$id = $db->getLastInsertId();`
+
+### ⚠️ `FrameworkDb`, `DbSelectStmt`: typed parameters, `prepare()` options
+
+- Values of `select()`, `selectRows()`, `selectRow()`, `execute()`, `DbQuery` and `DbQueryData` are
+  `list<float|int|string|null>` (PHPStan, no change at runtime). PDO binds every value of `execute(array)` as a string:
+  a `false` became the empty string. Convert booleans to `0` / `1`.
+- `prepare()` and `prepareSelect()` take `array $options = []` instead of `$options = null`; the workaround for the old
+  PHP bug is gone. Before: `$db->prepare(query: $sql, options: null)`, after: leave the argument out.
+- `select()` returns `list<stdClass>`, `execute()` and the others throw `DbRuntimeException`; `prepare()` wraps a
+  failure into `DbRuntimeException` too (it did before, now also the `false` result).
+- `createInQuery(array $paramArr)` is `createInQuery(array $values)` and throws an `InvalidArgumentException` for an empty
+  list (`IN ()` is no valid SQL; before the database failed with a syntax error).
+- `select()` and `execute()` are one code path with `prepareSelect()`: the time of the query log starts after
+  `prepare()`.
+
+### ⚠️ Query log per connection
+
+`DbQueryLogList` was a static list for all connections of the process (`DbQueryLogList::add()` / `getLog()`). It is a
+`final` instance class now, owned by the `FrameworkDb` (second constructor argument `queryLog:`, e.g. with a `Clock` for
+tests); `FrameworkDb::getQueryLog()` returns its `list<DbQueryLogItem>`. `DbQueryLogItem::getExecutionTime()` throws a
+`LogicException` for a query that is not finished (before: a meaningless number); items in the log are always finished.
+
+Before: `DbQueryLogList::getLog()`. After: `$db->getQueryLog()`.
+
+### ⚠️ `DbSelectStmt`: `executeAndFetch()`, `final`, log as argument
+
+- `ExecuteAndFetch()` is renamed to `executeAndFetch()` (PHP method names are case-insensitive: the old call keeps
+  working at runtime, the name in your code should change).
+- The constructor argument `bool $logQuery` is `?DbQueryLogList $queryLog`; create the statement with
+  `FrameworkDb::prepareSelect()`.
+- The class is `final readonly`.
+
+### ⚠️ `DbRuntimeException`: no bound values in the message, `final`
+
+The message contained every bound value (`SQL-Parameters: "…", "…"`), i.e. personal data in the log and error pages.
+It names the number of values only: `SQL-Parameters: 2 bound values (not shown)` (`none` without values; before:
+`-none-`). The SQL string is still part of the message. The message of the database driver can contain values itself
+(e.g. a duplicate entry): do not show it to users. `getCode()` is still the driver error code of a `PDOException`.
+The class is `final`; the constructor (`$parameters:`) and `getPrevious()` are unchanged.
+
+### ⚠️ `DbQuery`: `final`, `InvalidArgumentException`, no `SORT_*` constants
+
+- `DbQuery` is `final` (nothing in yuf or `actra/backend` extends it). Tests that stubbed it use
+  `DbQuery::createFromSqlQuery(query: 'SELECT id FROM item')`.
+- Every invalid query, part or parameter count throws an `InvalidArgumentException` (before: `LogicException`, its
+  parent class: `catch (LogicException)` keeps working).
+- `DbQuery::SORT_ASC` and `SORT_DESC` are removed; `addOrderPart(ascending: bool)` is unchanged (the internal
+  `DbSortDirectionEnum` has the two directions).
+- `getTotalAmount()` throws an `UnexpectedValueException` if the count query returns no row and reads the count with
+  `DbRow::getInt()`.
+- `createFromSqlQuery()` and `addOrderPart()` etc. take `list<float|int|string|null>` parameters.
+- The SQL of the query and of the added parts is trusted (documented); only values are bound.
+
+### ⚠️ Other classes
+
+`DbQueryData` and `DbQueryLogItem` are `final` too. `DbConnectionParameters` (`final readonly`), `DbStatementExecutor`, `DbQuerySectionEnum` and
+`DbSortDirectionEnum` are new (the last three `@internal`). `TableHelper::createDbResultTable(params:)` is typed as
+`list<float|int|string|null>`.
+
+### Bug fixes (no code change needed)
+
+- A failed `select()` / `execute()` no longer puts the bound values into the exception message (see above).
+- `DbQueryLogItem::getExecutionTime()` of an unfinished item returned a negative number.
+- The password of `DbSettings` and `DbConnectionParameters` is marked `#[SensitiveParameter]`: it does not show up in
+  stack traces of these constructors.
+
 ## [v4.33.0] – 2026-10-08
 
 Area release for `src/phone/` (port of libphonenumber, licence notice kept): typed metadata, no static caches, error

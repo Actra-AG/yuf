@@ -125,7 +125,7 @@ final class TableFilterSessionTest extends TestCase
         $table = new DbResultTable(
             identifier: TableFilterSessionTest::TABLE,
             db: TableFilterSessionTest::createStub(FrameworkDb::class),
-            dbQuery: TableFilterSessionTest::createStub(DbQuery::class),
+            dbQuery: DbQuery::createFromSqlQuery(query: 'SELECT id FROM item'),
             templateEngine: TemplateEngineFactory::create(
                 cacheDirectory: sys_get_temp_dir() . '/yuf-table-filter-test/',
                 templateBaseDirectory: sys_get_temp_dir() . '/',

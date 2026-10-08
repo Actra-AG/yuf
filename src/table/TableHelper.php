@@ -44,6 +44,9 @@ class TableHelper
         );
     }
 
+    /**
+     * @param list<float|int|string|null> $params One value per "?" placeholder of `$selectQuery`
+     */
     public static function createDbResultTable(
         string $identifier,
         FrameworkDb $db,

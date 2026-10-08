@@ -56,7 +56,7 @@ final class DbResultTableSessionTest extends TestCase
         $table = new DbResultTable(
             identifier: $identifier,
             db: DbResultTableSessionTest::createStub(FrameworkDb::class),
-            dbQuery: DbResultTableSessionTest::createStub(DbQuery::class),
+            dbQuery: DbQuery::createFromSqlQuery(query: 'SELECT id FROM item'),
             templateEngine: TemplateEngineFactory::create(
                 cacheDirectory: sys_get_temp_dir() . '/yuf-db-result-table-test/',
                 templateBaseDirectory: sys_get_temp_dir() . '/',
@@ -374,7 +374,7 @@ final class DbResultTableSessionTest extends TestCase
         $table = new DbResultTable(
             identifier: DbResultTableSessionTest::ID,
             db: DbResultTableSessionTest::createStub(FrameworkDb::class),
-            dbQuery: DbResultTableSessionTest::createStub(DbQuery::class),
+            dbQuery: DbQuery::createFromSqlQuery(query: 'SELECT id FROM item'),
             templateEngine: TemplateEngineFactory::create(
                 cacheDirectory: sys_get_temp_dir() . '/yuf-db-result-table-test/',
                 templateBaseDirectory: sys_get_temp_dir() . '/',

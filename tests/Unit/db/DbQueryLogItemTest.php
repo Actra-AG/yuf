@@ -12,6 +12,7 @@ namespace actra\yuf\tests\Unit\db;
 use actra\yuf\clock\Clock;
 use actra\yuf\db\DbQueryLogItem;
 use DateTimeImmutable;
+use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
 
@@ -35,5 +36,15 @@ final class DbQueryLogItemTest extends TestCase
         $item->confirmFinishedExecution();
 
         $this->assertEqualsWithDelta(1.75, $item->getExecutionTime(), 0.000001);
+    }
+
+    public function testExecutionTimeOfAnUnfinishedQueryThrows(): void
+    {
+        $item = new DbQueryLogItem(sqlQuery: 'SELECT 1', params: []);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIsOrContains('confirmFinishedExecution()');
+
+        $item->getExecutionTime();
     }
 }

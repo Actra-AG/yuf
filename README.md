@@ -581,6 +581,40 @@ $logger = new FileLogger(
 );
 ```
 
+## Database connection
+
+`FrameworkDb` is a PDO connection that throws on every error, uses native prepared statements and returns native types.
+It holds no static state: one object is one connection, which your project creates once and passes on (or keeps in an
+accessor of its own, as `actra/backend` does).
+
+```php
+use actra\yuf\db\DbConnectionParameters;
+use actra\yuf\db\DbSettings;
+use actra\yuf\db\FrameworkDb;
+
+$db = new FrameworkDb(
+    connectionParameters: DbConnectionParameters::forMysql(
+        dbSettings: new DbSettings(
+            hostName: 'db.example.com',
+            databaseName: 'app',
+            userName: 'app_user',
+            password: $password,
+        ),
+    ),
+);
+```
+
+`DbSettings` validates its values, because host and database name end up in the DSN and the charset and time names
+language in the init command. `sqlSafeUpdates` is on by default (MySQL refuses `UPDATE` and `DELETE` without a key). Use
+`?` placeholders for every value (`select()`, `selectRows()`, `selectRow()`, `execute()`, `prepareSelect()`); the values
+are `float|int|string|null`, so convert booleans to `0` / `1`. `createInQuery()` creates the placeholders of an `IN (...)`
+list, `getLastInsertId()` returns the generated ID as `int`, and `getQueryLog()` the queries run with `logQuery: true`
+(one log per connection). A `DbRuntimeException` carries the SQL string and the number of bound values, but never the
+values, because they may be personal data.
+
+Tests can connect to an in-memory SQLite database: `new FrameworkDb(connectionParameters: new DbConnectionParameters(dsn:
+'sqlite::memory:'))`.
+
 ## Typed database rows
 
 `FrameworkDb::select()` returns untyped `stdClass` rows. `selectRows()` and `selectRow()` return `DbRow` objects whose

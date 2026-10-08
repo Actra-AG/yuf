@@ -84,7 +84,7 @@ final class TablePaginationRendererTest extends TestCase
         $table = new FixedPageDbResultTable(
             identifier: 'paginationTest' . ++self::$tableCounter,
             db: TablePaginationRendererTest::createStub(FrameworkDb::class),
-            dbQuery: TablePaginationRendererTest::createStub(DbQuery::class),
+            dbQuery: DbQuery::createFromSqlQuery(query: 'SELECT id FROM item'),
             templateEngine: $this->templateEngine,
             httpRequest: HttpRequestFactory::create(),
             session: new Session(storage: new ArraySessionStorage()),

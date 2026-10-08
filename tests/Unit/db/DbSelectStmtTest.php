@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\db;
 
+use actra\yuf\db\DbQueryLogList;
 use actra\yuf\db\DbRowCountException;
 use actra\yuf\db\DbRuntimeException;
 use actra\yuf\db\DbSelectStmt;
@@ -29,7 +30,9 @@ final class DbSelectStmtTest extends TestCase
     protected function setUp(): void
     {
         $this->pdo = new PDO(dsn: 'sqlite::memory:', options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-        $this->pdo->exec(statement: 'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL, age INTEGER NULL)');
+        $this->pdo->exec(
+            statement: 'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL, age INTEGER NULL)',
+        );
         $this->pdo->exec(
             statement: "INSERT INTO users (id, name, age) VALUES (1, 'Anna', 30), (2, 'Ben', NULL)",
         );
@@ -96,5 +99,47 @@ final class DbSelectStmtTest extends TestCase
         $this->expectExceptionMessageIsOrContains('SQL-String: "INSERT INTO users (id, name) VALUES (5, NULL)"');
         // Fails on execute (NOT NULL constraint)
         $this->stmt(sql: 'INSERT INTO users (id, name) VALUES (5, NULL)')->executeAndFetchRows(parameters: []);
+    }
+
+    public function testExecuteAndFetchReturnsObjects(): void
+    {
+        $rows = $this->stmt(sql: 'SELECT id, name FROM users WHERE id = ?')->executeAndFetch(parameters: [2]);
+
+        $this->assertCount(1, $rows);
+        $this->assertSame('Ben', $rows[0]->name);
+    }
+
+    public function testExecutionsAreLoggedWithTheGivenLog(): void
+    {
+        $queryLog = new DbQueryLogList();
+        $pdoStatement = $this->pdo->prepare(query: 'SELECT name FROM users WHERE id = ?');
+        $this->assertInstanceOf(PDOStatement::class, $pdoStatement);
+        $statement = new DbSelectStmt(pdoStatement: $pdoStatement, queryLog: $queryLog);
+
+        $statement->executeAndFetchRows(parameters: [1]);
+        $statement->executeAndFetch(parameters: [2]);
+
+        $items = $queryLog->getItems();
+        $this->assertCount(2, $items);
+        $this->assertSame('SELECT name FROM users WHERE id = ?', $items[0]->sqlQuery);
+        $this->assertSame([2], $items[1]->params);
+    }
+
+    public function testExecutionsAreNotLoggedWithoutLog(): void
+    {
+        $rows = $this->stmt(sql: 'SELECT name FROM users')->executeAndFetchRows(parameters: []);
+
+        $this->assertCount(2, $rows);
+    }
+
+    public function testParametersOfAFailedExecutionAreNotInTheMessage(): void
+    {
+        try {
+            $this->stmt(sql: 'INSERT INTO users (id, name) VALUES (?, ?)')
+                ->executeAndFetchRows(parameters: [1, 'anna@example.com']);
+            DbSelectStmtTest::fail('Expected DbRuntimeException');
+        } catch (DbRuntimeException $exception) {
+            $this->assertStringNotContainsString('anna@example.com', $exception->getMessage());
+        }
     }
 }

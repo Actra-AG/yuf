@@ -233,10 +233,9 @@ final readonly class DbRow
      */
     public function getEnum(string $column, string $enumClass): BackedEnum
     {
-        return $this->getNullableEnum(column: $column, enumClass: $enumClass) ?? throw DbRowValueException::unexpectedNull(
-            column: $column,
-            expectedType: $enumClass,
-        );
+        $enum = $this->getNullableEnum(column: $column, enumClass: $enumClass);
+
+        return $enum ?? throw DbRowValueException::unexpectedNull(column: $column, expectedType: $enumClass);
     }
 
     /**

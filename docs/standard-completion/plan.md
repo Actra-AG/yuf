@@ -63,7 +63,7 @@ too large.
    allow-list (no environment secrets). The debug page (debug mode only) stays as is.
 5. `common` (68), done in v4.32.0.
 6. `phone` (78, full standard; characterization tests first), done in v4.33.0.
-7. `db` (51).
+7. `db` (51), done in v4.34.0.
 8. `table` (39) and `pagination` (3).
 9. `mailer` (33, full standard; characterization tests of the MIME output first).
 10. `auth` (26), `security` (0) and the rest of `session` (2).
@@ -249,6 +249,52 @@ too large.
 - **Open / for later:** there is no validity check per number type (only length, as before); a real
   `isValidNumber()` / E.164 / national format would be new features. The country list of `PhoneRegionCountryCodeMap`
   is rebuilt on each `isValidRegionCode()` call (cheap, 245 entries).
+
+### Step 7 (v4.34.0) – done
+
+- Area `db`. Baseline 229 -> 176 (all 51 entries of `src/db/` and 2 entries of `table` for the now typed `params`
+  removed, no new entry). Tests now 10563 (`tests/Unit/db/`: 224). Details and before/after in `UPGRADE.md`.
+- **Characterization first:** `DbQueryTest` (57 tests: tokenizer, sections, joins, sub queries, parameter distribution,
+  added parts, order escaping, every error message) passed against the old code before the change; `DbRuntimeException`
+  (code and message) as well. `DbSettings`, `FrameworkDb`, the query log and `DbSelectStmt` logging were written after the
+  change, because the old classes could not be built without a MySQL server (static pool, MySQL DSN).
+- **Database in tests:** `tests/Double/db/SqliteDatabase` creates a real `FrameworkDb` on `sqlite::memory:` (the new
+  `DbConnectionParameters` has a public constructor with a DSN; `FrameworkDb` forces its attributes over the options).
+  `FrameworkDbTest` (select / selectRows / selectRow / execute, bound values, transactions incl. the destructor check,
+  query log, `getLastInsertId()`, password not in the exception, errors without bound values) and `DbQueryDatabaseTest`
+  (`selectFromDb()` and `getTotalAmount()` on generated SQL) run the production code. `SteppingClock` gives known query
+  durations. The MySQL specific part is pure: `DbConnectionParameters::forMysql()` (DSN, init command `lc_time_names` /
+  `sql_safe_updates`) and the validation of `DbSettings` (charset, host, database, locale) are unit tested.
+- **Static state removed (decision):** `FrameworkDb::$instances` / `getInstance()`, `DbSettings::$instances` and
+  `DbQueryLogList::$stack` are gone; no `DbConnectionPool` class was added, because nothing in yuf asks for a connection
+  by name and a pool without consumer would be new, unused API. One `FrameworkDb` is one connection (public
+  constructor, `DbConnectionParameters`). `actra/backend` keeps its `DB::$instance` singleton (its own static, task 6 of
+  its plan replaces it by passing `DB` in); a project that needs several named connections holds an `array<string,
+  FrameworkDb>` itself. The query log is one `DbQueryLogList` per connection (injected, with a `Clock`).
+  `DbSettings::$identifier` was only used by the pool and is removed.
+- **final / extension points:** everything `final` except `FrameworkDb`, a documented extension point (backend's `DB`
+  extends it; it is a PDO subclass, composition would change every call in backend). `DbQuery`, `DbSelectStmt`,
+  `DbSettings`, `DbQueryData`, `DbQueryLogItem`, `DbQueryLogList`, `DbRuntimeException` are `final`; `DbStatementExecutor`
+  (the one place that executes, logs and wraps errors) and the two enums are `@internal`. Tests of `table` that stubbed
+  `DbQuery` use a real one.
+- **Enums:** `DbSortDirectionEnum` (replaces `DbQuery::SORT_ASC/DESC`, internal) and `DbQuerySectionEnum` (SELECT, FROM,
+  WHERE; internal). Constants for tokens (`JOIN_KEYWORDS` ...) are lists, no sets of values.
+- **Security findings:** all values are bound; identifiers: the order column is checked by whitelist (unchanged), the SQL of
+  `createFromSqlQuery()` and of added parts is trusted and documented as such (the README says so for the order
+  expression already). New: `DbSettings` validates host / database (`;` ends a DSN setting) and charset / locale (go into
+  the DSN and the init command, locale is quoted now); bound values left the application in the message of
+  `DbRuntimeException` (log, error page): removed; `#[SensitiveParameter]` on passwords; `sqlSafeUpdates` default kept.
+  Not changed: the driver message of a failed query can contain values (duplicate entry), documented.
+- **Bugs found:** `lastInsertId(): int` broke the contract of `PDO::lastInsertId()` (replaced by `getLastInsertId()`; `lastInsertId()` throws a `LogicException` naming it, decision of the user);
+  an unfinished `DbQueryLogItem` returned a negative time; `prepare()` returned `false` through an exception of its own
+  that was caught by itself; `createInQuery([])` produced invalid SQL; bool values bound through `execute(array)` become
+  `''` (documented, types exclude `bool`).
+- **Stays untested:** the real MySQL connection (`new FrameworkDb(forMysql(...))`, init command executed by the server,
+  `lc_time_names`, `sql_safe_updates` behaviour), MySQL specific SQL of callers, the `DbRow` date parsing against real
+  MySQL values (pure tests exist).
+- **Open / for later:** `actra/backend` still uses `DbSettingsModel`, `FrameworkDB` and `new DB(dbSettingsModel: ...)`; when
+  it follows: `DbSettings` without `identifier`, `new DB(connectionParameters: DbConnectionParameters::forMysql(...))`,
+  `lastInsertId()` -> `getLastInsertId()`, `ExecuteAndFetch` -> `executeAndFetch`. `AmountParser` (`form`) is used by `DbRow`.
 
 ### Superglobals rule – done
 

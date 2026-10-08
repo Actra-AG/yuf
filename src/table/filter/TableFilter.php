@@ -131,6 +131,9 @@ class TableFilter
         return true;
     }
 
+    /**
+     * @param list<float|int|string|null> $params
+     */
     private function addWhereConditionsToSelectQuery(
         DbResultTable $dbResultTable,
         array $whereConds,

@@ -11,82 +11,76 @@ namespace actra\yuf\db;
 
 use PDO;
 use PDOStatement;
-use RuntimeException;
 use stdClass;
-use Throwable;
 
-class DbSelectStmt
+/**
+ * A prepared SELECT statement that can be executed repeatedly. Created by `FrameworkDb::prepareSelect()`.
+ *
+ * Mimics the effect of `FrameworkDb::select()`: execute and fetch in ONE call.
+ *
+ * @phpstan-import-type SqlParameters from DbQueryData
+ */
+final readonly class DbSelectStmt
 {
-    private PDOStatement $pdoStatement;
-    private bool $logQuery;
+    private DbStatementExecutor $executor;
 
-    public function __construct(PDOStatement $pdoStatement, bool $logQuery = false)
+    /**
+     * @param ?DbQueryLogList $queryLog Executions are logged there if given.
+     */
+    public function __construct(private PDOStatement $pdoStatement, ?DbQueryLogList $queryLog = null)
     {
-        $this->pdoStatement = $pdoStatement;
-        $this->logQuery = $logQuery;
+        $this->executor = new DbStatementExecutor(queryLog: $queryLog);
     }
 
-    // The classic PDOStatement has execute() and fetch(). It was desired to mimic the
-    // effect of FrameworkDb->select(), which does both on ONE call.
     /**
-     * @param list<mixed> $parameters
+     * @param SqlParameters $parameters
      *
      * @return list<stdClass>
+     * @throws DbRuntimeException
      */
-    public function ExecuteAndFetch(array $parameters): array
+    public function executeAndFetch(array $parameters): array
     {
-        try {
-            if ($this->logQuery) {
-                $dbQueryLogItem = new DbQueryLogItem($this->pdoStatement->queryString, $parameters);
-            }
-            if ($this->pdoStatement->execute($parameters) === false) {
-                throw new RuntimeException(message: 'PDOStatement->execute() returned false');
-            }
-            /** @var list<stdClass> $res PDO::fetchAll() is untyped, FETCH_OBJ guarantees this shape */
-            $res = $this->pdoStatement->fetchAll(mode: PDO::FETCH_OBJ);
-            if (isset($dbQueryLogItem)) {
-                $dbQueryLogItem->confirmFinishedExecution();
-                DbQueryLogList::add($dbQueryLogItem);
-            }
+        return $this->executor->run(
+            statement: $this->pdoStatement,
+            parameters: $parameters,
+            afterExecution: static function (PDOStatement $statement): array {
+                /** @var list<stdClass> $rows PDO::fetchAll() is untyped, FETCH_OBJ guarantees this shape */
+                $rows = $statement->fetchAll(mode: PDO::FETCH_OBJ);
 
-            return $res;
-        } catch (Throwable $t) {
-            throw new DbRuntimeException($t, $this->pdoStatement->queryString, $parameters);
-        }
+                return $rows;
+            },
+        );
     }
 
     /**
-     * Like ExecuteAndFetch(), but returns typed rows.
+     * Like executeAndFetch(), but returns typed rows.
      *
-     * @param list<mixed> $parameters
+     * @param SqlParameters $parameters
      *
      * @return list<DbRow>
+     * @throws DbRuntimeException
      */
     public function executeAndFetchRows(array $parameters): array
     {
-        try {
-            if ($this->logQuery) {
-                $dbQueryLogItem = new DbQueryLogItem($this->pdoStatement->queryString, $parameters);
-            }
-            if ($this->pdoStatement->execute($parameters) === false) {
-                throw new RuntimeException(message: 'PDOStatement->execute() returned false');
-            }
-            /** @var list<array<string, mixed>> $rows PDO::fetchAll() is untyped, FETCH_ASSOC guarantees this shape */
-            $rows = $this->pdoStatement->fetchAll(mode: PDO::FETCH_ASSOC);
-            if (isset($dbQueryLogItem)) {
-                $dbQueryLogItem->confirmFinishedExecution();
-                DbQueryLogList::add($dbQueryLogItem);
-            }
-        } catch (Throwable $t) {
-            throw new DbRuntimeException($t, $this->pdoStatement->queryString, $parameters);
-        }
+        $rows = $this->executor->run(
+            statement: $this->pdoStatement,
+            parameters: $parameters,
+            afterExecution: static function (PDOStatement $statement): array {
+                /** @var list<array<string, mixed>> $rows PDO::fetchAll() is untyped, FETCH_ASSOC gives this shape */
+                $rows = $statement->fetchAll(mode: PDO::FETCH_ASSOC);
+
+                return $rows;
+            },
+        );
 
         return array_map(callback: static fn(array $row): DbRow => new DbRow(values: $row), array: $rows);
     }
 
     /**
-     * @param list<mixed> $parameters
+     * @param SqlParameters $parameters
      *
+     * @return DbRow|null null if the query returns no row
+     * @throws DbRuntimeException
      * @throws DbRowCountException If the query returns more than one row.
      */
     public function executeAndFetchRow(array $parameters): ?DbRow
@@ -99,6 +93,6 @@ class DbSelectStmt
             );
         }
 
-        return $rows[0] ?? null;
+        return array_first(array: $rows);
     }
 }
