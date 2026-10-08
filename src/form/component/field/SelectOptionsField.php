@@ -18,6 +18,8 @@ use Override;
 
 /**
  * A select with one selected option. See `MultiSelectOptionsField` for a multiple selection.
+ *
+ * Extension point: a project can extend it to fill its options (a select of a database table, a search select).
  */
 class SelectOptionsField extends SingleOptionsField
 {

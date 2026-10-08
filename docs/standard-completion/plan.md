@@ -70,7 +70,8 @@ too large.
 11. `api` (27), done in v4.38.0.
 12. `html` (25) and `layout` (0, `final` only), done in v4.39.0.
 13. `exception` (10) and `datacheck` (13), done in v4.40.0.
-14. `form` (0 baseline; `final` / extension points of its classes).
+14. `form` (0 baseline; `final` / extension points of its classes, `HtmlTagAttribute` named constructors), done in
+    v4.41.0. **The plan is complete.**
 
 ## Follow-up in other projects
 
@@ -627,9 +628,8 @@ too large.
   `HtmlDataObject` is a mutable `stdClass` wrapper (the templates read `data` directly); `HtmlDocument::render()` still
   changes its own replacements (`this`) and active ids when it renders (rendering twice is safe, tested);
   `HtmlSnippet::render()` adds the nonce to the caller's replacements (unchanged); `DetailDataObject` takes the label as
-  HTML, a plain-text label would be a new argument; the form renderers still pass `valueIsEncodedForRendering: true`
-  in 90 places (a `fromText()` / `fromHtml()` pair like `HtmlText` would be the safer API: a breaking change in all
-  renderers and in `actra/backend`).
+  HTML, a plain-text label would be a new argument; the form renderers still passed `valueIsEncodedForRendering: true`
+  in 90 places (done in step 14: `HtmlTagAttribute::fromText()` / `fromHtml()` / `fromName()`).
 - **Follow-up in `actra/backend`:** only the names it already has to change (`HtmlDocument::get()`,
   `HtmlText::unencoded()` / `encoded()`, `addEncodedText()`); `new NavigationItem(...)` keeps working (its hrefs are
   relative); `HtmlTag` / `HtmlTagAttribute` calls of `SearchQueryField` and `SearchSelectOptionsField` use valid names.
@@ -682,6 +682,69 @@ too large.
   range throws. `Validator::stringWithoutWhitespaces()` knows ASCII whitespace only. Backend: `IpTypeEnum::ip` ->
   `IpTypeEnum::IP` in `ValidIpAddressRule`; nothing else it uses changed (`IpValidator::validate()` / `isInWhitelist()`,
   `NotFoundException`, `UnauthorizedException`); its API clients must not rely on the exception message in production.
+
+### Step 14 (v4.41.0) – done
+
+- Area `form` (last step of the plan). Baseline stays empty (`ignoreErrors: []`). Tests 11982 -> 12052. Details and
+  before/after in `UPGRADE.md`.
+- **`HtmlTagAttribute` (decision of the user):** private constructor, named constructors `fromText(name, text)` (plain text,
+  escaped when rendered; `string|int`, so `maxlength` needs no cast), `fromHtml(name, html)` (encoded or trusted, a `"` is
+  still rejected) and `fromName(name)` (no value). The user asked for `?string`; `null` is `fromName()` instead, because
+  "no value" is not a text. All 111 call sites of `src/form/` were rewritten mechanically with a tokenizer script and
+  reviewed: 99 `fromText()` (names, ids, option keys, classes, `type`, placeholder, links, `data-*`, numbers), 2
+  `fromHtml()` (the two `value` attributes of `InputFieldRenderer` and `HiddenFieldRenderer`: `renderValue()` is encoded
+  by the field), 10 `fromName()` (`checked`, `selected`, `multiple`, `autofocus`, `novalidate`, valueless `data-*`).
+  The tests (`HtmlTagTest`, 16 call sites) were converted by hand. HTML output is byte-identical for values without
+  special characters (all form, template and `example/` tests unchanged); with special characters the attributes are
+  escaped now (see "Security").
+- **Extends in the other projects (read-only grep of `/Users/christof/development/*` without `vendor`, `cache`, `yuf`,
+  `framework`; many projects still run yuf v3):** `Form` 187, `TextField` 15, `SelectOptionsField` 14, `FormComponent` 9,
+  `FormRenderer` 7, `FormField` 5, `TextAreaField` 4, `CheckboxOptionsField` 4, `FormOptions` 3 (final since v4.0.0), `FileField` 3
+  (final since v4.0.0), `FormRule` 2, `DateField` 2 (final since v4.0.0), `StringRule` 1, `RadioOptionsField`, `OptionsField`,
+  `TextualField`, `FormControl`, `FormCollection`, `BooleanField` 1 each. `actra/backend`: `Form` 15,
+  `SelectOptionsField` 2, `StringRule`, `TextAreaField`, `TextField` 1 each. Nobody extends a concrete renderer, a concrete
+  rule, `ToggleField`, `MultiToggleField`, `MultiSelectOptionsField`, `FormInfo`, `FormSubHeadline` or `NullField`.
+- **final / extension points / internal:** `final`: those six fields/components, the 13 concrete rules and 17 renderers (the
+  form-v4 design left them open "because projects extend them"; the grep shows they do not, customization goes through
+  `FormRenderer` + `setRenderer()` and the typed rule bases). Documented extension points (PHPDoc "Extension point: ..."):
+  `Form`, `TextField`, `TextAreaField`, `SelectOptionsField`, `CheckboxOptionsField`, `RadioOptionsField`, `BooleanField`,
+  `IntegerField` (parent of `NumericField`), `FormControl`, `InputFieldRenderer` (parent of `NumericFieldRenderer`); the
+  abstract bases stay abstract. `@internal`: `ToggleChildren`, `BooleanFieldListRenderer`, `CheckboxItemRenderer`,
+  `HiddenFieldRenderer`, `NumericFieldRenderer`, `ToggleFieldRenderer` (projects use `DefinitionListRenderer`,
+  `FormControlRenderer`, the static helpers of `LegendAndListRenderer`; these stay public API). `readonly` where possible
+  (renderer properties, `FormSubHeadline`); `FormRule`, `ToggleChildren`, the fields and `FormRenderer` are mutable by
+  design. `ExtensionPointsTest` pins the decisions.
+- **Static state:** none in `src/form/` (only pure static helpers: `AmountParser`, the `add…ToParentHtmlTag()` helpers of
+  `FormRenderer`, `FormInput::from…()`). `mixed` only in `FormInput` and `SessionFileUploadStorage::toUploadedFile()`
+  (narrowing of request / session data).
+- **Security findings and fixes:** (1) every plain text value of the markup was output as HTML (`valueIsEncodedForRendering:
+  true`): `placeholder`, `name`, `id`, option keys, CSS classes, `data-*` values, the cancel link, the form `action`; a `"`
+  threw, `&` / `<` were raw (HTML injection for a value that comes from data, e.g. an option key from a database). All
+  are `fromText()` now. (2) The remove button of `FileFieldRenderer` output the field name without encoding. (3)
+  `FormControl` output `FormMessages::$cancel` (plain text) as HTML. Checked and fine: labels / info texts / error texts
+  are `HtmlText` (the caller says text or HTML; messages of `FormMessages` and `rejectInput()` are `fromText()`), file
+  names in errors and the remove button are encoded, the CSRF token is read from the posted data only and compared by
+  the token source, the upload pointer is restricted to `[a-zA-Z0-9_]` and only addresses the files of the own session,
+  stored files are named after the PHP temp file (never the client name), paths from the session must be below the root
+  directory (no `..`), `FileField` does not check type or size of an upload (`UploadedFile::$type` is client data;
+  documented; the PHP limits apply, a project checks content type and extension itself).
+- **Bugs found and fixed:** `FormSubHeadline` accepted any level (`<h7>`): 1 to 6 now; `Form::getField()` / `removeField()`
+  threw a plain `Exception` with a misleading message (`LogicException`, new tests: the methods were not covered).
+- **Open / for later:** a component can be rendered once (`getHtmlTag()` / `render()` a second time throws "You cannot
+  overwrite an already defined Tag-Element", the renderer sets its tag once; `Form::render()` twice fails); `FormRenderer`
+  keeps the two-phase `prepare()` / `getHtmlTag()` API. `FileField` has no built-in type / size check. `ToggleField` and
+  `MultiToggleField` duplicate their child methods (a trait or a delegating base would remove it; both are `final`
+  now). `actra/backend`: `SearchQueryField` and `SearchSelectOptionsField` use `new HtmlTagAttribute(name: 'for', value:
+  $this->name, valueIsEncodedForRendering: true)` -> `HtmlTagAttribute::fromText(name: 'for', text: $this->name)`; projects
+  with their own renderers (`intern.public-health-edu.ch`, `my.cmas.ch`) have the same pattern.
+
+### Plan complete
+
+All areas of `src/` have the coding standard; the baseline is empty (`phpstan-baseline.neon`: `ignoreErrors: []`).
+What is left is listed in [docs/standard-migration/remaining.md](../standard-migration/remaining.md) ("Open points"), taken
+from the "Open / for later" notes above: the Git index names of `CSVFile.php` / `SimpleXMLExtended.php` (step 5), the
+follow-up of `actra/backend` per release (`UPGRADE.md`), and the small functional points of each area. `actra/backend`
+follows next, as decided.
 
 ### Superglobals rule – done
 

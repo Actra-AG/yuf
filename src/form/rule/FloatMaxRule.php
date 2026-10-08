@@ -15,7 +15,7 @@ use Override;
 /**
  * The value is at most `$max`.
  */
-class FloatMaxRule extends FloatRule
+final class FloatMaxRule extends FloatRule
 {
     public function __construct(protected float $max, HtmlText $errorMessage)
     {

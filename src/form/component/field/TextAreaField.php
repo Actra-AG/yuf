@@ -17,6 +17,12 @@ use LogicException;
 use Override;
 use UnexpectedValueException;
 
+/**
+ * A multi-line text input.
+ *
+ * Extension point: a project extends it for fields with a fixed meaning and sets its rules and label in the
+ * constructor.
+ */
 class TextAreaField extends TextualField
 {
     public private(set) int $rows;

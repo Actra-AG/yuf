@@ -166,11 +166,12 @@ final class NumericRulesTest extends TestCase
         new DecimalMinRule(min: $limit, errorMessage: NumericRulesTest::message());
     }
 
-    public function testNumericRulesAreNotFinal(): void
+    public function testConcreteNumericRulesAreFinalAndTheTypedBaseIsAbstract(): void
     {
         foreach ([IntegerMinRule::class, IntegerMaxRule::class, FloatMinRule::class, FloatMaxRule::class,
-            DecimalMinRule::class, DecimalMaxRule::class, DecimalRule::class] as $className) {
-            $this->assertFalse(new ReflectionClass(objectOrClass: $className)->isFinal(), $className);
+            DecimalMinRule::class, DecimalMaxRule::class] as $className) {
+            $this->assertTrue(new ReflectionClass(objectOrClass: $className)->isFinal(), $className);
         }
+        $this->assertTrue(new ReflectionClass(objectOrClass: DecimalRule::class)->isAbstract());
     }
 }

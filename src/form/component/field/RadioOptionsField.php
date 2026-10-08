@@ -18,6 +18,11 @@ use actra\yuf\form\renderer\RadioOptionsRenderer;
 use actra\yuf\html\HtmlText;
 use Override;
 
+/**
+ * Radio buttons: one option must be chosen (the required rule is always set).
+ *
+ * Extension point: a project can extend it to fill its options or to change its rules.
+ */
 class RadioOptionsField extends SingleOptionsField
 {
     private bool $hasDefaultRequiredMessage = false;

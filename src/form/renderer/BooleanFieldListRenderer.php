@@ -21,8 +21,10 @@ use Override;
  * The v3 markup of a `BooleanField` that is not rendered as a single checkbox item: a list with one checkbox
  * (`id="name_checked"`), optionally in a fieldset with a legend. The v3 field was a `CheckboxOptionsField` with the
  * option `checked`; the markup is created by the options renderers from a copy of the field in that form.
+ *
+ * @internal
  */
-class BooleanFieldListRenderer extends FormRenderer
+final class BooleanFieldListRenderer extends FormRenderer
 {
     public function __construct(
         private readonly BooleanField $booleanField,

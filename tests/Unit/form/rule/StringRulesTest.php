@@ -82,11 +82,11 @@ final class StringRulesTest extends TestCase
         $this->assertSame('Other', $rule->getErrorMessage()->render());
     }
 
-    public function testRulesAreNotFinal(): void
+    public function testConcreteRulesAreFinal(): void
     {
         foreach ([MinLengthRule::class, MaxLengthRule::class, RegexRule::class, ValidValueRule::class,
             ValidEmailAddressRule::class] as $className) {
-            $this->assertFalse(new ReflectionClass(objectOrClass: $className)->isFinal(), $className);
+            $this->assertTrue(new ReflectionClass(objectOrClass: $className)->isFinal(), $className);
         }
     }
 }

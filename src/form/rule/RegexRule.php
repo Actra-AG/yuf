@@ -12,7 +12,7 @@ namespace actra\yuf\form\rule;
 use actra\yuf\html\HtmlText;
 use Override;
 
-class RegexRule extends StringRule
+final class RegexRule extends StringRule
 {
     public function __construct(
         protected string $pattern,

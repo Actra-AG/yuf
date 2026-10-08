@@ -31,14 +31,14 @@ final class HtmlTagTest extends TestCase
 
     public function testAttributeValueIsEscapedWhenNotEncoded(): void
     {
-        $attribute = new HtmlTagAttribute(name: 'title', value: 'a "b" <c> & d', valueIsEncodedForRendering: false);
+        $attribute = HtmlTagAttribute::fromText(name: 'title', text: 'a "b" <c> & d');
 
         $this->assertSame('title="a &quot;b&quot; &lt;c&gt; &amp; d"', $attribute->render());
     }
 
     public function testAttributeValueIsOutputAsItIsWhenEncoded(): void
     {
-        $attribute = new HtmlTagAttribute(name: 'title', value: 'a &amp; b', valueIsEncodedForRendering: true);
+        $attribute = HtmlTagAttribute::fromHtml(name: 'title', html: 'a &amp; b');
 
         $this->assertSame('title="a &amp; b"', $attribute->render());
     }
@@ -47,7 +47,7 @@ final class HtmlTagTest extends TestCase
     {
         $this->assertSame(
             'disabled',
-            new HtmlTagAttribute(name: 'disabled', value: null, valueIsEncodedForRendering: true)->render(),
+            HtmlTagAttribute::fromName(name: 'disabled')->render(),
         );
     }
 
@@ -55,7 +55,7 @@ final class HtmlTagTest extends TestCase
     {
         $this->assertSame(
             'maxlength="30"',
-            new HtmlTagAttribute(name: 'maxlength', value: 30, valueIsEncodedForRendering: false)->render(),
+            HtmlTagAttribute::fromText(name: 'maxlength', text: 30)->render(),
         );
     }
 
@@ -63,13 +63,13 @@ final class HtmlTagTest extends TestCase
     {
         $this->assertSame(
             'value=""',
-            new HtmlTagAttribute(name: 'value', value: '', valueIsEncodedForRendering: false)->render(),
+            HtmlTagAttribute::fromText(name: 'value', text: '')->render(),
         );
     }
 
     public function testNameAndValueOfAnAttributeAreReadable(): void
     {
-        $attribute = new HtmlTagAttribute(name: 'class', value: 'a', valueIsEncodedForRendering: true);
+        $attribute = HtmlTagAttribute::fromText(name: 'class', text: 'a');
 
         $this->assertSame('class', $attribute->name);
         $this->assertSame('a', $attribute->value);
@@ -83,8 +83,8 @@ final class HtmlTagTest extends TestCase
     public function testSelfClosingTagHasNoClosingTag(): void
     {
         $tag = new HtmlTag(name: 'input', selfClosing: true, htmlTagAttributes: [
-            new HtmlTagAttribute(name: 'type', value: 'text', valueIsEncodedForRendering: true),
-            new HtmlTagAttribute(name: 'required', value: null, valueIsEncodedForRendering: true),
+            HtmlTagAttribute::fromText(name: 'type', text: 'text'),
+            HtmlTagAttribute::fromName(name: 'required'),
         ]);
 
         $this->assertSame('<input type="text" required>', $tag->render());
@@ -94,7 +94,7 @@ final class HtmlTagTest extends TestCase
     {
         $tag = new HtmlTag(name: 'a', selfClosing: false);
         $tag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(name: 'href', value: '/x?a=1&b=2', valueIsEncodedForRendering: false),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'href', text: '/x?a=1&b=2'),
         );
 
         $this->assertSame('<a href="/x?a=1&amp;b=2"></a>', $tag->render());
@@ -104,7 +104,7 @@ final class HtmlTagTest extends TestCase
     {
         $list = new HtmlTag(name: 'ul', selfClosing: false);
         $item = new HtmlTag(name: 'li', selfClosing: false, htmlTagAttributes: [
-            new HtmlTagAttribute(name: 'class', value: 'first', valueIsEncodedForRendering: true),
+            HtmlTagAttribute::fromText(name: 'class', text: 'first'),
         ]);
         $item->addText(htmlText: HtmlText::fromText(text: 'a < b'));
         $item->addText(htmlText: HtmlText::fromHtml(html: '<em>!</em>'));
@@ -197,7 +197,7 @@ final class HtmlTagTest extends TestCase
     {
         $this->assertSame(
             $name . '="v"',
-            new HtmlTagAttribute(name: $name, value: 'v', valueIsEncodedForRendering: false)->render(),
+            HtmlTagAttribute::fromText(name: $name, text: 'v')->render(),
         );
     }
 
@@ -222,21 +222,42 @@ final class HtmlTagTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageIsOrContains('Invalid HTML attribute name');
-        new HtmlTagAttribute(name: $name, value: 'v', valueIsEncodedForRendering: false);
+        HtmlTagAttribute::fromText(name: $name, text: 'v');
+    }
+
+    public function testAttributeWithoutValueHasNoValueProperty(): void
+    {
+        $this->assertNull(HtmlTagAttribute::fromName(name: 'disabled')->value);
+    }
+
+    #[DataProvider('invalidAttributeNameProvider')]
+    public function testInvalidAttributeNameIsRejectedByEveryNamedConstructor(string $name): void
+    {
+        foreach ([
+            static fn(): HtmlTagAttribute => HtmlTagAttribute::fromName(name: $name),
+            static fn(): HtmlTagAttribute => HtmlTagAttribute::fromHtml(name: $name, html: 'v'),
+        ] as $create) {
+            try {
+                $create();
+                HtmlTagTest::fail('An InvalidArgumentException was expected for "' . $name . '".');
+            } catch (InvalidArgumentException $exception) {
+                $this->assertStringContainsString('Invalid HTML attribute name', $exception->getMessage());
+            }
+        }
     }
 
     public function testEncodedValueWithDoubleQuoteIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageIsOrContains('marked as encoded but contains a double quote');
-        new HtmlTagAttribute(name: 'title', value: 'a" onclick="x', valueIsEncodedForRendering: true);
+        $this->expectExceptionMessageIsOrContains('passed as HTML but contains a double quote');
+        HtmlTagAttribute::fromHtml(name: 'title', html: 'a" onclick="x');
     }
 
     public function testDoubleQuoteInAPlainValueIsEscaped(): void
     {
         $this->assertSame(
             'title="a&quot; onclick=&quot;x"',
-            new HtmlTagAttribute(name: 'title', value: 'a" onclick="x', valueIsEncodedForRendering: false)->render(),
+            HtmlTagAttribute::fromText(name: 'title', text: 'a" onclick="x')->render(),
         );
     }
 
@@ -244,7 +265,7 @@ final class HtmlTagTest extends TestCase
     {
         $this->assertSame(
             "title=\"it's &quot;x&quot;\"",
-            new HtmlTagAttribute(name: 'title', value: "it's &quot;x&quot;", valueIsEncodedForRendering: true)->render(),
+            HtmlTagAttribute::fromHtml(name: 'title', html: "it's &quot;x&quot;")->render(),
         );
     }
 
@@ -252,7 +273,7 @@ final class HtmlTagTest extends TestCase
     {
         $this->assertSame(
             "title=\"a\u{FFFD}b\"",
-            new HtmlTagAttribute(name: 'title', value: "a\xFFb", valueIsEncodedForRendering: false)->render(),
+            HtmlTagAttribute::fromText(name: 'title', text: "a\xFFb")->render(),
         );
     }
 

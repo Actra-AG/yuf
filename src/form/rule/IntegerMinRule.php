@@ -15,7 +15,7 @@ use Override;
 /**
  * The value is at least `$min`.
  */
-class IntegerMinRule extends IntegerRule
+final class IntegerMinRule extends IntegerRule
 {
     public function __construct(protected int $min, HtmlText $errorMessage)
     {

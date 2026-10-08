@@ -22,12 +22,15 @@ use actra\yuf\form\renderer\DefaultFormRenderer;
 use actra\yuf\form\renderer\DefinitionListRenderer;
 use actra\yuf\html\HtmlText;
 use actra\yuf\security\CsrfTokenSource;
-use Exception;
+use LogicException;
 use Override;
 
 /**
  * The form names must be unique per page: the name is the sent indicator and the prefix of the field names.
  * A form without CSRF token source in its `FormContext` (no session) has no CSRF field and checks no token.
+ *
+ * Extension point: a project form extends `Form`, adds its fields in the constructor and offers methods for the
+ * validated values.
  */
 class Form extends FormCollection
 {
@@ -94,7 +97,9 @@ class Form extends FormCollection
     public function removeField(string $name): void
     {
         if (!$this->hasField(name: $name)) {
-            throw new Exception(message: 'The requested component ' . $name . ' is not an instance of FormField');
+            throw new LogicException(
+                message: 'Form ' . $this->name . ' has no field ' . $name . ' (it does not exist or is not a FormField).',
+            );
         }
         $this->removeChildComponent(childComponentName: $name);
     }
@@ -182,7 +187,9 @@ class Form extends FormCollection
     {
         $childComponent = $this->getChildComponent(childComponentName: $name);
         if (!($childComponent instanceof FormField)) {
-            throw new Exception(message: 'The requested component ' . $name . ' is not an instance of FormField');
+            throw new LogicException(
+                message: 'The component ' . $name . ' of form ' . $this->name . ' is not a FormField.',
+            );
         }
 
         return $childComponent;

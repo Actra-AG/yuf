@@ -12,7 +12,7 @@ namespace actra\yuf\form\rule;
 use actra\yuf\html\HtmlText;
 use Override;
 
-class MaxLengthRule extends StringRule
+final class MaxLengthRule extends StringRule
 {
     public function __construct(protected int $maxLength, HtmlText $errorMessage)
     {

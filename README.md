@@ -557,6 +557,24 @@ $name->addRule(formRule: new NoSpacesRule(defaultErrorMessage: $noSpaces));
 $quantity->addValueRule(formRule: new IntegerMinRule(min: 1, errorMessage: $atLeastOne));
 ```
 
+### Extending the form classes
+
+The classes a project builds on are documented extension points: `Form` (one subclass per form), `TextField`,
+`TextAreaField`, `SelectOptionsField`, `CheckboxOptionsField`, `RadioOptionsField`, `BooleanField`, `IntegerField` and
+`FormControl` for fields with a fixed meaning (name, search query, ...), and the abstract bases `FormComponent`,
+`FormField`, `FormRenderer`, `FormFieldListener` and the rule bases (`StringRule`, ...). Every other class of the form
+code is `final`: customize it through its constructor, setters, rules, listeners and `setRenderer()`.
+
+Renderers build their tags with `HtmlTagAttribute::fromText()` (plain text, escaped), `fromHtml()` (encoded or trusted
+HTML, as it is) and `fromName()` (no value, `required`):
+
+```php
+new HtmlTag(name: 'input', selfClosing: true, htmlTagAttributes: [
+    HtmlTagAttribute::fromText(name: 'placeholder', text: 'Name & "Vorname"'),
+    HtmlTagAttribute::fromName(name: 'required'),
+]);
+```
+
 ### Request data
 
 `validate()` and `isSent()` take the request data as `FormInput`. In a view, build it from the request of the view

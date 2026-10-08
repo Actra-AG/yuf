@@ -16,7 +16,7 @@ use Override;
 /**
  * The value is at most `$max` (decimal strings, compared without float rounding).
  */
-class DecimalMaxRule extends DecimalRule
+final class DecimalMaxRule extends DecimalRule
 {
     protected string $max;
 

@@ -15,7 +15,12 @@ use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 use Override;
 
-class HiddenFieldRenderer extends FormRenderer
+/**
+ * The hidden input of `HiddenField` and `CsrfTokenField`.
+ *
+ * @internal
+ */
+final class HiddenFieldRenderer extends FormRenderer
 {
     public function __construct(private readonly InputField $hiddenField) {}
 
@@ -24,9 +29,9 @@ class HiddenFieldRenderer extends FormRenderer
     {
         $hiddenField = $this->hiddenField;
         $this->setHtmlTag(htmlTag: new HtmlTag(name: 'input', selfClosing: true, htmlTagAttributes: [
-            new HtmlTagAttribute(name: 'type', value: $hiddenField->inputType->value, valueIsEncodedForRendering: true),
-            new HtmlTagAttribute(name: 'name', value: $hiddenField->name, valueIsEncodedForRendering: true),
-            new HtmlTagAttribute(name: 'value', value: $hiddenField->renderValue(), valueIsEncodedForRendering: true),
+            HtmlTagAttribute::fromText(name: 'type', text: $hiddenField->inputType->value),
+            HtmlTagAttribute::fromText(name: 'name', text: $hiddenField->name),
+            HtmlTagAttribute::fromHtml(name: 'value', html: $hiddenField->renderValue()),
         ]));
     }
 }

@@ -16,7 +16,7 @@ use Override;
 /**
  * The value is at least `$min` (decimal strings, compared without float rounding).
  */
-class DecimalMinRule extends DecimalRule
+final class DecimalMinRule extends DecimalRule
 {
     protected string $min;
 

@@ -19,7 +19,7 @@ use Override;
 /**
  * A select with multiple selected options (`name[]`). Replaces `SelectOptionsField(acceptMultipleSelections: true)`.
  */
-class MultiSelectOptionsField extends MultiOptionsField
+final class MultiSelectOptionsField extends MultiOptionsField
 {
     use HasSelectOptionsPresentation;
 

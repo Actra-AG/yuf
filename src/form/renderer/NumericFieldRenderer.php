@@ -14,7 +14,12 @@ use actra\yuf\html\HtmlTagAttribute;
 use LogicException;
 use Override;
 
-class NumericFieldRenderer extends InputFieldRenderer
+/**
+ * The input of `NumericField`: `inputmode="numeric"` and a `pattern` for the number of digits.
+ *
+ * @internal
+ */
+final class NumericFieldRenderer extends InputFieldRenderer
 {
     public function __construct(private readonly NumericField $numericField)
     {
@@ -30,17 +35,12 @@ class NumericFieldRenderer extends InputFieldRenderer
             throw new LogicException(message: 'The input tag is missing after InputFieldRenderer::prepare().');
         }
         $inputTag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'inputmode',
-                value: 'numeric',
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'inputmode', text: 'numeric'),
         );
         $inputTag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
+            htmlTagAttribute: HtmlTagAttribute::fromText(
                 name: 'pattern',
-                value: '\d{' . $this->getDigitQuantifier() . '}',
-                valueIsEncodedForRendering: true,
+                text: '\d{' . $this->getDigitQuantifier() . '}',
             ),
         );
     }

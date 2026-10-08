@@ -15,6 +15,10 @@ use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 use Override;
 
+/**
+ * Renders an input field. Extension point: `NumericFieldRenderer` extends it; a project can do the same to add
+ * attributes to the input tag (`prepare()` and `getHtmlTag()`).
+ */
 class InputFieldRenderer extends FormRenderer
 {
     public function __construct(private readonly InputField $formField) {}
@@ -25,67 +29,38 @@ class InputFieldRenderer extends FormRenderer
         $formField = $this->formField;
         $inputTag = new HtmlTag(name: 'input', selfClosing: true);
         $inputTag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'type',
-                value: $formField->inputType->value,
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'type', text: $formField->inputType->value),
         );
         $inputTag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'name',
-                value: $formField->name,
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'name', text: $formField->name),
         );
         $inputTag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'id',
-                value: $formField->id,
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'id', text: $formField->id),
         );
         $inputTag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'value',
-                value: $formField->renderValue(),
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromHtml(name: 'value', html: $formField->renderValue()),
         );
         if ($formField->placeholder !== null) {
             $inputTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'placeholder',
-                    value: $formField->placeholder,
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'placeholder', text: $formField->placeholder),
             );
         }
         if ($formField->autoComplete !== null) {
             $inputTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
+                htmlTagAttribute: HtmlTagAttribute::fromText(
                     name: 'autocomplete',
-                    value: $formField->autoComplete->value,
-                    valueIsEncodedForRendering: true,
+                    text: $formField->autoComplete->value,
                 ),
             );
         }
         if ($formField->autoFocus) {
             $inputTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'autofocus',
-                    value: null,
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromName(name: 'autofocus'),
             );
         }
         if ($formField->maxLength !== null) {
             $inputTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'maxlength',
-                    value: $formField->maxLength,
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'maxlength', text: $formField->maxLength),
             );
         }
         FormRenderer::addAriaAttributesToHtmlTag(

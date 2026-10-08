@@ -1,14 +1,12 @@
 # Remaining differences to the coding standard
 
-State after v4.27.0 (2026-10-08), `actra/coding-standard` v1.2.0. `composer check` is green; most of the remaining
-differences are held in the PHPStan baseline. Counts come from searches in `src/` without the generated phone metadata
-(`src/phone/data/`), so they are close, not exact.
+Final state after v4.41.0 (2026-10-08), `actra/coding-standard` v1.3.0: the plan
+[docs/standard-completion/plan.md](../standard-completion/plan.md) is complete, `composer check` is green and the PHPStan
+baseline is empty. Only the open points below remain. Counts come from searches in `src/` without the generated phone
+metadata (`src/phone/data/`), so they are close, not exact.
 
-Decision of the user (2026-10-08): everything that is still open in yuf, including the areas postponed before (templates,
-`src/common/`, `src/core/`, the remaining baseline), is finished before `actra/backend` follows. Work continues with the
-postponed areas.
-
-The plan for the remaining work is [docs/standard-completion/plan.md](../standard-completion/plan.md).
+Decision of the user (2026-10-08): everything that is still open in yuf is finished before `actra/backend` follows. That
+is done: `actra/backend` follows next (its follow-up per release is in `UPGRADE.md`).
 
 ## Decisions for the remaining work
 
@@ -21,11 +19,11 @@ The plan for the remaining work is [docs/standard-completion/plan.md](../standar
 
 ## PHPStan baseline: 0 entries
 
-State after v4.40.0 (23 at v4.39.0, 532 at v4.27.0, 447 at v4.30.0, 375 at v4.31.0, 307 at v4.32.0, 229 at v4.33.0, 176 at v4.34.0, 136 at v4.35.0, 103 at v4.36.0, 75 at v4.37.0; v4.38.0 removed `api` 27, 48 at v4.38.0; v4.39.0 removed `html` 25).
+State after v4.41.0 (v4.41.0 had none to remove; 23 at v4.39.0, 532 at v4.27.0, 447 at v4.30.0, 375 at v4.31.0, 307 at v4.32.0, 229 at v4.33.0, 176 at v4.34.0, 136 at v4.35.0, 103 at v4.36.0, 75 at v4.37.0; v4.38.0 removed `api` 27, 48 at v4.38.0; v4.39.0 removed `html` 25).
 
 - By area: none. `datacheck`, `exception`, `core`, `Core.php`,
   `request`, `response`, `common`, `phone`, `db`, `table`, `pagination`, `mailer`, `auth`, `security`, `session`, `api`, `html`, `layout`,
-  `src/form/` and `src/template/` have none.
+  `form` and `template` have none.
 - Most frequent identifiers (counted with `count:` at v4.33.0, 250 errors in 229 entries): `argument.type` 64,
   `missingType.iterableValue` 62, `offsetAccess.notFound` 20, `return.type` 13, `disallowed.isset` 10, `binaryOp.invalid` 8,
   `method.nonObject` 7, `assign.propertyType` 5, `if.condNotBoolean` 5, `missingType.parameter` 5, `disallowed.switch` 5,
@@ -52,12 +50,11 @@ State after v4.40.0 (23 at v4.39.0, 532 at v4.27.0, 447 at v4.30.0, 375 at v4.31
 
 ## Explicit comparisons (`php.md`, section 5)
 
-- `isset()` 0, `empty()` 0, loose `==` / `!=` 1 (searched in `src/` after v4.40.0).
+- `isset()` 0, `empty()` 0, loose `==` / `!=` 0 (searched in `src/` after v4.41.0; the one `!=` in `SearchHelper` is SQL text).
 
 ## Types (`php.md`, section 3)
 
-- 86 `class` declarations are not `final` (`^(abstract )?class` in `src/` without `src/phone/data/` after v4.40.0, 93 at v4.39.0; `exception` (`ExceptionHandler`, `UnauthorizedException` stay documented extension points) and `datacheck` are done in v4.40.0; `html` and `layout` are done: `HtmlElement` and `HtmlDataObject` stay documented extension points; the six request classes and `CurlResponse` of `api` are `final` now, `AbstractCurlRequest` stays abstract; `core`, `Core.php`, `request`, `response`, `common`, `phone`, `db`, `table`, `pagination`, `mailer`, `auth`, `security` and `session` are done; `AbstractMail` and `AbstractMailer` stay documented extension points; `AuthUser`, `Authenticator`, `MicrosoftAuthenticator`, `AuthWebToken` and `AbstractSessionHandler` are documented extension points; `FrameworkDb`, `DbResultTable`, `SmartTable`, `AbstractTableColumn`, `TableHeadRenderer`, `TableFilter` and `AbstractTableFilterField` stay documented extension points). Some are intended extension points (views, forms, fields, columns, exception
-  handler); every class needs a review (`final`, or documented extension point, or `@internal`).
+- 50 `class` declarations are not `final` (`^(abstract )?class` in `src/` without `src/phone/data/` after v4.41.0, 86 at v4.40.0, 93 at v4.39.0; all of them are abstract bases or documented extension points (`form`: `Form`, `TextField`, `TextAreaField`, `SelectOptionsField`, `CheckboxOptionsField`, `RadioOptionsField`, `BooleanField`, `IntegerField`, `FormControl`, `InputFieldRenderer` and the abstract bases; the 13 concrete rules, 17 renderers and 6 fields/components are `final` since v4.41.0); `exception` (`ExceptionHandler`, `UnauthorizedException` stay documented extension points) and `datacheck` are done in v4.40.0; `html` and `layout` are done: `HtmlElement` and `HtmlDataObject` stay documented extension points; the six request classes and `CurlResponse` of `api` are `final` now, `AbstractCurlRequest` stays abstract; `core`, `Core.php`, `request`, `response`, `common`, `phone`, `db`, `table`, `pagination`, `mailer`, `auth`, `security` and `session` are done; `AbstractMail` and `AbstractMailer` stay documented extension points; `AuthUser`, `Authenticator`, `MicrosoftAuthenticator`, `AuthWebToken` and `AbstractSessionHandler` are documented extension points; `FrameworkDb`, `DbResultTable`, `SmartTable`, `AbstractTableColumn`, `TableHeadRenderer`, `TableFilter` and `AbstractTableFilterField` stay documented extension points). Every class has been reviewed (`final`, or documented extension point, or `@internal`).
 - `mixed` in own code: about 15 (e.g. `TableItem::getRawValue()`, documented as the values of any data source); `Core::config()` was removed in v4.31.0; `common` keeps only
   `JsonUtils::convertToJsonString(mixed)` and the narrowed JSON/XML data.
 - Enums first: fixed sets still as string constants (about 80 public string/int constants after v4.36.0, not all of them fixed sets); done so far:
@@ -66,7 +63,7 @@ State after v4.40.0 (23 at v4.39.0, 532 at v4.27.0, 447 at v4.30.0, 375 at v4.31
 
 ## Exceptions and style (`php.md`, sections 4 and 6)
 
-- Plain `new Exception(…)` instead of SPL or yuf exceptions: 2 (`form`; `mailer` was cleaned in v4.36.0, `common` in v4.32.0; the template
+- Plain `new Exception(…)` instead of SPL or yuf exceptions: 0 (`form` was cleaned in v4.41.0; `mailer` in v4.36.0, `common` in v4.32.0; the template
   engine throws `TemplateException`; `core` was cleaned in v4.31.0).
 - `switch` instead of `match`: 0 (the five of `mailer` are gone).
 - `@` error suppression: 0.
@@ -91,3 +88,27 @@ State after v4.40.0 (23 at v4.39.0, 532 at v4.27.0, 447 at v4.30.0, 375 at v4.31
   `ContentHandler::processRequest()` needs a `Core` for the `HtmlDocumentSettings`; `HtmlDocument` itself is tested since v4.39.0), redirects, `ExceptionHandler::handleException()` (ends
   with `exit`; its response is tested through `createResponse()` since v4.40.0), the SSO logging of `MicrosoftAuthenticator`.
 - Reflection to reset static state: none (`ExceptionHandlerTest` has none since v4.40.0).
+
+## Open points
+
+Collected from the "Open / for later" notes of [plan.md](../standard-completion/plan.md) (steps 4 to 14); none of them
+breaks the standard, all of them are decisions or features for later.
+
+- **Git index (step 5):** the names in the index are `src/common/CSVFile.php` and `src/common/SimpleXMLExtended.php`, the
+  files on disk `CsvFile.php` and `SimpleXmlExtended.php`; on Linux the classes are not found from a clean checkout. Fix
+  with `git mv` through a temporary name.
+- **`actra/backend` follows:** per release as listed in `UPGRADE.md` (v4.29.0 to v4.41.0): `HttpRequest` instance, `Session`,
+  `FormContext`, `DbSettings` / `FrameworkDb`, `SmtpMailer` arguments, `IpTypeEnum::IP`, `HtmlDocument::get()`, `HtmlText`
+  names, `HtmlTagAttribute::fromText()` in `SearchQueryField` / `SearchSelectOptionsField` (v4.41.0), table constants.
+- **Design decisions for later:** `SearchHelper` has two purposes (SQL builders and search state); `CsvFile` is mutable;
+  `RequestHandler` keeps four `@phpstan-ignore property.uninitialized`; `ErrorHandler` throws for every PHP error
+  regardless of `error_reporting()`; `HtmlDataObject` is a mutable `stdClass` wrapper; `FormRenderer` keeps the two-phase
+  `prepare()` / `getHtmlTag()` API and a component can be rendered once; `ToggleField` / `MultiToggleField` duplicate
+  their child methods.
+- **Functional gaps (new features, not standard):** no phone number validity per type; `FileField` checks neither type nor
+  size of an upload; IBAN length per country is not checked; no IPv4-mapped IPv6 in IP whitelists; `acceptRedirectionResponseCode()`
+  knows 301 and 303 only; `SmtpMailer` has `AUTH LOGIN` and STARTTLS only; `CountryCodeEnum` is unused and has two non-ISO
+  codes.
+- **Not covered by tests (needs `exit`, `Core` or the network):** `Core::__construct()`, `ContentHandler::processRequest()`,
+  `HttpResponse::sendAndExit()` / `redirectAndExit()`, `ExceptionHandler::handleException()`, the DNS check of
+  `SystemMailDomainResolver`, `SessionFileUploadStorage::store()` (real upload).

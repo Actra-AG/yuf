@@ -60,9 +60,9 @@ final class StringListRulesTest extends TestCase
         $this->assertSame($expected, $rule->validate(values: $values));
     }
 
-    public function testCountRulesAreNotFinal(): void
+    public function testCountRulesAreFinal(): void
     {
-        $this->assertFalse(new ReflectionClass(objectOrClass: MinCountRule::class)->isFinal());
-        $this->assertFalse(new ReflectionClass(objectOrClass: MaxCountRule::class)->isFinal());
+        $this->assertTrue(new ReflectionClass(objectOrClass: MinCountRule::class)->isFinal());
+        $this->assertTrue(new ReflectionClass(objectOrClass: MaxCountRule::class)->isFinal());
     }
 }

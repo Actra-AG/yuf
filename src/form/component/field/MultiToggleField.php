@@ -23,7 +23,7 @@ use Override;
 /**
  * Checkboxes that show child components under the selected options. Replaces `ToggleField(multiple: true)`.
  */
-class MultiToggleField extends MultiOptionsField
+final class MultiToggleField extends MultiOptionsField
 {
     private readonly ToggleChildren $toggleChildren;
     /** @var array<int|string, array<int|string, FormComponent>> */

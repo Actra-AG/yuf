@@ -27,6 +27,8 @@ use UnexpectedValueException;
  * It renders the canonical text of the value (`'+007'` becomes `7`), so leading zeros are not kept: use a
  * `TextField` with a `RegexRule` for codes with leading zeros. For prices use `DecimalField`, for measurements
  * `FloatField`.
+ *
+ * Extension point: `NumericField` extends it; a project can extend it for a number with a fixed meaning.
  */
 class IntegerField extends ParsedInputField
 {

@@ -16,7 +16,7 @@ use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 use Override;
 
-class SelectOptionsRenderer extends FormRenderer
+final class SelectOptionsRenderer extends FormRenderer
 {
     public function __construct(private readonly SelectOptionsField|MultiSelectOptionsField $selectOptionsField) {}
 
@@ -28,61 +28,47 @@ class SelectOptionsRenderer extends FormRenderer
         $fieldName = $selectOptionsField->name;
         $selectTag = new HtmlTag(name: 'select', selfClosing: false);
         $selectTag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
+            htmlTagAttribute: HtmlTagAttribute::fromText(
                 name: 'name',
-                value: $isMultiple ? $fieldName . '[]' : $fieldName,
-                valueIsEncodedForRendering: true,
+                text: $isMultiple ? $fieldName . '[]' : $fieldName,
             ),
         );
         foreach ($selectOptionsField->getDataAttributes() as $key => $val) {
             $selectTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'data-' . $key,
-                    value: $val === '' ? null : $val,
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: $val === ''
+                    ? HtmlTagAttribute::fromName(name: 'data-' . $key)
+                    : HtmlTagAttribute::fromText(name: 'data-' . $key, text: $val),
             );
         }
         $selectTag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'id',
-                value: $selectOptionsField->id,
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'id', text: $selectOptionsField->id),
         );
         if (count(value: $selectOptionsField->cssClasses) > 0) {
             $selectTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
+                htmlTagAttribute: HtmlTagAttribute::fromText(
                     name: 'class',
-                    value: implode(separator: ' ', array: $selectOptionsField->cssClasses),
-                    valueIsEncodedForRendering: true,
+                    text: implode(separator: ' ', array: $selectOptionsField->cssClasses),
                 ),
             );
         }
         if ($isMultiple) {
             $selectTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'multiple',
-                    value: null,
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromName(name: 'multiple'),
             );
         }
         if ($selectOptionsField->placeholder !== null) {
             $selectTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
+                htmlTagAttribute: HtmlTagAttribute::fromText(
                     name: 'placeholder',
-                    value: $selectOptionsField->placeholder,
-                    valueIsEncodedForRendering: true,
+                    text: $selectOptionsField->placeholder,
                 ),
             );
         }
         if ($selectOptionsField->autoComplete !== null) {
             $selectTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
+                htmlTagAttribute: HtmlTagAttribute::fromText(
                     name: 'autocomplete',
-                    value: $selectOptionsField->autoComplete->value,
-                    valueIsEncodedForRendering: true,
+                    text: $selectOptionsField->autoComplete->value,
                 ),
             );
         }
@@ -99,19 +85,11 @@ class SelectOptionsRenderer extends FormRenderer
                 selfClosing: false,
             );
             $optionTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'value',
-                    value: (string) $key,
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'value', text: (string) $key),
             );
             if ($selectOptionsField->isSelected(optionKey: (string) $key)) {
                 $optionTag->addHtmlTagAttribute(
-                    htmlTagAttribute: new HtmlTagAttribute(
-                        name: 'selected',
-                        value: null,
-                        valueIsEncodedForRendering: true,
-                    ),
+                    htmlTagAttribute: HtmlTagAttribute::fromName(name: 'selected'),
                 );
             }
             $optionTag->addText(htmlText: $htmlText);

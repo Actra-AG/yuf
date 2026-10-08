@@ -40,51 +40,30 @@ abstract class DefaultOptionsRenderer extends FormRenderer
             );
             $ulTag->addTag(htmlTag: $liTag);
             $liTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'class',
-                    value: 'form-check',
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'class', text: 'form-check'),
             );
             $inputTag = new HtmlTag(
                 name: 'input',
                 selfClosing: true,
             );
             $inputTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'type',
-                    value: $this->inputFieldType,
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'type', text: $this->inputFieldType),
             );
             $inputTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
+                htmlTagAttribute: HtmlTagAttribute::fromText(
                     name: 'name',
-                    value: ($this->acceptMultipleValues) ? $optionsField->name . '[]' : $optionsField->name,
-                    valueIsEncodedForRendering: true,
+                    text: ($this->acceptMultipleValues) ? $optionsField->name . '[]' : $optionsField->name,
                 ),
             );
             $inputTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'id',
-                    value: $optionsField->id . '_' . $key,
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'id', text: $optionsField->id . '_' . $key),
             );
             $inputTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'value',
-                    value: (string) $key,
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'value', text: (string) $key),
             );
             if ($optionsField->isSelected(optionKey: (string) $key)) {
                 $inputTag->addHtmlTagAttribute(
-                    htmlTagAttribute: new HtmlTagAttribute(
-                        name: 'checked',
-                        value: null,
-                        valueIsEncodedForRendering: true,
-                    ),
+                    htmlTagAttribute: HtmlTagAttribute::fromName(name: 'checked'),
                 );
             }
             $liTag->addTag(htmlTag: $inputTag);
@@ -93,18 +72,10 @@ abstract class DefaultOptionsRenderer extends FormRenderer
                 selfClosing: false,
             );
             $labelTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'class',
-                    value: 'form-check-label',
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'class', text: 'form-check-label'),
             );
             $labelTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'for',
-                    value: $optionsField->id . '_' . $key,
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'for', text: $optionsField->id . '_' . $key),
             );
             $labelTag->addText(htmlText: $htmlText);
             $liTag->addTag(htmlTag: $labelTag);
@@ -121,13 +92,9 @@ abstract class DefaultOptionsRenderer extends FormRenderer
         }
         $htmlTagAttributes = [];
         if (count(value: $listTagClasses) > 0) {
-            $htmlTagAttributes[] = new HtmlTagAttribute(
+            $htmlTagAttributes[] = HtmlTagAttribute::fromText(
                 name: 'class',
-                value: implode(
-                    separator: ' ',
-                    array: $listTagClasses,
-                ),
-                valueIsEncodedForRendering: true,
+                text: implode(separator: ' ', array: $listTagClasses),
             );
         }
 

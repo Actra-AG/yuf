@@ -11,7 +11,7 @@ namespace actra\yuf\form\renderer;
 
 use actra\yuf\form\component\field\CheckboxOptionsField;
 
-class CheckboxOptionsRenderer extends DefaultOptionsRenderer
+final class CheckboxOptionsRenderer extends DefaultOptionsRenderer
 {
     public function __construct(CheckboxOptionsField $checkboxOptionsField)
     {

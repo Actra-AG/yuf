@@ -12,7 +12,7 @@ namespace actra\yuf\form\component\field;
 use actra\yuf\form\FormComponent;
 use Override;
 
-class NullField extends FormComponent
+final class NullField extends FormComponent
 {
     #[Override]
     public function render(): string

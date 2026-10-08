@@ -30,26 +30,10 @@ abstract class FormRenderer
             name: 'div',
             selfClosing: false,
             htmlTagAttributes: [
-                new HtmlTagAttribute(
-                    name: 'class',
-                    value: 'form-input-error',
-                    valueIsEncodedForRendering: true,
-                ),
-                new HtmlTagAttribute(
-                    name: 'id',
-                    value: $formComponentWithErrors->name . '-error',
-                    valueIsEncodedForRendering: true,
-                ),
-                new HtmlTagAttribute(
-                    name: 'role',
-                    value: 'alert',
-                    valueIsEncodedForRendering: true,
-                ),
-                new HtmlTagAttribute(
-                    name: 'aria-live',
-                    value: 'assertive',
-                    valueIsEncodedForRendering: true,
-                ),
+                HtmlTagAttribute::fromText(name: 'class', text: 'form-input-error'),
+                HtmlTagAttribute::fromText(name: 'id', text: $formComponentWithErrors->name . '-error'),
+                HtmlTagAttribute::fromText(name: 'role', text: 'alert'),
+                HtmlTagAttribute::fromText(name: 'aria-live', text: 'assertive'),
             ],
         );
         $errorsHtml = [];
@@ -67,12 +51,8 @@ abstract class FormRenderer
             return;
         }
         $divTag = new HtmlTag(name: 'div', selfClosing: false, htmlTagAttributes: [
-            new HtmlTagAttribute(name: 'class', value: 'form-input-info', valueIsEncodedForRendering: true),
-            new HtmlTagAttribute(
-                name: 'id',
-                value: $formFieldWithFieldInfo->name . '-info',
-                valueIsEncodedForRendering: true,
-            ),
+            HtmlTagAttribute::fromText(name: 'class', text: 'form-input-info'),
+            HtmlTagAttribute::fromText(name: 'id', text: $formFieldWithFieldInfo->name . '-info'),
         ]);
         $divTag->addText(htmlText: $fieldInfo);
         $parentHtmlTag->addTag(htmlTag: $divTag);
@@ -83,11 +63,7 @@ abstract class FormRenderer
         $ariaDescribedBy = [];
         if ($formField->hasErrors(withChildElements: false)) {
             $parentHtmlTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'aria-invalid',
-                    value: 'true',
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'aria-invalid', text: 'true'),
             );
             $ariaDescribedBy[] = $formField->name . '-error';
         }
@@ -96,10 +72,9 @@ abstract class FormRenderer
         }
         if (count(value: $ariaDescribedBy) > 0) {
             $parentHtmlTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
+                htmlTagAttribute: HtmlTagAttribute::fromText(
                     name: 'aria-describedby',
-                    value: implode(separator: ' ', array: $ariaDescribedBy),
-                    valueIsEncodedForRendering: true,
+                    text: implode(separator: ' ', array: $ariaDescribedBy),
                 ),
             );
         }

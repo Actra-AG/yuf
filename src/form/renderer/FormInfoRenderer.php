@@ -15,14 +15,9 @@ use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 use Override;
 
-class FormInfoRenderer extends FormRenderer
+final class FormInfoRenderer extends FormRenderer
 {
-    private FormInfo $formInfo;
-
-    public function __construct(FormInfo $formInfo)
-    {
-        $this->formInfo = $formInfo;
-    }
+    public function __construct(private readonly FormInfo $formInfo) {}
 
     #[Override]
     public function prepare(): void
@@ -33,7 +28,7 @@ class FormInfoRenderer extends FormRenderer
         $dtClasses = $formInfo->dtClasses;
         if (count($dtClasses) > 0) {
             $dtTag->addHtmlTagAttribute(
-                new HtmlTagAttribute('class', implode(separator: ' ', array: $dtClasses), true),
+                HtmlTagAttribute::fromText(name: 'class', text: implode(separator: ' ', array: $dtClasses)),
             );
         }
         $dtTag->addText($formInfo->title);
@@ -42,7 +37,7 @@ class FormInfoRenderer extends FormRenderer
         $ddClasses = $formInfo->ddClasses;
         if (count($ddClasses) > 0) {
             $ddTag->addHtmlTagAttribute(
-                new HtmlTagAttribute('class', implode(separator: ' ', array: $ddClasses), true),
+                HtmlTagAttribute::fromText(name: 'class', text: implode(separator: ' ', array: $ddClasses)),
             );
         }
         $ddTag->addText($formInfo->content);
@@ -51,7 +46,7 @@ class FormInfoRenderer extends FormRenderer
         $dlClasses = $formInfo->dlClasses;
         if (count($dlClasses) > 0) {
             $dlTag->addHtmlTagAttribute(
-                new HtmlTagAttribute('class', implode(separator: ' ', array: $dlClasses), true),
+                HtmlTagAttribute::fromText(name: 'class', text: implode(separator: ' ', array: $dlClasses)),
             );
         }
         $dlTag->addTag($dtTag);

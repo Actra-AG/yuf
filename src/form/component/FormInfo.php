@@ -15,7 +15,7 @@ use actra\yuf\form\renderer\FormInfoRenderer;
 use actra\yuf\html\HtmlText;
 use Override;
 
-class FormInfo extends FormComponent
+final class FormInfo extends FormComponent
 {
     /**
      * @param list<string> $dlClasses

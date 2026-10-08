@@ -11,7 +11,7 @@ namespace actra\yuf\form\renderer;
 
 use actra\yuf\form\component\field\RadioOptionsField;
 
-class RadioOptionsRenderer extends DefaultOptionsRenderer
+final class RadioOptionsRenderer extends DefaultOptionsRenderer
 {
     public function __construct(RadioOptionsField $radioOptionsField)
     {

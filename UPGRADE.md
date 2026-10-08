@@ -4,6 +4,89 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.41.0] – 2026-10-08
+
+Area release for `src/form/` (the last step of the standard completion plan): `HtmlTagAttribute` gets named
+constructors like `HtmlText`, the form classes nobody extends are `final`, the extension points are documented, and
+plain text values of the form markup (placeholders, names, ids, option keys, CSS classes, links) are escaped. The
+rendered HTML is byte-identical for normal input. Search your project for `new HtmlTagAttribute`,
+`valueIsEncodedForRendering`, `extends ToggleField`, `extends MultiToggleField`, `extends MultiSelectOptionsField`,
+`extends FormInfo`, `extends FormSubHeadline`, `extends NullField`, `extends .*Rule` (of a concrete rule),
+`extends .*Renderer` (of a concrete renderer), `FormSubHeadline(`, `->getField(` / `->removeField(` in `catch` blocks
+and placeholders, CSS classes or cancel links that contain `&amp;` or other entities.
+
+### ⚠️ `HtmlTagAttribute`: named constructors instead of `valueIsEncodedForRendering`
+
+The public constructor with the flag `valueIsEncodedForRendering` is gone: whether the value is plain text or HTML is
+the name of the method, like `HtmlText::fromText()` / `fromHtml()`.
+
+| Before | After |
+|:--|:--|
+| `new HtmlTagAttribute(name: 'title', value: $text, valueIsEncodedForRendering: false)` | `HtmlTagAttribute::fromText(name: 'title', text: $text)` (escaped when rendered; `string\|int`) |
+| `new HtmlTagAttribute(name: 'title', value: $encoded, valueIsEncodedForRendering: true)` | `HtmlTagAttribute::fromHtml(name: 'title', html: $encoded)` (output as it is; a `"` in the value is still rejected) |
+| `new HtmlTagAttribute(name: 'disabled', value: null, valueIsEncodedForRendering: true)` | `HtmlTagAttribute::fromName(name: 'disabled')` (no value) |
+| `new HtmlTagAttribute('class', 'a', true)` (positional) | `HtmlTagAttribute::fromText(name: 'class', text: 'a')` |
+
+Migration: `valueIsEncodedForRendering: false` -> `fromText()`; `true` with a value that is encoded already (the result
+of `HtmlEncoder::encode()`, `FormField::renderValue()`) or trusted markup -> `fromHtml()`; `true` with a plain text
+that happened to need no escaping (class names, `type`, ids) -> `fromText()` (the output is the same, and it stays
+right when the text changes); `null` -> `fromName()`. `fromText()` takes no `null`: use `fromName()` for an attribute
+without a value. The public property `HtmlTagAttribute::$value` (`string|int|null`) is unchanged.
+
+### ⚠️ Plain text values of the form markup are escaped
+
+The renderers passed their values with `valueIsEncodedForRendering: true`, so a plain text with `&` or `<` was output
+as it was and one with `"` threw an `InvalidArgumentException` when the form was rendered. The renderers use
+`fromText()` for everything that is plain text now: field `name` and `id`, option keys, `placeholder`, CSS classes
+(`Form::addCssClass()`, `cssClasses`, `addListTagClass()`, `addCssClassForRenderer()`, the classes of `FormInfo`),
+`addDataAttribute()` values, `FormControl::$cancelLink` and the `action` of the form (the sent indicator). Only
+`renderValue()` (encoded by the field) is output as HTML. Nothing changes for values without special characters. A
+value that you encoded yourself is encoded twice now:
+
+| Before | After |
+|:--|:--|
+| `placeholder: 'Name &amp; Vorname'` | `placeholder: 'Name & Vorname'` |
+| `cancelLink: '/list?a=1&amp;b=2'` | `cancelLink: '/list?a=1&b=2'` (rendered as `href="/list?a=1&amp;b=2"`) |
+| a CSS class or data attribute with `&amp;` | the plain text |
+
+The cancel text of a `FormControl` without a `cancelLabel` is `FormMessages::$cancel` as plain text (as documented),
+it was output as HTML.
+
+### ⚠️ `final` classes and extension points (form)
+
+Everything that no project extends is `final`: `ToggleField`, `MultiToggleField`, `MultiSelectOptionsField`,
+`NullField`, `FormInfo`, `FormSubHeadline`, the rules `MinLengthRule`, `MaxLengthRule`, `RegexRule`, `ValidValueRule`,
+`ValidEmailAddressRule`, `MinCountRule`, `MaxCountRule`, `IntegerMinRule`, `IntegerMaxRule`, `FloatMinRule`,
+`FloatMaxRule`, `DecimalMinRule`, `DecimalMaxRule` and all renderers except `InputFieldRenderer` and the abstract
+`DefaultOptionsRenderer` (`BooleanFieldListRenderer`, `CheckboxItemRenderer`, `CheckboxOptionsRenderer`,
+`DefaultCollectionRenderer`, `DefaultComponentRenderer`, `DefaultFormRenderer`, `DefinitionListRenderer`,
+`FileFieldRenderer`, `FormControlRenderer`, `FormInfoRenderer`, `HiddenFieldRenderer`, `LegendAndListRenderer`,
+`NumericFieldRenderer`, `RadioOptionsRenderer`, `SelectOptionsRenderer`, `TextAreaRenderer`, `ToggleFieldRenderer`).
+Nothing in the Actra projects extends them: a project that does, writes its own rule on `StringRule` /
+`IntegerRule` / ..., its own renderer on `FormRenderer` and sets it with `setRenderer()`, or uses the rule inside its
+own rule. `FileField`, `DateField` and `FormOptions` were already `final`.
+
+Documented extension points (PHPDoc "Extension point: ..."): `Form`, `TextField`, `TextAreaField`,
+`SelectOptionsField`, `CheckboxOptionsField`, `RadioOptionsField`, `BooleanField`, `IntegerField` (parent of
+`NumericField`), `FormControl` and `InputFieldRenderer` (parent of `NumericFieldRenderer`); abstract bases stay abstract
+(`FormComponent`, `FormField`, `FormCollection`, `FormRenderer`, `FormRule`, the typed rule bases, `TextualField`,
+`OptionsField`, `FormFieldListener`). New `@internal`: `ToggleChildren`, `BooleanFieldListRenderer`,
+`CheckboxItemRenderer`, `HiddenFieldRenderer`, `NumericFieldRenderer`, `ToggleFieldRenderer`. `FormSubHeadline` and
+`FormInfoRenderer` / `DefinitionListRenderer` have `readonly` properties.
+
+### ⚠️ `Form::getField()`, `Form::removeField()`: `LogicException`, `FormSubHeadline`: level 1 to 6
+
+`getField()` of a component that is no `FormField`, and `removeField()` of a name that is no field, threw a plain
+`Exception` (`The requested component x is not an instance of FormField`); they throw a `LogicException` naming the
+form and the component. `catch (Exception)` still catches it. `new FormSubHeadline(headingLevel: 0 or 7, ...)` threw
+nothing and rendered `<h7>`: it throws an `InvalidArgumentException` for a level outside 1 to 6.
+
+### Fixed
+
+- `FileFieldRenderer`: the name of the remove button of an uploaded file was output without encoding (the field name
+  is chosen by the project, but a name with `"` made broken HTML).
+- Plain text with special characters in the attributes of the form markup, see above.
+
 ## [v4.40.0] – 2026-10-08
 
 Area release for `src/exception/` and `src/datacheck/`: the exception handler can be tested without `exit`, production

@@ -15,7 +15,7 @@ use Override;
 /**
  * The value is at least `$min`.
  */
-class FloatMinRule extends FloatRule
+final class FloatMinRule extends FloatRule
 {
     public function __construct(protected float $min, HtmlText $errorMessage)
     {

@@ -15,7 +15,7 @@ use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 use Override;
 
-class DefaultCollectionRenderer extends FormRenderer
+final class DefaultCollectionRenderer extends FormRenderer
 {
     public function __construct(private readonly FormCollection $formCollection) {}
 
@@ -25,7 +25,7 @@ class DefaultCollectionRenderer extends FormRenderer
         $componentTag = new HtmlTag($this->formCollection->name, false);
 
         if ($this->formCollection->hasErrors(withChildElements: true)) {
-            $componentTag->addHtmlTagAttribute(new HtmlTagAttribute('class', 'has-error', true));
+            $componentTag->addHtmlTagAttribute(HtmlTagAttribute::fromText(name: 'class', text: 'has-error'));
         }
 
         foreach ($this->formCollection->childComponents as $childComponent) {

@@ -12,7 +12,7 @@ namespace actra\yuf\form\rule;
 use actra\yuf\html\HtmlText;
 use Override;
 
-class MinLengthRule extends StringRule
+final class MinLengthRule extends StringRule
 {
     public function __construct(protected int $minLength, HtmlText $errorMessage)
     {

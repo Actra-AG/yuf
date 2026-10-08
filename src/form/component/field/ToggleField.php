@@ -23,7 +23,7 @@ use Override;
 /**
  * Radio options that show child components under the selected option. See `MultiToggleField` for checkboxes.
  */
-class ToggleField extends SingleOptionsField
+final class ToggleField extends SingleOptionsField
 {
     private readonly ToggleChildren $toggleChildren;
     /** @var array<int|string, array<int|string, FormComponent>> */

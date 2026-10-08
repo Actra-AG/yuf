@@ -15,7 +15,7 @@ use Override;
 /**
  * At least `$minCount` selected values (replaces `MinLengthRule` on a list of values).
  */
-class MinCountRule extends StringListRule
+final class MinCountRule extends StringListRule
 {
     public function __construct(protected int $minCount, HtmlText $errorMessage)
     {

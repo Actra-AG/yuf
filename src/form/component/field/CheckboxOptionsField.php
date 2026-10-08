@@ -19,6 +19,11 @@ use actra\yuf\form\renderer\LegendAndListRenderer;
 use actra\yuf\html\HtmlText;
 use Override;
 
+/**
+ * Checkboxes: a list of selected option keys.
+ *
+ * Extension point: a project can extend it to fill its options or to change its rules.
+ */
 class CheckboxOptionsField extends MultiOptionsField
 {
     /**

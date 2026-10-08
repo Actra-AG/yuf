@@ -20,8 +20,10 @@ use Override;
 /**
  * The markup of `ToggleField` and `MultiToggleField`: a list of radio buttons or checkboxes, each with the child
  * components of its option, optionally inside a fieldset with a legend.
+ *
+ * @internal
  */
-class ToggleFieldRenderer extends FormRenderer
+final class ToggleFieldRenderer extends FormRenderer
 {
     public function __construct(
         private readonly OptionsField $toggleField,
@@ -52,11 +54,7 @@ class ToggleFieldRenderer extends FormRenderer
             name: 'ul',
             selfClosing: false,
             htmlTagAttributes: [
-                new HtmlTagAttribute(
-                    name: 'class',
-                    value: implode(separator: ' ', array: $ulTagClasses),
-                    valueIsEncodedForRendering: true,
-                ),
+                HtmlTagAttribute::fromText(name: 'class', text: implode(separator: ' ', array: $ulTagClasses)),
             ],
         );
     }
@@ -68,7 +66,7 @@ class ToggleFieldRenderer extends FormRenderer
             name: 'span',
             selfClosing: false,
             htmlTagAttributes: [
-                new HtmlTagAttribute(name: 'class', value: 'label-text', valueIsEncodedForRendering: true),
+                HtmlTagAttribute::fromText(name: 'class', text: 'label-text'),
             ],
         );
         $spanLabelTag->addText(htmlText: $htmlText);
@@ -88,28 +86,19 @@ class ToggleFieldRenderer extends FormRenderer
     {
         $isMultiple = $this->toggleField->isMultiple();
         $inputAttributes = [
-            new HtmlTagAttribute(
-                name: 'type',
-                value: $isMultiple ? 'checkbox' : 'radio',
-                valueIsEncodedForRendering: true,
-            ),
-            new HtmlTagAttribute(name: 'toggle-id', value: $combinedSpecifier, valueIsEncodedForRendering: true),
-            new HtmlTagAttribute(
+            HtmlTagAttribute::fromText(name: 'type', text: $isMultiple ? 'checkbox' : 'radio'),
+            HtmlTagAttribute::fromText(name: 'toggle-id', text: $combinedSpecifier),
+            HtmlTagAttribute::fromText(
                 name: 'name',
-                value: $isMultiple ? $this->toggleField->name . '[]' : $this->toggleField->name,
-                valueIsEncodedForRendering: true,
+                text: $isMultiple ? $this->toggleField->name . '[]' : $this->toggleField->name,
             ),
-            new HtmlTagAttribute(name: 'value', value: $key, valueIsEncodedForRendering: true),
+            HtmlTagAttribute::fromText(name: 'value', text: $key),
         ];
         if ($this->toggleChildren->has(mainOption: $key)) {
-            $inputAttributes[] = new HtmlTagAttribute(
-                name: 'aria-describedby',
-                value: $combinedSpecifier,
-                valueIsEncodedForRendering: true,
-            );
+            $inputAttributes[] = HtmlTagAttribute::fromText(name: 'aria-describedby', text: $combinedSpecifier);
         }
         if ($this->toggleField->isSelected(optionKey: $key)) {
-            $inputAttributes[] = new HtmlTagAttribute(name: 'checked', value: null, valueIsEncodedForRendering: true);
+            $inputAttributes[] = HtmlTagAttribute::fromName(name: 'checked');
         }
 
         return new HtmlTag(name: 'input', selfClosing: true, htmlTagAttributes: $inputAttributes);
@@ -121,8 +110,8 @@ class ToggleFieldRenderer extends FormRenderer
             name: 'div',
             selfClosing: false,
             htmlTagAttributes: [
-                new HtmlTagAttribute(name: 'class', value: 'form-toggle-content', valueIsEncodedForRendering: true),
-                new HtmlTagAttribute(name: 'id', value: $combinedSpecifier, valueIsEncodedForRendering: true),
+                HtmlTagAttribute::fromText(name: 'class', text: 'form-toggle-content'),
+                HtmlTagAttribute::fromText(name: 'id', text: $combinedSpecifier),
             ],
         );
         foreach ($this->toggleChildren->getForMainOption(mainOption: $key) as $childComponent) {
@@ -150,11 +139,7 @@ class ToggleFieldRenderer extends FormRenderer
             name: 'div',
             selfClosing: false,
             htmlTagAttributes: [
-                new HtmlTagAttribute(
-                    name: 'class',
-                    value: implode(separator: ' ', array: $divClasses),
-                    valueIsEncodedForRendering: true,
-                ),
+                HtmlTagAttribute::fromText(name: 'class', text: implode(separator: ' ', array: $divClasses)),
             ],
         );
         $divTag->addTag(htmlTag: $ulTag);
@@ -194,7 +179,7 @@ class ToggleFieldRenderer extends FormRenderer
             name: 'legend',
             selfClosing: false,
             htmlTagAttributes: $this->toggleField->renderLabel ? [] : [
-                new HtmlTagAttribute(name: 'class', value: 'visuallyhidden', valueIsEncodedForRendering: true),
+                HtmlTagAttribute::fromText(name: 'class', text: 'visuallyhidden'),
             ],
         );
         $legendTag->addText(htmlText: $this->toggleField->label);
@@ -203,7 +188,7 @@ class ToggleFieldRenderer extends FormRenderer
                 name: 'span',
                 selfClosing: false,
                 htmlTagAttributes: [
-                    new HtmlTagAttribute(name: 'class', value: 'required', valueIsEncodedForRendering: true),
+                    HtmlTagAttribute::fromText(name: 'class', text: 'required'),
                 ],
             );
             $requiredTag->addText(htmlText: HtmlText::fromHtml(html: '*'));
@@ -215,7 +200,7 @@ class ToggleFieldRenderer extends FormRenderer
                 name: 'i',
                 selfClosing: false,
                 htmlTagAttributes: [
-                    new HtmlTagAttribute(name: 'class', value: 'legend-info', valueIsEncodedForRendering: true),
+                    HtmlTagAttribute::fromText(name: 'class', text: 'legend-info'),
                 ],
             );
             $labelInfoTag->addText(htmlText: $labelInfoText);

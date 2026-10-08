@@ -15,7 +15,7 @@ use Override;
 /**
  * The value is at most `$max`.
  */
-class IntegerMaxRule extends IntegerRule
+final class IntegerMaxRule extends IntegerRule
 {
     public function __construct(protected int $max, HtmlText $errorMessage)
     {

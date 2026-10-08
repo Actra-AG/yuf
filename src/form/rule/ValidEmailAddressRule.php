@@ -17,7 +17,7 @@ use Override;
  * The text is an e-mail address (syntax and, optionally, a DNS lookup of the domain). The canonical form is set by
  * the field (`EmailField`), not by the rule.
  */
-class ValidEmailAddressRule extends StringRule
+final class ValidEmailAddressRule extends StringRule
 {
     public function __construct(
         HtmlText $errorMessage,

@@ -24,6 +24,8 @@ use Override;
 /**
  * A single checkbox. The value is a `bool`, empty is `false` (so a required rule means "must be checked").
  * The checkbox is posted as `name[]=checked` (a plain `name=checked` is accepted as well).
+ *
+ * Extension point: a project can extend it for a checkbox with a fixed meaning.
  */
 class BooleanField extends FormField
 {

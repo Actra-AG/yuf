@@ -15,7 +15,7 @@ use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 use Override;
 
-class FormControlRenderer extends FormRenderer
+final class FormControlRenderer extends FormRenderer
 {
     public function __construct(private readonly FormControl $formControl) {}
 
@@ -25,18 +25,18 @@ class FormControlRenderer extends FormRenderer
         $formControl = $this->formControl;
 
         $buttonTag = new HtmlTag('button', false, [
-            new HtmlTagAttribute('type', 'submit', true),
-            new HtmlTagAttribute('name', $formControl->name, true),
+            HtmlTagAttribute::fromText(name: 'type', text: 'submit'),
+            HtmlTagAttribute::fromText(name: 'name', text: $formControl->name),
         ]);
         $buttonTag->addText(htmlText: $formControl->submitLabel);
 
-        $divTag = new HtmlTag('div', false, [new HtmlTagAttribute('class', 'form-control', true)]);
+        $divTag = new HtmlTag('div', false, [HtmlTagAttribute::fromText(name: 'class', text: 'form-control')]);
         $divTag->addTag($buttonTag);
 
         if ($formControl->cancelLink !== null) {
             $aTag = new HtmlTag('a', false, [
-                new HtmlTagAttribute('href', $formControl->cancelLink, true),
-                new HtmlTagAttribute('class', 'link-cancel', true),
+                HtmlTagAttribute::fromText(name: 'href', text: $formControl->cancelLink),
+                HtmlTagAttribute::fromText(name: 'class', text: 'link-cancel'),
             ]);
             $aTag->addText($formControl->cancelLabel);
             $divTag->addTag($aTag);

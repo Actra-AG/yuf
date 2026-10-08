@@ -17,6 +17,11 @@ use actra\yuf\form\renderer\FormControlRenderer;
 use actra\yuf\html\HtmlText;
 use Override;
 
+/**
+ * The submit button with an optional cancel link of a form.
+ *
+ * Extension point: a project can extend it to change the markup (override `getDefaultRenderer()`).
+ */
 class FormControl extends FormComponent
 {
     /** Used without a form; inside a form the messages of the form are used (see resolveMessages()) */
@@ -25,7 +30,7 @@ class FormControl extends FormComponent
     private readonly ?HtmlText $individualCancelLabel;
 
     public HtmlText $cancelLabel {
-        get => $this->individualCancelLabel ?? HtmlText::fromHtml(html: $this->resolveMessages()->cancel);
+        get => $this->individualCancelLabel ?? HtmlText::fromText(text: $this->resolveMessages()->cancel);
     }
 
     public function __construct(

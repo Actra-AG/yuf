@@ -16,7 +16,7 @@ use actra\yuf\html\HtmlTagAttribute;
 use actra\yuf\html\HtmlText;
 use Override;
 
-class TextAreaRenderer extends FormRenderer
+final class TextAreaRenderer extends FormRenderer
 {
     public function __construct(private readonly TextAreaField $textAreaField) {}
 
@@ -29,59 +29,35 @@ class TextAreaRenderer extends FormRenderer
             selfClosing: false,
         );
         $textareaTag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'name',
-                value: $textAreaField->name,
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'name', text: $textAreaField->name),
         );
         $textareaTag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'id',
-                value: $textAreaField->id,
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'id', text: $textAreaField->id),
         );
         $textareaTag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'rows',
-                value: (string) $textAreaField->rows,
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'rows', text: (string) $textAreaField->rows),
         );
         $textareaTag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'cols',
-                value: (string) $textAreaField->cols,
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'cols', text: (string) $textAreaField->cols),
         );
         $cssClassesForRenderer = $textAreaField->cssClassesForRenderer;
         if (count(value: $cssClassesForRenderer) > 0) {
             $textareaTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
+                htmlTagAttribute: HtmlTagAttribute::fromText(
                     name: 'class',
-                    value: implode(separator: ' ', array: $cssClassesForRenderer),
-                    valueIsEncodedForRendering: true,
+                    text: implode(separator: ' ', array: $cssClassesForRenderer),
                 ),
             );
         }
-        if ($textAreaField->getPlaceholder() !== null) {
+        $placeholder = $textAreaField->getPlaceholder();
+        if ($placeholder !== null) {
             $textareaTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'placeholder',
-                    value: $textAreaField->getPlaceholder(),
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'placeholder', text: $placeholder),
             );
         }
         if ($textAreaField->autoFocus) {
             $textareaTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'autofocus',
-                    value: null,
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromName(name: 'autofocus'),
             );
         }
         FormRenderer::addAriaAttributesToHtmlTag(

@@ -15,7 +15,7 @@ use Override;
 /**
  * At most `$maxCount` selected values (replaces `MaxLengthRule` on a list of values).
  */
-class MaxCountRule extends StringListRule
+final class MaxCountRule extends StringListRule
 {
     public function __construct(protected int $maxCount, HtmlText $errorMessage)
     {

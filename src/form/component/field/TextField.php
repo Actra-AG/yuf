@@ -13,6 +13,12 @@ use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlText;
 
+/**
+ * A text input.
+ *
+ * Extension point: a project extends it for fields with a fixed meaning (name, website, search query) and sets
+ * its rules, label and placeholder in the constructor. `ZipCodeField` and `IbanNumberField` are examples.
+ */
 class TextField extends SettableStringInputField
 {
     public function __construct(

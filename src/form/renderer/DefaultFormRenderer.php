@@ -16,7 +16,7 @@ use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
 use Override;
 
-class DefaultFormRenderer extends FormRenderer
+final class DefaultFormRenderer extends FormRenderer
 {
     public function __construct(private readonly Form $form) {}
 
@@ -25,38 +25,21 @@ class DefaultFormRenderer extends FormRenderer
     {
         $form = $this->form;
         $attributes = [
-            new HtmlTagAttribute(
-                name: 'method',
-                value: ($form->methodPost ? 'post' : 'get'),
-                valueIsEncodedForRendering: true,
-            ),
-            new HtmlTagAttribute(
-                name: 'action',
-                value: '?' . $form->sentIndicator,
-                valueIsEncodedForRendering: true,
-            ),
+            HtmlTagAttribute::fromText(name: 'method', text: ($form->methodPost ? 'post' : 'get')),
+            HtmlTagAttribute::fromText(name: 'action', text: '?' . $form->sentIndicator),
         ];
         $cssClasses = $form->cssClasses;
         if (count(value: $cssClasses) > 0) {
-            $attributes[] = new HtmlTagAttribute(
+            $attributes[] = HtmlTagAttribute::fromText(
                 name: 'class',
-                value: implode(separator: ' ', array: $cssClasses),
-                valueIsEncodedForRendering: true,
+                text: implode(separator: ' ', array: $cssClasses),
             );
         }
         if ($form->acceptUpload) {
-            $attributes[] = new HtmlTagAttribute(
-                name: 'enctype',
-                value: 'multipart/form-data',
-                valueIsEncodedForRendering: true,
-            );
+            $attributes[] = HtmlTagAttribute::fromText(name: 'enctype', text: 'multipart/form-data');
         }
         if ($form->disableClientValidation) {
-            $attributes[] = new HtmlTagAttribute(
-                name: 'novalidate',
-                value: null,
-                valueIsEncodedForRendering: true,
-            );
+            $attributes[] = HtmlTagAttribute::fromName(name: 'novalidate');
         }
         $htmlTag = new HtmlTag(name: 'form', selfClosing: false, htmlTagAttributes: $attributes);
         $this->renderErrors(parentTag: $htmlTag);
@@ -86,21 +69,9 @@ class DefaultFormRenderer extends FormRenderer
             return;
         }
         $mainAttributes = [
-            new HtmlTagAttribute(
-                name: 'class',
-                value: 'form-error',
-                valueIsEncodedForRendering: true,
-            ),
-            new HtmlTagAttribute(
-                name: 'role',
-                value: 'alert',
-                valueIsEncodedForRendering: true,
-            ),
-            new HtmlTagAttribute(
-                name: 'aria-live',
-                value: 'assertive',
-                valueIsEncodedForRendering: true,
-            ),
+            HtmlTagAttribute::fromText(name: 'class', text: 'form-error'),
+            HtmlTagAttribute::fromText(name: 'role', text: 'alert'),
+            HtmlTagAttribute::fromText(name: 'aria-live', text: 'assertive'),
         ];
         if ($errorCollection->count() === 1) {
             $pTag = new HtmlTag(

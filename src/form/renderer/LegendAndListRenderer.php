@@ -16,7 +16,7 @@ use actra\yuf\html\HtmlTagAttribute;
 use actra\yuf\html\HtmlText;
 use Override;
 
-class LegendAndListRenderer extends FormRenderer
+final class LegendAndListRenderer extends FormRenderer
 {
     public function __construct(private readonly OptionsField $optionsField) {}
 
@@ -55,11 +55,7 @@ class LegendAndListRenderer extends FormRenderer
             name: 'fieldset',
             selfClosing: false,
             htmlTagAttributes: [
-                new HtmlTagAttribute(
-                    name: 'class',
-                    value: 'legend-and-list',
-                    valueIsEncodedForRendering: true,
-                ),
+                HtmlTagAttribute::fromText(name: 'class', text: 'legend-and-list'),
             ],
         );
         FormRenderer::addAriaAttributesToHtmlTag(formField: $optionsField, parentHtmlTag: $fieldsetTag);
@@ -71,11 +67,7 @@ class LegendAndListRenderer extends FormRenderer
     {
         $legendAttributes = [];
         if (!$optionsField->renderLabel) {
-            $legendAttributes[] = new HtmlTagAttribute(
-                name: 'class',
-                value: 'visuallyhidden',
-                valueIsEncodedForRendering: true,
-            );
+            $legendAttributes[] = HtmlTagAttribute::fromText(name: 'class', text: 'visuallyhidden');
         }
         $labelText = $optionsField->label;
         $labelInfoText = $optionsField->labelInfoText;
@@ -94,7 +86,7 @@ class LegendAndListRenderer extends FormRenderer
                 name: 'i',
                 selfClosing: false,
                 htmlTagAttributes: [
-                    new HtmlTagAttribute(name: 'class', value: 'legend-info', valueIsEncodedForRendering: true),
+                    HtmlTagAttribute::fromText(name: 'class', text: 'legend-info'),
                 ],
             );
             $labelInfoTag->addText(htmlText: $labelInfoText);
@@ -108,11 +100,7 @@ class LegendAndListRenderer extends FormRenderer
                 name: 'span',
                 selfClosing: false,
                 htmlTagAttributes: [
-                    new HtmlTagAttribute(
-                        name: 'class',
-                        value: 'required',
-                        valueIsEncodedForRendering: true,
-                    ),
+                    HtmlTagAttribute::fromText(name: 'class', text: 'required'),
                 ],
             );
             $spanTag->addText(htmlText: HtmlText::fromHtml(html: '*'));

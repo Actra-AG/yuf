@@ -18,6 +18,7 @@ use actra\yuf\form\FormMessages;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\FormContextFactory;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
+use InvalidArgumentException;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 
@@ -153,5 +154,23 @@ final class FormComponentTest extends TestCase
             '<h3>Contact</h3>',
             new FormSubHeadline(headingLevel: 3, content: $this->text('Contact'))->render(),
         );
+    }
+
+    public function testSubHeadlineAcceptsTheLevelsOneToSix(): void
+    {
+        $this->assertSame('<h1>A</h1>', new FormSubHeadline(headingLevel: 1, content: $this->text('A'))->render());
+        $this->assertSame('<h6>A</h6>', new FormSubHeadline(headingLevel: 6, content: $this->text('A'))->render());
+    }
+
+    public function testSubHeadlineRejectsOtherLevels(): void
+    {
+        foreach ([0, 7, -1] as $level) {
+            try {
+                new FormSubHeadline(headingLevel: $level, content: $this->text('A'));
+                FormComponentTest::fail('An InvalidArgumentException was expected for level ' . $level . '.');
+            } catch (InvalidArgumentException $exception) {
+                $this->assertStringContainsString('between 1 and 6', $exception->getMessage());
+            }
+        }
     }
 }

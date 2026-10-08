@@ -12,7 +12,7 @@ namespace actra\yuf\form\rule;
 use actra\yuf\html\HtmlText;
 use Override;
 
-class ValidValueRule extends StringRule
+final class ValidValueRule extends StringRule
 {
     /**
      * @param list<string> $validValues

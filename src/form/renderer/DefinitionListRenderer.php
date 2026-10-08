@@ -16,24 +16,20 @@ use actra\yuf\html\HtmlTagAttribute;
 use actra\yuf\html\HtmlText;
 use Override;
 
-class DefinitionListRenderer extends FormRenderer
+final class DefinitionListRenderer extends FormRenderer
 {
-    private FormField $formField;
     /** @var list<HtmlTag> */
     private array $htmlTagsBeforeFormField = [];
 
-    public function __construct(FormField $formField)
-    {
-        $this->formField = $formField;
-    }
+    public function __construct(private readonly FormField $formField) {}
 
     #[Override]
     public function prepare(): void
     {
         $formField = $this->formField;
-        $labelAttributes = [new HtmlTagAttribute('for', $formField->name, true)];
+        $labelAttributes = [HtmlTagAttribute::fromText(name: 'for', text: $formField->name)];
         if (!$this->formField->renderLabel) {
-            $labelAttributes[] = new HtmlTagAttribute('class', 'visuallyhidden', true);
+            $labelAttributes[] = HtmlTagAttribute::fromText(name: 'class', text: 'visuallyhidden');
         }
 
         $labelTag = new HtmlTag('label', false, $labelAttributes);
@@ -41,7 +37,7 @@ class DefinitionListRenderer extends FormRenderer
 
         if ($formField->isRequired() && $formField->renderRequiredAbbr) {
             $abbrTag = new HtmlTag('span', false, [
-                new HtmlTagAttribute('class', 'required', true),
+                HtmlTagAttribute::fromText(name: 'class', text: 'required'),
             ]);
             $abbrTag->addText(HtmlText::fromHtml('*'));
             $labelTag->addTag($abbrTag);
@@ -50,7 +46,7 @@ class DefinitionListRenderer extends FormRenderer
         $labelInfoText = $formField->labelInfoText;
         if ($labelInfoText !== null) {
             $labelInfoTag = new HtmlTag('i', false, [
-                new HtmlTagAttribute('class', 'label-info', true),
+                HtmlTagAttribute::fromText(name: 'class', text: 'label-info'),
             ]);
             $labelInfoTag->addText($labelInfoText);
             $labelTag->addTag($labelInfoTag);
@@ -61,9 +57,15 @@ class DefinitionListRenderer extends FormRenderer
             $divTag = new HtmlTag('div', false);
             $divTag->addTag($labelTag);
             if ($formField->hasErrors(withChildElements: true)) {
-                $divTag->addHtmlTagAttribute(new HtmlTagAttribute('class', 'form-toggle-content-item has-error', true));
+                $divTag->addHtmlTagAttribute(HtmlTagAttribute::fromText(
+                    name: 'class',
+                    text: 'form-toggle-content-item has-error',
+                ));
             } else {
-                $divTag->addHtmlTagAttribute(new HtmlTagAttribute('class', 'form-toggle-content-item', true));
+                $divTag->addHtmlTagAttribute(HtmlTagAttribute::fromText(
+                    name: 'class',
+                    text: 'form-toggle-content-item',
+                ));
             }
             $defaultFormFieldRenderer = $formField->getDefaultRenderer();
             $divTag->addTag($defaultFormFieldRenderer->prepareHtmlTag());
@@ -95,11 +97,7 @@ class DefinitionListRenderer extends FormRenderer
         }
 
         $ddAttributes = (count($ddClasses) === 0) ? [] : [
-            new HtmlTagAttribute(
-                'class',
-                implode(separator: ' ', array: $ddClasses),
-                true,
-            ),
+            HtmlTagAttribute::fromText(name: 'class', text: implode(separator: ' ', array: $ddClasses)),
         ];
         $ddTag = new HtmlTag('dd', false, $ddAttributes);
 
@@ -111,11 +109,11 @@ class DefinitionListRenderer extends FormRenderer
         $fieldTag = $defaultFormFieldRenderer->prepareHtmlTag();
 
         if ($additionalColumnContent !== null) {
-            $column1 = new HtmlTag('div', false, [new HtmlTagAttribute('class', 'form-col-1', true)]);
+            $column1 = new HtmlTag('div', false, [HtmlTagAttribute::fromText(name: 'class', text: 'form-col-1')]);
             $column1->addTag($fieldTag);
             $ddTag->addTag($column1);
 
-            $column2 = new HtmlTag('div', false, [new HtmlTagAttribute('class', 'form-col-2', true)]);
+            $column2 = new HtmlTag('div', false, [HtmlTagAttribute::fromText(name: 'class', text: 'form-col-2')]);
             $column2->addText($additionalColumnContent);
             $ddTag->addTag($column2);
         } else {

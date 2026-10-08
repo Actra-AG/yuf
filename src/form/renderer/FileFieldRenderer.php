@@ -17,7 +17,7 @@ use actra\yuf\html\HtmlTagAttribute;
 use actra\yuf\html\HtmlText;
 use Override;
 
-class FileFieldRenderer extends FormRenderer
+final class FileFieldRenderer extends FormRenderer
 {
     public bool $enhanceMultipleField = true;
 
@@ -32,23 +32,20 @@ class FileFieldRenderer extends FormRenderer
         if ($stillAllowedToUploadCount < 0) {
             $stillAllowedToUploadCount = 0;
         }
-        $wrapperClass = ($stillAllowedToUploadCount > 1 && $this->enhanceMultipleField) ? 'fileupload-enhanced' : 'fileupload';
+        $wrapperClass = $stillAllowedToUploadCount > 1 && $this->enhanceMultipleField
+            ? 'fileupload-enhanced'
+            : 'fileupload';
         $divFileUpload = new HtmlTag(
             name: 'div',
             selfClosing: false,
         );
         $divFileUpload->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'class',
-                value: $wrapperClass,
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'class', text: $wrapperClass),
         );
         $divFileUpload->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
+            htmlTagAttribute: HtmlTagAttribute::fromText(
                 name: 'data-max-files',
-                value: (string) $stillAllowedToUploadCount,
-                valueIsEncodedForRendering: true,
+                text: (string) $stillAllowedToUploadCount,
             ),
         );
         if (count(value: $alreadyUploadedFiles) > 0) {
@@ -57,14 +54,10 @@ class FileFieldRenderer extends FormRenderer
                 selfClosing: false,
             );
             $ulFileUploadList->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'class',
-                    value: 'fileupload-list',
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'class', text: 'fileupload-list'),
             );
             $htmlContent = '';
-            $removeButtonName = $fileField->name . '_removeAttachment';
+            $removeButtonName = HtmlEncoder::encode(value: $fileField->name . '_removeAttachment');
             $removeButtonText = HtmlEncoder::encode(value: $fileField->messages->removeFile);
             foreach ($alreadyUploadedFiles as $hash => $uploadedFile) {
                 $htmlContent .= '<li><span>' . HtmlEncoder::encode(value: $uploadedFile->name) . '</span> '
@@ -79,33 +72,17 @@ class FileFieldRenderer extends FormRenderer
             selfClosing: true,
         );
         $inputTag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'type',
-                value: 'file',
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'type', text: 'file'),
         );
         $inputTag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'name',
-                value: $fileField->name . '[]',
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'name', text: $fileField->name . '[]'),
         );
         $inputTag->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'id',
-                value: $fileField->id,
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'id', text: $fileField->id),
         );
         if ($stillAllowedToUploadCount > 1) {
             $inputTag->addHtmlTagAttribute(
-                htmlTagAttribute: new HtmlTagAttribute(
-                    name: 'multiple',
-                    value: null,
-                    valueIsEncodedForRendering: true,
-                ),
+                htmlTagAttribute: HtmlTagAttribute::fromName(name: 'multiple'),
             );
         }
         FormRenderer::addAriaAttributesToHtmlTag(
@@ -119,25 +96,13 @@ class FileFieldRenderer extends FormRenderer
             selfClosing: true,
         );
         $hiddenField->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'type',
-                value: 'hidden',
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'type', text: 'hidden'),
         );
         $hiddenField->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'name',
-                value: $this->fileField->name . '_UID',
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'name', text: $this->fileField->name . '_UID'),
         );
         $hiddenField->addHtmlTagAttribute(
-            htmlTagAttribute: new HtmlTagAttribute(
-                name: 'value',
-                value: $fileField->uniqueSessFileStorePointer,
-                valueIsEncodedForRendering: true,
-            ),
+            htmlTagAttribute: HtmlTagAttribute::fromText(name: 'value', text: $fileField->uniqueSessFileStorePointer),
         );
         $divFileUpload->addTag(htmlTag: $hiddenField);
         $this->setHtmlTag(htmlTag: $divFileUpload);

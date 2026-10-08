@@ -123,7 +123,11 @@ abstract class MultiOptionsField extends OptionsField
         return array_values(
             array: array_filter(
                 array: $this->values,
-                callback: fn(string $key): bool => !in_array(needle: $key, haystack: $this->initialValues, strict: true),
+                callback: fn(string $key): bool => !in_array(
+                    needle: $key,
+                    haystack: $this->initialValues,
+                    strict: true,
+                ),
             ),
         );
     }
