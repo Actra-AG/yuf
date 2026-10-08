@@ -94,9 +94,6 @@ State after v4.41.0 (v4.41.0 had none to remove; 23 at v4.39.0, 532 at v4.27.0, 
 Collected from the "Open / for later" notes of [plan.md](../standard-completion/plan.md) (steps 4 to 14); none of them
 breaks the standard, all of them are decisions or features for later.
 
-- **Git index (step 5):** the names in the index are `src/common/CSVFile.php` and `src/common/SimpleXMLExtended.php`, the
-  files on disk `CsvFile.php` and `SimpleXmlExtended.php`; on Linux the classes are not found from a clean checkout. Fix
-  with `git mv` through a temporary name.
 - **`actra/backend` follows:** per release as listed in `UPGRADE.md` (v4.29.0 to v4.41.0): `HttpRequest` instance, `Session`,
   `FormContext`, `DbSettings` / `FrameworkDb`, `SmtpMailer` arguments, `IpTypeEnum::IP`, `HtmlDocument::get()`, `HtmlText`
   names, `HtmlTagAttribute::fromText()` in `SearchQueryField` / `SearchSelectOptionsField` (v4.41.0), table constants.
