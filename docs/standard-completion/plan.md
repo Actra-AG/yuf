@@ -69,7 +69,7 @@ too large.
 10. `auth` (26), `security` (0) and the rest of `session` (2), done in v4.37.0.
 11. `api` (27), done in v4.38.0.
 12. `html` (25) and `layout` (0, `final` only), done in v4.39.0.
-13. `exception` (10) and `datacheck` (13).
+13. `exception` (10) and `datacheck` (13), done in v4.40.0.
 14. `form` (0 baseline; `final` / extension points of its classes).
 
 ## Follow-up in other projects
@@ -633,6 +633,55 @@ too large.
 - **Follow-up in `actra/backend`:** only the names it already has to change (`HtmlDocument::get()`,
   `HtmlText::unencoded()` / `encoded()`, `addEncodedText()`); `new NavigationItem(...)` keeps working (its hrefs are
   relative); `HtmlTag` / `HtmlTagAttribute` calls of `SearchQueryField` and `SearchSelectOptionsField` use valid names.
+
+### Step 13 (v4.40.0) – done
+
+- Area `exception` and `datacheck`. Baseline 23 -> 0 (all 10 + 13 entries removed, no new entry; `phpstan-baseline.neon` is
+  empty now: `ignoreErrors: []`). Tests 11513 -> 11972. Details and before/after in `UPGRADE.md`.
+- **Characterization first** (passed against the old code): all validators and sanitizers with edge cases (IPv4 / IPv6
+  ranges and whitelists, an example IBAN of each of the 66 supported countries plus changed check digits, zip codes of
+  DE / CH / AT, domains with IDN / label and total length, TLD list, float / integer incl. limits and a locale with a
+  decimal comma if installed, domain normalization incl. query / path / port). The old code was probed for the behaviour
+  that is wrong; those cases came with the fixes. `ExceptionHandler` could not be characterized (`exit`); the example
+  (`/`, `/nope.html`, debug on and off) was compared before and after by hand.
+- **ExceptionHandler:** `handleException()` is the thin shell (`createResponse()->sendAndExit()`); everything else is
+  testable: `ErrorKindEnum` (status, page, titles, fixed production texts), `ErrorOutputFormatEnum` (JSON / text / HTML by
+  content type), `ExceptionDebugInfo` (plain values of the debug page), `ErrorPageValues` (values of every error page, all
+  escaped text), `ErrorPageRenderer` (file, missing page), `ErrorResponseFactory` (the `HttpResponse`). `ExceptionHandlerContext`
+  holds what the pages need instead of `Core` (`errorDocsDirectory`, `copyright`, `availableLanguages`, a closure that
+  creates the template engine) so tests build the handler without `Core`. Doubles: `ExceptionHandlerContextFactory`,
+  `TeapotExceptionHandler`, fixtures in `tests/Fixture/exception/error_docs/`. `HttpResponse::getContentString()` was added
+  (core area, additive) so tests can read the body.
+- **Static state:** `ExceptionHandler::$registeredInstance` is gone: `register()` recognises a second registration through
+  the handler `set_exception_handler()` returns (it restores it and throws). The only static property left in yuf is
+  `Core::$isInitialized`. The tests need no reflection.
+- **final / extension points:** `ExceptionHandler` (documented; hooks `createDebugResponse()`, `createNotFoundResponse()`,
+  `createUnauthorizedResponse()`, `createDefaultResponse()`) and `UnauthorizedException` (subclassed in `auth`) stay open;
+  `NotFoundException`, `PhpException`, all `datacheck` classes and the new helpers are `final` / `@internal`. `Sanitizer`,
+  `Validator` and the typed classes stay static (`final readonly`: pure functions without state; backend calls
+  `IpValidator::` statically).
+- **Enums:** `IpTypeEnum` cases upper case (⚠️); new internal `ErrorKindEnum`, `ErrorOutputFormatEnum`. The zip code formats
+  are a map by country code (open set, input is a string), not an enum.
+- **Security findings and fixes:** (1) debug page output of message / file / trace was raw HTML (XSS in debug mode): escaped;
+  (2) production JSON / text showed exception messages (JWT details) and codes (SQLSTATE): fixed texts and the HTTP status
+  as code; (3) a missing error page file showed its path in production: logged instead; (4) `IpValidator::isInWhitelist()`
+  accepted an invalid address that equals an entry (`''` / `''`): fails closed; (5) `ErrorPageRenderer` rejects file names
+  with a path; (6) `requestedFileName` (user input) was added as HTML to the error pages: escaped. Debug mode still dumps
+  session, GET, POST and files (by design, debug only). TLD list: IANA copy updated to version 2026100800 (2026-10-08, approved download;
+  update procedure in the `TldValidator` docblock).
+- **Bugs found and fixed:** see "Fixed" in `UPGRADE.md` (`FloatSanitizer` negative / zero-prefixed integers, `INF`;
+  `IntegerSanitizer` 2^63; `trimmedString()` TypeError; `DomainSanitizer` `www.` rule; `DomainValidator` bare TLD and IDN TLD;
+  `ZipCodeValidator` DE anchoring).
+- **Stays untested:** `handleException()` itself (`exit`), the effect of `applySystemLocale()` of a real language on the
+  error page texts, `Core`-built context (`Core` cannot be built), a failing template in an error page (the exception
+  would leave the handler).
+- **Open / for later:** `DomainSanitizer` reduces the input to the host (⚠️, decision of the user: port, path, query, fragment and
+  user info after a scheme are dropped; `user@example.com` without scheme is kept). IBAN: the length per country is
+  not checked (checksum and country only). `isInWhitelist()` does not treat IPv4-mapped IPv6 addresses (`::ffff:a.b.c.d`) as
+  IPv4 (fails closed; a dual-stack server may need entries for both). A plain invalid whitelist entry is ignored, an invalid
+  range throws. `Validator::stringWithoutWhitespaces()` knows ASCII whitespace only. Backend: `IpTypeEnum::ip` ->
+  `IpTypeEnum::IP` in `ValidIpAddressRule`; nothing else it uses changed (`IpValidator::validate()` / `isInWhitelist()`,
+  `NotFoundException`, `UnauthorizedException`); its API clients must not rely on the exception message in production.
 
 ### Superglobals rule – done
 

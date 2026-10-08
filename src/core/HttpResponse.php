@@ -132,6 +132,15 @@ final class HttpResponse
     }
 
     /**
+     * The content of a response created from a string; `null` for a response from a file. A 304 response has the
+     * content too, but `sendAndExit()` does not send it.
+     */
+    public function getContentString(): ?string
+    {
+        return $this->contentString;
+    }
+
+    /**
      * Sends the status, the headers and the content (none for a 304), then ends the script.
      */
     public function sendAndExit(): void

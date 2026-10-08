@@ -9,69 +9,51 @@ declare(strict_types=1);
 
 namespace actra\yuf\datacheck\sanitizerTypes;
 
-use actra\yuf\datacheck\Sanitizer;
 use RuntimeException;
 
-final class FloatSanitizer
+/**
+ * Turns a number as entered into a float: `.` or `,` as decimal separator (not both), optional minus sign,
+ * optional exponent (`1.5E2`). Nothing else is accepted: no plus sign, no thousands separator, no text. The
+ * conversion does not depend on the locale of the process. A text that is not zero but would become zero (`1E-400`)
+ * or infinite (`1E400`) is rejected, because that is a sign of a typing mistake.
+ */
+final readonly class FloatSanitizer
 {
+    private const string ERROR_MESSAGE = 'Value is not suitable as FLOAT.';
+
+    /**
+     * @throws RuntimeException if the input is no number, or does not fit into a float
+     */
     public static function sanitize(float|int|string $input): float
     {
-        if (is_float($input)) {
+        if (is_float(value: $input)) {
             return $input;
         }
-        if (is_int($input)) {
+        if (is_int(value: $input)) {
             return (float) $input;
         }
-        // It is a STRING
-        $input = Sanitizer::trimmedString(input: $input);
-        $hasDot = (str_contains($input, '.'));
-        $hasComma = (str_contains($input, ','));
-        $hasExponent = (str_contains(strtoupper($input), 'E'));
-
-        if (!$hasDot && !$hasExponent && !$hasComma) {
-            // Looks like a "stringed INT", but that "INT" might get as big as it wants.
-            // An INT contains only digits, but might have an - in front of it:
-            if (preg_match('/^-?\d*$/', $input) === 1) {
-                // Detect value being effective 0, because this is also an indicator for a type-casting error:
-                if (preg_match('/^-?0*$/', $input[0]) === 1) {
-                    return 0.0;
-                }
-                $value = (float) $input;
-                if ($value === 0.0) { // Also true for -0.0
-                    throw new RuntimeException('Value is not suitable as FLOAT.');
-                }
-
-                return $value;
-            }
-            throw new RuntimeException('Value is not suitable as FLOAT.');
+        $parts = explode(separator: 'E', string: strtoupper(string: trim(string: $input)));
+        if (count(value: $parts) > 2) {
+            throw new RuntimeException(message: FloatSanitizer::ERROR_MESSAGE);
         }
-        // It might be a "stringed FLOAT". This can get very nasty now,
-        //   because result depends on LOCALE setting, and a STRING could
-        //   contain anything
-        // Only zero or one "E" is allowed:
-        $parts = explode('E', strtoupper($input));
-        if (count($parts) > 2) {
-            throw new RuntimeException('Value is not suitable as FLOAT.');
+        $base = $parts[0];
+        $exponent = count(value: $parts) === 2 ? $parts[1] : null;
+        // Digits are required: '-', '.', ',' and 'E5' are no numbers
+        if (preg_match(pattern: '/^-?(\d+[.,]?\d*|[.,]\d+)$/D', subject: $base) !== 1) {
+            throw new RuntimeException(message: FloatSanitizer::ERROR_MESSAGE);
         }
-        // The exponent *must* be an INT, if present
-        if (isset($parts[1])) {
-            if (preg_match('/^-?\d*$/', $parts[1]) !== 1) {
-                throw new RuntimeException('Value is not suitable as FLOAT.');
-            }
+        if ($exponent !== null && preg_match(pattern: '/^-?\d+$/D', subject: $exponent) !== 1) {
+            throw new RuntimeException(message: FloatSanitizer::ERROR_MESSAGE);
         }
-        // The "base" value may have one dot OR one comma
-        if (preg_match('/^-?\d*[.,]?\d*$/', $parts[0]) !== 1) {
-            throw new RuntimeException('Value is not suitable as FLOAT.');
-        }
-        // Detect value being effective 0, because this is also an indicator for a type-casting error:
-        if (preg_match('/^-?0*[.,]?0*$/', $parts[0]) === 1) {
+        // A base of zeros is zero for sure, whatever the exponent says
+        if (preg_match(pattern: '/^-?0*[.,]?0*$/D', subject: $base) === 1) {
             return 0.0;
         }
-        // Convert it to "international format":
-        $input = str_replace(',', '.', $input);
-        $value = (float) $input;
-        if ($value === 0.0) { // Also true for -0.0
-            throw new RuntimeException('Value is not suitable as FLOAT.');
+        $normalized = str_replace(search: ',', replace: '.', subject: $base)
+            . ($exponent === null ? '' : 'E' . $exponent);
+        $value = (float) $normalized;
+        if ($value === 0.0 || is_infinite(num: $value)) {
+            throw new RuntimeException(message: FloatSanitizer::ERROR_MESSAGE);
         }
 
         return $value;

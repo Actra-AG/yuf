@@ -9,8 +9,17 @@ declare(strict_types=1);
 
 namespace actra\yuf\datacheck\validatorTypes;
 
-class TldValidator
+/**
+ * Whether a text is a top-level domain that exists: country codes, generic and new generic names and the punycode
+ * forms of internationalized names (`xn--…`), case-insensitive.
+ *
+ * Source: https://data.iana.org/TLD/tlds-alpha-by-domain.txt, version 2026100800 (last updated 2026-10-08). The list
+ * is a copy: IANA adds and removes names, so replace it by the current file from time to time (upper case, one name
+ * per line, the order of the file).
+ */
+final readonly class TldValidator
 {
+    /** @var list<non-empty-string> */
     private const array TLD_LIST = [
         'AAA',
         'AARP',
@@ -131,7 +140,6 @@ class TldValidator
         'BEATS',
         'BEAUTY',
         'BEER',
-        'BENTLEY',
         'BERLIN',
         'BEST',
         'BESTBUY',
@@ -358,7 +366,6 @@ class TldValidator
         'DRIVE',
         'DTV',
         'DUBAI',
-        'DUNLOP',
         'DUPONT',
         'DURBAN',
         'DVAG',
@@ -501,7 +508,6 @@ class TldValidator
         'GOLD',
         'GOLDPOINT',
         'GOLF',
-        'GOO',
         'GOODYEAR',
         'GOOG',
         'GOOGLE',
@@ -635,12 +641,10 @@ class TldValidator
         'JPMORGAN',
         'JPRS',
         'JUEGOS',
-        'JUNIPER',
         'KAUFEN',
         'KDDI',
         'KE',
         'KERRYHOTELS',
-        'KERRYLOGISTICS',
         'KERRYPROPERTIES',
         'KFH',
         'KG',
@@ -672,7 +676,6 @@ class TldValidator
         'LACAIXA',
         'LAMBORGHINI',
         'LAMER',
-        'LANCASTER',
         'LAND',
         'LANDROVER',
         'LANXESS',
@@ -704,7 +707,6 @@ class TldValidator
         'LIMO',
         'LINCOLN',
         'LINK',
-        'LIPSY',
         'LIVE',
         'LIVING',
         'LK',
@@ -760,6 +762,7 @@ class TldValidator
         'MEMORIAL',
         'MEN',
         'MENU',
+        'MERCK',
         'MERCKMSD',
         'MG',
         'MH',
@@ -929,7 +932,6 @@ class TldValidator
         'PORN',
         'POST',
         'PR',
-        'PRAMERICA',
         'PRAXI',
         'PRESS',
         'PRIME',
@@ -963,7 +965,6 @@ class TldValidator
         'REALTY',
         'RECIPES',
         'RED',
-        'REDSTONE',
         'REDUMBRELLA',
         'REHAB',
         'REISE',
@@ -1253,6 +1254,7 @@ class TldValidator
         'WATCHES',
         'WEATHER',
         'WEATHERCHANNEL',
+        'WEB',
         'WEBCAM',
         'WEBER',
         'WEBSITE',
@@ -1270,7 +1272,6 @@ class TldValidator
         'WINE',
         'WINNERS',
         'WME',
-        'WOLTERSKLUWER',
         'WOODSIDE',
         'WORK',
         'WORKS',
@@ -1459,11 +1460,8 @@ class TldValidator
         'ZW',
     ];
 
-    // Source: https://data.iana.org/TLD/tlds-alpha-by-domain.txt
-    # Version 2025020500, Last Updated Wed Feb  5 07:07:01 2025 UTC
-
     public static function validate(string $input): bool
     {
-        return (in_array(needle: mb_strtoupper(string: $input), haystack: TldValidator::TLD_LIST, strict: true));
+        return in_array(needle: mb_strtoupper(string: $input), haystack: TldValidator::TLD_LIST, strict: true);
     }
 }

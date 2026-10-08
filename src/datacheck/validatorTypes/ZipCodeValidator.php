@@ -22,15 +22,18 @@ namespace actra\yuf\datacheck\validatorTypes;
  * licensed under https://creativecommons.org/licenses/by/3.0/ch/deed.de_CH , adapted to code
  * =============================================================
  */
-final class ZipCodeValidator
+final readonly class ZipCodeValidator
 {
     private const int MAX_LENGTH = 16;
 
-    /** @var array<string, string> Regular expressions (without delimiters, matched case-insensitively) by country */
+    /**
+     * @var array<string, string> Regular expressions by country, matched against the whole zip code (without
+     *     delimiters, anchors and flags; case-insensitive)
+     */
     private const array REGULAR_EXPRESSIONS = [
-        'DE' => '\b((?:0[1-46-9]\d{3})|(?:[1-357-9]\d{4})|(?:[4][0-24-9]\d{3})|(?:[6][013-9]\d{3}))\b',
-        'CH' => '^([1-468][0-9]|[57][0-7]|9[0-6])[0-9]{2}$',
-        'AT' => '^[1-9][0-9]{3}$',
+        'DE' => '0[1-46-9]\d{3}|[1-357-9]\d{4}|4[0-24-9]\d{3}|6[013-9]\d{3}',
+        'CH' => '([1-468][0-9]|[57][0-7]|9[0-6])[0-9]{2}',
+        'AT' => '[1-9][0-9]{3}',
     ];
 
     /**
@@ -48,7 +51,7 @@ final class ZipCodeValidator
         }
 
         return preg_match(
-            pattern: '/' . ZipCodeValidator::REGULAR_EXPRESSIONS[$countryCode] . '/i',
+            pattern: '/^(?:' . ZipCodeValidator::REGULAR_EXPRESSIONS[$countryCode] . ')$/Di',
             subject: $zipCode,
         ) === 1;
     }

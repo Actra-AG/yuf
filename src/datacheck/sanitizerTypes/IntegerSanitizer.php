@@ -9,46 +9,74 @@ declare(strict_types=1);
 
 namespace actra\yuf\datacheck\sanitizerTypes;
 
-use actra\yuf\datacheck\Sanitizer;
 use RuntimeException;
 
-final class IntegerSanitizer
+/**
+ * Turns a number as entered into an int: only whole numbers within the range of PHP integers. Strings with digits
+ * are checked without a loss of precision; other numeric strings (`1e3`, `1.0`) go through `FloatSanitizer`.
+ */
+final readonly class IntegerSanitizer
 {
+    /** The float `PHP_INT_MAX` is 2^63, which is one more than the largest int: floats must be below it */
+    private const float INT_RANGE_END = 9.2233720368547758E+18;
+
+    /**
+     * @throws RuntimeException if the input is no number, no whole number, or out of range
+     */
     public static function sanitize(int|float|string $input): int
     {
-        if (is_int($input)) {
+        if (is_int(value: $input)) {
             return $input;
         }
-        if (!is_numeric($input)) {
-            throw new RuntimeException('Value is not suitable as INT.');
+        if (!is_numeric(value: $input)) {
+            throw new RuntimeException(message: 'Value is not suitable as INT.');
         }
-        if (is_string($input)) {
-            $input = Sanitizer::trimmedString(input: $input);
-            // An INT contains only digits, but might have an - in front of it:
-            if (preg_match('/^-?\d*$/', $input) === 1) {
-                // It might be "too big":
-                if (bccomp($input, (string) PHP_INT_MAX) === 1 || bccomp($input, (string) PHP_INT_MIN) === -1) {
-                    throw new RuntimeException('Value is out of range as INT.');
-                }
-
-                return (int) $input;
+        if (is_string(value: $input)) {
+            $trimmed = trim(string: $input);
+            // An INT contains only digits, but might have an - in front of it
+            if (is_numeric(value: $trimmed) && preg_match(pattern: '/^-?\d+$/D', subject: $trimmed) === 1) {
+                return IntegerSanitizer::convertDigits(digits: $trimmed);
             }
             // Maybe it's a "stringed FLOAT"?
             try {
-                $input = FloatSanitizer::sanitize($input);
+                $input = FloatSanitizer::sanitize(input: $trimmed);
             } catch (RuntimeException) {
-                throw new RuntimeException('Value is not suitable as INT.');
+                throw new RuntimeException(message: 'Value is not suitable as INT.');
             }
         }
 
-        // it's a float
-        if ($input > PHP_INT_MAX || $input < PHP_INT_MIN) {
-            throw new RuntimeException('Value is out of range as INT.');
-        }
-        if (fmod($input, 1.0) !== 0.0) {
-            throw new RuntimeException('Value is not a whole number.');
+        return IntegerSanitizer::convertFloat(value: $input);
+    }
+
+    /**
+     * @param numeric-string $digits
+     *
+     * @throws RuntimeException if the number is out of range
+     */
+    private static function convertDigits(string $digits): int
+    {
+        if (
+            bccomp(num1: $digits, num2: (string) PHP_INT_MAX) === 1
+            || bccomp(num1: $digits, num2: (string) PHP_INT_MIN) === -1
+        ) {
+            throw new RuntimeException(message: 'Value is out of range as INT.');
         }
 
-        return (int) $input;
+        return (int) $digits;
+    }
+
+    /**
+     * @throws RuntimeException if the number is out of range or has a fraction
+     */
+    private static function convertFloat(float $value): int
+    {
+        if ($value >= IntegerSanitizer::INT_RANGE_END || $value < -IntegerSanitizer::INT_RANGE_END) {
+            throw new RuntimeException(message: 'Value is out of range as INT.');
+        }
+        if (fmod(num1: $value, num2: 1.0) !== 0.0) {
+            throw new RuntimeException(message: 'Value is not a whole number.');
+        }
+
+        return (int) $value;
     }
 }

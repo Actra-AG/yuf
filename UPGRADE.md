@@ -4,6 +4,118 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.40.0] – 2026-10-08
+
+Area release for `src/exception/` and `src/datacheck/`: the exception handler can be tested without `exit`, production
+error output shows fixed texts only, the debug page escapes everything, the IP whitelist fails closed, and every
+PHPStan baseline entry of both areas is gone (the baseline is empty now). Search your project for `IpTypeEnum::`,
+`extends ExceptionHandler`, `->getContext()->core`, `new ExceptionHandlerContext`, `sendNotFoundHttpResponseAndExit`,
+`sendHttpResponseAndExit`, `extends NotFoundException`, `extends PhpException`, `new DomainValidator`,
+`Sanitizer::trimmedString`, `Validator::ipv4` and error messages that your API clients read.
+
+### ⚠️ Production errors show fixed texts
+
+`NotFoundException` and `UnauthorizedException` messages (`Unknown key ID`, `Path variable 1 is missing`, ...) and the
+codes of other exceptions (SQLSTATE codes) were part of the JSON / text answer in production. Production now answers
+with the text and the status code of the kind of error; the message stays in the debug answer. Error pages (HTML)
+never showed the message. A missing error page file showed its path in production (`Missing error html file /var/...`):
+now it shows the short text and logs the path (debug mode still shows it).
+
+| Before (production, JSON) | After |
+|:--|:--|
+| `{"error":{"code":0,"message":"Internal Server Error"}}` (code of the exception, `HY000` for PDO) | `"code":500` |
+| `{"error":{"code":404,"message":"Path variable 1 is missing"}}` | `"message":"Not Found"` |
+| `{"error":{"code":401,"message":"Unknown key ID"}}` | `"message":"Unauthorized"` |
+
+Values that a project added to its `htmlReplacementCollection` are no longer part of the JSON `data` (only the debug
+details are).
+
+### ⚠️ `ExceptionHandler`: hooks return a response
+
+`handleException()` sends `createResponse()` and ends the script; the four hooks create the response instead of
+sending it. `$contentType` and `$registeredInstance` are gone (a second `register()` is recognised through PHP's own
+exception handler). Nobody in the Actra projects extends the handler.
+
+| Before | After |
+|:--|:--|
+| `protected function sendDefaultHttpResponseAndExit(Throwable $t): void` (also `...NotFound...`, `...Unauthorized...`, `sendDebugHttpResponseAndExit`) | `protected function createDefaultResponse(Throwable $t): HttpResponse` (`createNotFoundResponse()`, `createUnauthorizedResponse()`, `createDebugResponse()`) |
+| `final protected function sendHttpResponseAndExit(HttpStatusCodeEnum, string, string\|int, string $htmlFileName): void` | `final protected function createErrorResponse(..., array $additionalInfo = []): HttpResponse` |
+| `$this->contentType` | `$this->getContentType()` |
+| `$this->getContext()->core` | `getContext()->errorDocsDirectory`, `->copyright`, `->availableLanguages`, `->createTemplateEngine` |
+| `new ExceptionHandlerContext(logger:, cspNonce:, cspPolicySettings:, isDebug:, core:, httpRequest:)` | `new ExceptionHandlerContext(logger:, cspNonce:, cspPolicySettings:, isDebug:, httpRequest:, errorDocsDirectory:, copyright:, availableLanguages:, createTemplateEngine:)` (only `Core` creates it) |
+
+New: `createResponse(Throwable): HttpResponse` (public), `HttpResponse::getContentString()`. Error pages: `requestedFileName`,
+`language`, `langRoot`, `copyright`, `cspNonce`, `charset`, `robots` are escaped text now (they were HTML); `csrfField`
+is still HTML. The debug page values (`errorMessage`, `errorFile`, `backtrace`, `vardump_*`) are escaped text and plain
+in the JSON `data` (the dumps were HTML-entity encoded there).
+
+### ⚠️ `final` classes and extension points (exception)
+
+`NotFoundException` and `PhpException` are `final`. `ExceptionHandler` and `UnauthorizedException` (extended by
+`UnauthorizedAccessRightException` and `UnauthorizedIpAddressException`) are documented extension points.
+`UnauthorizedException::__construct()` takes `string $message`. New `@internal` helpers: `ErrorKindEnum`,
+`ErrorOutputFormatEnum`, `ErrorPageRenderer`, `ErrorPageValues`, `ErrorResponseFactory`, `ExceptionDebugInfo`.
+
+### ⚠️ `IpTypeEnum`: cases in upper case
+
+| Before | After |
+|:--|:--|
+| `IpTypeEnum::ip` / `::ipv4` / `::ipv6` | `IpTypeEnum::IP` / `::IPV4` / `::IPV6` |
+
+### ⚠️ `datacheck`: types and `final`
+
+`Sanitizer`, `Validator`, `IpValidator`, `DomainValidator`, `TldValidator` and the other validators / sanitizers are
+`final` (static, pure functions without state). The arguments are typed.
+
+| Before | After |
+|:--|:--|
+| `Sanitizer::domain($input)`, `::integer($input)`, `::float($input)` (untyped) | `string`, `float\|int\|string`, `float\|int\|string` |
+| `Validator::ipv4(mixed $input)`, `::ipv6(mixed $input)` | `string $input` |
+| `class X extends IpValidator` / `DomainValidator` / `TldValidator` | not possible (`final`) |
+
+### ⚠️ `IpValidator::isInWhitelist()` fails closed
+
+An address that is no valid IP address is never in the whitelist. Before, `isInWhitelist([''], '')`,
+`isInWhitelist(['garbage'], 'garbage')` and `isInWhitelist([' 10.0.0.1'], ' 10.0.0.1')` were `true` (the entries were
+compared as text first). A missing `REMOTE_ADDR` together with an empty entry in a whitelist was a way in.
+
+### ⚠️ `DomainSanitizer` reduces the input to the host
+
+`Sanitizer::domain()` (and `BaseView::getInputDomain()`) removed the scheme, `www.`, spaces, zero-width characters,
+`?` and one trailing slash, and kept the rest. It keeps only the host now: user info (only after a scheme), port, path,
+query and fragment are dropped. Without a scheme `user@example.com` is kept as typed (it is no URL; `DomainValidator`
+rejects it). `www.ch` stays `www.ch`.
+
+| Before | After |
+|:--|:--|
+| `example.com?x=1` -> `example.comx=1` | `example.com` |
+| `example.com///` -> `example.com//` | `example.com` |
+| `example.com/path` -> `example.com/path` | `example.com` |
+| `example.com:8080` -> `example.com:8080` | `example.com` |
+| `https://user:pw@www.example.com:8080/a/b/` -> `user:pw@example.com:8080/a/b` | `example.com` |
+
+### Fixed
+
+- TLD list updated to IANA version 2026100800 (2026-10-08): `MERCK` and `WEB` added, `BENTLEY`, `DUNLOP`, `GOO`,
+  `JUNIPER`, `KERRYLOGISTICS`, `LANCASTER`, `LIPSY`, `PRAMERICA`, `REDSTONE` and `WOLTERSKLUWER` removed (no longer
+  delegated).
+- `FloatSanitizer`: `'-5'` and `'-100'` gave `0.0`, `'0123'` and `'05'` gave `0.0` (only the first character was
+  checked); `''` raised a PHP warning; `'1E400'` and a string of 400 digits gave `INF`; `'-'`, `'.'`, `','`, `'E5'`,
+  `'1E'` and `'1E-'` were accepted. All are a `RuntimeException` now except the first group, which are the numbers
+  they look like. `IntegerSanitizer`: `'1e400'` says `Value is not suitable as INT.` (was out of range); the float
+  `2^63` (`9.2233720368547758E18`) was converted to `PHP_INT_MIN` with a warning, it is out of range now.
+- `Sanitizer::trimmedString()` threw a `TypeError` for `int`, `float` and `bool` (its documented argument types);
+  `5` is `'5'`, `true` is `'1'`, `false` is `''`.
+- `DomainSanitizer`: `www.` is added again only if the `www.` prefix was removed and one label is left (`https://www.ch`
+  and `www.ch` give `www.ch`, `foo.www.bar` is unchanged; before, `www.` anywhere in the text counted); the result of
+  `preg_replace()` is checked before it is used.
+- `DomainValidator`: a top-level domain alone (`academy`, `xn--p1ai`) was a valid domain (the check for two labels
+  compared an array with a number); a domain with an internationalized top-level domain (`пример.рф`) was rejected
+  (the TLD is checked in its punycode form now).
+- `ZipCodeValidator`: the pattern for `DE` was not anchored: `abc 10115`, `10115 abc` and `10115-x` were valid.
+- The exception handler showed the message, file and stack trace of an exception as HTML in the debug page: a message
+  with `<script>` ran in the browser (debug mode only). Now escaped.
+
 ## [v4.39.0] – 2026-10-08
 
 Area release for `src/html/` and `src/layout/`: the HTML classes are `final` (two documented extension points),

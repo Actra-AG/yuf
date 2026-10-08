@@ -15,7 +15,7 @@ namespace actra\yuf\datacheck\validatorTypes;
  * Further information about the validation rules:
  * https://de.wikipedia.org/wiki/Internationale_Bankkontonummer#Validierung
  */
-final class IbanValidator
+final readonly class IbanValidator
 {
     /** The longest IBAN has 34 characters (the longest supported country has 31); stops needless calculation */
     private const int MAX_LENGTH = 34;

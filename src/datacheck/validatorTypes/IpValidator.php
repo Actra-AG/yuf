@@ -11,37 +11,41 @@ namespace actra\yuf\datacheck\validatorTypes;
 
 use InvalidArgumentException;
 
-class IpValidator
+/**
+ * Validates IP addresses and checks them against whitelists. Stays a static class: every method is a pure function of
+ * its arguments without state.
+ */
+final readonly class IpValidator
 {
     public static function validate(string $input, IpTypeEnum $ipType): bool
     {
         $filterFlags = match ($ipType) {
-            IpTypeEnum::ipv4 => FILTER_FLAG_IPV4,
-            IpTypeEnum::ipv6 => FILTER_FLAG_IPV6,
-            default => ['flags' => null],
+            IpTypeEnum::IP => FILTER_FLAG_IPV4 | FILTER_FLAG_IPV6,
+            IpTypeEnum::IPV4 => FILTER_FLAG_IPV4,
+            IpTypeEnum::IPV6 => FILTER_FLAG_IPV6,
         };
 
-        return (filter_var(value: $input, filter: FILTER_VALIDATE_IP, options: $filterFlags) !== false);
+        return filter_var(value: $input, filter: FILTER_VALIDATE_IP, options: $filterFlags) !== false;
     }
 
     /**
-     * Whether the IP address is one of the addresses or in one of the ranges of the whitelist.
+     * Whether the IP address is one of the addresses or in one of the ranges of the whitelist. Fails closed: an
+     * address that is no valid IP address is never in the whitelist, whatever the whitelist contains. An IPv4-mapped
+     * IPv6 address (`::ffff:192.0.2.1`) is an IPv6 address: it matches IPv6 entries only.
      *
-     * @param array<string> $whiteList IPv4 and IPv6 addresses and ranges in CIDR notation (`192.168.1.0/24`,
-     *     `2001:db8::/32`); IPv4 ranges may be shortened (`10/8` is `10.0.0.0/8`)
+     * @param array<string> $whiteList IPv4 and IPv6 addresses and ranges in CIDR notation (`192.0.2.0/24`,
+     *     `2001:db8::/32`); IPv4 ranges may be shortened (`10/8` is `10.0.0.0/8`). An entry that is neither a valid
+     *     address nor a range matches nothing.
      *
-     * @throws InvalidArgumentException if a range of the whitelist is invalid
+     * @throws InvalidArgumentException if a range of the whitelist is invalid (checked when the loop reaches it)
      */
     public static function isInWhitelist(array $whiteList, string $ipAddressToCheck): bool
     {
         $addressBytes = IpValidator::toBytes(ipAddress: $ipAddressToCheck);
+        if ($addressBytes === null) {
+            return false;
+        }
         foreach ($whiteList as $whitelistItem) {
-            if ($whitelistItem === $ipAddressToCheck) {
-                return true;
-            }
-            if ($addressBytes === null) {
-                continue;
-            }
             if (!str_contains(haystack: $whitelistItem, needle: '/')) {
                 if (IpValidator::toBytes(ipAddress: $whitelistItem) === $addressBytes) {
                     return true;
@@ -69,9 +73,16 @@ class IpValidator
         return $bytes === false ? null : $bytes;
     }
 
+    /**
+     * @throws InvalidArgumentException if the range is invalid
+     */
     private static function isInRange(string $range, string $addressBytes): bool
     {
-        [$network, $prefixLength] = explode(separator: '/', string: $range, limit: 2);
+        $parts = explode(separator: '/', string: $range);
+        if (count(value: $parts) !== 2) {
+            throw new InvalidArgumentException(message: 'Invalid IP range in the whitelist: ' . $range);
+        }
+        [$network, $prefixLength] = $parts;
         if (preg_match(pattern: '/^\d+(\.\d+){0,2}$/', subject: $network) === 1) {
             // Shortened IPv4 notation: "10" is "10.0.0.0"
             $network .= str_repeat(string: '.0', times: 3 - substr_count(haystack: $network, needle: '.'));
@@ -88,9 +99,21 @@ class IpValidator
             // IPv4 address and IPv6 range, or vice versa
             return false;
         }
+
+        return IpValidator::bytesShareThePrefix(
+            addressBytes: $addressBytes,
+            networkBytes: $networkBytes,
+            prefixBits: $prefixBits,
+        );
+    }
+
+    private static function bytesShareThePrefix(string $addressBytes, string $networkBytes, int $prefixBits): bool
+    {
         $fullBytes = intdiv(num1: $prefixBits, num2: 8);
-        if (substr(string: $addressBytes, offset: 0, length: $fullBytes)
-            !== substr(string: $networkBytes, offset: 0, length: $fullBytes)) {
+        if (
+            substr(string: $addressBytes, offset: 0, length: $fullBytes)
+            !== substr(string: $networkBytes, offset: 0, length: $fullBytes)
+        ) {
             return false;
         }
         $remainingBits = $prefixBits % 8;

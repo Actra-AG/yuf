@@ -12,13 +12,15 @@ namespace actra\yuf\datacheck;
 use actra\yuf\datacheck\sanitizerTypes\DomainSanitizer;
 use actra\yuf\datacheck\sanitizerTypes\FloatSanitizer;
 use actra\yuf\datacheck\sanitizerTypes\IntegerSanitizer;
+use RuntimeException;
 
 /**
- * Class "Sanitizer" is a "helper class"
+ * Normalizes input (trimming, domain notation, number formats); never validates and never repairs malicious input.
+ * Stays a static class: every method is a pure function of its argument without state.
  */
-class Sanitizer
+final readonly class Sanitizer
 {
-    public static function domain($input): string
+    public static function domain(string $input): string
     {
         return DomainSanitizer::sanitize(input: $input);
     }
@@ -29,15 +31,21 @@ class Sanitizer
             return '';
         }
 
-        return trim(string: $input);
+        return trim(string: (string) $input);
     }
 
-    public static function integer($input): int
+    /**
+     * @throws RuntimeException if the input is no integer or out of range
+     */
+    public static function integer(float|int|string $input): int
     {
         return IntegerSanitizer::sanitize(input: $input);
     }
 
-    public static function float($input): float
+    /**
+     * @throws RuntimeException if the input is no number
+     */
+    public static function float(float|int|string $input): float
     {
         return FloatSanitizer::sanitize(input: $input);
     }

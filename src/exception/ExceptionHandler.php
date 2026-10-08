@@ -9,27 +9,36 @@ declare(strict_types=1);
 
 namespace actra\yuf\exception;
 
-use actra\yuf\Core;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\RequestHandler;
-use actra\yuf\html\HtmlReplacement;
 use actra\yuf\html\HtmlReplacementCollection;
-use actra\yuf\html\HtmlSnippet;
-use actra\yuf\response\HttpErrorResponseContent;
 use actra\yuf\security\CsrfHiddenFieldRenderer;
 use actra\yuf\security\CsrfTokenSource;
 use actra\yuf\session\Session;
+use actra\yuf\template\TemplateEngine;
+use InvalidArgumentException;
 use LogicException;
 use Throwable;
 
+/**
+ * Answers every exception that is not caught: an error page, JSON or text (by the content type of the request).
+ *
+ * Production shows a fixed text per kind of error (`ErrorKindEnum`) and logs unexpected errors; the message, the file
+ * and the stack trace of the exception are only shown in debug mode.
+ *
+ * Extension point: projects pass a subclass as `individualExceptionHandler:` to `Core::prepareHttpResponse()` to add
+ * values to the error pages (`$htmlReplacementCollection`) or to answer other exceptions differently by overriding
+ * `createDebugResponse()`, `createNotFoundResponse()`, `createUnauthorizedResponse()` or `createDefaultResponse()`.
+ *
+ * `handleException()` is registered as the global exception handler by `register()`; it does nothing but send the
+ * response of `createResponse()` and end the script, so everything else can be tested.
+ */
 class ExceptionHandler
 {
-    private static ?ExceptionHandler $registeredInstance = null;
-    protected ContentType $contentType;
     // Set by register(): the handler instance is created by the project, before the request dependencies exist
     private ?ExceptionHandlerContext $context = null;
     // Set by Core as soon as the request data exists; an exception before that uses fallback values
@@ -44,20 +53,26 @@ class ExceptionHandler
         protected readonly HtmlReplacementCollection $htmlReplacementCollection = new HtmlReplacementCollection(),
     ) {}
 
+    /**
+     * Sets the handler as the global exception handler (a process-wide setting of PHP, so there is no state of our
+     * own that could be reset: a second registration is recognised by the handler PHP reports as replaced).
+     *
+     * @throws LogicException if an exception handler is registered already
+     */
     public static function register(
         ?ExceptionHandler $individualExceptionHandler,
         ExceptionHandlerContext $context,
     ): ExceptionHandler {
-        if (ExceptionHandler::$registeredInstance !== null) {
-            throw new LogicException(message: 'ExceptionHandler is already registered.');
-        }
-        $exceptionHandler = $individualExceptionHandler === null ? new ExceptionHandler() : $individualExceptionHandler;
-        $exceptionHandler->context = $context;
-        ExceptionHandler::$registeredInstance = $exceptionHandler;
-        set_exception_handler(callback: [
+        $exceptionHandler = $individualExceptionHandler ?? new ExceptionHandler();
+        $previousHandler = set_exception_handler(callback: [
             $exceptionHandler,
             'handleException',
         ]);
+        if (is_array(value: $previousHandler) && $previousHandler[0] instanceof ExceptionHandler) {
+            restore_exception_handler();
+            throw new LogicException(message: 'ExceptionHandler is already registered.');
+        }
+        $exceptionHandler->context = $context;
 
         return $exceptionHandler;
     }
@@ -100,6 +115,9 @@ class ExceptionHandler
         $this->csrfTokenSource = $csrfTokenSource;
     }
 
+    /**
+     * @throws LogicException if the handler is not registered
+     */
     protected function getContext(): ExceptionHandlerContext
     {
         if ($this->context === null) {
@@ -109,261 +127,177 @@ class ExceptionHandler
         return $this->context;
     }
 
+    /**
+     * The content type of the request; HTML as long as the request is not processed.
+     */
+    protected function getContentType(): ContentType
+    {
+        return $this->contentHandler === null ? ContentType::createHtml() : $this->contentHandler->getContentType();
+    }
+
     final public function handleException(Throwable $throwable): void
     {
-        $this->contentType = $this->contentHandler === null
-            ? ContentType::createHtml()
-            : $this->contentHandler->getContentType();
-        if ($this->getContext()->isDebug) {
-            $this->sendDebugHttpResponseAndExit(throwable: $throwable);
+        $this->createResponse(throwable: $throwable)->sendAndExit();
+    }
+
+    /**
+     * The response for an exception: the debug page in debug mode, else the page of its kind. Unexpected errors are
+     * logged in production (not found and unauthorized are normal requests).
+     */
+    final public function createResponse(Throwable $throwable): HttpResponse
+    {
+        $context = $this->getContext();
+        if ($context->isDebug) {
+            return $this->createDebugResponse(throwable: $throwable);
         }
-        if ($throwable instanceof NotFoundException) {
-            $this->sendNotFoundHttpResponseAndExit(throwable: $throwable);
-        }
-        if ($throwable instanceof UnauthorizedException) {
-            $this->sendUnauthorizedHttpResponseAndExit(throwable: $throwable);
-        }
+
+        return match (ErrorKindEnum::fromThrowable(throwable: $throwable)) {
+            ErrorKindEnum::NOT_FOUND => $this->createNotFoundResponse(throwable: $throwable),
+            ErrorKindEnum::UNAUTHORIZED => $this->createUnauthorizedResponse(throwable: $throwable),
+            ErrorKindEnum::INTERNAL_ERROR => $this->logAndCreateDefaultResponse(throwable: $throwable),
+        };
+    }
+
+    private function logAndCreateDefaultResponse(Throwable $throwable): HttpResponse
+    {
         $this->getContext()->logger->logException(throwable: $throwable);
-        $this->sendDefaultHttpResponseAndExit(throwable: $throwable);
+
+        return $this->createDefaultResponse(throwable: $throwable);
     }
 
-    protected function sendDebugHttpResponseAndExit(Throwable $throwable): void
+    protected function createDebugResponse(Throwable $throwable): HttpResponse
     {
-        $realException = $throwable->getPrevious() === null ? $throwable : $throwable->getPrevious();
-        $errorCode = $realException->getCode();
-        $errorMessage = $realException->getMessage();
+        $context = $this->getContext();
+        $debugInfo = ExceptionDebugInfo::create(
+            throwable: $throwable,
+            httpRequest: $context->httpRequest,
+            session: $this->session,
+        );
+        $debugInfo->addTo(replacements: $this->htmlReplacementCollection);
 
-        if ($throwable instanceof NotFoundException) {
-            $httpStatusCode = HttpStatusCodeEnum::HTTP_NOT_FOUND;
-            $title = 'Page not found';
-        } elseif ($throwable instanceof UnauthorizedException) {
-            $httpStatusCode = HttpStatusCodeEnum::HTTP_UNAUTHORIZED;
-            $title = 'Unauthorized';
-        } else {
-            $httpStatusCode = HttpStatusCodeEnum::HTTP_INTERNAL_SERVER_ERROR;
-            $title = 'Internal Server Error';
-        }
-        $httpRequest = $this->getContext()->httpRequest;
-        $this->htmlReplacementCollection->addHtml(
-            identifier: 'title',
-            html: $title,
-        );
-        $this->htmlReplacementCollection->addHtml(
-            identifier: 'errorType',
-            html: get_class(object: $throwable),
-        );
-        $this->htmlReplacementCollection->addHtml(
-            identifier: 'errorMessage',
-            html: $errorMessage,
-        );
-        $this->htmlReplacementCollection->addHtml(
-            identifier: 'errorFile',
-            html: $realException->getFile(),
-        );
-        $this->htmlReplacementCollection->addHtml(
-            identifier: 'errorLine',
-            html: (string) $realException->getLine(),
-        );
-        $this->htmlReplacementCollection->addHtml(
-            identifier: 'errorCode',
-            html: (string) $realException->getCode(),
-        );
-        $this->htmlReplacementCollection->addHtml(
-            identifier: 'backtrace',
-            html: $realException->getTraceAsString(),
-        );
-        $this->htmlReplacementCollection->addHtml(
-            identifier: 'vardump_get',
-            html: htmlentities(string: var_export(value: $httpRequest->getQueryParameters(), return: true)),
-        );
-        $this->htmlReplacementCollection->addHtml(
-            identifier: 'vardump_post',
-            html: htmlentities(string: var_export(value: $httpRequest->getPostParameters(), return: true)),
-        );
-        $this->htmlReplacementCollection->addHtml(
-            identifier: 'vardump_file',
-            html: htmlentities(string: var_export(value: $httpRequest->getRawFiles(), return: true)),
-        );
-        $this->htmlReplacementCollection->addHtml(
-            identifier: 'vardump_sess',
-            html: $this->session === null ? '' : htmlentities(
-                string: var_export(
-                    value: $this->session->export(),
-                    return: true,
-                ),
-            ),
-        );
-        $this->sendHttpResponseAndExit(
-            httpStatusCode: $httpStatusCode,
-            errorMessage: $errorMessage,
-            errorCode: $errorCode,
+        return $this->createErrorResponse(
+            httpStatusCode: ErrorKindEnum::fromThrowable(throwable: $throwable)->getHttpStatusCode(),
+            errorMessage: $debugInfo->errorMessage,
+            errorCode: $debugInfo->errorCode,
             htmlFileName: 'debug.html',
+            additionalInfo: $debugInfo->toArray(),
         );
     }
 
-    final protected function sendHttpResponseAndExit(
-        HttpStatusCodeEnum $httpStatusCode,
-        string $errorMessage,
-        string|int $errorCode,
-        string $htmlFileName,
-    ): void {
-        $contentType = $this->contentType;
-        if ($contentType->isJson()) {
-            $httpResponse = HttpResponse::createResponseFromString(
-                httpStatusCode: $httpStatusCode,
-                contentString: HttpErrorResponseContent::createJsonResponseContent(
-                    errorMessage: $errorMessage,
-                    errorCode: $errorCode,
-                    data: $this->htmlReplacementCollection->getArrayObject(),
-                )->content,
-                contentType: $contentType,
-                httpRequest: $this->getContext()->httpRequest,
-            );
-            $httpResponse->sendAndExit();
-        }
-        if (
-            $contentType->isTxt()
-            || $contentType->isCsv()
-        ) {
-            $httpResponse = HttpResponse::createResponseFromString(
-                httpStatusCode: $httpStatusCode,
-                contentString: HttpErrorResponseContent::createTextResponseContent(
-                    errorMessage: $errorMessage,
-                    errorCode: $errorCode,
-                    additionalInfo: $this->htmlReplacementCollection->getArrayObject(),
-                )->content,
-                contentType: $contentType,
-                httpRequest: $this->getContext()->httpRequest,
-            );
-            $httpResponse->sendAndExit();
-        }
-        $httpResponse = HttpResponse::createHtmlResponse(
-            httpStatusCode: $httpStatusCode,
-            htmlContent: $this->getHtmlContent(
-                htmlFileName: $htmlFileName,
-            ),
-            cspPolicySettings: $this->getContext()->cspPolicySettings,
-            nonce: $this->getContext()->cspNonce->value,
-            httpRequest: $this->getContext()->httpRequest,
-            languageCode: $this->requestHandler?->language?->code,
-        );
-        $httpResponse->sendAndExit();
-    }
-
-    private function getHtmlContent(string $htmlFileName): string
+    protected function createNotFoundResponse(Throwable $throwable): HttpResponse
     {
-        $core = $this->getContext()->core;
-        $contentPath = $core->errorDocsDirectory . $htmlFileName;
-        if (!file_exists(filename: $contentPath)) {
-            return 'Missing error html file ' . $contentPath;
-        }
-        $htmlReplacementCollection = $this->htmlReplacementCollection;
-        $requestHandler = $this->requestHandler;
-        $htmlReplacementCollection->addHtml(
-            identifier: 'copyright',
-            html: $core->renderCopyrightYear(),
-        );
-        $language = $requestHandler?->language;
-        $htmlReplacementCollection->addHtml(
-            identifier: 'language',
-            html: $language === null ? 'en' : $language->code,
-        );
-        $htmlReplacementCollection->addHtml(
-            identifier: 'langRoot',
-            html: $requestHandler === null ? '/' : $requestHandler->getLanguageRoot(),
-        );
-        $htmlReplacementCollection->addHtml(
-            identifier: 'charset',
-            html: 'UTF-8',
-        );
-        $htmlReplacementCollection->addHtml(
-            identifier: 'cspNonce',
-            html: $this->getContext()->cspNonce->value,
-        );
-        $htmlReplacementCollection->addHtml(
-            identifier: 'csrfField',
-            html: CsrfHiddenFieldRenderer::render(csrfTokenSource: $this->csrfTokenSource),
-        );
-        $htmlReplacementCollection->addHtml(
-            identifier: 'robots',
-            html: 'noindex,nofollow',
-        );
-        $htmlReplacementCollection->set(
-            identifier: 'pageTitle',
-            htmlReplacement: $htmlReplacementCollection->has(identifier: 'title') ? $htmlReplacementCollection->get(
-                identifier: 'title',
-            ) : HtmlReplacement::fromHtml(html: 'Error'),
-        );
-        $htmlReplacementCollection->addHtml(
-            identifier: 'bodyClassName',
-            html: 'body-' . pathinfo(path: $htmlFileName)['filename'],
-        );
-        $htmlReplacementCollection->addHtml(
-            identifier: 'requestedFileName',
-            html: $requestHandler?->fileName,
-        );
+        return $this->createKindResponse(errorKind: ErrorKindEnum::NOT_FOUND);
+    }
 
-        return new HtmlSnippet(
-            htmlSnippetFilePath: $contentPath,
-            replacements: $htmlReplacementCollection,
-        )->render(
-            templateEngine: $core->createTemplateEngine(
-                localeHandler: $this->createLocaleHandler(requestHandler: $requestHandler, core: $core),
-            ),
+    protected function createUnauthorizedResponse(Throwable $throwable): HttpResponse
+    {
+        return $this->createKindResponse(errorKind: ErrorKindEnum::UNAUTHORIZED);
+    }
+
+    protected function createDefaultResponse(Throwable $throwable): HttpResponse
+    {
+        return $this->createKindResponse(errorKind: ErrorKindEnum::INTERNAL_ERROR);
+    }
+
+    /**
+     * The production answer of a kind of error: its fixed text and page, never the message of the exception.
+     */
+    private function createKindResponse(ErrorKindEnum $errorKind): HttpResponse
+    {
+        return $this->createErrorResponse(
+            httpStatusCode: $errorKind->getHttpStatusCode(),
+            errorMessage: $errorKind->getPublicMessage(),
+            errorCode: $errorKind->getHttpStatusCode()->value,
+            htmlFileName: $errorKind->getHtmlFileName(),
         );
     }
 
     /**
-     * The texts of the error pages: the global texts of the default route of the requested language, if the request
-     * and its language are known.
+     * @param string $htmlFileName The error page in the error docs directory (no path), used for HTML requests
+     * @param array<string, string> $additionalInfo Shown in the JSON `data` and below the text; debug mode only
+     *
+     * @throws InvalidArgumentException if the file name contains a path
      */
-    private function createLocaleHandler(?RequestHandler $requestHandler, Core $core): LocaleHandler
+    final protected function createErrorResponse(
+        HttpStatusCodeEnum $httpStatusCode,
+        string $errorMessage,
+        string|int $errorCode,
+        string $htmlFileName,
+        array $additionalInfo = [],
+    ): HttpResponse {
+        $context = $this->getContext();
+        $format = ErrorOutputFormatEnum::fromContentType(contentType: $this->getContentType());
+        $languageCode = $this->requestHandler?->language?->code;
+
+        return new ErrorResponseFactory(
+            httpRequest: $context->httpRequest,
+            cspPolicySettings: $context->cspPolicySettings,
+            cspNonce: $context->cspNonce->value,
+        )->create(
+            format: $format,
+            contentType: $this->getContentType(),
+            httpStatusCode: $httpStatusCode,
+            errorMessage: $errorMessage,
+            errorCode: $errorCode,
+            additionalInfo: $additionalInfo,
+            htmlContent: $format === ErrorOutputFormatEnum::HTML
+                ? $this->renderErrorPage(htmlFileName: $htmlFileName, fallbackText: $errorMessage)
+                : '',
+            languageCode: $languageCode,
+        );
+    }
+
+    private function renderErrorPage(string $htmlFileName, string $fallbackText): string
     {
+        $context = $this->getContext();
+        $requestHandler = $this->requestHandler;
+        new ErrorPageValues(
+            htmlFileName: $htmlFileName,
+            copyright: $context->copyright,
+            languageCode: $requestHandler?->language?->code,
+            languageRoot: $requestHandler === null ? '/' : $requestHandler->getLanguageRoot(),
+            cspNonce: $context->cspNonce->value,
+            csrfFieldHtml: CsrfHiddenFieldRenderer::render(csrfTokenSource: $this->csrfTokenSource),
+            requestedFileName: $requestHandler?->fileName,
+        )->addTo(replacements: $this->htmlReplacementCollection);
+
+        return new ErrorPageRenderer(
+            errorDocsDirectory: $context->errorDocsDirectory,
+            isDebug: $context->isDebug,
+            logger: $context->logger,
+        )->render(
+            htmlFileName: $htmlFileName,
+            replacements: $this->htmlReplacementCollection,
+            templateEngine: $this->createTemplateEngine(),
+            fallbackText: $fallbackText,
+        );
+    }
+
+    /**
+     * The template engine of the error pages, with the global texts of the default route of the requested language,
+     * if the request and its language are known.
+     */
+    private function createTemplateEngine(): TemplateEngine
+    {
+        $context = $this->getContext();
+        $requestHandler = $this->requestHandler;
         $language = $requestHandler?->language;
         if (
             $requestHandler === null
             || $language === null
-            || !$core->availableLanguages->hasLanguage(languageCode: $language->code)
+            || !$context->availableLanguages->hasLanguage(languageCode: $language->code)
         ) {
-            return new LocaleHandler(language: null, availableLanguages: $core->availableLanguages);
+            return ($context->createTemplateEngine)(
+                new LocaleHandler(language: null, availableLanguages: $context->availableLanguages),
+            );
         }
-        $localeHandler = new LocaleHandler(language: $language, availableLanguages: $core->availableLanguages);
+        $localeHandler = new LocaleHandler(language: $language, availableLanguages: $context->availableLanguages);
         $localeHandler->applySystemLocale();
         $defaultRouteForLanguage = $requestHandler->defaultRoutesByLanguage->getRouteForLanguage(
             languageCode: $language->code,
         );
         $defaultRouteForLanguage?->loadLocalizedText(fileTitle: '', localeHandler: $localeHandler);
 
-        return $localeHandler;
-    }
-
-    protected function sendNotFoundHttpResponseAndExit(Throwable $throwable): void
-    {
-        $this->sendHttpResponseAndExit(
-            httpStatusCode: HttpStatusCodeEnum::HTTP_NOT_FOUND,
-            errorMessage: $throwable->getMessage(),
-            errorCode: $throwable->getCode(),
-            htmlFileName: 'notFound.html',
-        );
-    }
-
-    protected function sendUnauthorizedHttpResponseAndExit(Throwable $throwable): void
-    {
-        $this->sendHttpResponseAndExit(
-            httpStatusCode: HttpStatusCodeEnum::HTTP_UNAUTHORIZED,
-            errorMessage: $throwable->getMessage(),
-            errorCode: $throwable->getCode(),
-            htmlFileName: 'unauthorized.html',
-        );
-    }
-
-    protected function sendDefaultHttpResponseAndExit(Throwable $throwable): void
-    {
-        $this->sendHttpResponseAndExit(
-            httpStatusCode: HttpStatusCodeEnum::HTTP_INTERNAL_SERVER_ERROR,
-            errorMessage: 'Internal Server Error',
-            errorCode: $throwable->getCode(),
-            htmlFileName: 'default.html',
-        );
+        return ($context->createTemplateEngine)($localeHandler);
     }
 }

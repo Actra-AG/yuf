@@ -11,7 +11,11 @@ namespace actra\yuf\exception;
 
 use Exception;
 
-class PhpException extends Exception
+/**
+ * A PHP error (warning, notice, deprecation, …) that `ErrorHandler` turned into an exception; file and line are those
+ * of the error, not of the place where the exception was created.
+ */
+final class PhpException extends Exception
 {
     public function __construct(string $message, int $code, string $file, int $line)
     {

@@ -11,36 +11,37 @@ namespace actra\yuf\datacheck\validatorTypes;
 
 use actra\yuf\datacheck\Validator;
 
-class DomainValidator
+/**
+ * Whether a text is a domain name: at least a name and a listed top-level domain (`TldValidator`), labels of letters,
+ * digits and hyphens (IDN names are checked in their punycode form, so `münchen.de` and `xn--mnchen-3ya.de` are both
+ * valid), at most 63 characters per label and 253 in total. No whitespace, no trailing dot, no IP addresses.
+ */
+final readonly class DomainValidator
 {
+    /** Name + '.' + top-level domain: at least 5 characters */
+    private const int MIN_LENGTH = 5;
+
     public static function validate(string $input): bool
     {
-        if (!Validator::stringWithoutWhitespaces(input: $input)) {
+        if (
+            !Validator::stringWithoutWhitespaces(input: $input)
+            || mb_strlen(string: $input) < DomainValidator::MIN_LENGTH
+        ) {
             return false;
         }
-        // Domainname + '.' + TLD = minimum 5 characters
-        if (mb_strlen(string: $input) < 5) {
+        $encodedDomain = idn_to_ascii(domain: $input);
+        if ($encodedDomain === false) {
             return false;
         }
-        $pieces = explode(
-            separator: '.',
-            string: $input,
-        );
-        if ($pieces < 2) {
-            return false;
-        }
-        $realTld = array_pop(array: $pieces);
-        if (!TldValidator::validate(input: $realTld)) {
-            return false;
-        }
-        $encodedData = idn_to_ascii(domain: $input);
-        if ($encodedData === false) {
-            return false;
-        }
-        if (filter_var(value: $encodedData, filter: FILTER_VALIDATE_DOMAIN, options: FILTER_FLAG_HOSTNAME) === false) {
+        $labels = explode(separator: '.', string: $encodedDomain);
+        if (count(value: $labels) < 2 || !TldValidator::validate(input: array_last(array: $labels))) {
             return false;
         }
 
-        return true;
+        return filter_var(
+            value: $encodedDomain,
+            filter: FILTER_VALIDATE_DOMAIN,
+            options: FILTER_FLAG_HOSTNAME,
+        ) !== false;
     }
 }

@@ -15,13 +15,18 @@ use actra\yuf\datacheck\validatorTypes\IpValidator;
 use actra\yuf\datacheck\validatorTypes\TldValidator;
 
 /**
- * Class "Validator" is a "helper class"
+ * The validators of the typed classes in one place. Stays a static class: every method is a pure function of its
+ * argument without state.
  */
-class Validator
+final readonly class Validator
 {
+    /**
+     * Whether the input contains none of the ASCII whitespace characters (space, tab, line breaks, vertical tab and
+     * form feed); Unicode spaces such as the no-break space are not whitespace here.
+     */
     public static function stringWithoutWhitespaces(string $input): bool
     {
-        return (preg_match(pattern: '#\s#', subject: $input) === 0);
+        return preg_match(pattern: '#\s#', subject: $input) === 0;
     }
 
     public static function domain(string $input): bool
@@ -36,16 +41,16 @@ class Validator
 
     public static function ip(string $input): bool
     {
-        return IpValidator::validate(input: $input, ipType: IpTypeEnum::ip);
+        return IpValidator::validate(input: $input, ipType: IpTypeEnum::IP);
     }
 
-    public static function ipv4(mixed $input): bool
+    public static function ipv4(string $input): bool
     {
-        return IpValidator::validate(input: $input, ipType: IpTypeEnum::ipv4);
+        return IpValidator::validate(input: $input, ipType: IpTypeEnum::IPV4);
     }
 
-    public static function ipv6(mixed $input): bool
+    public static function ipv6(string $input): bool
     {
-        return IpValidator::validate(input: $input, ipType: IpTypeEnum::ipv6);
+        return IpValidator::validate(input: $input, ipType: IpTypeEnum::IPV6);
     }
 }

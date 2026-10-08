@@ -11,7 +11,7 @@ namespace actra\yuf\datacheck\validatorTypes;
 
 enum IpTypeEnum
 {
-    case ip;
-    case ipv4;
-    case ipv6;
+    case IP;
+    case IPV4;
+    case IPV6;
 }

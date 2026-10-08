@@ -22,14 +22,14 @@ final class IpValidatorTest extends TestCase
      */
     public static function validateProvider(): iterable
     {
-        yield 'IPv4 as any IP' => ['192.168.1.1', IpTypeEnum::ip, true];
-        yield 'IPv6 as any IP' => ['2001:db8::1', IpTypeEnum::ip, true];
-        yield 'IPv4 as IPv4' => ['192.168.1.1', IpTypeEnum::ipv4, true];
-        yield 'IPv6 as IPv4' => ['2001:db8::1', IpTypeEnum::ipv4, false];
-        yield 'IPv6 as IPv6' => ['2001:db8::1', IpTypeEnum::ipv6, true];
-        yield 'IPv4 as IPv6' => ['192.168.1.1', IpTypeEnum::ipv6, false];
-        yield 'out of range' => ['256.1.1.1', IpTypeEnum::ip, false];
-        yield 'empty string' => ['', IpTypeEnum::ip, false];
+        yield 'IPv4 as any IP' => ['192.168.1.1', IpTypeEnum::IP, true];
+        yield 'IPv6 as any IP' => ['2001:db8::1', IpTypeEnum::IP, true];
+        yield 'IPv4 as IPv4' => ['192.168.1.1', IpTypeEnum::IPV4, true];
+        yield 'IPv6 as IPv4' => ['2001:db8::1', IpTypeEnum::IPV4, false];
+        yield 'IPv6 as IPv6' => ['2001:db8::1', IpTypeEnum::IPV6, true];
+        yield 'IPv4 as IPv6' => ['192.168.1.1', IpTypeEnum::IPV6, false];
+        yield 'out of range' => ['256.1.1.1', IpTypeEnum::IP, false];
+        yield 'empty string' => ['', IpTypeEnum::IP, false];
     }
 
     #[DataProvider('validateProvider')]
@@ -74,6 +74,41 @@ final class IpValidatorTest extends TestCase
         yield 'IPv6 address and IPv4 range' => [['0.0.0.0/0'], '2001:db8::1', false];
         yield 'empty address' => [['10.0.0.0/8'], '', false];
         yield 'invalid address' => [['10.0.0.0/8'], '10.0.0.300', false];
+        yield 'empty address is not in a whitelist with an empty entry' => [[''], '', false];
+        yield 'invalid address is not in a whitelist with the same entry' => [['garbage'], 'garbage', false];
+        yield 'address with a leading space is not in a whitelist with the same entry' => [
+            [' 10.0.0.1'],
+            ' 10.0.0.1',
+            false,
+        ];
+        yield 'zero is not an address' => [['0'], '0', false];
+        yield 'address with a zone is not an address' => [['fe80::1%eth0'], 'fe80::1%eth0', false];
+        yield 'IPv6 in other letter case' => [['2001:DB8::1'], '2001:db8::1', true];
+        yield 'IPv6 range with other letter case' => [['2001:db8::/32'], '2001:DB8::1', true];
+        yield 'IPv6 loopback range' => [['::1/128'], '::1', true];
+        yield 'all IPv6 addresses' => [['::/0'], '::1', true];
+        yield 'IPv6 range of a single address pair' => [['2001:db8::1/127'], '2001:db8::', true];
+        yield 'IPv6 beyond range of a single address pair' => [['2001:db8::1/127'], '2001:db8::2', false];
+        yield 'IPv6 /48' => [['2001:db8::/48'], '2001:db8:1::1', false];
+        yield 'IPv6 /64 other subnet' => [['2001:db8::/64'], '2001:db8:0:1::1', false];
+        yield 'IPv4-mapped IPv6 address in an IPv4 range' => [['10.0.0.0/8'], '::ffff:10.0.0.1', false];
+        yield 'IPv4-mapped IPv6 address in the mapped range' => [['::ffff:0:0/96'], '::ffff:10.0.0.1', true];
+        yield 'IPv4-mapped IPv6 address of an IPv4 address' => [['10.0.0.1'], '::ffff:10.0.0.1', false];
+        yield 'leading zero of the prefix length' => [['10.0.0.0/08'], '10.1.1.1', true];
+        yield 'two leading zeros of the prefix length' => [['10.0.0.0/008'], '10.1.1.1', true];
+        yield 'range of two addresses, first' => [['192.0.2.0/25'], '192.0.2.127', true];
+        yield 'range of two addresses, after' => [['192.0.2.0/25'], '192.0.2.128', false];
+        yield 'private range, last address' => [['172.16.0.0/12'], '172.31.255.255', true];
+        yield 'private range, after' => [['172.16.0.0/12'], '172.32.0.1', false];
+        yield 'shortened range with three parts' => [['1.2.3/24'], '1.2.3.200', true];
+        yield 'shortened range, other network' => [['10.1/16'], '10.2.0.1', false];
+        yield 'shortened single part range' => [['1/8'], '1.2.3.4', true];
+        yield 'address with leading zero never matches' => [['10.0.0.1'], '010.0.0.1', false];
+        yield 'whitelist item with leading zero never matches' => [['01.2.3.4'], '1.2.3.4', false];
+        yield 'trailing space of the address' => [['10.0.0.1'], '10.0.0.1 ', false];
+        yield 'invalid plain item is ignored' => [['not an address', '10.0.0.1'], '10.0.0.1', true];
+        yield 'duplicate items' => [['10.0.0.0/8', '10.0.0.0/8'], '11.0.0.1', false];
+        yield 'an invalid range after a match is not read' => [['10.0.0.0/8', 'bad/range'], '10.0.0.1', true];
     }
 
     /**
@@ -87,6 +122,15 @@ final class IpValidatorTest extends TestCase
         yield 'IPv6 mask too large' => ['2001:db8::/129'];
         yield 'invalid network' => ['10.0.0.300/8'];
         yield 'no network' => ['/8'];
+        yield 'four digit prefix length' => ['10.0.0.0/0008'];
+        yield 'space after the prefix length' => ['10.0.0.0/8 '];
+        yield 'negative prefix length' => ['10.0.0.0/-1'];
+        yield 'text after the prefix length' => ['1.2.3.4/24x'];
+        yield 'two slashes' => ['1.2.3.4/24/1'];
+        yield 'empty label in the network' => ['10..0/8'];
+        yield 'five parts' => ['1.2.3.4.5/8'];
+        yield 'text as network' => ['bad/range'];
+        yield 'IPv4 network with an IPv6 prefix length' => ['10.0.0.0/64'];
     }
 
     #[DataProvider('invalidRangeProvider')]

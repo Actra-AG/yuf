@@ -249,8 +249,11 @@ final class Core
                 cspNonce: $cspNonce,
                 cspPolicySettings: $this->cspPolicySettings,
                 isDebug: $this->debug,
-                core: $this,
                 httpRequest: $this->httpRequest,
+                errorDocsDirectory: $this->errorDocsDirectory,
+                copyright: $this->renderCopyrightYear(),
+                availableLanguages: $this->availableLanguages,
+                createTemplateEngine: $this->createTemplateEngine(...),
             ),
         );
         if ($individualSessionHandler === null) {
