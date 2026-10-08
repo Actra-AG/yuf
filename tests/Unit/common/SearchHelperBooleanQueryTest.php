@@ -13,6 +13,8 @@ use actra\yuf\common\SearchHelper;
 use actra\yuf\core\InputSourceEnum;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\DbQueryData;
+use actra\yuf\session\ArraySessionStorage;
+use actra\yuf\session\Session;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use InvalidArgumentException;
 use PDO;
@@ -127,7 +129,11 @@ final class SearchHelperBooleanQueryTest extends TestCase
     #[DataProvider('specialCharacterProvider')]
     public function testSpecialCharactersAreBoundLiterally(string $queryText, string $expectedParameter): void
     {
-        $this->assertBooleanQuery('((name' . SearchHelperBooleanQueryTest::LIKE . '))', [$expectedParameter], $queryText);
+        $this->assertBooleanQuery(
+            '((name' . SearchHelperBooleanQueryTest::LIKE . '))',
+            [$expectedParameter],
+            $queryText,
+        );
     }
 
     /**
@@ -235,6 +241,7 @@ final class SearchHelperBooleanQueryTest extends TestCase
                 instanceName: 'test',
                 httpRequest: HttpRequestFactory::create(),
                 valueSource: InputSourceEnum::POST,
+                session: new Session(storage: new ArraySessionStorage()),
             )->getBooleanQuery(
                 spaceSeparatedFieldNames: 'a.name b.city',
                 queryText: $queryText,

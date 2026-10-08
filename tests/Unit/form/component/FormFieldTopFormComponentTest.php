@@ -11,20 +11,13 @@ namespace actra\yuf\tests\Unit\form\component;
 
 use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\TextField;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use LogicException;
-use Override;
 use PHPUnit\Framework\TestCase;
 
 final class FormFieldTopFormComponentTest extends TestCase
 {
-    #[Override]
-    protected function setUp(): void
-    {
-        FormNameRegistry::reset();
-    }
-
     private function createField(): TextField
     {
         return new TextField(name: 'name', label: HtmlText::fromHtml(html: 'Name'));
@@ -47,7 +40,7 @@ final class FormFieldTopFormComponentTest extends TestCase
 
     public function testFormAddsItselfAsTopFormComponent(): void
     {
-        $form = new Form(name: 'topFormComponentForm');
+        $form = new Form(context: FormContextFactory::create(), name: 'topFormComponentForm');
         $field = $this->createField();
 
         $form->addField(formField: $field);

@@ -12,6 +12,8 @@ namespace actra\yuf\table\table;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
+use actra\yuf\session\Session;
+use actra\yuf\session\SessionSectionEnum;
 use actra\yuf\table\column\AbstractTableColumn;
 use actra\yuf\table\filter\TableFilter;
 use actra\yuf\table\renderer\SortableTableHeadRenderer;
@@ -19,6 +21,7 @@ use actra\yuf\table\renderer\TablePaginationRenderer;
 use actra\yuf\table\TableHelper;
 use actra\yuf\table\TableItem;
 use actra\yuf\table\TableItemCollection;
+use actra\yuf\table\TableSessionState;
 use actra\yuf\template\TemplateEngine;
 use Override;
 
@@ -29,7 +32,9 @@ class DbResultTable extends SmartTable
     protected const string PARAM_PAGE = 'page';
     public const string PARAM_FIND = 'find';
 
-    protected const string SESSION_DATA_TYPE = 'table';
+    private const string SORT_COLUMN_KEY = 'sortColumn';
+    private const string SORT_DIRECTION_KEY = 'sortDirection';
+    private const string PAGINATION_PAGE_KEY = 'paginationPage';
     protected const string FILTER = '[filter]';
     protected const string PAGINATION = '[pagination]';
     protected const string TABLE_FOOTER = '[footer]';
@@ -41,13 +46,18 @@ class DbResultTable extends SmartTable
     private bool $hasUserDefinedSorting = false;
     private TablePaginationRenderer $tablePaginationRenderer;
     private ?int $filledAmount = null;
+    private readonly TableSessionState $state;
 
+    /**
+     * @param Session $session Keeps sorting and page of the user (`ViewContext::$session`)
+     */
     public function __construct(
-        string                          $identifier, // Can be the name of the main table but must be unique per site
+        string                          $identifier, // Can be the name of the main table but must be unique per page
         public readonly FrameworkDb     $db,
         public readonly DbQuery         $dbQuery,
         private readonly TemplateEngine $templateEngine,
         private readonly HttpRequest    $httpRequest,
+        Session                         $session,
         private readonly ?TableFilter   $tableFilter = null,
         ?TablePaginationRenderer        $tablePaginationRenderer = null,
         ?SortableTableHeadRenderer      $sortableTableHeadRenderer = null,
@@ -65,6 +75,7 @@ class DbResultTable extends SmartTable
         );
         $this->noDataHtml = DbResultTable::FILTER . $this->noDataHtml;
         $this->fullHtml = DbResultTable::FILTER . '<div class="table-meta table-meta-header">' . SmartTable::TOTAL_AMOUNT . DbResultTable::PAGINATION . '</div><div class="table-wrap">' . SmartTable::TABLE . '</div>' . DbResultTable::TABLE_FOOTER;
+        $this->state = new TableSessionState(session: $session, section: SessionSectionEnum::TABLES);
         $this->tablePaginationRenderer = $tablePaginationRenderer === null ? new TablePaginationRenderer() : $tablePaginationRenderer;
     }
 
@@ -156,88 +167,48 @@ class DbResultTable extends SmartTable
                     && in_array(needle: $requestedSortColumn, haystack: $availableSortOptions, strict: true)
                     && array_key_exists(key: $requestedSortDirection, array: TableHelper::OPPOSITE_SORT_DIRECTION)
                 ) {
-                    DbResultTable::saveToSession(
-                        dataType: DbResultTable::SESSION_DATA_TYPE,
+                    $this->state->set(
                         identifier: $this->identifier,
-                        index: 'sort_column',
+                        index: DbResultTable::SORT_COLUMN_KEY,
                         value: $requestedSortColumn,
                     );
-                    DbResultTable::saveToSession(
-                        dataType: DbResultTable::SESSION_DATA_TYPE,
+                    $this->state->set(
                         identifier: $this->identifier,
-                        index: 'sort_direction',
+                        index: DbResultTable::SORT_DIRECTION_KEY,
                         value: $requestedSortDirection,
                     );
                 }
             }
         }
 
-        $currentSortColumn = $this->getCurrentSortColumn();
-        if (
-            $currentSortColumn === null
-            || $currentSortColumn === ''
-            || $this->httpRequest->getQueryString(name: DbResultTable::PARAM_RESET) !== null
-        ) {
-            $this->hasUserDefinedSorting = false;
-            $defaultSortColumn = $this->defaultSortColumn;
-            if ($defaultSortColumn === null) {
-                DbResultTable::saveToSession(
-                    dataType: DbResultTable::SESSION_DATA_TYPE,
-                    identifier: $this->identifier,
-                    index: 'sort_column',
-                    value: current(array: $this->columns)->identifier,
-                );
-                DbResultTable::saveToSession(
-                    dataType: DbResultTable::SESSION_DATA_TYPE,
-                    identifier: $this->identifier,
-                    index: 'sort_direction',
-                    value: TableHelper::SORT_ASC,
-                );
-            } else {
-                DbResultTable::saveToSession(
-                    dataType: DbResultTable::SESSION_DATA_TYPE,
-                    identifier: $this->identifier,
-                    index: 'sort_column',
-                    value: $defaultSortColumn->identifier,
-                );
-                DbResultTable::saveToSession(
-                    dataType: DbResultTable::SESSION_DATA_TYPE,
-                    identifier: $this->identifier,
-                    index: 'sort_direction',
-                    value: $defaultSortColumn->sortAscendingByDefault ? TableHelper::SORT_ASC : TableHelper::SORT_DESC,
-                );
-            }
-
-            return;
+        if ($this->httpRequest->getQueryString(name: DbResultTable::PARAM_RESET) !== null) {
+            // Back to the default sorting: the defaults are not stored
+            $this->state->remove(identifier: $this->identifier, index: DbResultTable::SORT_COLUMN_KEY);
+            $this->state->remove(identifier: $this->identifier, index: DbResultTable::SORT_DIRECTION_KEY);
         }
         // The sorting has been chosen by the user, either within this request or a previous one.
-        $this->hasUserDefinedSorting = true;
+        $this->hasUserDefinedSorting = $this->getStoredSortColumn() !== null;
     }
 
-    public static function saveToSession(string $dataType, string $identifier, string $index, string $value): void
-    {
-        $_SESSION[$dataType][$identifier][$index] = $value;
-    }
-
+    /**
+     * The column the table is sorted by: the choice of the user, else the default sort column (the first column if
+     * none is defined as default); `null` for a table without columns.
+     */
     public function getCurrentSortColumn(): ?string
     {
-        return DbResultTable::getFromSession(
-            dataType: DbResultTable::SESSION_DATA_TYPE,
-            identifier: $this->identifier,
-            index: 'sort_column',
-        );
+        return $this->getStoredSortColumn() ?? $this->getDefaultSortColumn()?->identifier;
     }
 
-    public static function getFromSession(string $dataType, string $identifier, string $index): ?string
+    private function getStoredSortColumn(): ?string
     {
-        if (!isset($_SESSION[$dataType][$identifier])) {
-            $_SESSION[$dataType][$identifier] = [];
-        }
+        $storedSortColumn = $this->state->get(identifier: $this->identifier, index: DbResultTable::SORT_COLUMN_KEY);
 
-        return array_key_exists(
-            key: $index,
-            array: $_SESSION[$dataType][$identifier],
-        ) ? $_SESSION[$dataType][$identifier][$index] : null;
+        return $storedSortColumn === '' ? null : $storedSortColumn;
+    }
+
+    private function getDefaultSortColumn(): ?AbstractTableColumn
+    {
+        return $this->defaultSortColumn ?? ($this->columns === [] ? null : current(array: $this->columns));
     }
 
     private function initPaginationPage(): void
@@ -255,8 +226,7 @@ class DbResultTable extends SmartTable
         }
 
         if (
-            $this->getCurrentPaginationPage() < 1
-            || $this->httpRequest->getQueryString(name: DbResultTable::PARAM_FIND) !== null
+            $this->httpRequest->getQueryString(name: DbResultTable::PARAM_FIND) !== null
             || $this->httpRequest->getQueryString(name: DbResultTable::PARAM_RESET) !== null
         ) {
             $this->setCurrentPaginationPage(page: 1);
@@ -265,30 +235,41 @@ class DbResultTable extends SmartTable
 
     public function setCurrentPaginationPage(int $page): void
     {
-        DbResultTable::saveToSession(
-            dataType: DbResultTable::SESSION_DATA_TYPE,
+        // The first page is the default, it needs no entry in the session
+        if ($page === $this->getCurrentPaginationPage()) {
+            return;
+        }
+        $this->state->set(
             identifier: $this->identifier,
-            index: 'pagination_page',
+            index: DbResultTable::PAGINATION_PAGE_KEY,
             value: (string) $page,
         );
     }
 
+    /**
+     * The page of the user, 1 if none is stored.
+     */
     public function getCurrentPaginationPage(): int
     {
-        return (int) DbResultTable::getFromSession(
-            dataType: DbResultTable::SESSION_DATA_TYPE,
-            identifier: $this->identifier,
-            index: 'pagination_page',
-        );
+        $storedPage = (int) $this->state->get(identifier: $this->identifier, index: DbResultTable::PAGINATION_PAGE_KEY);
+
+        return max(1, $storedPage);
     }
 
+    /**
+     * The sort direction (`TableHelper::SORT_ASC` / `SORT_DESC`): the choice of the user, else the one of the default
+     * sort column (ascending if the column does not say otherwise).
+     */
     public function getCurrentSortDirection(): string
     {
-        return DbResultTable::getFromSession(
-            dataType: DbResultTable::SESSION_DATA_TYPE,
-            identifier: $this->identifier,
-            index: 'sort_direction',
-        );
+        $storedDirection = $this->state->get(identifier: $this->identifier, index: DbResultTable::SORT_DIRECTION_KEY);
+        if ($storedDirection !== null && $this->getStoredSortColumn() !== null) {
+            return $storedDirection;
+        }
+
+        return $this->getDefaultSortColumn()?->sortAscendingByDefault === false
+            ? TableHelper::SORT_DESC
+            : TableHelper::SORT_ASC;
     }
 
     public function addAdditionalLinkParameter(string $key, string $value): void

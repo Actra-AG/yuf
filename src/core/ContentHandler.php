@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
+use actra\yuf\auth\AuthSession;
 use actra\yuf\Core;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\html\HtmlDocument;
@@ -51,6 +52,7 @@ class ContentHandler
                 cspNonce: $this->cspNonce,
                 core: $this->core,
                 templateEngine: $this->templateEngine,
+                csrfTokenSource: $this->core->formContext->csrfTokenSource,
             );
         }
 
@@ -87,6 +89,10 @@ class ContentHandler
         );
         $context = new ViewContext(
             httpRequest: $core->httpRequest,
+            session: $core->session,
+            sessionHandler: $core->sessionHandler,
+            authSession: $core->session === null ? null : new AuthSession(session: $core->session),
+            formContext: $core->formContext,
             route: $route,
             fileGroup: $requestHandler->fileGroup,
             fileTitle: $requestHandler->fileTitle,

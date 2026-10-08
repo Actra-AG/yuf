@@ -11,27 +11,22 @@ namespace actra\yuf\auth;
 
 use actra\yuf\core\HttpRequest;
 use actra\yuf\datacheck\validatorTypes\IpValidator;
-use actra\yuf\session\AbstractSessionHandler;
 use LogicException;
 
 abstract class Authenticator
 {
-    private static ?Authenticator $instance = null;
     public protected(set) AuthResultEnum $authResult = AuthResultEnum::UNDEFINED;
 
     /**
      * @param HttpRequest $httpRequest The request of the login: its remote address is checked against the IP
      *                                 whitelist of the user and logged (`Core::$httpRequest`)
+     * @param AuthSession $authSession Where the login is stored (`ViewContext::$authSession`)
      */
     protected function __construct(
         protected readonly HttpRequest $httpRequest,
+        protected readonly AuthSession $authSession,
         private readonly int $maxAllowedWrongPasswordAttempts,
-    ) {
-        if (Authenticator::$instance !== null) {
-            throw new LogicException(message: 'There can only be one Authenticator instance.');
-        }
-        Authenticator::$instance = $this;
-    }
+    ) {}
 
     public function passwordLogin(string $userName, string $inputPassword): bool
     {
@@ -50,10 +45,10 @@ abstract class Authenticator
         if ($this->authResult !== AuthResultEnum::UNDEFINED) {
             throw new LogicException(message: 'It is not allowed to execute this method multiple times.');
         }
-        if (AuthSession::isLoggedIn()) {
+        if ($this->authSession->isLoggedIn()) {
             throw new LogicException(message: 'It is not allowed to log in, if user is already logged in.');
         }
-        $sessionId = AbstractSessionHandler::getSessionHandler()->getId();
+        $sessionId = $this->authSession->getSessionId();
         $ipAddress = $this->httpRequest->getRemoteAddress();
         $authUser = $this->createAuthUserByUserName(userName: $userName);
         if ($authUser === null) {
@@ -164,7 +159,7 @@ abstract class Authenticator
             userName: $userName,
             authResult: $this->authResult,
         );
-        AuthSession::logIn(authSessionId: $authUser->confirmSuccessfulLogin());
+        $this->authSession->logIn(authSessionId: $authUser->confirmSuccessfulLogin());
 
         return true;
     }

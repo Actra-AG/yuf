@@ -13,11 +13,10 @@ use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\FileField;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\html\HtmlText;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use actra\yuf\tests\Double\form\InMemoryFileUploadStorage;
-use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -32,12 +31,6 @@ final class FileFieldMarkupTest extends TestCase
     private const string FIRST_PATH = '/tmp/v332files/a';
     private const string SECOND_PATH = '/tmp/v332files/b';
     private static int $formCounter = 0;
-
-    #[Override]
-    protected function setUp(): void
-    {
-        FormNameRegistry::reset();
-    }
 
     /**
      * @param list<string> $names
@@ -84,7 +77,12 @@ final class FileFieldMarkupTest extends TestCase
         string $expectedHtml,
     ): void {
         $formName = 'fileForm' . FileFieldMarkupTest::$formCounter++;
-        $form = new Form(name: $formName, acceptUpload: true, messages: FormMessages::german());
+        $form = new Form(
+            context: FormContextFactory::create(),
+            name: $formName,
+            acceptUpload: true,
+            messages: FormMessages::german(),
+        );
         $form->removeCsrfProtection();
         $field = new FileField(
             name: 'file',

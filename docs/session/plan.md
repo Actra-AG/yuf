@@ -8,7 +8,7 @@ Design: [design.md](design.md). Step 3 of [docs/standard-completion/plan.md](../
    (generation, renewal, validation, rendering, disabled sessions), `DbResultTable` sorting/paging, `TableFilter` and
    the filter fields, `SearchHelper`, `SessionFileUploadStorage`, the preferred language, `clearUserData()`; forms and
    the table filter without session.
-2. **v4.30.0 – session object (⚠️):** design sections 1–7 in one release.
+2. **v4.30.0 – session object (⚠️): done** (design sections 1–8 in one release, see the handover note).
 
 ## Follow-up in other projects
 
@@ -134,3 +134,48 @@ example app in the browser after step 2 (login, form, table with filter).
     `SessionCsrfTokenSource` should treat a non-string or empty stored token as missing.
 11. **Debug page** dumps the raw `$_SESSION` including the CSRF token and the login state (only in debug mode, by
     design); the `Session` needs a way to export all data for it.
+
+### Step 2 (v4.30.0) – done
+
+`composer check` is green (about 3190 tests). Baseline 469 -> 447 entries, no new entry. `example/` checked: `/` 200
+("Hello World!"), `/index.html` 200, `/nope.html` 404, http -> https redirect 303; a throw-away `Core` bootstrap with a
+real file session (cookie jar, three requests) kept the count, the login and the ID, and showed the layout below.
+Design sections 1-8 are implemented as written; deviations and additions:
+
+- `SessionStorage` also carries `getId()` / `regenerateId()` (`NativeSessionStorage` gets the `AbstractSessionHandler`,
+  `ArraySessionStorage` counts regenerations: `array-session`, `array-session-1`, …), so `Session` has the storage as
+  its only constructor argument (design 1: "storage and session handler").
+- `Session` also has `getFloat()`, `getSection()` / `setSection()` (`@internal`, for the classes of yuf) and rejects
+  objects and the key `yuf` in `set()` / `remove()` (`InvalidArgumentException`). The PHPDoc alias `SessionValue` is
+  not recursive (PHPStan has no recursive aliases): arrays are `array<array-key, mixed>`, `set()` checks them
+  recursively at run time.
+- Layout (`SessionSectionEnum`): `yuf.handler` (`sessionCreated`, `trustedRemoteAddress`, `trustedUserAgent`,
+  `lastActivity`, `preferredLanguage`), `yuf.auth` (`isLoggedIn`, `authSessionId`), `yuf.csrf.token`,
+  `yuf.tables[<id>]` (`sortColumn`, `sortDirection`, `paginationPage` as string), `yuf.tableFilters.filters[<id>]` (own
+  filters) and `.fields[<filter>_<field>]`, `yuf.search[<instance>]`, `yuf.uploads[<pointer>]`.
+- New classes: `Session`, `SessionStorage`, `NativeSessionStorage`, `ArraySessionStorage`, `SessionSectionEnum`,
+  `SessionPreferredLanguage` (`src/session/`), `AuthSessionKeyEnum`, `SessionCsrfTokenSource(Session)` (+ `renew()`),
+  `CsrfHiddenFieldRenderer`, `FormContext`, `TableSessionState` (`@internal`). `Core` has `$session`, `$sessionHandler`,
+  `$formContext` (set in `prepareHttpResponse()`, `private(set)`); `ViewContext` has `session`, `sessionHandler`,
+  `authSession`, `formContext`; `ExceptionHandler::setSession()`.
+- Removed: `CsrfToken`, `FormNameRegistry`, the identifier registries, the guards of `AuthUser` / `Authenticator`,
+  `AuthUser::resetInstance()`, `DbResultTable::saveToSession()` / `getFromSession()`, the static members of
+  `AbstractSessionHandler`. No `$_SESSION` outside `NativeSessionStorage` and `AbstractSessionHandler`.
+- Fixes of design 8.3 each have a test: no writes on read (tables, filters, search, auth, CSRF), preferred language only
+  for routes with a language, `getAuthSessionId()` throws when logged out, empty/non-string CSRF token is missing and
+  checking never creates one (new expectation: fail closed), pointers cannot collide, sort direction before `fill…()`
+  is the default instead of a `TypeError`. New expectations because of "defaults are not written": a `SearchHelper`
+  default that changes in the code applies until the user chose a value; `getCurrentPaginationPage()` is `1` without a
+  stored page; `reset` removes the stored sorting.
+- Tests: the step 1 classes were moved to the new API (`ArraySessionStorage`, new layout in the `testStorageLayout…()`
+  tests); removed: `StaticTableRegistries`, the reflection resets, `TestAuthUser::release()`, all
+  `FormNameRegistry::reset()` calls, `FormNameRegistryTest`, `CsrfTokenTest` (merged into `SessionCsrfTokenSourceTest`)
+  and the duplicate-identifier / second-instance tests. `NonStartingSessionHandler` stays (without reflection) for
+  `NativeSessionStorageTest`. New: `SessionTest`, `ArraySessionStorageTest`, `NativeSessionStorageTest`,
+  `CsrfHiddenFieldRendererTest`, `FormContextTest`, tests for forms and the table filter without CSRF source, for
+  `Form::validate()` with the default input, `ExceptionHandler::setSession()` and an old-layout session.
+- Not covered: `Core::prepareHttpResponse()` (creation of the session objects), `HttpResponse::redirectAndExit()` with
+  the SameSite change, the debug page and the `csrfField` of `HtmlDocument` / error pages, the Microsoft login redirect,
+  a successful `SessionFileUploadStorage::store()`. The real session path was checked by the smoke test above and by
+  `AbstractSessionHandlerTest` (separate processes).
+- Own `AuthUser` singletons, forms, tables, filters and `$_SESSION` data of projects: see `UPGRADE.md` v4.30.0.

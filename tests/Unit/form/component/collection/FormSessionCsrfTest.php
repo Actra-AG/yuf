@@ -12,54 +12,56 @@ namespace actra\yuf\tests\Unit\form\component\collection;
 use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\TextField;
 use actra\yuf\form\FormInput;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
-use actra\yuf\session\AbstractSessionHandler;
+use actra\yuf\security\SessionCsrfTokenSource;
+use actra\yuf\session\ArraySessionStorage;
+use actra\yuf\session\Session;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Characterization of the session behaviour before the redesign (docs/session/plan.md, step 1): a `Form` with its
- * default CSRF token source (the token of the session), as opposed to `FormCsrfTest` (in-memory source). The
- * behaviour tests use `seedToken()` and `storedToken()` only; the session key is pinned in `SessionCsrfTokenSourceTest`
- * and `CsrfTokenTest`.
+ * A `Form` with the CSRF token of the session (`SessionCsrfTokenSource` on an `ArraySessionStorage`), as opposed to
+ * `FormCsrfTest` (in-memory source), and a `Form` without token source (no session): no CSRF field, no token check.
+ * The behaviour tests use `seedToken()` and `storedToken()` only; the layout is pinned in
+ * `SessionCsrfTokenSourceTest`.
  */
 final class FormSessionCsrfTest extends TestCase
 {
     private const string ENGLISH_MESSAGE = 'The form could not be submitted because of a technical problem'
         . ' (invalid CSRF token). Please try again.';
 
-    private static int $formCounter = 0;
+    private ArraySessionStorage $storage;
+    private SessionCsrfTokenSource $tokenSource;
 
     #[Override]
     protected function setUp(): void
     {
-        FormNameRegistry::reset();
-        $_SESSION = [];
-    }
-
-    #[Override]
-    protected function tearDown(): void
-    {
-        FormNameRegistry::reset();
-        unset($_SESSION); // Sessions are disabled in the CLI
+        $this->storage = new ArraySessionStorage();
+        $this->tokenSource = new SessionCsrfTokenSource(session: new Session(storage: $this->storage));
     }
 
     private function seedToken(string $token): void
     {
-        $_SESSION['csrftoken'] = $token;
+        $this->storage->set(key: 'yuf', value: ['csrf' => ['token' => $token]]);
     }
 
     private function storedToken(): ?string
     {
-        $token = $_SESSION['csrftoken'] ?? null;
+        $yuf = $this->storage->get(key: 'yuf');
+        $csrf = is_array(value: $yuf) ? ($yuf['csrf'] ?? null) : null;
+        $token = is_array(value: $csrf) ? ($csrf['token'] ?? null) : null;
 
         return is_string(value: $token) ? $token : null;
     }
 
-    private function createForm(bool $methodPost = true): Form
+    private function createForm(bool $methodPost = true, bool $withSession = true): Form
     {
-        return new Form(name: 'sessionForm' . FormSessionCsrfTest::$formCounter++, methodPost: $methodPost);
+        return new Form(
+            context: FormContextFactory::create(csrfTokenSource: $withSession ? $this->tokenSource : null),
+            name: 'sessionForm',
+            methodPost: $methodPost,
+        );
     }
 
     /**
@@ -91,14 +93,17 @@ final class FormSessionCsrfTest extends TestCase
         }
     }
 
-    public function testNoTokenInTheSessionRejectsEveryPostedTokenAndCreatesOne(): void
+    /**
+     * Fail closed: checking a posted token does not create a token (it is created when a form is rendered).
+     */
+    public function testNoTokenInTheSessionRejectsEveryPostedTokenAndCreatesNone(): void
     {
         $form = $this->createForm();
 
         $this->assertFalse($this->send(form: $form, post: ['csrftoken' => 'anything']));
 
         $this->assertSame(FormSessionCsrfTest::ENGLISH_MESSAGE, $form->errorCollection->getFirstError()->render());
-        $this->assertNotNull($this->storedToken());
+        $this->assertNull($this->storedToken());
     }
 
     public function testFormRendersTheTokenOfTheSession(): void
@@ -116,7 +121,6 @@ final class FormSessionCsrfTest extends TestCase
         $this->createForm()->render();
         $token = $this->storedToken();
         $this->assertNotNull($token);
-        FormNameRegistry::reset();
 
         $this->assertTrue($this->send(form: $this->createForm(), post: ['csrftoken' => $token]));
     }
@@ -135,7 +139,7 @@ final class FormSessionCsrfTest extends TestCase
     {
         $this->createForm();
 
-        $this->assertSame([], $_SESSION);
+        $this->assertSame([], $this->storage->all());
     }
 
     public function testTokenIsNotCheckedWhileAnotherFieldIsInvalid(): void
@@ -151,7 +155,7 @@ final class FormSessionCsrfTest extends TestCase
 
         $this->assertFalse($this->send(form: $form, post: ['csrftoken' => 'wrong', 'name' => '']));
 
-        $this->assertSame([], $_SESSION);
+        $this->assertSame([], $this->storage->all());
     }
 
     public function testFormWithGetMethodNeverTouchesTheSession(): void
@@ -162,7 +166,7 @@ final class FormSessionCsrfTest extends TestCase
         $this->assertTrue($form->validate(input: FormInput::fromArray(data: $query, query: $query)));
         $form->render();
 
-        $this->assertSame([], $_SESSION);
+        $this->assertSame([], $this->storage->all());
     }
 
     public function testRemovedCsrfProtectionNeverTouchesTheSession(): void
@@ -172,47 +176,42 @@ final class FormSessionCsrfTest extends TestCase
 
         $this->assertTrue($this->send(form: $form, post: []));
 
-        $this->assertSame([], $_SESSION);
+        $this->assertSame([], $this->storage->all());
     }
 
     /**
-     * Without session a token cannot survive to the next request, so every posted token is rejected: a form with
-     * CSRF protection can never be submitted successfully (`removeCsrfProtection()` is the way out).
+     * Decision of v4.30.0: without session (no token source in the `FormContext`) the form has no CSRF field and
+     * checks no token. Before, it rendered a token that was never accepted.
      */
-    public function testWithoutSessionEveryPostedTokenIsRejected(): void
+    public function testWithoutTokenSourceTheFormHasNoCsrfFieldAndChecksNoToken(): void
     {
-        unset($_SESSION);
-        $form = $this->createForm();
+        $form = $this->createForm(withSession: false);
 
-        $isValid = $this->send(form: $form, post: ['csrftoken' => 'anything']);
-
-        $this->assertFalse($isValid);
-        $this->assertSame(FormSessionCsrfTest::ENGLISH_MESSAGE, $form->errorCollection->getFirstError()->render());
+        $this->assertFalse($form->hasField(name: 'csrftoken'));
+        $this->assertTrue($this->send(form: $form, post: []));
+        $this->assertFalse($form->hasErrors(withChildElements: true));
     }
 
-    public function testWithoutSessionAFormWithoutCsrfProtectionCanBeSubmitted(): void
+    public function testWithoutTokenSourceTheFormRendersNoTokenField(): void
     {
-        unset($_SESSION);
-        $form = $this->createForm();
+        $html = $this->createForm(withSession: false)->render();
+
+        $this->assertStringNotContainsString('csrftoken', $html);
+    }
+
+    public function testWithoutTokenSourceAPostedTokenIsIgnored(): void
+    {
+        $form = $this->createForm(withSession: false);
+
+        $this->assertTrue($this->send(form: $form, post: ['csrftoken' => 'anything']));
+    }
+
+    public function testWithoutTokenSourceRemovingTheCsrfProtectionIsHarmless(): void
+    {
+        $form = $this->createForm(withSession: false);
+
         $form->removeCsrfProtection();
 
         $this->assertTrue($this->send(form: $form, post: []));
-        $this->assertFalse(AbstractSessionHandler::enabled());
-    }
-
-    /**
-     * Unlike `CsrfToken::renderAsHiddenPostField()` (empty without session), the field of the form renders a token
-     * that is never accepted.
-     */
-    public function testWithoutSessionTheFormStillRendersAHiddenTokenField(): void
-    {
-        unset($_SESSION);
-
-        $html = $this->createForm()->render();
-
-        $this->assertMatchesRegularExpression(
-            '~<input type="hidden" name="csrftoken" value="[A-Za-z0-9+/=]{44}">~',
-            $html,
-        );
     }
 }

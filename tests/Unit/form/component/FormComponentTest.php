@@ -15,11 +15,10 @@ use actra\yuf\form\component\FormControl;
 use actra\yuf\form\component\FormInfo;
 use actra\yuf\form\component\FormSubHeadline;
 use actra\yuf\form\FormMessages;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
 use LogicException;
-use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -27,12 +26,6 @@ use PHPUnit\Framework\TestCase;
  */
 final class FormComponentTest extends TestCase
 {
-    #[Override]
-    protected function setUp(): void
-    {
-        FormNameRegistry::reset();
-    }
-
     private function text(string $text): HtmlText
     {
         return HtmlText::fromHtml(html: $text);
@@ -50,7 +43,10 @@ final class FormComponentTest extends TestCase
 
     public function testAddErrorStoresTheHtmlTextAndMarksTheParents(): void
     {
-        $form = new Form(name: 'errors', csrfTokenSource: new InMemoryCsrfTokenSource());
+        $form = new Form(
+            context: FormContextFactory::create(csrfTokenSource: new InMemoryCsrfTokenSource()),
+            name: 'errors',
+        );
         $control = $this->createControl();
         $form->addComponent(formComponent: $control);
 
@@ -92,9 +88,9 @@ final class FormComponentTest extends TestCase
     public function testControlGetsTheCancelTextOfTheForm(): void
     {
         $form = new Form(
+            context: FormContextFactory::create(csrfTokenSource: new InMemoryCsrfTokenSource()),
             name: 'german',
             messages: FormMessages::german(),
-            csrfTokenSource: new InMemoryCsrfTokenSource(),
         );
         $control = $this->createControl();
         $form->addComponent(formComponent: $control);
@@ -105,9 +101,9 @@ final class FormComponentTest extends TestCase
     public function testControlAddedAsChildComponentUsesTheMessagesOfTheForm(): void
     {
         $form = new Form(
+            context: FormContextFactory::create(csrfTokenSource: new InMemoryCsrfTokenSource()),
             name: 'childComponent',
             messages: FormMessages::german(),
-            csrfTokenSource: new InMemoryCsrfTokenSource(),
         );
         $control = $this->createControl();
         $form->addChildComponent(formComponent: $control);
@@ -118,9 +114,9 @@ final class FormComponentTest extends TestCase
     public function testIndividualCancelLabelWinsOverTheMessages(): void
     {
         $form = new Form(
+            context: FormContextFactory::create(csrfTokenSource: new InMemoryCsrfTokenSource()),
             name: 'individual',
             messages: FormMessages::german(),
-            csrfTokenSource: new InMemoryCsrfTokenSource(),
         );
         $control = $this->createControl(cancelLabel: $this->text('Back'));
         $form->addComponent(formComponent: $control);

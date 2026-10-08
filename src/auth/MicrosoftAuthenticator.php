@@ -22,12 +22,15 @@ abstract class MicrosoftAuthenticator extends Authenticator
 
     protected function __construct(
         HttpRequest $httpRequest,
+        AuthSession $authSession,
         int $maxAllowedWrongPasswordAttempts,
+        private readonly AbstractSessionHandler $sessionHandler,
         private readonly string $logDirectory,
         private readonly string $cacheDirectory,
     ) {
         parent::__construct(
             httpRequest: $httpRequest,
+            authSession: $authSession,
             maxAllowedWrongPasswordAttempts: $maxAllowedWrongPasswordAttempts,
         );
     }
@@ -38,10 +41,10 @@ abstract class MicrosoftAuthenticator extends Authenticator
         string $redirectUri,
         string $ssoNonce,
     ): void {
-        if (AuthSession::isLoggedIn()) {
+        if ($this->authSession->isLoggedIn()) {
             throw new LogicException(message: 'User is already logged in');
         }
-        AbstractSessionHandler::getSessionHandler()->changeCookieSameSiteToNone();
+        $this->sessionHandler->changeCookieSameSiteToNone();
         // See https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-protocols-oidc
         HttpResponse::redirectAndExit(
             relativeOrAbsoluteUri: str_replace(

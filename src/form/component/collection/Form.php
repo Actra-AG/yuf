@@ -14,19 +14,21 @@ use actra\yuf\form\component\FormControl;
 use actra\yuf\form\component\FormField;
 use actra\yuf\form\FormCollection;
 use actra\yuf\form\FormComponent;
+use actra\yuf\form\FormContext;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\DefaultFormRenderer;
 use actra\yuf\form\renderer\DefinitionListRenderer;
 use actra\yuf\html\HtmlText;
-use actra\yuf\security\CsrfToken;
 use actra\yuf\security\CsrfTokenSource;
-use actra\yuf\security\SessionCsrfTokenSource;
 use Exception;
 use Override;
 
+/**
+ * The form names must be unique per page: the name is the sent indicator and the prefix of the field names.
+ * A form without CSRF token source in its `FormContext` (no session) has no CSRF field and checks no token.
+ */
 class Form extends FormCollection
 {
     public readonly string $sentIndicator;
@@ -35,6 +37,7 @@ class Form extends FormCollection
     private bool $renderRequiredAbbr = true;
 
     public function __construct(
+        public readonly FormContext $context,
         string $name,
         public readonly bool $acceptUpload = false,
         public readonly ?HtmlText $globalErrorMessage = null,
@@ -42,17 +45,14 @@ class Form extends FormCollection
         ?string $individualSentIndicator = null,
         public readonly bool $disableClientValidation = false,
         public readonly FormMessages $messages = new FormMessages(),
-        ?CsrfTokenSource $csrfTokenSource = null,
     ) {
-        FormNameRegistry::register(name: $name);
         $this->sentIndicator = $individualSentIndicator === null ? $name : $individualSentIndicator;
         parent::__construct(name: $name);
 
-        if ($methodPost) {
-            // A GET form must not change state and would put the token into the URL, so it has no CSRF token
-            $this->addField(
-                formField: new CsrfTokenField(tokenSource: $csrfTokenSource ?? new SessionCsrfTokenSource()),
-            );
+        $csrfTokenSource = $context->csrfTokenSource;
+        // A GET form must not change state and would put the token into the URL, so it has no CSRF token
+        if ($methodPost && $csrfTokenSource !== null) {
+            $this->addField(formField: new CsrfTokenField(tokenSource: $csrfTokenSource));
         }
     }
 
@@ -68,8 +68,8 @@ class Form extends FormCollection
 
     public function removeCsrfProtection(): void
     {
-        if ($this->hasChildComponent(childComponentName: CsrfToken::getFieldName())) {
-            $this->removeChildComponent(childComponentName: CsrfToken::getFieldName());
+        if ($this->hasChildComponent(childComponentName: CsrfTokenSource::FIELD_NAME)) {
+            $this->removeChildComponent(childComponentName: CsrfTokenSource::FIELD_NAME);
         }
     }
 
@@ -113,10 +113,12 @@ class Form extends FormCollection
     /**
      * Validates all fields with the request data if the form was sent.
      *
-     * @param FormInput $input The request data (`FormInput::fromHttpRequest()`)
+     * @param ?FormInput $input The request data, by default the input of the request of the `FormContext` (the post
+     *                          data or, for a GET form, the query string)
      */
-    public function validate(FormInput $input): bool
+    public function validate(?FormInput $input = null): bool
     {
+        $input ??= $this->createInput();
         if (!$this->isSent(input: $input)) {
             return false;
         }
@@ -148,20 +150,26 @@ class Form extends FormCollection
     /**
      * Whether the sent indicator is in the query string of the request.
      *
-     * @param FormInput $input The request data (`FormInput::fromHttpRequest()`)
+     * @param ?FormInput $input The request data, by default the input of the request of the `FormContext`
      */
-    public function isSent(FormInput $input): bool
+    public function isSent(?FormInput $input = null): bool
     {
+        $input ??= $this->createInput();
         return $input->hasQueryKey(key: $this->sentIndicator);
+    }
+
+    private function createInput(): FormInput
+    {
+        return FormInput::fromHttpRequest(httpRequest: $this->context->httpRequest, methodPost: $this->methodPost);
     }
 
     private function validateCsrf(FormInput $input): void
     {
-        if (!$this->hasChildComponent(childComponentName: CsrfToken::getFieldName())) {
+        if (!$this->hasChildComponent(childComponentName: CsrfTokenSource::FIELD_NAME)) {
             // The Csrf protection has been disabled
             return;
         }
-        $csrfTokenField = $this->getField(name: CsrfToken::getFieldName());
+        $csrfTokenField = $this->getField(name: CsrfTokenSource::FIELD_NAME);
         if (!$csrfTokenField instanceof CsrfTokenField) {
             return;
         }

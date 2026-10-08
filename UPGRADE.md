@@ -4,6 +4,257 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.30.0] – 2026-10-08
+
+The session is an object now: `Core` creates one `Session` per request and passes it explicitly to everything that needs
+it. There is no static session state any more (`AbstractSessionHandler::getSessionHandler()`, `AuthSession`,
+`CsrfToken`, `FormNameRegistry`, the static `saveToSession()` / `getFromSession()` of `DbResultTable`) and nothing in
+yuf reads `$_SESSION` except `NativeSessionStorage` and the session handler. Search your project for `$_SESSION`,
+`AuthSession::`, `CsrfToken::`, `AbstractSessionHandler::`, `FormNameRegistry`, `new Form(`, `new TableFilter(`,
+`createDbResultTable`, `SearchHelper::create`, `SessionFileUploadStorage`, `resetInstance` and for every class that
+extends `Authenticator`, `MicrosoftAuthenticator`, `AuthUser`, `AbstractSessionHandler` or `ExceptionHandler`.
+
+### ⚠️ Users are logged out once, tables lose their state
+
+All data of yuf moves below one key, `$_SESSION['yuf']`, in sections (`SessionSectionEnum`). Existing sessions keep the
+old keys, which are ignored: **every user is logged out once** and **tables, table filters, search forms and upload
+lists start from their defaults**. The preferred language is forgotten, too (it was a top-level key).
+
+| Before (top-level key) | After |
+|:-----------------------|:------|
+| `sessionCreated`, `trustedRemoteAddress`, `trustedUserAgent`, `lastActivity`, `preferredLanguage` | `yuf.handler.<same key>` |
+| `auth_userSession` (`isLoggedIn`, `authSessionId`) | `yuf.auth` (`isLoggedIn`, `authSessionId`) |
+| `csrftoken` | `yuf.csrf.token` |
+| `table[<identifier>]` (`sort_column`, `sort_direction`, `pagination_page`) | `yuf.tables[<identifier>]` (`sortColumn`, `sortDirection`, `paginationPage`) |
+| `columnFilter[<filter>_<field>]` | `yuf.tableFilters.fields[<filter>_<field>]` |
+| `tableFilter[<filter>]` (own filters through `TableFilter::getFromSession()`) | `yuf.tableFilters.filters[<filter>]` |
+| `searchHelper[<instance>]` | `yuf.search[<instance>]` |
+| `<pointer>` (upload pointers, top level) | `yuf.uploads[<pointer>]` |
+
+Project data stays where it is (top level) and cannot collide with `yuf`: the key `yuf` is reserved and `Session::set()`
+throws an `InvalidArgumentException` for it. Code that reads the old keys directly (`$_SESSION['csrftoken']`, …) has to
+use the new API.
+
+### ⚠️ Static → instance
+
+| Before | After |
+|:-------|:------|
+| `AbstractSessionHandler::register()`, `enabled()`, `getSessionHandler()` | removed. `$core->session` (`?Session`, `null` with `individualSessionHandler: false`), `$core->sessionHandler`, `$this->context->session`, `$this->context->sessionHandler` |
+| `AbstractSessionHandler::clearUserData()` (static) | `$session->clearUserData()` (keeps only `yuf.handler`) |
+| `$handler->setPreferredLanguage()`, `getPreferredLanguageCode()` | removed: `SessionPreferredLanguage(session:)` with `set()` / `getCode()` (`RequestHandler` uses it) |
+| `AuthSession::logIn()`, `logOut()`, `isLoggedIn()`, `getAuthSessionId()` (static) | `final readonly class AuthSession(Session $session)`: the same methods as instance methods, `$this->context->authSession` (`null` without session); new `getSessionId()` |
+| `CsrfToken::getToken()`, `validateToken()` | `CsrfTokenSource::getToken()`, `isValid()` (`new SessionCsrfTokenSource(session: $session)`, `$context->formContext->csrfTokenSource`) |
+| `CsrfToken::getToken(forceNew: true)` | `SessionCsrfTokenSource::renew()` |
+| `CsrfToken::renderAsHiddenPostField()` | `CsrfHiddenFieldRenderer::render(csrfTokenSource:)` (empty string for `null`) |
+| `CsrfToken::getFieldName()`, `CsrfToken::CSRFTOKENSTORAGE` | `CsrfTokenSource::FIELD_NAME` (`'csrftoken'`) |
+| `DbResultTable::saveToSession()`, `getFromSession()` (static) | removed; the table, filter and fields keep their state through `TableSessionState` (`@internal`) |
+| `FormNameRegistry` | removed (no check for duplicate form names) |
+| `SmartTable`, `TableFilter`, `AbstractTableFilterField` identifier registries | removed (no `LogicException` for duplicate identifiers) |
+| single-instance guards of `AuthUser` and `Authenticator`, `AuthUser::resetInstance()` | removed (several instances are allowed, no reset needed in tests) |
+| `HttpResponse::redirectAndExit(setSameSiteCookieTemporaryToLax: true)` | `sameSiteLaxSessionHandler: $core->sessionHandler` (the handler that changes the cookie) |
+
+### ⚠️ Changed constructors and methods
+
+| Class / method | Change |
+|:---------------|:-------|
+| `Form::__construct()` | new required first argument `context:` (`$this->context->formContext`); `csrfTokenSource:` removed (a project that needs another source builds its own `FormContext`) |
+| `Form::validate()`, `Form::isSent()` | `input:` is optional again (default: `FormInput::fromHttpRequest()` of the request of the context, post data for a POST form, query string for a GET form); passing it still works |
+| `CsrfTokenField::__construct()` | `tokenSource:` is required (no session default) |
+| `Authenticator::__construct()` | new required `authSession:` after `httpRequest:`; subclasses pass it on (`$this->context->authSession`, `null` without session: no login possible) |
+| `MicrosoftAuthenticator::__construct()` | new required `authSession:` after `httpRequest:` and `sessionHandler:` after `maxAllowedWrongPasswordAttempts:` (`$this->context->sessionHandler`, for the SameSite change of the redirect) |
+| `AuthSession::getAuthSessionId()` | throws a `LogicException` when nobody is logged in (before: the stored ID of a logged-out session, `0` after a logout, `UnexpectedValueException` without ID) |
+| `ViewContext::__construct()` | new required `session:`, `sessionHandler:`, `authSession:` (all `?`) and `formContext:` after `httpRequest:` |
+| `RequestHandler::__construct()` | new required `session:` (`?Session`, last) |
+| `HtmlDocument::__construct()` | new required `csrfTokenSource:` (last; created by `ContentHandler`) |
+| `ExceptionHandler` | new `setSession(session:, csrfTokenSource:)`, called by `Core` once (like `setRequestHandler()`); `ExceptionHandlerContext` is unchanged |
+| `AbstractSessionHandler` / `FileSessionHandler` | constructors unchanged; the data of the handler is in `yuf.handler`; `register()`, `enabled()`, `getSessionHandler()`, `clearUserData()`, `setPreferredLanguage()`, `getPreferredLanguageCode()` removed |
+| `SessionFileUploadStorage::__construct()` | new required first argument `session:` |
+| `SessionFileUploadStorage::forHttpRequest()` | new required first argument `session:` |
+| `DbResultTable::__construct()` | new required `session:` after `httpRequest:` |
+| `TableHelper::createDbResultTable()` | new required `session:` after `httpRequest:` |
+| `TableFilter::__construct()` | new required `session:` and `csrfTokenSource:` (`?CsrfTokenSource`) after `httpRequest:`; the fields take the session from their filter |
+| `SearchHelper::create()` | new required `session:` |
+| `HtmlDocument` / `ExceptionHandler` placeholder `csrfField` | rendered through `CsrfHiddenFieldRenderer`; empty without session |
+
+### Before / after
+
+A view with a form:
+
+```php
+// before
+$form = new Form(name: 'order');
+$input = FormInput::fromHttpRequest(httpRequest: $this->context->httpRequest, methodPost: true);
+if ($form->validate(input: $input)) {
+    // …
+}
+
+// after
+$form = new Form(context: $this->context->formContext, name: 'order');
+if ($form->validate()) { // reads the request of the context
+    // …
+}
+```
+
+Form names must be unique per page: yuf no longer checks it (the name is the sent indicator).
+
+A table with a filter:
+
+```php
+// before
+$httpRequest = $this->context->httpRequest;
+$table = TableHelper::createDbResultTable(
+    identifier: 'users',
+    db: $db,
+    selectQuery: $sql,
+    templateEngine: $this->context->templateEngine,
+    httpRequest: $httpRequest,
+    tableFilter: new TableFilter(identifier: 'usersFilter', httpRequest: $httpRequest),
+);
+
+// after
+$httpRequest = $this->context->httpRequest;
+$session = $this->context->session; // Session, not null: tables remember sorting, page and filter in the session
+$table = TableHelper::createDbResultTable(
+    identifier: 'users',
+    db: $db,
+    selectQuery: $sql,
+    templateEngine: $this->context->templateEngine,
+    httpRequest: $httpRequest,
+    session: $session,
+    tableFilter: new TableFilter(
+        identifier: 'usersFilter',
+        httpRequest: $httpRequest,
+        session: $session,
+        csrfTokenSource: $this->context->formContext->csrfTokenSource,
+    ),
+);
+```
+
+Table, filter and search identifiers must be unique per page, too: they are the keys of the state in the session. Two
+tables with the same identifier share sorting and page.
+
+An own `AuthUser` singleton: the guard of `AuthUser` is gone, build the singleton on the `AuthSession` that you get
+passed in:
+
+```php
+// before
+final class MyAuthUser extends AuthUser
+{
+    public static function get(): MyAuthUser
+    {
+        return MyAuthUser::$instance ??= MyAuthUser::createFromId(id: AuthSession::getAuthSessionId());
+    }
+}
+$user = MyAuthUser::get();
+
+// after
+final class MyAuthUser extends AuthUser
+{
+    private static ?MyAuthUser $instance = null;
+
+    public static function get(AuthSession $authSession): MyAuthUser
+    {
+        return MyAuthUser::$instance ??= MyAuthUser::createFromId(id: $authSession->getAuthSessionId());
+    }
+}
+$user = MyAuthUser::get(authSession: $this->context->authSession);
+```
+
+(Better: create the user once in the bootstrap or view factory and pass it to what needs it, instead of a static
+`get()`.) Tests no longer need `AuthUser::resetInstance()` or reflection on `Authenticator`.
+
+An own `Authenticator` and the login:
+
+```php
+// before
+final class MyAuthenticator extends Authenticator
+{
+    public function __construct(HttpRequest $httpRequest)
+    {
+        parent::__construct(httpRequest: $httpRequest, maxAllowedWrongPasswordAttempts: 5);
+    }
+}
+$authenticator = new MyAuthenticator(httpRequest: $this->context->httpRequest);
+if (AuthSession::isLoggedIn()) { … }
+AuthSession::logOut();
+
+// after
+final class MyAuthenticator extends Authenticator
+{
+    public function __construct(HttpRequest $httpRequest, AuthSession $authSession)
+    {
+        parent::__construct(httpRequest: $httpRequest, authSession: $authSession, maxAllowedWrongPasswordAttempts: 5);
+    }
+}
+$authenticator = new MyAuthenticator(
+    httpRequest: $this->context->httpRequest,
+    authSession: $this->context->authSession,
+);
+if ($this->context->authSession->isLoggedIn()) { … }
+$this->context->authSession->logOut();
+```
+
+Own `$_SESSION` data (cart, order data, flash messages, `requestedPageAfterLogin`, breadcrumbs) goes through the
+`Session`. Projects must not use `$_SESSION` any more:
+
+```php
+// before
+$_SESSION['requestedPageAfterLogin'] = $uri;
+$page = $_SESSION['requestedPageAfterLogin'] ?? '/';
+unset($_SESSION['requestedPageAfterLogin']);
+
+// after
+$session = $this->context->session; // ?Session
+$session?->set(key: 'requestedPageAfterLogin', value: $uri);
+$page = $session?->getString(key: 'requestedPageAfterLogin') ?? '/';
+$session?->remove(key: 'requestedPageAfterLogin');
+```
+
+`Session` stores strings, numbers, booleans, `null` and arrays of these (an object throws an
+`InvalidArgumentException`: store its data as array); `getString()`, `getInt()`, `getFloat()`, `getBool()` and
+`getArray()` return `null` for a missing key or another type and never write. A PHPStan rule against `$_SESSION`
+(`disallowedSuperGlobals`) can enforce this in a project.
+
+Tests and scripts use `new Session(storage: new ArraySessionStorage())` instead of a prepared `$_SESSION`.
+
+A bootstrap file that registered the session handler itself: nothing to do, `Core::prepareHttpResponse()` creates the
+handler, the `Session` and the `FormContext`; `$core->sessionHandler`, `$core->session` and `$core->formContext` are
+available afterwards.
+
+### ⚠️ Forms and table filters without session
+
+`Core` with `individualSessionHandler: false` has no session: `$core->session`, `$context->session` and
+`$context->authSession` are `null` and the `FormContext` has no `CsrfTokenSource`. A form then has **no CSRF field and
+does not check a token**, and a `TableFilter` without token source accepts its posted input without a token. CSRF needs
+an ambient credential (the session cookie) that the browser sends along on its own; without a session there is nothing
+to abuse. Before, such a form rendered a token field that was never accepted (a POST form could not be submitted
+without `removeCsrfProtection()`), and a table filter never accepted its input. A project that relied on the failure
+(or that sends the session ID in another way) builds its own `FormContext` with a `CsrfTokenSource`. The `csrfField`
+placeholder of pages and error pages is empty without session (before: empty until something wrote to `$_SESSION`,
+then a token field that was never accepted). Tables, `SearchHelper` and the upload storage need a `Session` (an
+`ArraySessionStorage` keeps their state for the request).
+
+### Bug fixes (no change needed unless noted)
+
+- No writes on read: `isLoggedIn()`, `getToken()` of an existing token, the first request of a table, a filter or a search
+  form write nothing into the session any more (before: `isLoggedIn = false`, empty arrays for every filter field, the
+  default sorting and page, the defaults of the search fields). Defaults are returned and only stored when they change
+  (a choice of the user). A `SearchHelper` default that changes in your code now applies until the user made a choice.
+- The preferred language is only written for a route with an explicit `language`. Before, a route without language
+  overwrote it with the first available language.
+- `AuthSession::getAuthSessionId()` throws when logged out (⚠️ see above).
+- An empty or non-string stored CSRF token counts as missing. Checking a posted token never creates a token: without a
+  stored token every posted token is invalid (before, the check created a token and failed).
+- Upload pointers live in `yuf.uploads` and cannot overwrite or delete other session data any more (a pointer named
+  `table` or `csrftoken` did).
+- `DbResultTable::getCurrentSortDirection()` before the table was filled returns the default direction (before: a
+  `TypeError`), `getCurrentSortColumn()` returns the default sort column; both are `null` / `ASC` for a table without
+  columns. `getCurrentPaginationPage()` is `1` without a stored page.
+- The debug page of `ExceptionHandler` shows the session through `Session::export()`.
+- `getId()` and `regenerateId()` of the session handler are available as `Session::getId()` / `regenerateId()`.
+
+---
+
 ## [v4.29.0] – 2026-10-08
 
 `HttpRequest` is an immutable instance now, created once per request by `Core` and passed explicitly to everything that

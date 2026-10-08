@@ -13,9 +13,8 @@ use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\TextField;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
-use Override;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -28,12 +27,6 @@ final class FormMessagesHandoverTest extends TestCase
         return new TextField(name: 'field', label: HtmlText::fromHtml(html: 'Label'));
     }
 
-    #[Override]
-    protected function setUp(): void
-    {
-        FormNameRegistry::reset();
-    }
-
     public function testFieldWithoutFormUsesEnglishDefaults(): void
     {
         $this->assertSame('The invalid input was ignored.', $this->createField()->messages->invalidInput);
@@ -41,7 +34,7 @@ final class FormMessagesHandoverTest extends TestCase
 
     public function testFormWithoutMessagesGivesEnglishDefaults(): void
     {
-        $form = new Form(name: 'handoverDefaultForm');
+        $form = new Form(context: FormContextFactory::create(), name: 'handoverDefaultForm');
         $field = $this->createField();
 
         $form->addField(formField: $field);
@@ -51,7 +44,11 @@ final class FormMessagesHandoverTest extends TestCase
 
     public function testFieldGetsTheMessagesOfTheForm(): void
     {
-        $form = new Form(name: 'handoverGermanForm', messages: FormMessages::german());
+        $form = new Form(
+            context: FormContextFactory::create(),
+            name: 'handoverGermanForm',
+            messages: FormMessages::german(),
+        );
         $field = $this->createField();
 
         $form->addField(formField: $field);
@@ -65,7 +62,11 @@ final class FormMessagesHandoverTest extends TestCase
 
     public function testCustomMessagesAreUsed(): void
     {
-        $form = new Form(name: 'handoverCustomForm', messages: new FormMessages(invalidInput: 'Nope.'));
+        $form = new Form(
+            context: FormContextFactory::create(),
+            name: 'handoverCustomForm',
+            messages: new FormMessages(invalidInput: 'Nope.'),
+        );
         $field = $this->createField();
 
         $form->addField(formField: $field);

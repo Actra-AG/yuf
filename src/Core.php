@@ -27,10 +27,14 @@ use actra\yuf\core\UnsupportedRequestMethodException;
 use actra\yuf\exception\ExceptionHandler;
 use actra\yuf\exception\ExceptionHandlerContext;
 use actra\yuf\exception\NotFoundException;
+use actra\yuf\form\FormContext;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CspPolicySettings;
+use actra\yuf\security\SessionCsrfTokenSource;
 use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\session\FileSessionHandler;
+use actra\yuf\session\NativeSessionStorage;
+use actra\yuf\session\Session;
 use actra\yuf\session\SessionSettings;
 use actra\yuf\template\cache\DirectoryTemplateCache;
 use actra\yuf\template\tag\TemplateTag;
@@ -49,6 +53,18 @@ class Core
     public readonly string $documentRoot;
     /** The request of this process: create other requests only in tests. */
     public readonly HttpRequest $httpRequest;
+    /**
+     * The session handler of the request (`null` with `individualSessionHandler: false`); set by
+     * `prepareHttpResponse()`.
+     */
+    public private(set) ?AbstractSessionHandler $sessionHandler = null;
+    /** The session of the request (`null` without sessions); set by `prepareHttpResponse()`. */
+    public private(set) ?Session $session = null;
+    /**
+     * The request and the CSRF token source (none without sessions, and before `prepareHttpResponse()`) for the forms
+     * of the request.
+     */
+    public private(set) FormContext $formContext;
     public readonly string $frameworkDirectory;
     public private(set) string $baseDirectory = '';
     public private(set) string $appDirectory = '';
@@ -122,6 +138,7 @@ class Core
             header(header: HttpStatusCodeEnum::HTTP_METHOD_NOT_ALLOWED->getStatusHeader());
             exit;
         }
+        $this->formContext = new FormContext(httpRequest: $this->httpRequest, csrfTokenSource: null);
         if (!$this->httpRequest->isSsl()) {
             HttpResponse::redirectAndExit(
                 relativeOrAbsoluteUri: $this->httpRequest->getUrl(protocol: ProtocolEnum::HTTPS),
@@ -243,7 +260,13 @@ class Core
                 defaultSavePath: $this->cacheDirectory . 'sessions',
             );
         }
-        AbstractSessionHandler::register(individualSessionHandler: $individualSessionHandler);
+        $this->sessionHandler = $individualSessionHandler === false ? null : $individualSessionHandler;
+        $this->session = $this->sessionHandler === null
+            ? null
+            : new Session(storage: new NativeSessionStorage(sessionHandler: $this->sessionHandler));
+        $csrfTokenSource = $this->session === null ? null : new SessionCsrfTokenSource(session: $this->session);
+        $this->formContext = new FormContext(httpRequest: $this->httpRequest, csrfTokenSource: $csrfTokenSource);
+        $exceptionHandler->setSession(session: $this->session, csrfTokenSource: $csrfTokenSource);
         if (!$routeCollection->hasRoutes()) {
             throw new LogicException(message: 'There must be at least one route');
         }
@@ -252,6 +275,7 @@ class Core
             routeCollection: $routeCollection,
             availableLanguages: $this->availableLanguages,
             allowedDomains: $this->allowedDomains,
+            session: $this->session,
         );
         $exceptionHandler->setRequestHandler(requestHandler: $requestHandler);
         $requestHandler->resolveRoute();

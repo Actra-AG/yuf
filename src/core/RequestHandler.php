@@ -10,7 +10,8 @@ declare(strict_types=1);
 namespace actra\yuf\core;
 
 use actra\yuf\exception\NotFoundException;
-use actra\yuf\session\AbstractSessionHandler;
+use actra\yuf\session\Session;
+use actra\yuf\session\SessionPreferredLanguage;
 use LogicException;
 
 class RequestHandler
@@ -38,12 +39,15 @@ class RequestHandler
      * routes are available afterwards (also for the error page of an unknown route). Call `resolveRoute()` next.
      *
      * @param list<string> $allowedDomains
+     * @param ?Session $session Remembers the language of the last route that has one (`Core::$session`, `null`
+     *                          without sessions)
      */
     public function __construct(
         private readonly HttpRequest $httpRequest,
         private readonly RouteCollection $routeCollection,
         private readonly LanguageCollection $availableLanguages,
         private readonly array $allowedDomains,
+        private readonly ?Session $session,
     ) {
         if (!$availableLanguages->isEmpty()) {
             $this->language = $availableLanguages->getFirstLanguage();
@@ -82,26 +86,11 @@ class RequestHandler
         if ($forceFileName !== null && $forceFileName !== '') {
             $this->fileName = $forceFileName;
         }
-        if ($this->route->language !== null) {
-            $this->language = $this->route->language;
-        }
-        if (AbstractSessionHandler::enabled()) {
-            $sessionHandler = AbstractSessionHandler::getSessionHandler();
-            $preferredLanguageCode = $sessionHandler->getPreferredLanguageCode();
-            if (
-                $this->language !== null
-                && (
-                    $preferredLanguageCode === null
-                    || $preferredLanguageCode !== $this->language->code
-                )
-            ) {
-                if (!$this->availableLanguages->hasLanguage(languageCode: $this->language->code)) {
-                    throw new LogicException(
-                        message: 'The preferred language ' . $this->language->code . ' is not available',
-                    );
-                }
-                $sessionHandler->setPreferredLanguage(language: $this->language);
-            }
+        $routeLanguage = $this->route->language;
+        if ($routeLanguage !== null) {
+            $this->language = $routeLanguage;
+            // Only a route with an explicit language tells the language of the user
+            $this->rememberPreferredLanguage(language: $routeLanguage);
         }
         $requestedFileName = $this->fileName ?? '';
         $fileName = (trim(string: $requestedFileName) === '') ? $this->route->defaultFileName : $requestedFileName;
@@ -126,6 +115,21 @@ class RequestHandler
         ) {
             throw new NotFoundException();
         }
+    }
+
+    private function rememberPreferredLanguage(Language $language): void
+    {
+        if ($this->session === null) {
+            return;
+        }
+        $preferredLanguage = new SessionPreferredLanguage(session: $this->session);
+        if ($preferredLanguage->getCode() === $language->code) {
+            return;
+        }
+        if (!$this->availableLanguages->hasLanguage(languageCode: $language->code)) {
+            throw new LogicException(message: 'The preferred language ' . $language->code . ' is not available');
+        }
+        $preferredLanguage->set(language: $language);
     }
 
     private function checkDomain(): void
@@ -215,16 +219,16 @@ class RequestHandler
         }
         if ($this->httpRequest->getUri() === '/') {
             $defaultRoutesByLanguage = $this->defaultRoutesByLanguage;
-            if (AbstractSessionHandler::enabled()) {
-                $preferredLanguageCode = AbstractSessionHandler::getSessionHandler()->getPreferredLanguageCode();
-                if ($preferredLanguageCode !== null) {
-                    foreach ($defaultRoutesByLanguage->routes as $route) {
-                        if ($route->language->code === $preferredLanguageCode) {
-                            HttpResponse::redirectAndExit(
-                                relativeOrAbsoluteUri: $route->path,
-                                httpRequest: $this->httpRequest,
-                            );
-                        }
+            $preferredLanguageCode = $this->session === null
+                ? null
+                : new SessionPreferredLanguage(session: $this->session)->getCode();
+            if ($preferredLanguageCode !== null) {
+                foreach ($defaultRoutesByLanguage->routes as $route) {
+                    if ($route->language->code === $preferredLanguageCode) {
+                        HttpResponse::redirectAndExit(
+                            relativeOrAbsoluteUri: $route->path,
+                            httpRequest: $this->httpRequest,
+                        );
                     }
                 }
             }

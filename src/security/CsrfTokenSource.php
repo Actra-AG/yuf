@@ -15,6 +15,9 @@ namespace actra\yuf\security;
  */
 interface CsrfTokenSource
 {
+    /** The name of the hidden field and of the posted value that carries the token. */
+    public const string FIELD_NAME = 'csrftoken';
+
     /**
      * The token the form has to send back (created on first use).
      */

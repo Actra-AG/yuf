@@ -9,15 +9,15 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\form\component\collection;
 
+use actra\yuf\core\HttpRequest;
+use actra\yuf\core\RequestMethodEnum;
 use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\TextField;
 use actra\yuf\form\FormInput;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
-use LogicException;
-use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -26,25 +26,19 @@ use PHPUnit\Framework\TestCase;
  */
 final class FormValidateTest extends TestCase
 {
-    #[Override]
-    protected function setUp(): void
-    {
-        FormNameRegistry::reset();
-    }
-
-    #[Override]
-    protected function tearDown(): void
-    {
-        FormNameRegistry::reset();
-    }
-
-    private function createForm(bool $methodPost = true, ?string $individualSentIndicator = null): Form
-    {
+    private function createForm(
+        bool $methodPost = true,
+        ?string $individualSentIndicator = null,
+        ?HttpRequest $httpRequest = null,
+    ): Form {
         $form = new Form(
+            context: FormContextFactory::create(
+                httpRequest: $httpRequest,
+                csrfTokenSource: new InMemoryCsrfTokenSource(token: 'tok'),
+            ),
             name: 'contact',
             methodPost: $methodPost,
             individualSentIndicator: $individualSentIndicator,
-            csrfTokenSource: new InMemoryCsrfTokenSource(token: 'tok'),
         );
         $form->addField(
             formField: new TextField(
@@ -158,21 +152,73 @@ final class FormValidateTest extends TestCase
         $this->assertFalse($form->validate(input: $input));
     }
 
-    public function testDuplicateFormNameThrows(): void
+    public function testTwoFormsWithTheSameNameAreAllowed(): void
     {
-        $this->createForm();
+        $first = $this->createForm();
+        $second = $this->createForm();
 
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessageIsOrContains('A Form with the name "contact" has already been defined.');
-
-        $this->createForm();
+        $this->assertNotSame($first, $second);
+        $this->assertSame($first->name, $second->name);
     }
 
-    public function testFormNameCanBeUsedAgainAfterTheRegistryWasReset(): void
+    public function testInputDefaultsToThePostDataOfTheRequestOfTheContext(): void
     {
-        $this->createForm();
-        FormNameRegistry::reset();
+        $form = $this->createForm(
+            httpRequest: HttpRequestFactory::create(
+                method: RequestMethodEnum::POST,
+                queryParameters: ['contact' => ''],
+                postParameters: ['name' => 'Ann', 'csrftoken' => 'tok'],
+            ),
+        );
 
-        $this->assertSame('contact', $this->createForm()->name);
+        $this->assertTrue($form->isSent());
+        $this->assertTrue($form->validate());
+        $this->assertSame('Ann', $form->getField(name: 'name')->renderValue());
+    }
+
+    public function testDefaultInputRejectsAWrongTokenOfTheRequest(): void
+    {
+        $form = $this->createForm(
+            httpRequest: HttpRequestFactory::create(
+                method: RequestMethodEnum::POST,
+                queryParameters: ['contact' => ''],
+                postParameters: ['name' => 'Ann', 'csrftoken' => 'wrong'],
+            ),
+        );
+
+        $this->assertFalse($form->validate());
+    }
+
+    public function testInputOfAGetFormDefaultsToTheQueryStringOfTheRequest(): void
+    {
+        $form = $this->createForm(
+            methodPost: false,
+            httpRequest: HttpRequestFactory::create(
+                queryParameters: ['contact' => '', 'name' => 'Ann'],
+                postParameters: ['name' => 'Bob'],
+            ),
+        );
+
+        $this->assertTrue($form->validate());
+    }
+
+    public function testFormIsNotSentWithoutTheSentIndicatorInTheRequest(): void
+    {
+        $form = $this->createForm(httpRequest: HttpRequestFactory::create(method: RequestMethodEnum::POST));
+
+        $this->assertFalse($form->isSent());
+        $this->assertFalse($form->validate());
+    }
+
+    public function testExplicitInputWinsOverTheRequestOfTheContext(): void
+    {
+        $form = $this->createForm(
+            httpRequest: HttpRequestFactory::create(
+                method: RequestMethodEnum::POST,
+                queryParameters: ['contact' => ''],
+            ),
+        );
+
+        $this->assertFalse($form->isSent(input: FormInput::fromArray(data: [])));
     }
 }

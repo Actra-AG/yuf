@@ -95,3 +95,11 @@ The order of 4–16 may change when a redesign already cleaned an area.
 
 - `HttpRequest` is an immutable instance (`Core::$httpRequest`, `ViewContext::$httpRequest`); details, signatures and
   what is not covered in [docs/http-request/plan.md](../http-request/plan.md). Baseline: 525 -> 469 entries.
+
+### Step 3 (v4.30.0) – done
+
+- Session object: `Session` per request (`Core::$session`), `AuthSession`, `SessionCsrfTokenSource`, `FormContext`; the
+  static session classes, `FormNameRegistry`, the identifier registries and the guards of `AuthUser` / `Authenticator`
+  are gone; all data of yuf is below `$_SESSION['yuf']`. Details, layout and what is not covered in
+  [docs/session/plan.md](../session/plan.md). Baseline: 469 -> 447 entries.
+

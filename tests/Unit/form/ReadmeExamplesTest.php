@@ -18,15 +18,14 @@ use actra\yuf\form\component\field\PasswordField;
 use actra\yuf\form\component\field\TextField;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\rule\IntegerMinRule;
 use actra\yuf\form\rule\MinLengthRule;
 use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use actra\yuf\tests\Double\form\NoSpacesRule;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
-use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -35,19 +34,13 @@ use PHPUnit\Framework\TestCase;
  */
 final class ReadmeExamplesTest extends TestCase
 {
-    #[Override]
-    protected function setUp(): void
-    {
-        FormNameRegistry::reset();
-    }
-
     public function testFormExample(): void
     {
         $requiredError = HtmlText::fromHtml(html: 'Required');
         $form = new Form(
+            context: FormContextFactory::create(csrfTokenSource: new InMemoryCsrfTokenSource(token: 'token')),
             name: 'order',
             messages: FormMessages::german(),
-            csrfTokenSource: new InMemoryCsrfTokenSource(token: 'token'),
         );
         $name = new TextField(
             name: 'customer',
@@ -125,7 +118,10 @@ final class ReadmeExamplesTest extends TestCase
 
     public function testRequestDataExample(): void
     {
-        $form = new Form(name: 'order', csrfTokenSource: new InMemoryCsrfTokenSource(token: 'token'));
+        $form = new Form(
+            context: FormContextFactory::create(csrfTokenSource: new InMemoryCsrfTokenSource(token: 'token')),
+            name: 'order',
+        );
         $form->addField(
             formField: new TextField(name: 'customer', label: HtmlText::fromHtml(html: 'Name')),
         );

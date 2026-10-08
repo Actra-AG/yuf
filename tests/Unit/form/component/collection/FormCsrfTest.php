@@ -13,10 +13,9 @@ use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\TextField;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
-use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -30,23 +29,17 @@ final class FormCsrfTest extends TestCase
 
     private static int $formCounter = 0;
 
-    #[Override]
-    protected function setUp(): void
-    {
-        FormNameRegistry::reset();
-    }
-
     private function createForm(
         bool $methodPost = true,
         FormMessages $messages = new FormMessages(),
         ?HtmlText $globalErrorMessage = null,
     ): Form {
         return new Form(
+            context: FormContextFactory::create(csrfTokenSource: new InMemoryCsrfTokenSource(token: 'expected-token')),
             name: 'csrfForm' . FormCsrfTest::$formCounter++,
             globalErrorMessage: $globalErrorMessage,
             methodPost: $methodPost,
             messages: $messages,
-            csrfTokenSource: new InMemoryCsrfTokenSource(token: 'expected-token'),
         );
     }
 

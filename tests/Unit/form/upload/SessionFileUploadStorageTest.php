@@ -13,6 +13,9 @@ use actra\yuf\clock\FixedClock;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\form\model\UploadInput;
 use actra\yuf\form\upload\SessionFileUploadStorage;
+use actra\yuf\session\ArraySessionStorage;
+use actra\yuf\session\Session;
+use actra\yuf\session\SessionSectionEnum;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use DateTimeImmutable;
 use DirectoryIterator;
@@ -20,24 +23,23 @@ use InvalidArgumentException;
 use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use stdClass;
 
 /**
- * Tested with a temp directory and a replaced `$_SESSION`. Not covered: a successful `store()`, because
- * `is_uploaded_file()` and `move_uploaded_file()` only accept files that PHP received in an HTTP upload of the current
- * request; the test checks that every other file is refused and left alone.
+ * Tested with a temp directory and an `ArraySessionStorage`; the file lists live in `yuf.uploads.<pointer>`. Not
+ * covered: a successful `store()`, because `is_uploaded_file()` and `move_uploaded_file()` only accept files that PHP
+ * received in an HTTP upload of the current request; the test checks that every other file is refused and left alone.
  */
 final class SessionFileUploadStorageTest extends TestCase
 {
     private string $rootDirectory;
-    /** @var array<array-key, mixed> */
-    private array $savedSession;
+    private ArraySessionStorage $storage;
+    private Session $session;
 
     #[Override]
     protected function setUp(): void
     {
-        $this->savedSession = $_SESSION ?? [];
-        $_SESSION = [];
+        $this->storage = new ArraySessionStorage();
+        $this->session = new Session(storage: $this->storage);
         $this->rootDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-upload-test-' . bin2hex(string: random_bytes(length: 8));
         mkdir(directory: $this->rootDirectory);
     }
@@ -45,7 +47,6 @@ final class SessionFileUploadStorageTest extends TestCase
     #[Override]
     protected function tearDown(): void
     {
-        $_SESSION = $this->savedSession;
         $this->removeTree(path: $this->rootDirectory);
     }
 
@@ -68,9 +69,17 @@ final class SessionFileUploadStorageTest extends TestCase
         rmdir(directory: $path);
     }
 
+    /**
+     * @param array<array-key, mixed>|string|int|null $value
+     */
+    private function seedPointer(string $pointer, array|string|int|null $value): void
+    {
+        $this->session->setSection(section: SessionSectionEnum::UPLOADS, data: [$pointer => $value]);
+    }
+
     private function createStorage(): SessionFileUploadStorage
     {
-        return new SessionFileUploadStorage(rootDirectory: $this->rootDirectory);
+        return new SessionFileUploadStorage(session: $this->session, rootDirectory: $this->rootDirectory);
     }
 
     private function createStoredFile(
@@ -98,16 +107,21 @@ final class SessionFileUploadStorageTest extends TestCase
         $this->assertEquals([$file->getHash() => $file], $storage->load(pointer: 'ptr'));
     }
 
-    public function testFilesAreKeptInTheSessionUnderThePointerAsPlainArrays(): void
+    public function testStorageLayoutIsTheListOfPlainArraysUnderThePointerInTheUploadsSection(): void
     {
         $file = $this->createStoredFile();
 
         $this->createStorage()->save(pointer: 'ptr', files: [$file->getHash() => $file]);
 
-        $this->assertArrayHasKey('ptr', $_SESSION);
         $this->assertSame(
-            [['name' => 'a.txt', 'type' => 'text/plain', 'size' => 7, 'path' => $file->path]],
-            $_SESSION['ptr'],
+            [
+                'yuf' => [
+                    'uploads' => [
+                        'ptr' => [['name' => 'a.txt', 'type' => 'text/plain', 'size' => 7, 'path' => $file->path]],
+                    ],
+                ],
+            ],
+            $this->storage->all(),
         );
     }
 
@@ -118,7 +132,7 @@ final class SessionFileUploadStorageTest extends TestCase
 
     public function testNothingIsLoadedIfTheSessionEntryIsNoArray(): void
     {
-        $_SESSION['ptr'] = 'text';
+        $this->seedPointer(pointer: 'ptr', value: 'text');
 
         $this->assertSame([], $this->createStorage()->load(pointer: 'ptr'));
     }
@@ -151,7 +165,10 @@ final class SessionFileUploadStorageTest extends TestCase
     {
         $outsidePath = $this->rootDirectory . '-outside';
         file_put_contents(filename: $outsidePath, data: 'x');
-        $_SESSION['ptr'] = [['name' => 'a', 'type' => 't', 'size' => 1, 'path' => $outsidePath]];
+        $this->seedPointer(
+            pointer: 'ptr',
+            value: [['name' => 'a', 'type' => 't', 'size' => 1, 'path' => $outsidePath]],
+        );
 
         try {
             $this->assertSame([], $this->createStorage()->load(pointer: 'ptr'));
@@ -165,21 +182,20 @@ final class SessionFileUploadStorageTest extends TestCase
         $file = $this->createStoredFile();
         $traversal = $this->rootDirectory . DIRECTORY_SEPARATOR . 'ptr' . DIRECTORY_SEPARATOR . '..'
             . DIRECTORY_SEPARATOR . 'ptr' . DIRECTORY_SEPARATOR . 'php1';
-        $_SESSION['ptr'] = [['name' => 'a', 'type' => 't', 'size' => 1, 'path' => $traversal]];
+        $this->seedPointer(pointer: 'ptr', value: [['name' => 'a', 'type' => 't', 'size' => 1, 'path' => $traversal]]);
 
         $this->assertTrue(is_file(filename: $file->path));
         $this->assertSame([], $this->createStorage()->load(pointer: 'ptr'));
     }
 
     /**
-     * @return iterable<string, array{mixed}>
+     * @return iterable<string, array{array<array-key, mixed>|string|int|null}>
      */
     public static function brokenSessionEntryProvider(): iterable
     {
         yield 'string' => ['text'];
         yield 'int' => [5];
         yield 'null' => [null];
-        yield 'object (class of an older version)' => [new stdClass()];
         yield 'empty array' => [[]];
         yield 'missing path' => [['name' => 'a', 'type' => 't', 'size' => 1]];
         yield 'name is no string' => [['name' => 1, 'type' => 't', 'size' => 1, 'path' => '/x']];
@@ -187,10 +203,13 @@ final class SessionFileUploadStorageTest extends TestCase
         yield 'path is an array' => [['name' => 'a', 'type' => 't', 'size' => 1, 'path' => ['/x']]];
     }
 
+    /**
+     * @param array<array-key, mixed>|string|int|null $entry
+     */
     #[DataProvider('brokenSessionEntryProvider')]
-    public function testBrokenSessionEntryIsDropped(mixed $entry): void
+    public function testBrokenSessionEntryIsDropped(array|string|int|null $entry): void
     {
-        $_SESSION['ptr'] = [$entry];
+        $this->seedPointer(pointer: 'ptr', value: [$entry]);
 
         $this->assertSame([], $this->createStorage()->load(pointer: 'ptr'));
     }
@@ -262,7 +281,7 @@ final class SessionFileUploadStorageTest extends TestCase
         $storage->clear(pointer: 'ptr');
 
         $this->assertDirectoryDoesNotExist($this->rootDirectory . DIRECTORY_SEPARATOR . 'ptr');
-        $this->assertArrayNotHasKey('ptr', $_SESSION);
+        $this->assertSame([], $this->storage->all());
         $this->assertFileExists($other->path);
     }
 
@@ -299,6 +318,7 @@ final class SessionFileUploadStorageTest extends TestCase
         touch(filename: dirname(path: $beyondLimit->path), mtime: $now - $twoDays - 1);
 
         new SessionFileUploadStorage(
+            session: $this->session,
             rootDirectory: $this->rootDirectory,
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '@' . $now)),
         )->removeExpired();
@@ -322,7 +342,7 @@ final class SessionFileUploadStorageTest extends TestCase
     {
         $missingRoot = $this->rootDirectory . DIRECTORY_SEPARATOR . 'missing';
 
-        new SessionFileUploadStorage(rootDirectory: $missingRoot)->removeExpired();
+        new SessionFileUploadStorage(session: $this->session, rootDirectory: $missingRoot)->removeExpired();
 
         $this->assertDirectoryDoesNotExist($missingRoot);
     }
@@ -401,9 +421,13 @@ final class SessionFileUploadStorageTest extends TestCase
         file_put_contents(filename: $path, data: 'x');
 
         try {
-            $_SESSION['yufptr'] = [['name' => 'a', 'type' => 't', 'size' => 1, 'path' => $path]];
+            $this->seedPointer(
+                pointer: 'yufptr',
+                value: [['name' => 'a', 'type' => 't', 'size' => 1, 'path' => $path]],
+            );
 
             $this->assertCount(1, SessionFileUploadStorage::forHttpRequest(
+                session: $this->session,
                 httpRequest: HttpRequestFactory::create(serverName: $serverName),
             )->load(pointer: 'yufptr'));
         } finally {
@@ -419,6 +443,55 @@ final class SessionFileUploadStorageTest extends TestCase
     {
         $httpRequest = HttpRequestFactory::create(serverName: '');
 
-        $this->assertSame([], SessionFileUploadStorage::forHttpRequest(httpRequest: $httpRequest)->load(pointer: 'ptr'));
+        $this->assertSame(
+            [],
+            SessionFileUploadStorage::forHttpRequest(
+                session: $this->session,
+                httpRequest: $httpRequest,
+            )->load(pointer: 'ptr'),
+        );
+    }
+
+    /**
+     * Fix of v4.30.0: a pointer such as `table` or `csrftoken` overwrote the data of yuf (and `clear()` deleted it).
+     */
+    public function testPointerNamedLikeOtherSessionDataCannotCollideWithIt(): void
+    {
+        $this->session->setSection(section: SessionSectionEnum::TABLES, data: ['items' => ['sortColumn' => 'name']]);
+        $this->session->setSection(section: SessionSectionEnum::CSRF, data: ['token' => 'token']);
+        $this->session->set(key: 'tables', value: 'project data');
+        $storage = $this->createStorage();
+        $file = $this->createStoredFile(pointer: 'tables');
+
+        $storage->save(pointer: 'tables', files: [$file->getHash() => $file]);
+        $storage->clear(pointer: 'tables');
+
+        $this->assertSame(
+            ['items' => ['sortColumn' => 'name']],
+            $this->session->getSection(section: SessionSectionEnum::TABLES),
+        );
+        $this->assertSame(['token' => 'token'], $this->session->getSection(section: SessionSectionEnum::CSRF));
+        $this->assertSame('project data', $this->session->getString(key: 'tables'));
+        $this->assertSame([], $this->session->getSection(section: SessionSectionEnum::UPLOADS));
+    }
+
+    public function testSavingAPointerKeepsTheOtherPointers(): void
+    {
+        $storage = $this->createStorage();
+        $first = $this->createStoredFile(pointer: 'first');
+        $second = $this->createStoredFile(pointer: 'second');
+
+        $storage->save(pointer: 'first', files: [$first->getHash() => $first]);
+        $storage->save(pointer: 'second', files: [$second->getHash() => $second]);
+
+        $this->assertEquals([$first->getHash() => $first], $storage->load(pointer: 'first'));
+        $this->assertEquals([$second->getHash() => $second], $storage->load(pointer: 'second'));
+    }
+
+    public function testLoadingDoesNotWriteIntoTheSession(): void
+    {
+        $this->createStorage()->load(pointer: 'ptr');
+
+        $this->assertSame([], $this->storage->all());
     }
 }

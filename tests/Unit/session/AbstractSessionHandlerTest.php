@@ -9,92 +9,26 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\session;
 
+use actra\yuf\auth\AuthSession;
 use actra\yuf\clock\FixedClock;
-use actra\yuf\security\CsrfToken;
-use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\session\FileSessionHandler;
+use actra\yuf\session\NativeSessionStorage;
+use actra\yuf\session\Session;
 use actra\yuf\session\SessionSettings;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use DateTimeImmutable;
-use Override;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Session handler (docs/session/plan.md, step 1: characterization of the session behaviour before the redesign):
- * which keys `clearUserData()` keeps, the data of a started session and the protection against session fixation.
+ * Session handler: the data of a started session (`yuf.handler`) and the protection against session fixation. What
+ * `Session::clearUserData()` keeps is tested in `SessionTest`.
  */
 final class AbstractSessionHandlerTest extends TestCase
 {
     private const string SESSION_NAME = 'yufTestSession';
     private const string COOKIE_SESSION_ID = '0123456789abcdef0123456789abcdef';
     private const string REQUESTED_SESSION_ID = 'fedcba9876543210fedcba9876543210';
-    private const array DATA_WITHOUT_USER_DATA = [
-        'sessionCreated' => 1_790_000_000,
-        'trustedRemoteAddress' => '192.0.2.1',
-        'trustedUserAgent' => 'Browser',
-        'lastActivity' => 1_790_000_100,
-        'preferredLanguage' => 'de',
-    ];
-
-    #[Override]
-    protected function tearDown(): void
-    {
-        unset($_SESSION);
-    }
-
-    public function testClearUserDataRemovesUserData(): void
-    {
-        $_SESSION = AbstractSessionHandlerTest::DATA_WITHOUT_USER_DATA;
-        $_SESSION['auth_userSession'] = ['isLoggedIn' => true, 'authSessionId' => 5];
-        $_SESSION[CsrfToken::CSRFTOKENSTORAGE] = 'token';
-        $_SESSION['sess_breadcrumb'] = ['home' => ['title' => 'Home', 'link' => 'home']];
-
-        AbstractSessionHandler::clearUserData();
-
-        $this->assertSame(AbstractSessionHandlerTest::DATA_WITHOUT_USER_DATA, $_SESSION);
-    }
-
-    public function testClearUserDataRemovesTheStateOfTablesFiltersSearchAndUploads(): void
-    {
-        $_SESSION = AbstractSessionHandlerTest::DATA_WITHOUT_USER_DATA;
-        $_SESSION['table'] = ['items' => ['sort_column' => 'name', 'sort_direction' => 'DESC']];
-        $_SESSION['tableFilter'] = ['items' => ['key' => 'value']];
-        $_SESSION['columnFilter'] = ['items_name' => ['items_name' => 'ann']];
-        $_SESSION['searchHelper'] = ['users' => ['status' => 'active']];
-        $_SESSION['uploadPointer'] = [['name' => 'a.txt', 'type' => 'text/plain', 'size' => 7, 'path' => '/tmp/x']];
-
-        AbstractSessionHandler::clearUserData();
-
-        $this->assertSame(AbstractSessionHandlerTest::DATA_WITHOUT_USER_DATA, $_SESSION);
-    }
-
-    public function testClearUserDataKeepsOnlyTheHandlerKeysThatExist(): void
-    {
-        $_SESSION = ['sessionCreated' => 1_790_000_000, 'preferredLanguage' => 'de', 'other' => 'data'];
-
-        AbstractSessionHandler::clearUserData();
-
-        $this->assertSame(['sessionCreated' => 1_790_000_000, 'preferredLanguage' => 'de'], $_SESSION);
-    }
-
-    public function testClearUserDataKeepsSessionHandlerDataAndLanguage(): void
-    {
-        $_SESSION = AbstractSessionHandlerTest::DATA_WITHOUT_USER_DATA;
-
-        AbstractSessionHandler::clearUserData();
-
-        $this->assertSame(AbstractSessionHandlerTest::DATA_WITHOUT_USER_DATA, $_SESSION);
-    }
-
-    public function testClearUserDataDoesNothingWithoutSession(): void
-    {
-        unset($_SESSION);
-
-        AbstractSessionHandler::clearUserData();
-
-        $this->assertFalse(AbstractSessionHandler::enabled());
-    }
 
     /**
      * Regression test for session fixation: a session ID in the URL or the POST data must not replace the session ID
@@ -131,7 +65,7 @@ final class AbstractSessionHandlerTest extends TestCase
     }
 
     /**
-     * Today's layout of the data of the session handler in a new session: four top-level keys.
+     * The layout of the data of the session handler in a new session: four keys in `yuf.handler`.
      */
     #[RunInSeparateProcess]
     public function testNewSessionStartsWithTheDataOfTheSessionHandler(): void
@@ -161,10 +95,14 @@ final class AbstractSessionHandlerTest extends TestCase
 
         $this->assertSame(
             [
-                'sessionCreated' => 1_790_000_000,
-                'trustedRemoteAddress' => '192.0.2.1',
-                'trustedUserAgent' => 'Browser',
-                'lastActivity' => 1_790_000_000,
+                'yuf' => [
+                    'handler' => [
+                        'sessionCreated' => 1_790_000_000,
+                        'trustedRemoteAddress' => '192.0.2.1',
+                        'trustedUserAgent' => 'Browser',
+                        'lastActivity' => 1_790_000_000,
+                    ],
+                ],
             ],
             $session,
         );
@@ -179,8 +117,18 @@ final class AbstractSessionHandlerTest extends TestCase
         $savePath = $this->createSessionSavePath();
         file_put_contents(
             filename: $savePath . DIRECTORY_SEPARATOR . 'sess_' . AbstractSessionHandlerTest::COOKIE_SESSION_ID,
-            data: 'sessionCreated|i:1790000000;trustedRemoteAddress|s:9:"192.0.2.1";trustedUserAgent|s:7:"Browser";'
-            . 'lastActivity|i:1790000100;preferredLanguage|s:2:"de";table|a:1:{s:5:"items";a:0:{}}',
+            data: AbstractSessionHandlerTest::serialized(data: [
+                'yuf' => [
+                    'handler' => [
+                        'sessionCreated' => 1_790_000_000,
+                        'trustedRemoteAddress' => '192.0.2.1',
+                        'trustedUserAgent' => 'Browser',
+                        'lastActivity' => 1_790_000_100,
+                        'preferredLanguage' => 'de',
+                    ],
+                    'tables' => ['items' => []],
+                ],
+            ]),
         );
         $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
         $httpRequest = HttpRequestFactory::create(
@@ -206,15 +154,73 @@ final class AbstractSessionHandlerTest extends TestCase
 
         $this->assertSame(
             [
-                'sessionCreated' => 1_790_000_000,
-                'trustedRemoteAddress' => '192.0.2.1',
-                'trustedUserAgent' => 'Browser',
-                'lastActivity' => 1_790_000_200,
-                'preferredLanguage' => 'de',
-                'table' => ['items' => []],
+                'yuf' => [
+                    'handler' => [
+                        'sessionCreated' => 1_790_000_000,
+                        'trustedRemoteAddress' => '192.0.2.1',
+                        'trustedUserAgent' => 'Browser',
+                        'lastActivity' => 1_790_000_200,
+                        'preferredLanguage' => 'de',
+                    ],
+                    'tables' => ['items' => []],
+                ],
             ],
             $session,
         );
+    }
+
+    /**
+     * A session of yuf before v4.30.0 (top-level keys) is a new session for the handler: the login state and all other
+     * data of the old layout are not read, so the user has to log in again.
+     */
+    #[RunInSeparateProcess]
+    public function testSessionOfTheOldLayoutIsNotLoggedIn(): void
+    {
+        $savePath = $this->createSessionSavePath();
+        file_put_contents(
+            filename: $savePath . DIRECTORY_SEPARATOR . 'sess_' . AbstractSessionHandlerTest::COOKIE_SESSION_ID,
+            data: 'sessionCreated|i:1790000000;trustedRemoteAddress|s:9:"192.0.2.1";trustedUserAgent|s:7:"Browser";'
+            . 'lastActivity|i:1790000100;auth_userSession|a:2:{s:10:"isLoggedIn";b:1;s:13:"authSessionId";i:5;}',
+        );
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        $httpRequest = HttpRequestFactory::create(
+            headers: ['User-Agent' => 'Browser'],
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
+        );
+
+        try {
+            $sessionHandler = new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable(datetime: '@1790000200')),
+            );
+            $session = new Session(storage: new NativeSessionStorage(sessionHandler: $sessionHandler));
+            $isLoggedIn = new AuthSession(session: $session)->isLoggedIn();
+            $sessionCreated = $sessionHandler->getSessionCreated();
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertFalse($isLoggedIn);
+        $this->assertSame(1_790_000_200, $sessionCreated);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private static function serialized(array $data): string
+    {
+        $encoded = '';
+        foreach ($data as $key => $value) {
+            $encoded .= $key . '|' . serialize(value: $value);
+        }
+
+        return $encoded;
     }
 
     #[RunInSeparateProcess]

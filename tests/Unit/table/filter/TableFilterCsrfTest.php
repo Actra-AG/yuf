@@ -12,44 +12,43 @@ namespace actra\yuf\tests\Unit\table\filter;
 use actra\yuf\core\RequestMethodEnum;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
-use actra\yuf\security\CsrfToken;
+use actra\yuf\session\ArraySessionStorage;
+use actra\yuf\session\Session;
 use actra\yuf\table\filter\TableFilter;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
 use actra\yuf\tests\Double\table\FixedPageDbResultTable;
 use actra\yuf\tests\Double\table\RecordingTableFilterField;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
-use Override;
 use PHPUnit\Framework\TestCase;
 
 final class TableFilterCsrfTest extends TestCase
 {
     private static int $instanceCounter = 0;
 
-    #[Override]
-    protected function setUp(): void
-    {
-        $_SESSION = [CsrfToken::CSRFTOKENSTORAGE => 'expected-token'];
-    }
-
-    #[Override]
-    protected function tearDown(): void
-    {
-        unset($_SESSION); // Sessions are disabled in the CLI, the request handler checks that
-    }
-
     /**
      * @param array<string, string> $post
      * @param array<string, string> $query
      */
-    private function sendFilter(RequestMethodEnum $requestMethod, array $post, array $query = []): RecordingTableFilterField
-    {
+    private function sendFilter(
+        RequestMethodEnum $requestMethod,
+        array $post,
+        array $query = [],
+        bool $withCsrfTokenSource = true,
+    ): RecordingTableFilterField {
+        $session = new Session(storage: new ArraySessionStorage());
         $identifier = 'csrfFilter' . ++TableFilterCsrfTest::$instanceCounter;
         $httpRequest = HttpRequestFactory::create(
             method: $requestMethod,
             queryParameters: [$identifier => ''] + $query,
             postParameters: $post,
         );
-        $tableFilter = new TableFilter(identifier: $identifier, httpRequest: $httpRequest);
+        $tableFilter = new TableFilter(
+            identifier: $identifier,
+            httpRequest: $httpRequest,
+            session: $session,
+            csrfTokenSource: $withCsrfTokenSource ? new InMemoryCsrfTokenSource(token: 'expected-token') : null,
+        );
         $field = new RecordingTableFilterField(parentFilter: $tableFilter);
         $tableFilter->addPrimaryField(abstractTableFilterField: $field);
 
@@ -63,6 +62,7 @@ final class TableFilterCsrfTest extends TestCase
                     templateBaseDirectory: sys_get_temp_dir() . '/',
                 ),
                 httpRequest: $httpRequest,
+                session: $session,
                 totalAmount: 0,
                 currentPage: 1,
             ),
@@ -94,7 +94,25 @@ final class TableFilterCsrfTest extends TestCase
 
     public function testFilterWithTokenInTheUrlIsIgnored(): void
     {
-        $field = $this->sendFilter(requestMethod: RequestMethodEnum::GET, post: [], query: ['csrftoken' => 'expected-token']);
+        $field = $this->sendFilter(
+            requestMethod: RequestMethodEnum::GET,
+            post: [],
+            query: ['csrftoken' => 'expected-token'],
+        );
+
+        $this->assertFalse($field->inputChecked);
+    }
+
+    public function testWithoutTokenSourceAPostedFilterIsApplied(): void
+    {
+        $field = $this->sendFilter(requestMethod: RequestMethodEnum::POST, post: [], withCsrfTokenSource: false);
+
+        $this->assertTrue($field->inputChecked);
+    }
+
+    public function testWithoutTokenSourceAFilterInTheUrlIsStillIgnored(): void
+    {
+        $field = $this->sendFilter(requestMethod: RequestMethodEnum::GET, post: [], withCsrfTokenSource: false);
 
         $this->assertFalse($field->inputChecked);
     }

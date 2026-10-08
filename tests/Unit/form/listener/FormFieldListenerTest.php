@@ -12,11 +12,10 @@ namespace actra\yuf\tests\Unit\form\listener;
 use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\TextField;
 use actra\yuf\form\FormInput;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use actra\yuf\tests\Double\form\RecordingFieldListener;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
-use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -24,15 +23,12 @@ use PHPUnit\Framework\TestCase;
  */
 final class FormFieldListenerTest extends TestCase
 {
-    #[Override]
-    protected function setUp(): void
-    {
-        FormNameRegistry::reset();
-    }
-
     private function createField(RecordingFieldListener $listener, bool $required = false): TextField
     {
-        $form = new Form(name: 'listenerForm', csrfTokenSource: new InMemoryCsrfTokenSource(token: 'tok'));
+        $form = new Form(
+            context: FormContextFactory::create(csrfTokenSource: new InMemoryCsrfTokenSource(token: 'tok')),
+            name: 'listenerForm',
+        );
         $field = new TextField(
             name: 'field',
             label: HtmlText::fromHtml(html: 'Field'),

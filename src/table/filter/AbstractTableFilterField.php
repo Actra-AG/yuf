@@ -13,17 +13,17 @@ use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQueryData;
 use actra\yuf\html\HtmlDataObject;
 use actra\yuf\html\HtmlText;
-use actra\yuf\table\table\DbResultTable;
-use LogicException;
+use actra\yuf\session\SessionSectionEnum;
+use actra\yuf\table\TableSessionState;
 
+/**
+ * The identifier of the field is `<filter identifier>_<field identifier>` and must be unique per page.
+ */
 abstract class AbstractTableFilterField
 {
-    private const string SESSION_DATA_TYPE = 'columnFilter';
-
-    /** @var AbstractTableFilterField[] */
-    private static array $instances = [];
     public readonly string $identifier;
     protected readonly HttpRequest $httpRequest;
+    private readonly TableSessionState $state;
 
     protected function __construct(
         TableFilter $parentFilter,
@@ -31,15 +31,13 @@ abstract class AbstractTableFilterField
         private readonly HtmlText $label,
         protected readonly bool $highlightFieldIfSelected,
     ) {
-        $uniqueIdentifier = $parentFilter->identifier . '_' . $filterFieldIdentifier;
-        if (array_key_exists(key: $uniqueIdentifier, array: AbstractTableFilterField::$instances)) {
-            throw new LogicException(
-                message: 'There is already a column filter with the same identifier ' . $uniqueIdentifier,
-            );
-        }
-        $this->identifier = $uniqueIdentifier;
+        $this->identifier = $parentFilter->identifier . '_' . $filterFieldIdentifier;
         $this->httpRequest = $parentFilter->httpRequest;
-        AbstractTableFilterField::$instances[$uniqueIdentifier] = $this;
+        $this->state = new TableSessionState(
+            session: $parentFilter->session,
+            section: SessionSectionEnum::TABLE_FILTERS,
+            group: TableSessionState::GROUP_FIELDS,
+        );
     }
 
     public function render(): HtmlDataObject
@@ -70,20 +68,15 @@ abstract class AbstractTableFilterField
 
     protected function getFromSession(string $index): ?string
     {
-        return DbResultTable::getFromSession(
-            dataType: AbstractTableFilterField::SESSION_DATA_TYPE,
-            identifier: $this->identifier,
-            index: $index,
-        );
+        return $this->state->get(identifier: $this->identifier, index: $index);
     }
 
     protected function saveToSession(string $index, string $value): void
     {
-        DbResultTable::saveToSession(
-            dataType: AbstractTableFilterField::SESSION_DATA_TYPE,
-            identifier: $this->identifier,
-            index: $index,
-            value: $value,
-        );
+        // A cleared value is the same as no value: nothing to store
+        if ($value === '' && $this->getFromSession(index: $index) === null) {
+            return;
+        }
+        $this->state->set(identifier: $this->identifier, index: $index, value: $value);
     }
 }

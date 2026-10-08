@@ -13,10 +13,9 @@ use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\RadioOptionsField;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
-use Override;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use PHPUnit\Framework\TestCase;
 
 final class RadioOptionsFieldValueTest extends TestCase
@@ -34,12 +33,6 @@ final class RadioOptionsFieldValueTest extends TestCase
             initialValue: $initialValue,
             requiredError: $requiredError,
         );
-    }
-
-    #[Override]
-    protected function setUp(): void
-    {
-        FormNameRegistry::reset();
     }
 
     public function testValueIsEmptyAfterConstructionWithoutValue(): void
@@ -131,7 +124,11 @@ final class RadioOptionsFieldValueTest extends TestCase
 
     public function testDefaultRequiredTextIsTakenFromTheMessagesOfTheForm(): void
     {
-        $form = new Form(name: 'radioGermanForm', messages: FormMessages::german());
+        $form = new Form(
+            context: FormContextFactory::create(),
+            name: 'radioGermanForm',
+            messages: FormMessages::german(),
+        );
         $field = $this->createField();
         $form->addField(formField: $field);
 
@@ -160,6 +157,7 @@ final class RadioOptionsFieldValueTest extends TestCase
     public function testUnknownOptionMessageUsesTheMessagesOfTheForm(): void
     {
         $form = new Form(
+            context: FormContextFactory::create(),
             name: 'radioCustomForm',
             messages: new FormMessages(invalidOption: 'Bad option in [field]!'),
         );

@@ -14,17 +14,20 @@ use actra\yuf\core\RequestMethodEnum;
 use actra\yuf\html\HtmlDataObjectCollection;
 use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\html\HtmlSnippet;
-use actra\yuf\security\CsrfToken;
+use actra\yuf\security\CsrfHiddenFieldRenderer;
+use actra\yuf\security\CsrfTokenSource;
+use actra\yuf\session\Session;
+use actra\yuf\session\SessionSectionEnum;
 use actra\yuf\table\table\DbResultTable;
+use actra\yuf\table\TableSessionState;
 use actra\yuf\template\TemplateEngine;
-use LogicException;
 
+/**
+ * The identifier of a filter and the identifiers of its fields must be unique per page (they are the keys of the
+ * state in the session). Without CSRF token source (no session), the input is accepted without token.
+ */
 class TableFilter
 {
-    private const string SESSION_DATA_TYPE = 'tableFilter';
-    /** @var TableFilter[] */
-    private static array $instances = [];
-
     public private(set) bool $filtersApplied = false;
     /** @var AbstractTableFilterField[] $allFilterFields */
     public private(set) array $allFilterFields = [];
@@ -32,20 +35,29 @@ class TableFilter
     private array $primaryFields = [];
     /** @var AbstractTableFilterField[] $secondaryFields */
     private array $secondaryFields = [];
+    private readonly TableSessionState $state;
 
+    /**
+     * @param Session $session Keeps the values of the filter fields (`ViewContext::$session`)
+     * @param ?CsrfTokenSource $csrfTokenSource Protects the filter form (`ViewContext::$formContext`); `null` without
+     *                                          session: the input is accepted without token
+     */
     public function __construct(
         public readonly string $identifier,
         public readonly HttpRequest $httpRequest,
+        public readonly Session $session,
+        private readonly ?CsrfTokenSource $csrfTokenSource,
         private readonly bool $showLegend = true,
         private readonly string $resetParameter = 'reset',
         private readonly ?string $individualHtmlSnippetPath = null,
         private readonly string $submitButtonLabel = 'Filter anwenden',
         private readonly string $resetLinkLabel = 'Filter zurücksetzen',
     ) {
-        if (array_key_exists(key: $identifier, array: TableFilter::$instances)) {
-            throw new LogicException(message: 'There is already a filter with the same identifier ' . $identifier);
-        }
-        TableFilter::$instances[$identifier] = $this;
+        $this->state = new TableSessionState(
+            session: $session,
+            section: SessionSectionEnum::TABLE_FILTERS,
+            group: TableSessionState::GROUP_FILTERS,
+        );
     }
 
     public function validate(DbResultTable $dbResultTable): void
@@ -53,7 +65,7 @@ class TableFilter
         if ($this->httpRequest->getQueryString(name: $this->resetParameter) !== null) {
             $this->reset(dbResultTable: $dbResultTable);
         }
-        if ($this->httpRequest->getQueryString(name: $this->identifier) !== null && $this->hasValidCsrfToken()) {
+        if ($this->httpRequest->getQueryString(name: $this->identifier) !== null && $this->isInputAccepted()) {
             $this->reset(dbResultTable: $dbResultTable);
             $this->checkInput();
         }
@@ -62,16 +74,19 @@ class TableFilter
 
     /**
      * The filter input is only accepted from the filter form: a POST request with the CSRF token of the user in the
-     * posted data (never from the URL). Otherwise, the previous filter stays.
+     * posted data (never from the URL; not needed without CSRF token source). Otherwise, the previous filter stays.
      */
-    private function hasValidCsrfToken(): bool
+    private function isInputAccepted(): bool
     {
         if ($this->httpRequest->getMethod() !== RequestMethodEnum::POST) {
             return false;
         }
-        $token = $this->httpRequest->getPostString(name: CsrfToken::getFieldName());
+        if ($this->csrfTokenSource === null) {
+            return true;
+        }
+        $token = $this->httpRequest->getPostString(name: CsrfTokenSource::FIELD_NAME);
 
-        return $token !== null && CsrfToken::validateToken(token: $token);
+        return $token !== null && $this->csrfTokenSource->isValid(token: $token);
     }
 
     protected function reset(DbResultTable $dbResultTable): void
@@ -153,7 +168,10 @@ class TableFilter
             identifier: 'formAction',
             html: '?' . $this->identifier . '&' . DbResultTable::PARAM_FIND,
         );
-        $replacements->addHtml(identifier: 'csrfField', html: CsrfToken::renderAsHiddenPostField());
+        $replacements->addHtml(
+            identifier: 'csrfField',
+            html: CsrfHiddenFieldRenderer::render(csrfTokenSource: $this->csrfTokenSource),
+        );
         $primaryFields = new HtmlDataObjectCollection();
         foreach ($this->primaryFields as $abstractTableFilterField) {
             $primaryFields->add(htmlDataObject: $abstractTableFilterField->render());
@@ -194,20 +212,11 @@ class TableFilter
 
     protected function getFromSession(string $index): ?string
     {
-        return DbResultTable::getFromSession(
-            dataType: TableFilter::SESSION_DATA_TYPE,
-            identifier: $this->identifier,
-            index: $index,
-        );
+        return $this->state->get(identifier: $this->identifier, index: $index);
     }
 
     protected function saveToSession(string $index, string $value): void
     {
-        DbResultTable::saveToSession(
-            dataType: TableFilter::SESSION_DATA_TYPE,
-            identifier: $this->identifier,
-            index: $index,
-            value: $value,
-        );
+        $this->state->set(identifier: $this->identifier, index: $index, value: $value);
     }
 }

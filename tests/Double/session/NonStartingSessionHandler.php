@@ -11,13 +11,10 @@ namespace actra\yuf\tests\Double\session;
 
 use actra\yuf\session\AbstractSessionHandler;
 use Override;
-use ReflectionProperty;
 
 /**
- * A session handler that does not start a session and only counts the regenerations of the session ID. Code that
- * reaches the handler through the static `AbstractSessionHandler::getSessionHandler()` needs it registered: call
- * `install()` in `setUp()` and `uninstall()` in `tearDown()` (removed with the static handler holder in
- * docs/session/plan.md, step 2).
+ * A session handler that does not start a session: for `NativeSessionStorage` tests, which only need its ID and the
+ * regeneration.
  */
 final class NonStartingSessionHandler extends AbstractSessionHandler
 {
@@ -28,30 +25,14 @@ final class NonStartingSessionHandler extends AbstractSessionHandler
      */
     public function __construct() {} // @phpstan-ignore constructor.missingParentCall (the parent starts a session)
 
-    /**
-     * Registers a new handler in the static holder of `AbstractSessionHandler` (through reflection, because the
-     * holder has no reset method).
-     */
-    public static function install(): NonStartingSessionHandler
-    {
-        $sessionHandler = new NonStartingSessionHandler();
-        NonStartingSessionHandler::holder()->setValue(null, $sessionHandler);
-
-        return $sessionHandler;
-    }
-
-    public static function uninstall(): void
-    {
-        NonStartingSessionHandler::holder()->setValue(null, null);
-    }
-
-    private static function holder(): ReflectionProperty
-    {
-        return new ReflectionProperty(class: AbstractSessionHandler::class, property: 'abstractSessionHandler');
-    }
-
     #[Override]
     protected function executePreStartActions(): void {}
+
+    #[Override]
+    public function getId(): string
+    {
+        return 'native-test-session-' . $this->regenerations;
+    }
 
     #[Override]
     public function regenerateId(): void

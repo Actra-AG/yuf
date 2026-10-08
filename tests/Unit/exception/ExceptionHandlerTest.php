@@ -17,6 +17,9 @@ use actra\yuf\exception\ExceptionHandler;
 use actra\yuf\exception\ExceptionHandlerContext;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CspPolicySettings;
+use actra\yuf\security\SessionCsrfTokenSource;
+use actra\yuf\session\ArraySessionStorage;
+use actra\yuf\session\Session;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\core\RecordingLogger;
 use actra\yuf\tests\Double\exception\ContextExposingExceptionHandler;
@@ -125,5 +128,26 @@ final class ExceptionHandlerTest extends TestCase
         $this->expectException(LogicException::class);
         $this->expectExceptionMessageIs('The content handler is already set.');
         $handler->setContentHandler(contentHandler: $contentHandler);
+    }
+
+    public function testSetSessionTwiceThrows(): void
+    {
+        $handler = ExceptionHandler::register(individualExceptionHandler: null, context: $this->createContext());
+        $handler->setSession(session: null, csrfTokenSource: null);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIs('The session is already set.');
+        $handler->setSession(session: null, csrfTokenSource: null);
+    }
+
+    public function testSetSessionAcceptsASessionOnce(): void
+    {
+        $handler = ExceptionHandler::register(individualExceptionHandler: null, context: $this->createContext());
+        $session = new Session(storage: new ArraySessionStorage());
+
+        $handler->setSession(session: $session, csrfTokenSource: new SessionCsrfTokenSource(session: $session));
+
+        $this->expectException(LogicException::class);
+        $handler->setSession(session: $session, csrfTokenSource: null);
     }
 }

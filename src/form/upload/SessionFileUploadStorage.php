@@ -14,13 +14,16 @@ use actra\yuf\clock\SystemClock;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\form\model\UploadInput;
+use actra\yuf\session\Session;
+use actra\yuf\session\SessionSectionEnum;
 use DirectoryIterator;
 use InvalidArgumentException;
 use Override;
 
 /**
  * Keeps the uploaded files in a directory below the temp directory (one directory per pointer) and the list of the
- * files in `$_SESSION[pointer]`. It is the only form class that touches the session, the file system and the clock.
+ * files in the session (`yuf.uploads.<pointer>`, so a pointer cannot overwrite other session data). It is the only
+ * form class that touches the session, the file system and the clock.
  *
  * Not unit tested: `store()` needs a real upload (`is_uploaded_file()` and `move_uploaded_file()` refuse every other
  * file). Everything else is tested with a temp directory.
@@ -30,16 +33,22 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
     private const int MAX_AGE_IN_SECONDS = 60 * 60 * 24 * 2;
 
     /**
+     * @param Session $session Keeps the list of the files of every pointer (`ViewContext::$session`)
      * @param string $rootDirectory The directory that contains one subdirectory per pointer (created when needed)
      * @param Clock $clock Decides which directories are expired
      */
-    public function __construct(private string $rootDirectory, private Clock $clock = new SystemClock()) {}
+    public function __construct(
+        private Session $session,
+        private string $rootDirectory,
+        private Clock $clock = new SystemClock(),
+    ) {}
 
     /**
      * The storage below `<temp directory>/<SERVER_NAME>`, as in yuf v3. Characters of the server name that are not
      * allowed in a directory name are replaced (the name can be derived from the `Host` header).
      */
     public static function forHttpRequest(
+        Session $session,
         HttpRequest $httpRequest,
         Clock $clock = new SystemClock(),
     ): SessionFileUploadStorage {
@@ -53,6 +62,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
         }
 
         return new SessionFileUploadStorage(
+            session: $session,
             rootDirectory: sys_get_temp_dir() . DIRECTORY_SEPARATOR . $directoryName,
             clock: $clock,
         );
@@ -62,7 +72,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
     public function load(string $pointer): array
     {
         $this->assertValidPointer(pointer: $pointer);
-        $storedFiles = $_SESSION[$pointer] ?? null;
+        $storedFiles = $this->session->getSection(section: SessionSectionEnum::UPLOADS)[$pointer] ?? null;
         if (!is_array(value: $storedFiles)) {
             return [];
         }
@@ -90,7 +100,10 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
                 'path' => $file->path,
             ];
         }
-        $_SESSION[$pointer] = $storedFiles;
+        $this->session->setSection(
+            section: SessionSectionEnum::UPLOADS,
+            data: [...$this->session->getSection(section: SessionSectionEnum::UPLOADS), $pointer => $storedFiles],
+        );
     }
 
     #[Override]
@@ -137,7 +150,9 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
         if (is_dir(filename: $directory)) {
             $this->removeDirectory(path: $directory);
         }
-        unset($_SESSION[$pointer]);
+        $uploads = $this->session->getSection(section: SessionSectionEnum::UPLOADS);
+        unset($uploads[$pointer]);
+        $this->session->setSection(section: SessionSectionEnum::UPLOADS, data: $uploads);
     }
 
     #[Override]

@@ -32,23 +32,20 @@ State after v4.29.0 (532 at v4.27.0; `HttpRequest` as instance removed 56, v4.28
 
 ## Static state (`php.md`, section 1)
 
-- 21 static properties (v4.29.0: the caches of `HttpRequest`, `RequestBody::$data` and the `SearchHelper` registry are gone).
+- 13 static properties (v4.29.0: the caches of `HttpRequest`, `RequestBody::$data` and the `SearchHelper` registry are gone;
+  v4.30.0: the session holder, `FormNameRegistry`, the identifier registries and the guards of `AuthUser` and `Authenticator`).
 - Kept on purpose so far (see `plan.md`, step 10 "Stays" and "Later"):
     - `Core::get()`, `LocaleHandler::get()` / `register()` / `isRegistered()` and `CoreTestInstance` are gone (v4.26.0):
       the template engine, `HtmlSnippet` and `LogFile` get what they need as arguments; `Core` keeps a private guard
       against a second instance (`$isInitialized`);
-    - session: `AbstractSessionHandler::getSessionHandler()` / `enabled()`, `AuthSession`, `CsrfToken`,
-      `FormNameRegistry`;
     - `FrameworkDb::getInstance()` (connection pool);
-    - identifier registries of `SmartTable`, `TableFilter`, `AbstractTableFilterField`;
-    - caches: `PhoneMetaData`, `PhoneParser`, `AbstractCurlRequest`, `DbQueryLogList`;
-    - single-instance guards of `AuthUser` and `Authenticator`.
-- `$GLOBALS`: once, in `AbstractSessionHandler::enabled()`.
+    - caches: `PhoneMetaData`, `PhoneParser`, `AbstractCurlRequest`, `DbQueryLogList`.
+- `$GLOBALS`: none (removed in v4.30.0 with `AbstractSessionHandler::enabled()`).
 - `HttpRequest` is an instance since v4.29.0 ([docs/http-request/plan.md](../http-request/plan.md)): the request
   superglobals (`$_GET`, `$_POST`, `$_SERVER`, `$_COOKIE`, `$_FILES`) are only read in `HttpRequest::fromGlobals()`, in
   `Core` (`$_SERVER['DOCUMENT_ROOT']`) and in `AbstractSessionHandler` (removes an invalid session cookie from
-  `$_COOKIE`, because `session_start()` reads it from there). `$_SESSION` is read in the session users (the session
-  object redesign, step 3).
+  `$_COOKIE`, because `session_start()` reads it from there). `$_SESSION` is only touched in `NativeSessionStorage` and
+  `AbstractSessionHandler` since v4.30.0 ([docs/session/plan.md](../session/plan.md)); projects use `Session`.
 
 ## Explicit comparisons (`php.md`, section 5)
 
@@ -78,9 +75,8 @@ State after v4.29.0 (532 at v4.27.0; `HttpRequest` as instance removed 56, v4.28
 
 ## Structure and separation (`php.md`, section 1)
 
-- Session object instead of the static session classes; see
-  [docs/standard-completion/plan.md](../standard-completion/plan.md). `LogFile` is an instance class since v4.28.0,
-  `HttpRequest` since v4.29.0.
+- `LogFile` is an instance class since v4.28.0, `HttpRequest` since v4.29.0, the session (`Session`, `AuthSession`,
+  `SessionCsrfTokenSource`, `FormContext`) since v4.30.0; no redesign of static state is open any more.
 - Logic mixed with I/O, e.g. `HtmlDocument` and `ExceptionHandler` (render and read files), `Core` (reads the env file,
   creates directories).
 
@@ -89,4 +85,4 @@ State after v4.29.0 (532 at v4.27.0; `HttpRequest` as instance removed 56, v4.28
 - Not covered: `Core::__construct()` and `prepareHttpResponse()` (the request pipeline is testable with a built
   `HttpRequest` since v4.29.0, but `Core` is a singleton that reads the env file), `HtmlDocument`, redirects, `ExceptionHandler::handleException()` (ends
   with `exit`), the SSO logging of `MicrosoftAuthenticator`.
-- Reflection to reset static state: `AuthSessionTest`, `AuthenticatorTest`, `ExceptionHandlerTest`.
+- Reflection to reset static state: `ExceptionHandlerTest` (the session tests have none since v4.30.0).

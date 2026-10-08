@@ -11,34 +11,32 @@ namespace actra\yuf\tests\Unit\common;
 
 use actra\yuf\common\SearchHelper;
 use actra\yuf\core\InputSourceEnum;
-use actra\yuf\session\AbstractSessionHandler;
+use actra\yuf\session\ArraySessionStorage;
+use actra\yuf\session\Session;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Characterization of the session behaviour before the redesign (docs/session/plan.md, step 1): what a
- * `SearchHelper` remembers across requests and when it forgets it. `SearchHelperRequestTest` covers where the input
- * comes from and the basics; this class adds the edge cases and the storage layout.
+ * What a `SearchHelper` remembers across requests (in `yuf.search.<instance name>`) and when it forgets it.
+ * `SearchHelperRequestTest` covers where the input comes from and the basics; this class adds the edge cases and the
+ * storage layout. Defaults are returned but not written: only what the user chose is remembered.
  *
- * A request is simulated by creating a helper with the `$_SESSION` of the previous request. The behaviour tests only
- * use `helper()` and the return values; the key `searchHelper` and the value shapes are pinned in
- * `testStorageLayout…()` only (they may change in step 2).
+ * A request is simulated by creating a helper with the session of the previous request. The behaviour tests only
+ * use `helper()` and the return values; the value shapes are pinned in `testStorageLayout…()` only.
  */
 final class SearchHelperSessionTest extends TestCase
 {
     private const array RANGE = ['minDate' => '2026-01-01', 'maxDate' => '2026-12-31'];
 
+    private ArraySessionStorage $storage;
+    private Session $session;
+
     #[Override]
     protected function setUp(): void
     {
-        $_SESSION = [];
-    }
-
-    #[Override]
-    protected function tearDown(): void
-    {
-        unset($_SESSION); // Sessions are disabled in the CLI
+        $this->storage = new ArraySessionStorage();
+        $this->session = new Session(storage: $this->storage);
     }
 
     /**
@@ -51,10 +49,11 @@ final class SearchHelperSessionTest extends TestCase
             instanceName: $instanceName,
             httpRequest: HttpRequestFactory::create(queryParameters: $query, postParameters: $post),
             valueSource: InputSourceEnum::POST,
+            session: $this->session,
         );
     }
 
-    public function testStorageLayoutIsOneArrayPerInstanceBelowTheKeySearchHelper(): void
+    public function testStorageLayoutIsOneArrayPerInstanceInTheSearchSection(): void
     {
         $this->helper(post: ['status' => 'active'])->checkString(fieldName: 'status');
         $this->helper(post: ['level' => 'b'])->checkFilter(array: ['a' => 'A', 'b' => 'B'], fieldName: 'level');
@@ -70,37 +69,60 @@ final class SearchHelperSessionTest extends TestCase
 
         $this->assertSame(
             [
-                'searchHelper' => [
-                    'users' => [
-                        'status' => 'active',
-                        'level' => 'b',
-                        'groups' => [1, '7'],
-                        'from' => '01.03.2026',
-                        'to' => '30.04.2026',
+                'yuf' => [
+                    'search' => [
+                        'users' => [
+                            'status' => 'active',
+                            'level' => 'b',
+                            'groups' => [1, '7'],
+                            'from' => '01.03.2026',
+                            'to' => '30.04.2026',
+                        ],
                     ],
                 ],
             ],
-            $_SESSION,
+            $this->storage->all(),
         );
     }
 
-    public function testStorageLayoutOfAFieldWithoutInputIsTheDefaultWrittenOnRead(): void
+    /**
+     * Fix of v4.30.0: before, the defaults were written on the first read.
+     */
+    public function testFieldsWithoutInputWriteNothingIntoTheSession(): void
     {
-        $this->helper()->checkString(fieldName: 'status', default: 'all');
-        $this->helper()->checkMultiFilter(array: [], fieldName: 'groups', default: [3]);
-
-        $this->assertSame(['searchHelper' => ['users' => ['status' => 'all', 'groups' => [3]]]], $_SESSION);
-    }
-
-    public function testStorageLayoutOfTheDateRangeWithoutInputIsTheWholeRangeInTheDisplayFormat(): void
-    {
-        $this->helper()->checkDateRangeFilter(
+        $this->assertSame('all', $this->helper()->checkString(fieldName: 'status', default: 'all'));
+        $this->assertSame([3], $this->helper()->checkMultiFilter(array: [], fieldName: 'groups', default: [3]));
+        $this->assertSame('a', $this->helper()->checkFilter(array: ['a' => 'A'], fieldName: 'level', default: 'a'));
+        $range = $this->helper()->checkDateRangeFilter(
             dateRange: SearchHelperSessionTest::RANGE,
             fromField: 'from',
             toField: 'to',
         );
 
-        $this->assertSame(['searchHelper' => ['users' => ['from' => '01.01.2026', 'to' => '31.12.2026']]], $_SESSION);
+        $this->assertSame('2026-01-01', $range['dateFrom']->format(format: 'Y-m-d'));
+        $this->assertSame('2026-12-31', $range['dateTo']->format(format: 'Y-m-d'));
+        $this->assertSame([], $this->storage->all());
+    }
+
+    public function testStorageLayoutOfTheDateRangeIsTheDisplayFormatOfTheChosenDates(): void
+    {
+        $this->helper(post: ['from' => '2026-03-01'])->checkDateRangeFilter(
+            dateRange: SearchHelperSessionTest::RANGE,
+            fromField: 'from',
+            toField: 'to',
+        );
+
+        $this->assertSame(['yuf' => ['search' => ['users' => ['from' => '01.03.2026']]]], $this->storage->all());
+    }
+
+    public function testReadingARememberedValueDoesNotChangeTheSession(): void
+    {
+        $this->helper(post: ['status' => 'active'])->checkString(fieldName: 'status');
+        $before = $this->storage->all();
+
+        $this->helper()->checkString(fieldName: 'status');
+
+        $this->assertSame($before, $this->storage->all());
     }
 
     public function testValueIsRememberedForTheNextRequests(): void
@@ -127,11 +149,17 @@ final class SearchHelperSessionTest extends TestCase
         $this->assertSame('', $this->helper()->checkString(fieldName: 'status', default: 'all'));
     }
 
+    /**
+     * Decision of v4.30.0: a default is not remembered, so a changed default applies until the user chose a value.
+     */
     public function testDefaultIsOnlyUsedWhenNothingIsRemembered(): void
     {
-        $this->helper()->checkString(fieldName: 'status', default: 'all');
+        $this->assertSame('all', $this->helper()->checkString(fieldName: 'status', default: 'all'));
+        $this->assertSame('other', $this->helper()->checkString(fieldName: 'status', default: 'other'));
 
-        $this->assertSame('all', $this->helper()->checkString(fieldName: 'status', default: 'other'));
+        $this->helper(post: ['status' => 'active'])->checkString(fieldName: 'status', default: 'all');
+
+        $this->assertSame('active', $this->helper()->checkString(fieldName: 'status', default: 'other'));
     }
 
     public function testValuesAreKeptPerInstanceAndField(): void
@@ -267,7 +295,7 @@ final class SearchHelperSessionTest extends TestCase
     {
         $this->helper(post: ['status' => 'active'])->checkString(fieldName: 'status');
 
-        AbstractSessionHandler::clearUserData();
+        $this->session->clearUserData();
 
         $this->assertSame('', $this->helper()->checkString(fieldName: 'status'));
     }
@@ -275,20 +303,8 @@ final class SearchHelperSessionTest extends TestCase
     public function testValuesOfAnotherSessionAreNotVisible(): void
     {
         $this->helper(post: ['status' => 'active'])->checkString(fieldName: 'status');
-        $_SESSION = [];
+        $this->storage->replaceAll(data: []);
 
         $this->assertSame('', $this->helper()->checkString(fieldName: 'status'));
-    }
-
-    public function testWithoutSessionTheValuesAreOnlyKnownWithinTheRequest(): void
-    {
-        unset($_SESSION);
-
-        $value = $this->helper(post: ['status' => 'active'])->checkString(fieldName: 'status', default: 'all');
-        unset($_SESSION); // the next request starts without the data of this one
-        $next = $this->helper()->checkString(fieldName: 'status', default: 'all');
-
-        $this->assertSame('active', $value);
-        $this->assertSame('all', $next);
     }
 }

@@ -13,9 +13,8 @@ use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\BooleanField;
 use actra\yuf\form\component\layout\CheckboxOptionsLayoutEnum;
 use actra\yuf\form\FormInput;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
-use Override;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -26,12 +25,6 @@ use PHPUnit\Framework\TestCase;
 final class BooleanFieldV3MarkupTest extends TestCase
 {
     private static int $formCounter = 0;
-
-    #[Override]
-    protected function setUp(): void
-    {
-        FormNameRegistry::reset();
-    }
 
     /**
      * @return iterable<string, array{CheckboxOptionsLayoutEnum, bool, string}>
@@ -84,7 +77,7 @@ final class BooleanFieldV3MarkupTest extends TestCase
     public function testFormMarkupIsTheMarkupOfV3(CheckboxOptionsLayoutEnum $layout, bool $checked, string $expected): void
     {
         $formName = 'booleanMarkupForm' . BooleanFieldV3MarkupTest::$formCounter++;
-        $form = new Form(name: $formName);
+        $form = new Form(context: FormContextFactory::create(), name: $formName);
         $field = new BooleanField(
             name: 'bo',
             label: HtmlText::fromHtml(html: 'L'),

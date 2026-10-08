@@ -14,58 +14,53 @@ use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\RequestHandler;
 use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
-use actra\yuf\session\AbstractSessionHandler;
+use actra\yuf\session\ArraySessionStorage;
+use actra\yuf\session\Session;
+use actra\yuf\session\SessionPreferredLanguage;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
-use actra\yuf\tests\Double\session\NonStartingSessionHandler;
 use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Characterization of the session behaviour before the redesign (docs/session/plan.md, step 1): the preferred
- * language of the user, written by `RequestHandler::resolveRoute()` and kept by the session handler. The behaviour
- * tests only use `seedPreferredLanguage()` and `storedPreferredLanguage()`; the key is pinned in
- * `testStorageLayout…()` only (it may change in step 2).
+ * The preferred language of the user: written by `RequestHandler::resolveRoute()` for routes with an explicit
+ * language and kept in the data of the session handler (`yuf.handler.preferredLanguage`), so it survives
+ * `Session::clearUserData()`.
  *
  * Not covered: the redirect of "/" to the route of the preferred language (`HttpResponse::redirectAndExit()` exits).
- * The registered session handler is a stand-in that does not start a session (`NonStartingSessionHandler`, registered
- * through reflection; removed in step 2).
  */
 final class RequestHandlerPreferredLanguageTest extends TestCase
 {
     private Language $german;
     private Language $english;
+    private ArraySessionStorage $storage;
+    private Session $session;
 
     #[Override]
     protected function setUp(): void
     {
         $this->german = new Language(code: 'de', locale: 'de_CH.UTF-8');
         $this->english = new Language(code: 'en', locale: 'en_US.UTF-8');
-        $_SESSION = [];
-        NonStartingSessionHandler::install();
-    }
-
-    #[Override]
-    protected function tearDown(): void
-    {
-        NonStartingSessionHandler::uninstall();
-        unset($_SESSION); // Sessions are disabled in the CLI
+        $this->storage = new ArraySessionStorage();
+        $this->session = new Session(storage: $this->storage);
     }
 
     private function seedPreferredLanguage(string $code): void
     {
-        $_SESSION['preferredLanguage'] = $code;
+        $this->storage->set(key: 'yuf', value: ['handler' => ['preferredLanguage' => $code]]);
     }
 
     private function storedPreferredLanguage(): ?string
     {
-        $code = $_SESSION['preferredLanguage'] ?? null;
-
-        return is_string(value: $code) ? $code : null;
+        return new SessionPreferredLanguage(session: $this->session)->getCode();
     }
 
-    private function resolve(string $uri, ?Language $routeLanguage, LanguageCollection $available): RequestHandler
-    {
+    private function resolve(
+        string $uri,
+        ?Language $routeLanguage,
+        LanguageCollection $available,
+        ?Session $session,
+    ): RequestHandler {
         $handler = new RequestHandler(
             httpRequest: HttpRequestFactory::create(uri: $uri),
             routeCollection: new RouteCollection(
@@ -81,6 +76,7 @@ final class RequestHandlerPreferredLanguageTest extends TestCase
             ),
             availableLanguages: $available,
             allowedDomains: ['example.com'],
+            session: $session,
         );
         $handler->resolveRoute();
 
@@ -92,16 +88,26 @@ final class RequestHandlerPreferredLanguageTest extends TestCase
         return new LanguageCollection(languages: [$this->german, $this->english]);
     }
 
-    public function testStorageLayoutIsTheTopLevelKeyPreferredLanguageWithTheLanguageCode(): void
+    public function testStorageLayoutIsTheKeyPreferredLanguageInTheHandlerSectionWithTheLanguageCode(): void
     {
-        $this->resolve(uri: '/en/', routeLanguage: $this->english, available: $this->bothLanguages());
+        $this->resolve(
+            uri: '/en/',
+            routeLanguage: $this->english,
+            available: $this->bothLanguages(),
+            session: $this->session,
+        );
 
-        $this->assertSame(['preferredLanguage' => 'en'], $_SESSION);
+        $this->assertSame(['yuf' => ['handler' => ['preferredLanguage' => 'en']]], $this->storage->all());
     }
 
     public function testLanguageOfTheRouteIsRememberedAsPreferredLanguage(): void
     {
-        $this->resolve(uri: '/en/', routeLanguage: $this->english, available: $this->bothLanguages());
+        $this->resolve(
+            uri: '/en/',
+            routeLanguage: $this->english,
+            available: $this->bothLanguages(),
+            session: $this->session,
+        );
 
         $this->assertSame('en', $this->storedPreferredLanguage());
     }
@@ -110,7 +116,12 @@ final class RequestHandlerPreferredLanguageTest extends TestCase
     {
         $this->seedPreferredLanguage(code: 'de');
 
-        $this->resolve(uri: '/en/', routeLanguage: $this->english, available: $this->bothLanguages());
+        $this->resolve(
+            uri: '/en/',
+            routeLanguage: $this->english,
+            available: $this->bothLanguages(),
+            session: $this->session,
+        );
 
         $this->assertSame('en', $this->storedPreferredLanguage());
     }
@@ -119,29 +130,52 @@ final class RequestHandlerPreferredLanguageTest extends TestCase
     {
         $this->seedPreferredLanguage(code: 'en');
 
-        $this->resolve(uri: '/en/', routeLanguage: $this->english, available: $this->bothLanguages());
+        $this->resolve(
+            uri: '/en/',
+            routeLanguage: $this->english,
+            available: $this->bothLanguages(),
+            session: $this->session,
+        );
 
         $this->assertSame('en', $this->storedPreferredLanguage());
     }
 
     /**
-     * Not a feature but today's behaviour: a route without language falls back to the first available language,
-     * which then overwrites the preferred language of the user (findings of docs/session/plan.md, step 1).
+     * Fix of v4.30.0: before, a route without language wrote the first available language and so overwrote the
+     * preferred language of the user.
      */
-    public function testRouteWithoutLanguageWritesTheFirstAvailableLanguage(): void
+    public function testRouteWithoutLanguageKeepsThePreferredLanguage(): void
     {
         $this->seedPreferredLanguage(code: 'en');
 
-        $this->resolve(uri: '/en/', routeLanguage: null, available: $this->bothLanguages());
+        $handler = $this->resolve(
+            uri: '/en/',
+            routeLanguage: null,
+            available: $this->bothLanguages(),
+            session: $this->session,
+        );
 
-        $this->assertSame('de', $this->storedPreferredLanguage());
+        $this->assertSame('en', $this->storedPreferredLanguage());
+        $this->assertSame($this->german, $handler->language);
+    }
+
+    public function testRouteWithoutLanguageWritesNothing(): void
+    {
+        $this->resolve(
+            uri: '/en/',
+            routeLanguage: null,
+            available: $this->bothLanguages(),
+            session: $this->session,
+        );
+
+        $this->assertSame([], $this->storage->all());
     }
 
     public function testWithoutAvailableLanguagesNothingIsWritten(): void
     {
-        $this->resolve(uri: '/en/', routeLanguage: null, available: new LanguageCollection());
+        $this->resolve(uri: '/en/', routeLanguage: null, available: new LanguageCollection(), session: $this->session);
 
-        $this->assertSame([], $_SESSION);
+        $this->assertSame([], $this->storage->all());
     }
 
     public function testLanguageOfTheRouteThatIsNotAvailableThrows(): void
@@ -153,53 +187,62 @@ final class RequestHandlerPreferredLanguageTest extends TestCase
             uri: '/en/',
             routeLanguage: $this->english,
             available: new LanguageCollection(languages: [$this->german]),
+            session: $this->session,
         );
     }
 
-    public function testNothingIsWrittenWithoutSession(): void
+    public function testWithoutSessionNothingIsRemembered(): void
     {
-        unset($_SESSION);
+        $handler = $this->resolve(
+            uri: '/en/',
+            routeLanguage: $this->english,
+            available: $this->bothLanguages(),
+            session: null,
+        );
 
-        $this->resolve(uri: '/en/', routeLanguage: $this->english, available: $this->bothLanguages());
-
-        $this->assertFalse(AbstractSessionHandler::enabled());
+        $this->assertSame($this->english, $handler->language);
+        $this->assertSame([], $this->storage->all());
     }
 
-    public function testSessionHandlerReadsThePreferredLanguage(): void
+    public function testPreferredLanguageIsReadFromTheSession(): void
     {
         $this->seedPreferredLanguage(code: 'en');
 
-        $this->assertSame('en', AbstractSessionHandler::getSessionHandler()->getPreferredLanguageCode());
-    }
-
-    public function testSessionHandlerWithoutPreferredLanguageReturnsNull(): void
-    {
-        $this->assertNull(AbstractSessionHandler::getSessionHandler()->getPreferredLanguageCode());
-    }
-
-    public function testSessionHandlerIgnoresAPreferredLanguageThatIsNoString(): void
-    {
-        $_SESSION['preferredLanguage'] = ['en'];
-
-        $this->assertNull(AbstractSessionHandler::getSessionHandler()->getPreferredLanguageCode());
-    }
-
-    public function testSessionHandlerWritesThePreferredLanguage(): void
-    {
-        AbstractSessionHandler::getSessionHandler()->setPreferredLanguage(language: $this->english);
-
         $this->assertSame('en', $this->storedPreferredLanguage());
-        $this->assertSame('en', AbstractSessionHandler::getSessionHandler()->getPreferredLanguageCode());
+    }
+
+    public function testWithoutPreferredLanguageTheCodeIsNull(): void
+    {
+        $this->assertNull($this->storedPreferredLanguage());
+    }
+
+    public function testPreferredLanguageThatIsNoStringIsIgnored(): void
+    {
+        $this->storage->set(key: 'yuf', value: ['handler' => ['preferredLanguage' => ['en']]]);
+
+        $this->assertNull($this->storedPreferredLanguage());
+    }
+
+    public function testSettingThePreferredLanguageKeepsTheOtherHandlerData(): void
+    {
+        $this->storage->set(key: 'yuf', value: ['handler' => ['sessionCreated' => 1_790_000_000]]);
+
+        new SessionPreferredLanguage(session: $this->session)->set(language: $this->english);
+
+        $this->assertSame(
+            ['yuf' => ['handler' => ['sessionCreated' => 1_790_000_000, 'preferredLanguage' => 'en']]],
+            $this->storage->all(),
+        );
     }
 
     public function testPreferredLanguageSurvivesTheClearingOfTheUserData(): void
     {
         $this->seedPreferredLanguage(code: 'en');
-        $_SESSION['other'] = 'data';
+        $this->session->set(key: 'other', value: 'data');
 
-        AbstractSessionHandler::clearUserData();
+        $this->session->clearUserData();
 
         $this->assertSame('en', $this->storedPreferredLanguage());
-        $this->assertArrayNotHasKey('other', $_SESSION);
+        $this->assertFalse($this->session->has(key: 'other'));
     }
 }

@@ -16,14 +16,13 @@ use actra\yuf\form\component\field\ToggleField;
 use actra\yuf\form\component\FormField;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\DefaultComponentRenderer;
 use actra\yuf\form\renderer\InputFieldRenderer;
 use actra\yuf\html\HtmlText;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use LogicException;
-use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -39,12 +38,6 @@ final class ToggleChildrenTest extends TestCase
         $formOptions->addItem(key: 'b', htmlText: HtmlText::fromHtml(html: 'B'));
 
         return $formOptions;
-    }
-
-    #[Override]
-    protected function setUp(): void
-    {
-        FormNameRegistry::reset();
     }
 
     private function createToggle(?string $initialValue = null): ToggleField
@@ -178,7 +171,11 @@ final class ToggleChildrenTest extends TestCase
         $toggle = $this->createToggle();
         $child = $this->createChild(name: 'childA');
         $toggle->addChildField(mainOption: 'a', childField: $child);
-        $form = new Form(name: 'toggleChildrenLaterForm', messages: FormMessages::german());
+        $form = new Form(
+            context: FormContextFactory::create(),
+            name: 'toggleChildrenLaterForm',
+            messages: FormMessages::german(),
+        );
 
         $form->addField(formField: $toggle);
         $toggle->validate(input: FormInput::fromArray(data: ['toggle' => 'a', 'childA' => ['x']]));
@@ -192,7 +189,7 @@ final class ToggleChildrenTest extends TestCase
 
     public function testChildrenGetTheFormOfTheToggleFieldWhenItIsAlreadyInTheForm(): void
     {
-        $form = new Form(name: 'toggleChildrenEarlyForm');
+        $form = new Form(context: FormContextFactory::create(), name: 'toggleChildrenEarlyForm');
         $toggle = $this->createToggle();
         $form->addField(formField: $toggle);
         $child = $this->createChild(name: 'childA');
@@ -205,7 +202,7 @@ final class ToggleChildrenTest extends TestCase
 
     public function testChildErrorsReachTheForm(): void
     {
-        $form = new Form(name: 'toggleChildrenErrorForm');
+        $form = new Form(context: FormContextFactory::create(), name: 'toggleChildrenErrorForm');
         $toggle = $this->createToggle(initialValue: 'a');
         $toggle->addChildField(mainOption: 'a', childField: $this->createChild(name: 'childA'));
         $form->addField(formField: $toggle);

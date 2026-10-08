@@ -13,7 +13,8 @@ use actra\yuf\Core;
 use actra\yuf\core\RequestHandler;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\security\CspNonce;
-use actra\yuf\security\CsrfToken;
+use actra\yuf\security\CsrfHiddenFieldRenderer;
+use actra\yuf\security\CsrfTokenSource;
 use actra\yuf\template\TemplateData;
 use actra\yuf\template\TemplateEngine;
 
@@ -43,6 +44,7 @@ class HtmlDocument
         CspNonce $cspNonce,
         private readonly Core $core,
         private readonly TemplateEngine $templateEngine,
+        ?CsrfTokenSource $csrfTokenSource,
     ) {
         $requestHandler = $this->requestHandler;
         $viewDirectory = $requestHandler->route->viewDirectory;
@@ -83,7 +85,7 @@ class HtmlDocument
         );
         $replacements->addHtml(
             identifier: 'csrfField',
-            html: CsrfToken::renderAsHiddenPostField(),
+            html: CsrfHiddenFieldRenderer::render(csrfTokenSource: $csrfTokenSource),
         );
         $replacements->addHtml(
             identifier: 'requestedFileName',

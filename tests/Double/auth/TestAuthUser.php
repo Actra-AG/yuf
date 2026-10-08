@@ -14,9 +14,6 @@ use actra\yuf\auth\AuthUser;
 use actra\yuf\auth\Password;
 use Override;
 
-/**
- * AuthUser allows one instance only: call `release()` in `tearDown()`.
- */
 final class TestAuthUser extends AuthUser
 {
     /**
@@ -32,11 +29,6 @@ final class TestAuthUser extends AuthUser
             password: Password::generateNew(rawPassword: 'test'),
             ipWhitelist: [],
         );
-    }
-
-    public static function release(): void
-    {
-        TestAuthUser::resetInstance();
     }
 
     #[Override]

@@ -12,6 +12,8 @@ namespace actra\yuf\tests\Unit\common;
 use actra\yuf\common\SearchHelper;
 use actra\yuf\core\InputSourceEnum;
 use actra\yuf\db\DbQuery;
+use actra\yuf\session\ArraySessionStorage;
+use actra\yuf\session\Session;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use InvalidArgumentException;
 use PDO;
@@ -149,6 +151,7 @@ final class SearchHelperFilterTest extends TestCase
             instanceName: 'test',
             httpRequest: HttpRequestFactory::create(),
             valueSource: InputSourceEnum::POST,
+            session: new Session(storage: new ArraySessionStorage()),
         )->createSqlSearch(
             string: 'foo "bar baz" 50%',
             columns: ['name', 't.city', '`order`'],
@@ -174,6 +177,7 @@ final class SearchHelperFilterTest extends TestCase
                 instanceName: 'test',
                 httpRequest: HttpRequestFactory::create(),
                 valueSource: InputSourceEnum::POST,
+                session: new Session(storage: new ArraySessionStorage()),
             )->createSqlSearch(string: ' , ', columns: ['name']),
         );
     }
@@ -203,6 +207,7 @@ final class SearchHelperFilterTest extends TestCase
             instanceName: 'test',
             httpRequest: HttpRequestFactory::create(),
             valueSource: InputSourceEnum::POST,
+            session: new Session(storage: new ArraySessionStorage()),
         )->createSqlSearch(string: 'foo', columns: $columns);
     }
 }

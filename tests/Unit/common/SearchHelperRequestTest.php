@@ -11,6 +11,8 @@ namespace actra\yuf\tests\Unit\common;
 
 use actra\yuf\common\SearchHelper;
 use actra\yuf\core\InputSourceEnum;
+use actra\yuf\session\ArraySessionStorage;
+use actra\yuf\session\Session;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use Override;
 use PHPUnit\Framework\TestCase;
@@ -24,17 +26,18 @@ final class SearchHelperRequestTest extends TestCase
     /** @var array<mixed> */
     private array $savedGet = [];
 
+    private Session $session;
+
     #[Override]
     protected function setUp(): void
     {
         $this->savedGet = $_GET;
-        $_SESSION = [];
+        $this->session = new Session(storage: new ArraySessionStorage());
     }
 
     #[Override]
     protected function tearDown(): void
     {
-        unset($_SESSION); // Sessions are disabled in the CLI, the request handler checks that
         $_GET = $this->savedGet;
     }
 
@@ -51,6 +54,7 @@ final class SearchHelperRequestTest extends TestCase
             instanceName: 'users',
             httpRequest: HttpRequestFactory::create(queryParameters: $query, postParameters: $post),
             valueSource: $source,
+            session: $this->session,
         );
     }
 

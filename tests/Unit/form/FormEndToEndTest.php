@@ -28,12 +28,12 @@ use actra\yuf\form\component\field\ToggleField;
 use actra\yuf\form\component\FormControl;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\rule\IntegerMinRule;
 use actra\yuf\form\rule\MinLengthRule;
 use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use actra\yuf\tests\Double\form\InMemoryFileUploadStorage;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
 use DateTimeImmutable;
@@ -69,13 +69,12 @@ final class FormEndToEndTest extends TestCase
     #[Override]
     protected function setUp(): void
     {
-        FormNameRegistry::reset();
         $this->storage = new InMemoryFileUploadStorage();
         $this->form = new Form(
+            context: FormContextFactory::create(csrfTokenSource: new InMemoryCsrfTokenSource(token: 'expected-token')),
             name: 'order',
             acceptUpload: true,
             messages: FormMessages::german(),
-            csrfTokenSource: new InMemoryCsrfTokenSource(token: 'expected-token'),
         );
         $this->addFields();
     }
@@ -268,7 +267,10 @@ final class FormEndToEndTest extends TestCase
         $this->assertSame('post', $this->delivery->getValueAsString());
         $this->assertSame('Main street 1', $this->street->getValueAsString());
         $this->assertSame(['line one', 'line two'], $this->message->getValues());
-        $this->assertSame(['cv.pdf'], array_column(array: array_values(array: $this->attachment->getFiles()), column_key: 'name'));
+        $this->assertSame(
+            ['cv.pdf'],
+            array_column(array: array_values(array: $this->attachment->getFiles()), column_key: 'name'),
+        );
     }
 
     public function testInitialAndAddedValuesAreTracked(): void

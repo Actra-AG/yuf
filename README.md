@@ -128,7 +128,9 @@ Only the view of the current request is created; a file without a mapped view is
 Every view receives the `ViewContext` of the request and passes it to `BaseView::__construct()`. It holds the route
 (`$this->context->route`), the file group and title, the `PathVars` and the `ContentHandler`
 (`$this->context->content->getContentType()`), the `LocaleHandler` (`$this->context->locale`) and the template engine
-(`$this->context->templateEngine`) and the `HttpRequest` (`$this->context->httpRequest`); `BaseView::getHtmlDocument()`
+(`$this->context->templateEngine`), the `HttpRequest` (`$this->context->httpRequest`), the `Session`
+(`$this->context->session`, `null` without sessions), the `AuthSession` (`$this->context->authSession`) and the
+`FormContext` for forms (`$this->context->formContext`); `BaseView::getHtmlDocument()`
 and `getJsonRequestBody()` give the HTML document and the JSON request body.
 
 ```php
@@ -194,15 +196,48 @@ $page = $this->getPathVarAsInt(nr: 3) ?? 1;       // ?int, null if missing or no
 Integers must be strictly formatted: optional minus and digits only (no `+`, no spaces, no decimals); values outside
 the integer range count as not an integer.
 
-## Clearing the session on logout
+## Session
 
-`AuthSession::logOut()` resets the login and calls `AbstractSessionHandler::clearUserData()`, so the next user of the
-same browser does not see the data of the previous one (breadcrumb, table and search state, uploads, CSRF token, own
-project data, …). Projects do not need to clear the session themselves.
+`Core::prepareHttpResponse()` starts the session handler and creates one `Session` per request: `$core->session` and
+`$this->context->session` in a view (`null` with `individualSessionHandler: false`, the example app runs without
+sessions). The `Session` is the only way to read and write session data: **projects must not use `$_SESSION`**, also
+not for their own data (cart, order data, flash messages, `requestedPageAfterLogin`). Only `NativeSessionStorage` and
+the session handler touch `$_SESSION`.
 
-`clearUserData()` removes everything except the data of the session handler and the preferred language. It does nothing if sessions are disabled. Call it
-directly to clear the session without a logout. Data that has to survive a logout (e.g. a message for the login page)
-must be written to the session after `AuthSession::logOut()`.
+```php
+$session = $this->context->session;                    // ?Session
+$session?->set(key: 'cart', value: ['items' => 3]);    // string|int|float|bool|array|null, arrays recursively
+$items = $session?->getArray(key: 'cart');             // getString(), getInt(), getFloat(), getBool()
+$session?->has(key: 'cart');
+$session?->remove(key: 'cart');
+```
+
+The typed getters return `null` for a missing key or a value of another type and never write. Objects are rejected (no
+serialization surprises). The key `yuf` is reserved for yuf. `getId()`, `regenerateId()` and `export()` (all data, for
+the debug page) complete the API; tests and scripts build a `Session` on an `ArraySessionStorage` (`new
+Session(storage: new ArraySessionStorage())`).
+
+All data of yuf lives below `$_SESSION['yuf']` in documented sections (`SessionSectionEnum`): `handler` (session
+handler, preferred language), `auth` (login), `csrf` (token), `tables` (sorting and page), `tableFilters`, `search`
+and `uploads`. Own data is stored next to it and cannot collide with it.
+
+`AuthSession` (`$this->context->authSession`) holds the login: `logIn()`, `logOut()`, `isLoggedIn()` and
+`getAuthSessionId()` (throws a `LogicException` when nobody is logged in). `AuthSession::logOut()` resets the login
+and calls `Session::clearUserData()`, so the next user of the same browser does not see the data of the previous one
+(breadcrumb, table and search state, uploads, CSRF token, own project data, …). Projects do not need to clear the
+session themselves. `clearUserData()` removes everything except the section `handler` (data of the session handler and
+the preferred language). Call it directly to clear the session without a logout. Data that has to survive a logout
+(e.g. a message for the login page) must be written to the session after `AuthSession::logOut()`.
+
+Identifiers are session keys: **form names, table identifiers, filter identifiers and the instance names of
+`SearchHelper` must be unique per page.** Two tables with the same identifier share their sorting and page, two forms
+with the same name share the sent indicator. yuf does not check this.
+
+Without a session (`$context->session === null`) forms and the table filter do without CSRF protection: CSRF needs a
+session cookie that the browser sends along on its own, without a session there is nothing to abuse. The `FormContext`
+has no `CsrfTokenSource` then, so a form has no CSRF field and checks no token, and a table filter accepts its posted
+input without a token. Tables, `SearchHelper` and upload storage need a `Session` (build one on an
+`ArraySessionStorage` if they are used without sessions, the state then lives for one request).
 
 ## REST/API Endpoints
 
@@ -301,11 +336,13 @@ $snippet->replacements->addText(identifier: 'title', text: $title);
 $html = $snippet->render(templateEngine: $this->context->templateEngine);
 ```
 
-`Pagination::render()`, `TablePaginationRenderer::render()` and `TableFilter::render()` take `templateEngine:` the same
-way; a `DbResultTable` takes it in its constructor (`TableHelper::createDbResultTable(identifier:, db:, selectQuery:,
-templateEngine:, httpRequest:)`) and passes it to the pagination and the filter. The table reads sorting and page from
-the query string of the request; a `TableFilter` (`new TableFilter(identifier:, httpRequest:)`) takes the filter values
-from the posted data (with a valid CSRF token).
+`Pagination::render()`, `TablePaginationRenderer::render()` and `TableFilter::render()` take `templateEngine:` the
+same way; a `DbResultTable` takes it in its constructor (`TableHelper::createDbResultTable(identifier:, db:,
+selectQuery:, templateEngine:, httpRequest:, session:)`) and passes it to the pagination and the filter. The table
+reads sorting and page from the query string of the request and remembers them in the session; a `TableFilter` (`new
+TableFilter(identifier:, httpRequest:, session:, csrfTokenSource:)`, the token source is
+`$this->context->formContext->csrfTokenSource`) takes the filter values from the posted data (with a valid CSRF token,
+if there is a token source) and remembers them in the session.
 
 ### Using the engine directly
 
@@ -372,13 +409,13 @@ level 10 friendly). The form texts it creates itself (e.g. "The invalid input wa
 `FormMessages::german()` has the German texts, your own texts are named arguments of `FormMessages`.
 
 ```php
-$form = new Form(name: 'order', messages: FormMessages::german());
+$form = new Form(context: $this->context->formContext, name: 'order', messages: FormMessages::german());
 $name = new TextField(name: 'customer', label: HtmlText::fromHtml(html: 'Name'), requiredError: $requiredError);
 $quantity = new IntegerField(name: 'quantity', label: HtmlText::fromHtml(html: 'Quantity'));
 $form->addField(formField: $name);
 $form->addField(formField: $quantity);
 
-if ($form->validate()) { // reads the current request, only if the form was sent
+if ($form->validate()) { // reads the request of the context, only if the form was sent
     $customer = $name->getValueAsString();
     $amount = $quantity->getValueAsInt(); // ?int, null if empty (optional field)
 }
@@ -486,10 +523,15 @@ $input = FormInput::fromArray(data: ['customer' => 'Ann', 'quantity' => '2'], qu
 $isValid = $form->validate(input: $input);
 ```
 
+A form gets the request and the CSRF token source from its `FormContext` (`$this->context->formContext`; a project that
+needs another source builds its own `FormContext`). `validate()` and `isSent()` read the input from the request of the
+context (the posted data, for a GET form the query string); the `input:` argument is optional. The form names of a page
+must be unique (see [Session](#session)).
+
 `FileField` keeps uploaded files in a `FileUploadStorage` (the production one is
-`SessionFileUploadStorage::forHttpRequest(httpRequest:)`: session and temp directory) and the CSRF field gets its token
-from a `CsrfTokenSource` (default: session). The storage is a required argument of the field, the token source an
-optional one of the field or `Form`. Code that upgrades from v3 finds the changes in
+`SessionFileUploadStorage::forHttpRequest(session:, httpRequest:)`: session and temp directory); the CSRF field gets its
+token from the `CsrfTokenSource` of the `FormContext` (`SessionCsrfTokenSource` on the session, none without session).
+The storage is a required argument of the field. Code that upgrades from v3 finds the changes in
 [UPGRADE.md](UPGRADE.md).
 
 ## Clock

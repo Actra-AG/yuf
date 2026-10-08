@@ -13,9 +13,7 @@ use actra\yuf\form\renderer\HiddenFieldRenderer;
 use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
-use actra\yuf\security\CsrfToken;
 use actra\yuf\security\CsrfTokenSource;
-use actra\yuf\security\SessionCsrfTokenSource;
 use Override;
 
 /**
@@ -28,11 +26,11 @@ final class CsrfTokenField extends InputField
 {
     private bool $postedTokenIsValid = false;
 
-    public function __construct(private readonly CsrfTokenSource $tokenSource = new SessionCsrfTokenSource())
+    public function __construct(private readonly CsrfTokenSource $tokenSource)
     {
         parent::__construct(
             inputType: InputTypeEnum::HIDDEN,
-            name: CsrfToken::getFieldName(),
+            name: CsrfTokenSource::FIELD_NAME,
             label: HtmlText::fromHtml(html: ''),
             placeholder: null,
             autoComplete: null,

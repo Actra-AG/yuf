@@ -12,6 +12,8 @@ namespace actra\yuf\common;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\InputSourceEnum;
 use actra\yuf\db\DbQueryData;
+use actra\yuf\session\Session;
+use actra\yuf\session\SessionSectionEnum;
 use DateTime;
 use InvalidArgumentException;
 use NoDiscard;
@@ -29,10 +31,11 @@ class SearchHelper
     private const array LIKE_ESCAPE_MAP = ['!' => '!!', '%' => '!%', '_' => '!_'];
     /** An unquoted column name must not consist of digits only; a "?" would be counted as a placeholder. */
     private const string FIELD_NAME_PATTERN = '/^(`[^`?\s.]+`|[0-9a-z_$]*[a-z_$][0-9a-z_$]*)(\.(`[^`?\s.]+`|[0-9a-z_$]*[a-z_$][0-9a-z_$]*)){0,2}$/i';
-    private string $sessionRootName = 'searchHelper';
 
     /**
-     * @param string $instanceName The search state of the user is kept in the session below this name
+     * @param string $instanceName The search state of the user is kept in the session below this name; it must be
+     *                             unique per page
+     * @param Session $session Keeps the search state of the user (`ViewContext::$session`)
      * @param InputSourceEnum $valueSource Where the values of the search fields come from (the query string for a
      *                                     search form with method GET, else the posted data); the parameters `reset`
      *                                     and `find` always come from the query string
@@ -41,17 +44,20 @@ class SearchHelper
         private readonly string $instanceName,
         private readonly HttpRequest $httpRequest,
         private readonly InputSourceEnum $valueSource,
+        private readonly Session $session,
     ) {}
 
     public static function create(
         string $instanceName,
         HttpRequest $httpRequest,
         InputSourceEnum $valueSource,
+        Session $session,
     ): SearchHelper {
         return new SearchHelper(
             instanceName: $instanceName,
             httpRequest: $httpRequest,
             valueSource: $valueSource,
+            session: $session,
         );
     }
 
@@ -619,68 +625,65 @@ class SearchHelper
         return $this->checkString(fieldName: 'searchterm', default: $default);
     }
 
+    /**
+     * The text of a search field: the input of this request, else the remembered value, else the default. The
+     * session is only written when the value changes.
+     */
     public function checkString(string $fieldName, string $default = ''): string
     {
-        $sessionRootName = $this->sessionRootName;
-        $instanceName = $this->instanceName;
-        $this->resetField(fieldName: $fieldName, default: $default);
-
+        $storedValue = $this->readStoredString(field: $fieldName);
+        $value = $this->isSearchRequested() ? $default : $storedValue ?? $default;
         $userInput = $this->readString(fieldName: $fieldName);
         if ($userInput !== null) {
-            $_SESSION[$sessionRootName][$instanceName][$fieldName] = $userInput;
+            $value = $userInput;
         }
+        $this->storeIfChanged(field: $fieldName, value: $value, storedValue: $storedValue ?? $default);
 
-        return $_SESSION[$sessionRootName][$instanceName][$fieldName];
+        return $value;
     }
 
-    private function resetField(string $fieldName, string $default = ''): void
-    {
-        $sessionRootName = $this->sessionRootName;
-        $instanceName = $this->instanceName;
-        if (
-            !isset($_SESSION[$sessionRootName][$instanceName][$fieldName])
-            || $this->isSearchRequested()
-        ) {
-            $_SESSION[$sessionRootName][$instanceName][$fieldName] = $default;
-        }
-    }
-
+    /**
+     * @param array<array-key, mixed> $array The allowed values as keys
+     */
     public function checkFilter(array $array, string $fieldName, string $default = ''): string
     {
-        $sessionRootName = $this->sessionRootName;
-        $instanceName = $this->instanceName;
-        $this->resetField(fieldName: $fieldName, default: $default);
-
+        $storedValue = $this->readStoredString(field: $fieldName);
+        $value = $this->isSearchRequested() ? $default : $storedValue ?? $default;
         $userInput = $this->readString(fieldName: $fieldName);
         if ($userInput !== null && array_key_exists($userInput, $array)) {
-            $_SESSION[$sessionRootName][$instanceName][$fieldName] = $userInput;
+            $value = $userInput;
         }
+        $this->storeIfChanged(field: $fieldName, value: $value, storedValue: $storedValue ?? $default);
 
-        return $_SESSION[$sessionRootName][$instanceName][$fieldName];
+        return $value;
     }
 
+    /**
+     * @param array<array-key, mixed> $array The allowed values as keys
+     * @param list<int|string> $default
+     *
+     * @return list<int|string> The chosen keys (a posted value of `<fieldName>ID` is added as string)
+     */
     public function checkMultiFilter(array $array, string $fieldName, array $default = []): array
     {
-        $instanceName = $this->instanceName;
-        if (!isset($_SESSION[$this->sessionRootName][$instanceName][$fieldName]) || $this->isSearchRequested()) {
-            $_SESSION[$this->sessionRootName][$instanceName][$fieldName] = $default;
-        }
-
-        if ($this->isSearchRequested()) {
+        $storedValue = $this->readStoredList(field: $fieldName);
+        $isSearchRequested = $this->isSearchRequested();
+        $value = $isSearchRequested ? $default : $storedValue ?? $default;
+        if ($isSearchRequested) {
             foreach ($array as $key => $val) {
                 $userInput = $this->readArray(fieldName: $fieldName);
                 if ($userInput !== null && in_array(needle: (string) $key, haystack: $userInput, strict: true)) {
-                    $_SESSION[$this->sessionRootName][$instanceName][$fieldName][] = $key;
+                    $value[] = $key;
                 }
             }
             $requestedValue = $this->readString(fieldName: $fieldName . 'ID');
-
             if ($requestedValue !== null) {
-                $_SESSION[$this->sessionRootName][$instanceName][$fieldName][] = $requestedValue;
+                $value[] = $requestedValue;
             }
         }
+        $this->storeIfChanged(field: $fieldName, value: $value, storedValue: $storedValue ?? $default);
 
-        return $_SESSION[$this->sessionRootName][$instanceName][$fieldName];
+        return $value;
     }
 
     /**
@@ -695,27 +698,13 @@ class SearchHelper
         ?string $defaultFrom = null,
         ?string $defaultTo = null,
     ): array {
-        $instanceName = $this->instanceName;
-
-        if (!isset($_SESSION[$this->sessionRootName][$instanceName][$fromField]) || $this->isSearchRequested()) {
-            $this->storeInSession(
-                field: $fromField,
-                value: $defaultFrom === null ? $dateRange['minDate'] : $defaultFrom,
-            );
-        }
-
-        if (!isset($_SESSION[$this->sessionRootName][$instanceName][$toField]) || $this->isSearchRequested()) {
-            $this->storeInSession(
-                field: $toField,
-                value: $defaultTo === null ? $dateRange['maxDate'] : $defaultTo,
-            );
-        }
-
+        $storedFrom = $this->readStoredString(field: $fromField);
+        $storedTo = $this->readStoredString(field: $toField);
+        $isSearchRequested = $this->isSearchRequested();
         $inputFrom = $this->readString(fieldName: $fromField);
         $inputTo = $this->readString(fieldName: $toField);
-
-        $dateFromStr = $inputFrom === null ? $_SESSION[$this->sessionRootName][$instanceName][$fromField] : $inputFrom;
-        $dateToStr = $inputTo === null ? $_SESSION[$this->sessionRootName][$instanceName][$toField] : $inputTo;
+        $dateFromStr = $inputFrom ?? ($isSearchRequested ? null : $storedFrom) ?? $defaultFrom ?? $dateRange['minDate'];
+        $dateToStr = $inputTo ?? ($isSearchRequested ? null : $storedTo) ?? $defaultTo ?? $dateRange['maxDate'];
 
         $dateFromObj = $this->checkDate(date: $dateFromStr);
         $dateToObj = $this->checkDate(date: $dateToStr);
@@ -739,15 +728,92 @@ class SearchHelper
             $dateToObj = $maxDateObj;
         }
 
-        $this->storeInSession(field: $fromField, value: $dateFromObj->format(format: 'd.m.Y'));
-        $this->storeInSession(field: $toField, value: $dateToObj->format(format: 'd.m.Y'));
+        // The defaults are not stored: only what the user chose (or what replaces a remembered value)
+        $this->storeDateIfChanged(
+            field: $fromField,
+            value: $dateFromObj,
+            storedValue: $storedFrom,
+            hasInput: $inputFrom !== null,
+        );
+        $this->storeDateIfChanged(
+            field: $toField,
+            value: $dateToObj,
+            storedValue: $storedTo,
+            hasInput: $inputTo !== null,
+        );
 
         return ['dateFrom' => $dateFromObj, 'dateTo' => $dateToObj];
     }
 
-    private function storeInSession(string $field, string $value): void
+    private function storeDateIfChanged(string $field, DateTime $value, ?string $storedValue, bool $hasInput): void
     {
-        $_SESSION[$this->sessionRootName][$this->instanceName][$field] = $value;
+        $formattedValue = $value->format(format: 'd.m.Y');
+        if ($storedValue === null ? $hasInput : $storedValue !== $formattedValue) {
+            $this->store(field: $field, value: $formattedValue);
+        }
+    }
+
+    /**
+     * @param string|list<int|string> $value
+     * @param string|list<int|string> $storedValue What the next request reads without a write (the remembered value,
+     *                                             else the default)
+     */
+    private function storeIfChanged(string $field, string|array $value, string|array $storedValue): void
+    {
+        if ($value !== $storedValue) {
+            $this->store(field: $field, value: $value);
+        }
+    }
+
+    /**
+     * @param string|list<int|string> $value
+     */
+    private function store(string $field, string|array $value): void
+    {
+        $data = $this->session->getSection(section: SessionSectionEnum::SEARCH);
+        $instanceData = $data[$this->instanceName] ?? null;
+        $instanceData = is_array(value: $instanceData) ? $instanceData : [];
+        $instanceData[$field] = $value;
+        $data[$this->instanceName] = $instanceData;
+        $this->session->setSection(section: SessionSectionEnum::SEARCH, data: $data);
+    }
+
+    private function readStoredString(string $field): ?string
+    {
+        $value = $this->readStored(field: $field);
+
+        return is_string(value: $value) ? $value : null;
+    }
+
+    /**
+     * @return ?list<int|string>
+     */
+    private function readStoredList(string $field): ?array
+    {
+        $value = $this->readStored(field: $field);
+        if (!is_array(value: $value)) {
+            return null;
+        }
+        $list = [];
+        foreach ($value as $item) {
+            if (is_int(value: $item) || is_string(value: $item)) {
+                $list[] = $item;
+            }
+        }
+
+        return $list;
+    }
+
+    /**
+     * @return string|int|float|bool|array<array-key, mixed>|null
+     */
+    private function readStored(string $field): string|int|float|bool|array|null
+    {
+        $instanceData = $this->session->getSection(section: SessionSectionEnum::SEARCH)[$this->instanceName] ?? null;
+
+        $value = is_array(value: $instanceData) ? ($instanceData[$field] ?? null) : null;
+
+        return $value === null || is_scalar(value: $value) || is_array(value: $value) ? $value : null;
     }
 
     public function checkDate(string $date): ?DateTime

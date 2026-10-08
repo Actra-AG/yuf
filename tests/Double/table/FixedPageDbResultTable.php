@@ -12,6 +12,7 @@ namespace actra\yuf\tests\Double\table;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
+use actra\yuf\session\Session;
 use actra\yuf\table\table\DbResultTable;
 use actra\yuf\template\TemplateEngine;
 
@@ -23,6 +24,7 @@ final class FixedPageDbResultTable extends DbResultTable
         DbQuery $dbQuery,
         TemplateEngine $templateEngine,
         HttpRequest $httpRequest,
+        Session $session,
         private readonly int $totalAmount,
         private readonly int $currentPage,
     ) {
@@ -32,6 +34,7 @@ final class FixedPageDbResultTable extends DbResultTable
             dbQuery: $dbQuery,
             templateEngine: $templateEngine,
             httpRequest: $httpRequest,
+            session: $session,
         );
     }
 

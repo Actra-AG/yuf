@@ -15,7 +15,8 @@ use actra\yuf\table\TableItem;
 use actra\yuf\table\TableItemCollection;
 use LogicException;
 
-// Can be extended or used directly to render a table with data from different sources
+// Can be extended or used directly to render a table with data from different sources.
+// The identifier must be unique per page (it is the key of the table state in the session).
 class SmartTable
 {
     public const string TOTAL_AMOUNT = '[totalAmount]';
@@ -26,8 +27,6 @@ class SmartTable
 
     public const string TOTAL_AMOUNT_MESSAGE_PLACEHOLDER = '[TOTAL_AMOUNT_MESSAGE]';
     public const string AMOUNT = '[AMOUNT]';
-    /** @var SmartTable[] */
-    private static array $instances = [];
     public string $noDataHtml = '<p class="no-entry">Es wurden keine Einträge gefunden.</p>';
     public string $totalAmountHtml = '<p class="search-result">' . SmartTable::TOTAL_AMOUNT_MESSAGE_PLACEHOLDER . '</p>';
     public string $fullHtml = '<div class="table-meta table-meta-header">' . SmartTable::TOTAL_AMOUNT . '</div><div class="table-wrap">' . SmartTable::TABLE . '</div>';
@@ -44,12 +43,7 @@ class SmartTable
         public readonly string $identifier,
         private readonly TableHeadRenderer $tableHeadRenderer,
         public readonly TableItemCollection $tableItemCollection,
-    ) {
-        if (array_key_exists(key: $identifier, array: SmartTable::$instances)) {
-            throw new LogicException(message: 'There is already a table with the same identifier ' . $identifier);
-        }
-        SmartTable::$instances[$this->identifier] = $this;
-    }
+    ) {}
 
     public function addCssClass(string $className): void
     {

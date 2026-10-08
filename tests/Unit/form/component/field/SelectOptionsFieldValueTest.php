@@ -13,10 +13,9 @@ use actra\yuf\form\component\collection\Form;
 use actra\yuf\form\component\field\SelectOptionsField;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\FormOptions;
 use actra\yuf\html\HtmlText;
-use Override;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use PHPUnit\Framework\TestCase;
 
 final class SelectOptionsFieldValueTest extends TestCase
@@ -34,12 +33,6 @@ final class SelectOptionsFieldValueTest extends TestCase
             initialValue: $initialValue,
             requiredError: $requiredError,
         );
-    }
-
-    #[Override]
-    protected function setUp(): void
-    {
-        FormNameRegistry::reset();
     }
 
     public function testValueIsEmptyAfterConstructionWithoutValue(): void
@@ -163,7 +156,11 @@ final class SelectOptionsFieldValueTest extends TestCase
 
     public function testEmptyValueLabelOfARequiredFieldComesFromTheMessagesOfTheForm(): void
     {
-        $form = new Form(name: 'selectEmptyLabelForm', messages: new FormMessages(selectEmptyOption: 'Choose'));
+        $form = new Form(
+            context: FormContextFactory::create(),
+            name: 'selectEmptyLabelForm',
+            messages: new FormMessages(selectEmptyOption: 'Choose'),
+        );
         $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
         $this->assertSame('-- Please select --', $field->emptyValueLabel->render());
 

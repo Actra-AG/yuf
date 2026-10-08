@@ -32,12 +32,6 @@ use stdClass;
  */
 final class BaseViewTest extends TestCase
 {
-    #[\Override]
-    protected function tearDown(): void
-    {
-        TestAuthUser::release();
-    }
-
     public function testContextIsAvailableToTheView(): void
     {
         $context = ViewContextFactory::create();
@@ -243,7 +237,11 @@ final class BaseViewTest extends TestCase
     {
         $parameters = new InputParameterCollection();
         $parameters->add(
-            inputParameter: new InputParameter(name: 'viewTestMissingParam', source: InputSourceEnum::QUERY, isRequired: true),
+            inputParameter: new InputParameter(
+                name: 'viewTestMissingParam',
+                source: InputSourceEnum::QUERY,
+                isRequired: true,
+            ),
         );
 
         $this->expectException(NotFoundException::class);
@@ -257,7 +255,11 @@ final class BaseViewTest extends TestCase
     {
         $parameters = new InputParameterCollection();
         $parameters->add(
-            inputParameter: new InputParameter(name: 'viewTestMissingParam', source: InputSourceEnum::QUERY, isRequired: true),
+            inputParameter: new InputParameter(
+                name: 'viewTestMissingParam',
+                source: InputSourceEnum::QUERY,
+                isRequired: true,
+            ),
         );
         $context = ViewContextFactory::create(contentType: ContentType::createJson());
 
@@ -283,7 +285,11 @@ final class BaseViewTest extends TestCase
     {
         $parameters = new InputParameterCollection();
         $parameters->add(
-            inputParameter: new InputParameter(name: 'viewTestOptionalParam', source: InputSourceEnum::QUERY, isRequired: false),
+            inputParameter: new InputParameter(
+                name: 'viewTestOptionalParam',
+                source: InputSourceEnum::QUERY,
+                isRequired: false,
+            ),
         );
         $view = new ConfigurableTestView(
             context: ViewContextFactory::create(),

@@ -9,12 +9,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\auth;
 
-use LogicException;
-
 abstract class AuthUser
 {
-    private static ?AuthUser $instance = null;
-
     /**
      * @param array<string> $ipWhitelist IP addresses and ranges the user may log in from (see
      *     `IpValidator::isInWhitelist()`), empty for all
@@ -26,17 +22,7 @@ abstract class AuthUser
         private readonly AccessRightCollection $accessRightCollection,
         public private(set) Password $password,
         public private(set) readonly array $ipWhitelist,
-    ) {
-        if (AuthUser::$instance !== null) {
-            throw new LogicException(message: 'There can only be one AuthUser instance.');
-        }
-        AuthUser::$instance = $this;
-    }
-
-    protected static function resetInstance(): void
-    {
-        AuthUser::$instance = null;
-    }
+    ) {}
 
     public function hasOneOfRights(AccessRightCollection $accessRightCollection): bool
     {

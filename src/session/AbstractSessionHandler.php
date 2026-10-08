@@ -12,7 +12,6 @@ namespace actra\yuf\session;
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
 use actra\yuf\core\HttpRequest;
-use actra\yuf\core\Language;
 use actra\yuf\exception\UnauthorizedException;
 use LogicException;
 use SessionHandler;
@@ -25,19 +24,6 @@ abstract class AbstractSessionHandler extends SessionHandler
     private const string TRUSTED_REMOTE_ADDRESS_INDICATOR = 'trustedRemoteAddress';
     private const string TRUSTED_USER_AGENT_INDICATOR = 'trustedUserAgent';
     private const string LAST_ACTIVITY_INDICATOR = 'lastActivity';
-    private const string PREFERRED_LANGUAGE_INDICATOR = 'preferredLanguage';
-    /**
-     * Session data that is not bound to the user: the session handler needs its own data on every request, and the
-     * preferred language stays for the next user of the browser.
-     */
-    private const array SESSION_KEYS_WITHOUT_USER_DATA = [
-        AbstractSessionHandler::SESSION_CREATED_INDICATOR,
-        AbstractSessionHandler::TRUSTED_REMOTE_ADDRESS_INDICATOR,
-        AbstractSessionHandler::TRUSTED_USER_AGENT_INDICATOR,
-        AbstractSessionHandler::LAST_ACTIVITY_INDICATOR,
-        AbstractSessionHandler::PREFERRED_LANGUAGE_INDICATOR,
-    ];
-    private static false|AbstractSessionHandler|null $abstractSessionHandler = null;
     public private(set) ?string $name = null {
         get {
             if ($this->name === null) {
@@ -203,7 +189,7 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     private function isSessionCreated(): bool
     {
-        return array_key_exists(key: AbstractSessionHandler::SESSION_CREATED_INDICATOR, array: $_SESSION);
+        return $this->readHandlerValue(key: AbstractSessionHandler::SESSION_CREATED_INDICATOR) !== null;
     }
 
     private function initDefaultSessionData(bool $destroyCurrentSessionData): void
@@ -241,22 +227,30 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     private function setSessionCreated(): void
     {
-        $_SESSION[AbstractSessionHandler::SESSION_CREATED_INDICATOR] = $this->currentTime;
+        $this->writeHandlerValue(key: AbstractSessionHandler::SESSION_CREATED_INDICATOR, value: $this->currentTime);
     }
 
     private function setTrustedRemoteAddress(): void
     {
-        $_SESSION[AbstractSessionHandler::TRUSTED_REMOTE_ADDRESS_INDICATOR] = $this->clientRemoteAddress;
+        $this->writeHandlerValue(
+            key: AbstractSessionHandler::TRUSTED_REMOTE_ADDRESS_INDICATOR,
+            value: $this->clientRemoteAddress,
+        );
     }
 
     public function setTrustedUserAgent(): void
     {
-        $_SESSION[AbstractSessionHandler::TRUSTED_USER_AGENT_INDICATOR] = $this->clientUserAgent;
+        $this->writeHandlerValue(
+            key: AbstractSessionHandler::TRUSTED_USER_AGENT_INDICATOR,
+            value: $this->clientUserAgent,
+        );
     }
 
     public function getTrustedRemoteAddress(): string
     {
-        $trustedRemoteAddress = $_SESSION[AbstractSessionHandler::TRUSTED_REMOTE_ADDRESS_INDICATOR] ?? null;
+        $trustedRemoteAddress = $this->readHandlerValue(
+            key: AbstractSessionHandler::TRUSTED_REMOTE_ADDRESS_INDICATOR,
+        );
         if (!is_string(value: $trustedRemoteAddress)) {
             throw new UnexpectedValueException(message: 'The session contains no trusted remote address.');
         }
@@ -266,7 +260,7 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     public function getTrustedUserAgent(): string
     {
-        $trustedUserAgent = $_SESSION[AbstractSessionHandler::TRUSTED_USER_AGENT_INDICATOR] ?? null;
+        $trustedUserAgent = $this->readHandlerValue(key: AbstractSessionHandler::TRUSTED_USER_AGENT_INDICATOR);
         if (!is_string(value: $trustedUserAgent)) {
             throw new UnexpectedValueException(message: 'The session contains no trusted user agent.');
         }
@@ -276,7 +270,7 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     private function isSessionExpired(): bool
     {
-        $lastActivity = $_SESSION[AbstractSessionHandler::LAST_ACTIVITY_INDICATOR] ?? null;
+        $lastActivity = $this->readHandlerValue(key: AbstractSessionHandler::LAST_ACTIVITY_INDICATOR);
 
         return (
             is_int(value: $lastActivity)
@@ -291,7 +285,7 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     public function getSessionCreated(): int
     {
-        $sessionCreated = $_SESSION[AbstractSessionHandler::SESSION_CREATED_INDICATOR] ?? null;
+        $sessionCreated = $this->readHandlerValue(key: AbstractSessionHandler::SESSION_CREATED_INDICATOR);
         if (!is_int(value: $sessionCreated)) {
             throw new UnexpectedValueException(message: 'The session contains no creation time.');
         }
@@ -308,51 +302,7 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     private function setLastAction(): void
     {
-        $_SESSION[AbstractSessionHandler::LAST_ACTIVITY_INDICATOR] = $this->currentTime;
-    }
-
-    public static function register(false|AbstractSessionHandler $individualSessionHandler): void
-    {
-        if (AbstractSessionHandler::$abstractSessionHandler !== null) {
-            throw new LogicException(message: 'SessionHandler handler is already registered.');
-        }
-        AbstractSessionHandler::$abstractSessionHandler = $individualSessionHandler;
-    }
-
-    public static function enabled(): bool
-    {
-        return (array_key_exists(
-            key: '_SESSION',
-            array: $GLOBALS,
-        ));
-    }
-
-    public static function getSessionHandler(): AbstractSessionHandler
-    {
-        $abstractSessionHandler = AbstractSessionHandler::$abstractSessionHandler;
-        if (!$abstractSessionHandler instanceof AbstractSessionHandler) {
-            throw new LogicException(
-                message: 'No session handler is registered. Register one with AbstractSessionHandler::register().',
-            );
-        }
-
-        return $abstractSessionHandler;
-    }
-
-    /**
-     * Removes all data of the user from the session, e.g. on logout (breadcrumb, table and search state, uploads, CSRF
-     * token, login state, project data, …). Keeps only the data of the session handler and the preferred
-     * language. Does nothing if sessions are disabled.
-     */
-    public static function clearUserData(): void
-    {
-        if (!AbstractSessionHandler::enabled()) {
-            return;
-        }
-        $_SESSION = array_intersect_key(
-            $_SESSION,
-            array_flip(array: AbstractSessionHandler::SESSION_KEYS_WITHOUT_USER_DATA),
-        );
+        $this->writeHandlerValue(key: AbstractSessionHandler::LAST_ACTIVITY_INDICATOR, value: $this->currentTime);
     }
 
     public function getId(): string
@@ -384,16 +334,24 @@ abstract class AbstractSessionHandler extends SessionHandler
         return $sessionName;
     }
 
-    public function setPreferredLanguage(Language $language): void
+    private function readHandlerValue(string $key): string|int|null
     {
-        $_SESSION[AbstractSessionHandler::PREFERRED_LANGUAGE_INDICATOR] = $language->code;
+        $yufData = $_SESSION[SessionSectionEnum::ROOT_KEY] ?? null;
+        $handlerData = is_array(value: $yufData) ? ($yufData[SessionSectionEnum::HANDLER->value] ?? null) : null;
+        $value = is_array(value: $handlerData) ? ($handlerData[$key] ?? null) : null;
+
+        return is_string(value: $value) || is_int(value: $value) ? $value : null;
     }
 
-    public function getPreferredLanguageCode(): ?string
+    private function writeHandlerValue(string $key, string|int $value): void
     {
-        $preferredLanguageCode = $_SESSION[AbstractSessionHandler::PREFERRED_LANGUAGE_INDICATOR] ?? null;
-
-        return is_string(value: $preferredLanguageCode) ? $preferredLanguageCode : null;
+        $yufData = $_SESSION[SessionSectionEnum::ROOT_KEY] ?? null;
+        $yufData = is_array(value: $yufData) ? $yufData : [];
+        $handlerData = $yufData[SessionSectionEnum::HANDLER->value] ?? null;
+        $handlerData = is_array(value: $handlerData) ? $handlerData : [];
+        $handlerData[$key] = $value;
+        $yufData[SessionSectionEnum::HANDLER->value] = $handlerData;
+        $_SESSION[SessionSectionEnum::ROOT_KEY] = $yufData;
     }
 
     public function changeCookieSameSiteToLax(): void

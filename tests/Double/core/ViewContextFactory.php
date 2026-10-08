@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Double\core;
 
+use actra\yuf\auth\AuthSession;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpRequest;
@@ -18,6 +19,8 @@ use actra\yuf\core\PathVars;
 use actra\yuf\core\Route;
 use actra\yuf\core\ViewContext;
 use actra\yuf\security\CspNonce;
+use actra\yuf\session\Session;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
 
 /**
@@ -36,11 +39,17 @@ final class ViewContextFactory
         ?ContentType $contentType = null,
         array $pathVars = [],
         ?HttpRequest $httpRequest = null,
+        ?Session $session = null,
     ): ViewContext {
+        $httpRequest ??= HttpRequestFactory::create();
         $localeHandler = new LocaleHandler(language: null, availableLanguages: new LanguageCollection());
 
         return new ViewContext(
-            httpRequest: $httpRequest ?? HttpRequestFactory::create(),
+            httpRequest: $httpRequest,
+            session: $session,
+            sessionHandler: null,
+            authSession: $session === null ? null : new AuthSession(session: $session),
+            formContext: FormContextFactory::create(httpRequest: $httpRequest),
             route: new Route(
                 path: '/',
                 viewDirectory: '/tmp/views/',

@@ -47,6 +47,7 @@ final class RequestHandlerTest extends TestCase
             routeCollection: $routeCollection,
             availableLanguages: $availableLanguages,
             allowedDomains: [$allowedDomain ?? $host],
+            session: null,
         );
     }
 

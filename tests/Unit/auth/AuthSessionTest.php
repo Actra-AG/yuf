@@ -10,241 +10,196 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\auth;
 
 use actra\yuf\auth\AuthSession;
-use actra\yuf\security\CsrfToken;
-use actra\yuf\session\AbstractSessionHandler;
+use actra\yuf\session\ArraySessionStorage;
+use actra\yuf\session\Session;
+use actra\yuf\session\SessionSectionEnum;
+use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
-use ReflectionProperty;
-use UnexpectedValueException;
 
 /**
- * Characterization of the session behaviour before the redesign (docs/session/plan.md, step 1): the static
- * `AuthSession`. The layout of the stored state (`auth_userSession` with `isLoggedIn` and `authSessionId`) is pinned
- * in `testLogInStoresTheAuthSessionIdInTheSession()` and in the tests that compare the whole `$_SESSION`; the other
- * tests only use the public methods.
- *
- * A logged-in logout regenerates the session ID, so the registered session handler is replaced by a stand-in that only
- * counts the regenerations; the session array and the registered handler are reset after each test.
+ * `AuthSession` on an `ArraySessionStorage`. The layout of the stored state (`yuf.auth` with `isLoggedIn` and
+ * `authSessionId`) is pinned in `testStorageLayoutAfterLogIn()`; the other tests only use the public methods and the
+ * session ID (a logout regenerates it).
  */
 final class AuthSessionTest extends TestCase
 {
-    private ReflectionProperty $handlerProperty;
+    private ArraySessionStorage $storage;
+    private Session $session;
+    private AuthSession $authSession;
 
     #[Override]
     protected function setUp(): void
     {
-        $this->handlerProperty = new ReflectionProperty(
-            class: AbstractSessionHandler::class,
-            property: 'abstractSessionHandler',
-        );
-        $_SESSION = [];
-    }
-
-    #[Override]
-    protected function tearDown(): void
-    {
-        $this->handlerProperty->setValue(null, null);
-        unset($_SESSION);
+        $this->storage = new ArraySessionStorage();
+        $this->session = new Session(storage: $this->storage);
+        $this->authSession = new AuthSession(session: $this->session);
     }
 
     public function testLogInStoresTheAuthSessionId(): void
     {
-        AuthSession::logIn(authSessionId: 5);
+        $this->authSession->logIn(authSessionId: 5);
 
-        $this->assertTrue(AuthSession::isLoggedIn());
-        $this->assertSame(5, AuthSession::getAuthSessionId());
+        $this->assertTrue($this->authSession->isLoggedIn());
+        $this->assertSame(5, $this->authSession->getAuthSessionId());
     }
 
-    public function testLogInStoresTheAuthSessionIdInTheSession(): void
+    public function testStorageLayoutAfterLogIn(): void
     {
-        AuthSession::logIn(authSessionId: 5);
+        $this->authSession->logIn(authSessionId: 5);
 
-        $this->assertSame(['auth_userSession' => ['isLoggedIn' => true, 'authSessionId' => 5]], $_SESSION);
+        $this->assertSame(
+            ['yuf' => ['auth' => ['isLoggedIn' => true, 'authSessionId' => 5]]],
+            $this->storage->all(),
+        );
     }
 
     public function testIsNotLoggedInWithoutLogIn(): void
     {
-        $this->assertFalse(AuthSession::isLoggedIn());
+        $this->assertFalse($this->authSession->isLoggedIn());
     }
 
-    public function testAuthSessionIDWithoutLogInThrows(): void
+    public function testReadingTheLoginStateDoesNotWriteIntoTheSession(): void
     {
-        $this->expectException(UnexpectedValueException::class);
+        $this->authSession->isLoggedIn();
 
-        AuthSession::getAuthSessionId();
+        $this->assertSame([], $this->storage->all());
+    }
+
+    public function testAuthSessionIdWithoutLogInThrows(): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIs('No user is logged in: there is no auth session ID.');
+
+        $this->authSession->getAuthSessionId();
     }
 
     public function testLogOutClearsUserDataAndRegeneratesTheSessionId(): void
     {
-        $sessionHandler = $this->registerSessionHandler();
-        AuthSession::logIn(authSessionId: 5);
-        $_SESSION['sessionCreated'] = 1_790_000_000;
-        $_SESSION['preferredLanguage'] = 'de';
-        $_SESSION[CsrfToken::CSRFTOKENSTORAGE] = 'token';
-        $_SESSION['sess_breadcrumb'] = ['home' => ['title' => 'Home', 'link' => 'home']];
+        $this->authSession->logIn(authSessionId: 5);
+        $this->storage->set(key: 'yuf', value: [
+            'handler' => ['sessionCreated' => 1_790_000_000, 'preferredLanguage' => 'de'],
+            'auth' => ['isLoggedIn' => true, 'authSessionId' => 5],
+            'csrf' => ['token' => 'token'],
+        ]);
+        $this->session->set(key: 'sess_breadcrumb', value: ['home' => ['title' => 'Home', 'link' => 'home']]);
 
-        AuthSession::logOut();
+        $this->authSession->logOut();
 
         $this->assertSame(
-            [
-                'sessionCreated' => 1_790_000_000,
-                'preferredLanguage' => 'de',
-                'auth_userSession' => ['isLoggedIn' => false, 'authSessionId' => 0],
-            ],
-            $_SESSION,
+            ['yuf' => ['handler' => ['sessionCreated' => 1_790_000_000, 'preferredLanguage' => 'de']]],
+            $this->storage->all(),
         );
-        $this->assertFalse(AuthSession::isLoggedIn());
-        $this->assertSame(0, AuthSession::getAuthSessionId());
-        $this->assertSame(1, $sessionHandler->regenerations);
+        $this->assertFalse($this->authSession->isLoggedIn());
+        $this->assertSame('array-session-1', $this->session->getId());
+    }
+
+    public function testGetAuthSessionIdAfterLogOutThrows(): void
+    {
+        $this->authSession->logIn(authSessionId: 5);
+        $this->authSession->logOut();
+
+        $this->expectException(LogicException::class);
+
+        $this->authSession->getAuthSessionId();
     }
 
     public function testLogOutWithoutLogInKeepsTheSession(): void
     {
-        $sessionHandler = $this->registerSessionHandler();
-        $_SESSION['sess_breadcrumb'] = ['home' => ['title' => 'Home', 'link' => 'home']];
+        $this->session->set(key: 'sess_breadcrumb', value: ['home' => ['title' => 'Home', 'link' => 'home']]);
 
-        AuthSession::logOut();
+        $this->authSession->logOut();
 
         $this->assertSame(
-            [
-                'sess_breadcrumb' => ['home' => ['title' => 'Home', 'link' => 'home']],
-                'auth_userSession' => ['isLoggedIn' => false],
-            ],
-            $_SESSION,
+            ['sess_breadcrumb' => ['home' => ['title' => 'Home', 'link' => 'home']]],
+            $this->storage->all(),
         );
-        $this->assertSame(0, $sessionHandler->regenerations);
+        $this->assertSame('array-session', $this->session->getId());
     }
 
-    public function testSessionWithoutAuthSessionIdIsLoggedOut(): void
+    public function testLoginStateWithoutAuthSessionIdIsLoggedOutAndClearsTheUserData(): void
     {
-        $sessionHandler = $this->registerSessionHandler();
-        $_SESSION['auth_userSession'] = ['isLoggedIn' => true, 'authSessionID' => 5];
+        $this->storage->set(key: 'yuf', value: ['auth' => ['isLoggedIn' => true]]);
+        $this->session->set(key: 'cart', value: 'full');
 
-        $this->assertFalse(AuthSession::isLoggedIn());
-        $this->assertSame(['auth_userSession' => ['isLoggedIn' => false, 'authSessionId' => 0]], $_SESSION);
-        $this->assertSame(1, $sessionHandler->regenerations);
+        $this->assertFalse($this->authSession->isLoggedIn());
+        $this->assertSame([], $this->storage->all());
+        $this->assertSame('array-session-1', $this->session->getId());
     }
 
-    public function testIsLoggedInWritesTheLoggedOutStateIfNothingIsStored(): void
+    public function testIndicatorThatIsNoBooleanMeansLoggedOut(): void
     {
-        $this->assertFalse(AuthSession::isLoggedIn());
+        $this->storage->set(key: 'yuf', value: ['auth' => ['isLoggedIn' => 'yes', 'authSessionId' => 5]]);
 
-        $this->assertSame(['auth_userSession' => ['isLoggedIn' => false]], $_SESSION);
+        $this->assertFalse($this->authSession->isLoggedIn());
     }
 
-    public function testIndicatorThatIsNoBooleanMeansLoggedOutAndIsReplacedByFalse(): void
+    public function testAuthDataThatIsNoArrayMeansLoggedOut(): void
     {
-        $_SESSION['auth_userSession'] = ['isLoggedIn' => 'yes', 'authSessionId' => 5];
+        $this->storage->set(key: 'yuf', value: ['auth' => 'text']);
 
-        $this->assertFalse(AuthSession::isLoggedIn());
-        $this->assertSame(['auth_userSession' => ['isLoggedIn' => false, 'authSessionId' => 5]], $_SESSION);
+        $this->assertFalse($this->authSession->isLoggedIn());
     }
 
-    public function testSessionDataThatIsNoArrayMeansLoggedOut(): void
+    public function testStoredIdOfALoggedOutStateIsNotReadable(): void
     {
-        $_SESSION['auth_userSession'] = 'text';
+        $this->storage->set(key: 'yuf', value: ['auth' => ['isLoggedIn' => false, 'authSessionId' => 5]]);
 
-        $this->assertFalse(AuthSession::isLoggedIn());
-    }
+        $this->assertFalse($this->authSession->isLoggedIn());
+        $this->expectException(LogicException::class);
 
-    /**
-     * Not a feature but today's behaviour: the ID of a logged-out session can still be read (findings of
-     * docs/session/plan.md, step 1).
-     */
-    public function testAuthSessionIdIsStillReadableWhenLoggedOutWithAStoredId(): void
-    {
-        $_SESSION['auth_userSession'] = ['isLoggedIn' => false, 'authSessionId' => 5];
-
-        $this->assertFalse(AuthSession::isLoggedIn());
-        $this->assertSame(5, AuthSession::getAuthSessionId());
+        $this->authSession->getAuthSessionId();
     }
 
     public function testSecondLogInReplacesTheAuthSessionId(): void
     {
-        AuthSession::logIn(authSessionId: 5);
+        $this->authSession->logIn(authSessionId: 5);
 
-        AuthSession::logIn(authSessionId: 6);
+        $this->authSession->logIn(authSessionId: 6);
 
-        $this->assertTrue(AuthSession::isLoggedIn());
-        $this->assertSame(6, AuthSession::getAuthSessionId());
+        $this->assertTrue($this->authSession->isLoggedIn());
+        $this->assertSame(6, $this->authSession->getAuthSessionId());
     }
 
     public function testLogOutTwiceRegeneratesTheSessionIdOnce(): void
     {
-        $sessionHandler = $this->registerSessionHandler();
-        AuthSession::logIn(authSessionId: 5);
+        $this->authSession->logIn(authSessionId: 5);
 
-        AuthSession::logOut();
-        AuthSession::logOut();
+        $this->authSession->logOut();
+        $this->authSession->logOut();
 
-        $this->assertFalse(AuthSession::isLoggedIn());
-        $this->assertSame(1, $sessionHandler->regenerations);
+        $this->assertFalse($this->authSession->isLoggedIn());
+        $this->assertSame('array-session-1', $this->session->getId());
     }
 
     public function testLogInAfterLogOutIsPossible(): void
     {
-        $this->registerSessionHandler();
-        AuthSession::logIn(authSessionId: 5);
-        AuthSession::logOut();
+        $this->authSession->logIn(authSessionId: 5);
+        $this->authSession->logOut();
 
-        AuthSession::logIn(authSessionId: 7);
+        $this->authSession->logIn(authSessionId: 7);
 
-        $this->assertTrue(AuthSession::isLoggedIn());
-        $this->assertSame(7, AuthSession::getAuthSessionId());
+        $this->assertTrue($this->authSession->isLoggedIn());
+        $this->assertSame(7, $this->authSession->getAuthSessionId());
     }
 
-    public function testLogOutKeepsTheStateOfAnotherUserOutOfTheSession(): void
+    public function testLogOutRemovesTheStateOfTablesAndSearch(): void
     {
-        $this->registerSessionHandler();
-        AuthSession::logIn(authSessionId: 5);
-        $_SESSION['table'] = ['items' => ['sort_column' => 'name']];
-        $_SESSION['searchHelper'] = ['users' => ['status' => 'active']];
+        $this->authSession->logIn(authSessionId: 5);
+        $this->storage->set(key: 'yuf', value: [
+            'auth' => ['isLoggedIn' => true, 'authSessionId' => 5],
+            'tables' => ['items' => ['sortColumn' => 'name']],
+            'search' => ['users' => ['status' => 'active']],
+        ]);
 
-        AuthSession::logOut();
+        $this->authSession->logOut();
 
-        $this->assertArrayNotHasKey('table', $_SESSION);
-        $this->assertArrayNotHasKey('searchHelper', $_SESSION);
+        $this->assertSame([], $this->session->getSection(section: SessionSectionEnum::TABLES));
+        $this->assertSame([], $this->session->getSection(section: SessionSectionEnum::SEARCH));
     }
 
-    /**
-     * Not a feature but today's behaviour: without session the state lives in a `$_SESSION` array that the call
-     * creates (`AbstractSessionHandler::enabled()` is true afterwards) and is gone with the request (findings of
-     * docs/session/plan.md, step 1).
-     */
-    public function testWithoutSessionLogInIsKeptInTheCreatedSessionArray(): void
+    public function testGetSessionIdIsTheIdOfTheSession(): void
     {
-        unset($_SESSION);
-
-        AuthSession::logIn(authSessionId: 5);
-
-        $this->assertTrue(AuthSession::isLoggedIn());
-        $this->assertTrue(AbstractSessionHandler::enabled());
-    }
-
-    private function registerSessionHandler(): AuthSessionTestSessionHandler
-    {
-        $sessionHandler = new AuthSessionTestSessionHandler();
-        $this->handlerProperty->setValue(null, $sessionHandler);
-
-        return $sessionHandler;
-    }
-}
-
-final class AuthSessionTestSessionHandler extends AbstractSessionHandler
-{
-    public int $regenerations = 0;
-
-    /**
-     * Does not start a session.
-     */
-    public function __construct() {} // @phpstan-ignore constructor.missingParentCall (the parent starts a session)
-
-    #[Override]
-    protected function executePreStartActions(): void {}
-
-    #[Override]
-    public function regenerateId(): void
-    {
-        $this->regenerations++;
+        $this->assertSame('array-session', $this->authSession->getSessionId());
     }
 }

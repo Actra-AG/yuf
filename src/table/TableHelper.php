@@ -12,6 +12,7 @@ namespace actra\yuf\table;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
+use actra\yuf\session\Session;
 use actra\yuf\table\column\ActionsColumn;
 use actra\yuf\table\column\CallbackColumn;
 use actra\yuf\table\column\DateColumn;
@@ -49,6 +50,7 @@ class TableHelper
         string $selectQuery,
         TemplateEngine $templateEngine,
         HttpRequest $httpRequest,
+        Session $session,
         array $params = [],
         ?TableFilter $tableFilter = null,
         ?TablePaginationRenderer $tablePaginationRenderer = null,
@@ -61,6 +63,7 @@ class TableHelper
             dbQuery: DbQuery::createFromSqlQuery(query: $selectQuery, parameters: $params),
             templateEngine: $templateEngine,
             httpRequest: $httpRequest,
+            session: $session,
             tableFilter: $tableFilter,
             tablePaginationRenderer: $tablePaginationRenderer,
             sortableTableHeadRenderer: $sortableTableHeadRenderer,

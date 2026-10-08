@@ -11,6 +11,8 @@ namespace actra\yuf\tests\Unit\table;
 
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
+use actra\yuf\session\ArraySessionStorage;
+use actra\yuf\session\Session;
 use actra\yuf\table\renderer\TablePaginationRenderer;
 use actra\yuf\template\TemplateEngine;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
@@ -85,6 +87,7 @@ final class TablePaginationRendererTest extends TestCase
             dbQuery: TablePaginationRendererTest::createStub(DbQuery::class),
             templateEngine: $this->templateEngine,
             httpRequest: HttpRequestFactory::create(),
+            session: new Session(storage: new ArraySessionStorage()),
             totalAmount: 100,
             currentPage: 2,
         );

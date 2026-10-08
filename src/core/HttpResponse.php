@@ -146,11 +146,10 @@ class HttpResponse
         string         $relativeOrAbsoluteUri,
         HttpRequest    $httpRequest,
         HttpStatusCodeEnum $httpStatusCode = HttpStatusCodeEnum::HTTP_SEE_OTHER,
-        bool           $setSameSiteCookieTemporaryToLax = false,
+        ?AbstractSessionHandler $sameSiteLaxSessionHandler = null,
     ): void {
-        if ($setSameSiteCookieTemporaryToLax) {
-            AbstractSessionHandler::getSessionHandler()->changeCookieSameSiteToLax();
-        }
+        // The session cookie is sent with the redirect: temporarily Lax, so it comes back from other sites
+        $sameSiteLaxSessionHandler?->changeCookieSameSiteToLax();
         header(header: $httpStatusCode->getStatusHeader());
         header(header: 'Location: ' . UrlHelper::generateAbsoluteUri(
             relativeOrAbsoluteUri: $relativeOrAbsoluteUri,

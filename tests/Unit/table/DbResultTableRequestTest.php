@@ -13,6 +13,9 @@ use actra\yuf\core\HttpRequest;
 use actra\yuf\core\RequestMethodEnum;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
+use actra\yuf\session\ArraySessionStorage;
+use actra\yuf\session\Session;
+use actra\yuf\session\SessionSectionEnum;
 use actra\yuf\table\column\DefaultColumn;
 use actra\yuf\table\table\DbResultTable;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
@@ -26,26 +29,23 @@ use PHPUnit\Framework\TestCase;
  */
 final class DbResultTableRequestTest extends TestCase
 {
-    private static int $counter = 0;
+    private int $counter = 0;
+    private ArraySessionStorage $storage;
+    private Session $session;
 
     #[Override]
     protected function setUp(): void
     {
-        $_SESSION = [];
-    }
-
-    #[Override]
-    protected function tearDown(): void
-    {
-        unset($_SESSION); // Sessions are disabled in the CLI, the request handler checks that
+        $this->storage = new ArraySessionStorage();
+        $this->session = new Session(storage: $this->storage);
     }
 
     /**
-     * The identifiers of tables are unique per process, so every test uses its own.
+     * A different identifier for every call, so tests can tell tables apart.
      */
     private function nextIdentifier(): string
     {
-        return 'items' . ++DbResultTableRequestTest::$counter;
+        return 'items' . ++$this->counter;
     }
 
     private function createTable(string $identifier, HttpRequest $httpRequest): DbResultTable
@@ -59,6 +59,7 @@ final class DbResultTableRequestTest extends TestCase
                 templateBaseDirectory: sys_get_temp_dir() . '/',
             ),
             httpRequest: $httpRequest,
+            session: $this->session,
         );
         $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'id', label: 'Id', isSortable: true));
         $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'name', label: 'Name', isSortable: true));
@@ -159,9 +160,10 @@ final class DbResultTableRequestTest extends TestCase
     {
         foreach (['find', 'reset'] as $parameter) {
             $id = $this->nextIdentifier();
-            $_SESSION = [
-                'table' => [$id => ['pagination_page' => '5', 'sort_column' => 'name', 'sort_direction' => 'DESC']],
-            ];
+            $this->session->setSection(
+                section: SessionSectionEnum::TABLES,
+                data: [$id => ['paginationPage' => '5', 'sortColumn' => 'name', 'sortDirection' => 'DESC']],
+            );
             $table = $this->createTable(
                 identifier: $id,
                 httpRequest: HttpRequestFactory::create(queryParameters: [$parameter => '']),
@@ -176,7 +178,10 @@ final class DbResultTableRequestTest extends TestCase
     public function testResetRestoresTheDefaultSorting(): void
     {
         $id = $this->nextIdentifier();
-        $_SESSION = ['table' => [$id => ['sort_column' => 'name', 'sort_direction' => 'DESC']]];
+        $this->session->setSection(
+            section: SessionSectionEnum::TABLES,
+            data: [$id => ['sortColumn' => 'name', 'sortDirection' => 'DESC']],
+        );
         $table = $this->createTable(
             identifier: $id,
             httpRequest: HttpRequestFactory::create(queryParameters: ['reset' => '']),
@@ -191,7 +196,10 @@ final class DbResultTableRequestTest extends TestCase
     public function testSortingOfAPreviousRequestStaysInTheSession(): void
     {
         $id = $this->nextIdentifier();
-        $_SESSION = ['table' => [$id => ['sort_column' => 'name', 'sort_direction' => 'DESC']]];
+        $this->session->setSection(
+            section: SessionSectionEnum::TABLES,
+            data: [$id => ['sortColumn' => 'name', 'sortDirection' => 'DESC']],
+        );
         $table = $this->createTable(identifier: $id, httpRequest: HttpRequestFactory::create());
 
         $table->fillBySelectQuery();

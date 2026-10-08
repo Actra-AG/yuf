@@ -14,7 +14,10 @@ use actra\yuf\db\DbQuery;
 use actra\yuf\db\DbQueryData;
 use actra\yuf\db\FrameworkDb;
 use actra\yuf\html\HtmlText;
-use actra\yuf\session\AbstractSessionHandler;
+use actra\yuf\security\SessionCsrfTokenSource;
+use actra\yuf\session\ArraySessionStorage;
+use actra\yuf\session\Session;
+use actra\yuf\session\SessionSectionEnum;
 use actra\yuf\table\column\DefaultColumn;
 use actra\yuf\table\filter\DateFilterField;
 use actra\yuf\table\filter\FilterOption;
@@ -24,24 +27,19 @@ use actra\yuf\table\filter\TextFilterField;
 use actra\yuf\table\table\DbResultTable;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\table\ExposingTableFilter;
-use actra\yuf\tests\Double\table\StaticTableRegistries;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
-use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Characterization of the session behaviour before the redesign (docs/session/plan.md, step 1): what a `TableFilter`
- * with a text, an options and a date field remembers across requests, when it forgets it, the CSRF requirement for
- * new input and the behaviour without session. `TableFilterCsrfTest` covers the CSRF check with a recording field;
- * this class covers the stored values.
+ * What a `TableFilter` with a text, an options and a date field remembers across requests (in
+ * `yuf.tableFilters.fields`), when it forgets it, the CSRF requirement for new input and the behaviour without CSRF
+ * token source (no session). `TableFilterCsrfTest` covers the CSRF check with a recording field; this class covers
+ * the stored values.
  *
- * A request is simulated by building the filter and the table again with the same identifiers and the `$_SESSION`
- * of the previous request. The static identifier registries have no reset method, so `StaticTableRegistries::reset()`
- * empties them through reflection (removed in step 2 together with the registries).
- *
- * The behaviour tests only use `request()`, `submit()` and the getters of the fields; the keys and value shapes of
- * the storage are pinned in `testStorageLayout…()` only (they may change in step 2).
+ * A request is simulated by building the filter and the table again with the same identifiers and the session of
+ * the previous request. The behaviour tests only use `request()`, `submit()` and the getters of the fields; the keys
+ * and value shapes of the storage are pinned in `testStorageLayout…()` only.
  */
 final class TableFilterSessionTest extends TestCase
 {
@@ -51,18 +49,16 @@ final class TableFilterSessionTest extends TestCase
     private const string OPTIONS = 'sessionFilter_status';
     private const string DATE = 'sessionFilter_since';
 
+    private ArraySessionStorage $storage;
+    private Session $session;
+    private SessionCsrfTokenSource $tokenSource;
+
     #[Override]
     protected function setUp(): void
     {
-        StaticTableRegistries::reset();
-        $_SESSION = ['csrftoken' => 'expected-token'];
-    }
-
-    #[Override]
-    protected function tearDown(): void
-    {
-        StaticTableRegistries::reset();
-        unset($_SESSION); // Sessions are disabled in the CLI
+        $this->storage = new ArraySessionStorage(data: ['yuf' => ['csrf' => ['token' => 'expected-token']]]);
+        $this->session = new Session(storage: $this->storage);
+        $this->tokenSource = new SessionCsrfTokenSource(session: $this->session);
     }
 
     /**
@@ -78,10 +74,15 @@ final class TableFilterSessionTest extends TestCase
         array $query = [],
         array $post = [],
         string $optionsDefault = '',
+        bool $withCsrfTokenSource = true,
     ): array {
-        StaticTableRegistries::reset();
         $httpRequest = HttpRequestFactory::create(method: $method, queryParameters: $query, postParameters: $post);
-        $filter = new TableFilter(identifier: TableFilterSessionTest::FILTER, httpRequest: $httpRequest);
+        $filter = new TableFilter(
+            identifier: TableFilterSessionTest::FILTER,
+            httpRequest: $httpRequest,
+            session: $this->session,
+            csrfTokenSource: $withCsrfTokenSource ? $this->tokenSource : null,
+        );
         $text = new TextFilterField(
             parentFilter: $filter,
             filterFieldIdentifier: 'name',
@@ -93,7 +94,11 @@ final class TableFilterSessionTest extends TestCase
             filterFieldIdentifier: 'status',
             label: HtmlText::fromHtml(html: 'Status'),
             filterOptions: [
-                new FilterOption(identifier: 'all', label: 'All', whereCondition: new DbQueryData(query: '1=1', params: [])),
+                new FilterOption(
+                    identifier: 'all',
+                    label: 'All',
+                    whereCondition: new DbQueryData(query: '1=1', params: []),
+                ),
                 new FilterOption(
                     identifier: 'active',
                     label: 'Active',
@@ -126,6 +131,7 @@ final class TableFilterSessionTest extends TestCase
                 templateBaseDirectory: sys_get_temp_dir() . '/',
             ),
             httpRequest: $httpRequest,
+            session: $this->session,
             tableFilter: $filter,
         );
         $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'id', label: 'Id', isSortable: true));
@@ -141,17 +147,22 @@ final class TableFilterSessionTest extends TestCase
      *
      * @return array{filter: TableFilter, table: DbResultTable, text: TextFilterField, options: OptionsFilterField, date: DateFilterField}
      */
-    private function submit(array $values, string $token = 'expected-token', string $optionsDefault = ''): array
-    {
+    private function submit(
+        array $values,
+        string $token = 'expected-token',
+        string $optionsDefault = '',
+        bool $withCsrfTokenSource = true,
+    ): array {
         return $this->request(
             method: RequestMethodEnum::POST,
             query: [TableFilterSessionTest::FILTER => '', 'find' => ''],
             post: ['csrftoken' => $token] + $values,
             optionsDefault: $optionsDefault,
+            withCsrfTokenSource: $withCsrfTokenSource,
         );
     }
 
-    public function testStorageLayoutIsOneArrayPerFilterFieldBelowTheKeyColumnFilter(): void
+    public function testStorageLayoutIsOneArrayPerFilterFieldInTheFieldsGroupOfTheTableFiltersSection(): void
     {
         $this->submit(
             values: [
@@ -163,61 +174,69 @@ final class TableFilterSessionTest extends TestCase
 
         $this->assertSame(
             [
-                'csrftoken' => 'expected-token',
-                'columnFilter' => [
-                    'sessionFilter_name' => ['sessionFilter_name' => 'ann'],
-                    'sessionFilter_status' => ['sessionFilter_status' => 'active'],
-                    'sessionFilter_since' => ['sessionFilter_since' => '2026-03-01 00:00:00'],
-                ],
-                'table' => [
-                    'sessionFilterTable' => [
-                        'pagination_page' => '1',
-                        'sort_column' => 'id',
-                        'sort_direction' => 'ASC',
+                'yuf' => [
+                    'csrf' => ['token' => 'expected-token'],
+                    'tableFilters' => [
+                        'fields' => [
+                            'sessionFilter_name' => ['sessionFilter_name' => 'ann'],
+                            'sessionFilter_status' => ['sessionFilter_status' => 'active'],
+                            'sessionFilter_since' => ['sessionFilter_since' => '2026-03-01 00:00:00'],
+                        ],
                     ],
                 ],
             ],
-            $_SESSION,
-        );
-    }
-
-    public function testStorageLayoutOfTheFirstRequestHasEmptyArraysWrittenOnRead(): void
-    {
-        $this->request();
-
-        $this->assertSame(
-            [
-                'csrftoken' => 'expected-token',
-                'columnFilter' => [
-                    'sessionFilter_name' => [],
-                    'sessionFilter_status' => [],
-                    'sessionFilter_since' => [],
-                ],
-                'table' => [
-                    'sessionFilterTable' => [
-                        'sort_column' => 'id',
-                        'sort_direction' => 'ASC',
-                        'pagination_page' => '1',
-                    ],
-                ],
-            ],
-            $_SESSION,
+            $this->storage->all(),
         );
     }
 
     /**
-     * The protected accessors of `TableFilter` for own filters use the key `tableFilter`; yuf's own filter fields use
-     * `columnFilter` instead, so nothing of yuf writes `tableFilter`.
+     * Fix of v4.30.0: before, a filter and its fields wrote empty arrays (and the table its defaults) on every first
+     * request.
+     */
+    public function testFirstRequestWritesNothingIntoTheSession(): void
+    {
+        $this->request();
+
+        $this->assertSame(['yuf' => ['csrf' => ['token' => 'expected-token']]], $this->storage->all());
+    }
+
+    /**
+     * The protected accessors of `TableFilter` for own filters use the group `filters`; the filter fields of yuf
+     * use the group `fields`, so they cannot collide.
      */
     public function testStorageLayoutOfTheProtectedAccessorsOfTableFilter(): void
     {
-        $filter = new ExposingTableFilter(identifier: 'own', httpRequest: HttpRequestFactory::create());
+        $filter = new ExposingTableFilter(
+            identifier: 'own',
+            httpRequest: HttpRequestFactory::create(),
+            session: $this->session,
+            csrfTokenSource: null,
+        );
 
         $filter->write(index: 'key', value: 'value');
 
         $this->assertSame('value', $filter->read(index: 'key'));
         $this->assertNull($filter->read(index: 'unknown'));
-        $this->assertSame(['own' => ['key' => 'value']], $_SESSION['tableFilter'] ?? null);
+        $this->assertSame(
+            ['filters' => ['own' => ['key' => 'value']]],
+            $this->session->getSection(section: SessionSectionEnum::TABLE_FILTERS),
+        );
+    }
+
+    public function testOwnFilterStateAndFieldStateDoNotCollide(): void
+    {
+        $this->submit(values: [TableFilterSessionTest::TEXT => 'ann']);
+        $filter = new ExposingTableFilter(
+            identifier: TableFilterSessionTest::TEXT,
+            httpRequest: HttpRequestFactory::create(),
+            session: $this->session,
+            csrfTokenSource: null,
+        );
+
+        $filter->write(index: TableFilterSessionTest::TEXT, value: 'own');
+
+        $this->assertSame('own', $filter->read(index: TableFilterSessionTest::TEXT));
+        $this->assertSame('ann', $this->request()['text']->getValue());
     }
 
     public function testFilterStartsWithoutValuesAndIsNotApplied(): void
@@ -337,7 +356,7 @@ final class TableFilterSessionTest extends TestCase
     public function testResetParameterNeedsNoCsrfToken(): void
     {
         $this->submit(values: [TableFilterSessionTest::TEXT => 'ann']);
-        unset($_SESSION['csrftoken']);
+        $this->session->setSection(section: SessionSectionEnum::CSRF, data: []);
 
         $reset = $this->request(query: ['reset' => '']);
 
@@ -425,7 +444,7 @@ final class TableFilterSessionTest extends TestCase
 
     public function testFilterInputIsAcceptedWithTheTokenOfTheSessionOnly(): void
     {
-        $_SESSION['csrftoken'] = 'another-token';
+        $this->session->setSection(section: SessionSectionEnum::CSRF, data: ['token' => 'another-token']);
 
         $this->assertSame('', $this->submit(values: [TableFilterSessionTest::TEXT => 'ann'])['text']->getValue());
         $this->assertSame(
@@ -437,7 +456,7 @@ final class TableFilterSessionTest extends TestCase
     public function testValuesOfAnotherSessionAreNotVisible(): void
     {
         $this->submit(values: [TableFilterSessionTest::TEXT => 'ann']);
-        $_SESSION = ['csrftoken' => 'expected-token'];
+        $this->storage->replaceAll(data: ['yuf' => ['csrf' => ['token' => 'expected-token']]]);
 
         $this->assertSame('', $this->request()['text']->getValue());
     }
@@ -446,7 +465,7 @@ final class TableFilterSessionTest extends TestCase
     {
         $this->submit(values: [TableFilterSessionTest::TEXT => 'ann']);
 
-        AbstractSessionHandler::clearUserData();
+        $this->session->clearUserData();
 
         $this->assertSame('', $this->request()['text']->getValue());
     }
@@ -459,13 +478,11 @@ final class TableFilterSessionTest extends TestCase
     }
 
     /**
-     * Without session the placeholder `csrfField` is empty as long as nothing wrote to `$_SESSION`; a filter
-     * without fields reads nothing.
+     * Decision of v4.30.0: without CSRF token source (no session) the filter renders no CSRF field.
      */
-    public function testWithoutSessionAFilterWithoutFieldsRendersNoCsrfField(): void
+    public function testWithoutTokenSourceTheFilterRendersNoCsrfField(): void
     {
-        unset($_SESSION);
-        $filter = new TableFilter(identifier: TableFilterSessionTest::FILTER, httpRequest: HttpRequestFactory::create());
+        $filter = $this->request(withCsrfTokenSource: false)['filter'];
 
         $html = $this->renderFilter(filter: $filter);
 
@@ -473,72 +490,56 @@ final class TableFilterSessionTest extends TestCase
     }
 
     /**
-     * Not a feature but today's behaviour: the filter fields (and the table) write into `$_SESSION` when they are
-     * built, which makes `AbstractSessionHandler::enabled()` true. Without session the filter renders a token field
-     * whose token can never be accepted (findings of docs/session/plan.md, step 1).
+     * Decision of v4.30.0: without CSRF token source the posted filter input is accepted without token (CSRF needs
+     * a session cookie). Before, it was never accepted.
      */
-    public function testWithoutSessionAFilterWithFieldsRendersACsrfFieldThatIsNeverAccepted(): void
+    public function testWithoutTokenSourceFilterInputIsAcceptedWithoutToken(): void
     {
-        unset($_SESSION);
-        $filter = $this->request()['filter'];
+        $result = $this->request(
+            method: RequestMethodEnum::POST,
+            query: [TableFilterSessionTest::FILTER => '', 'find' => ''],
+            post: [TableFilterSessionTest::TEXT => 'ann'],
+            withCsrfTokenSource: false,
+        );
 
-        $html = $this->renderFilter(filter: $filter);
-
-        $this->assertMatchesRegularExpression('~<input type="hidden" name="csrftoken" value="[A-Za-z0-9+/=]{44}">~', $html);
-        $this->assertTrue(AbstractSessionHandler::enabled());
+        $this->assertSame('ann', $result['text']->getValue());
+        $this->assertTrue($result['filter']->filtersApplied);
     }
 
-    public function testWithoutSessionFilterInputIsNeverAccepted(): void
+    public function testWithoutTokenSourceFilterInputIsStillOnlyAcceptedFromAPostRequest(): void
     {
-        unset($_SESSION);
-
-        $result = $this->submit(values: [TableFilterSessionTest::TEXT => 'ann']);
+        $result = $this->request(
+            query: [TableFilterSessionTest::FILTER => '', TableFilterSessionTest::TEXT => 'ann'],
+            withCsrfTokenSource: false,
+        );
 
         $this->assertSame('', $result['text']->getValue());
         $this->assertFalse($result['filter']->filtersApplied);
     }
 
-    public function testWithoutSessionTheFilterStartsEmpty(): void
+    public function testTheSameFilterIdentifierMayBeUsedAgain(): void
     {
-        unset($_SESSION);
-
-        $result = $this->request();
-
-        $this->assertSame('', $result['text']->getValue());
-        $this->assertFalse($result['filter']->filtersApplied);
-    }
-
-    /**
-     * Removed in step 2 together with the static registry of `TableFilter`.
-     */
-    public function testSecondFilterWithTheSameIdentifierThrows(): void
-    {
-        new TableFilter(identifier: 'duplicateFilter', httpRequest: HttpRequestFactory::create());
-
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessageIs('There is already a filter with the same identifier duplicateFilter');
-
-        new TableFilter(identifier: 'duplicateFilter', httpRequest: HttpRequestFactory::create());
-    }
-
-    /**
-     * Removed in step 2 together with the static registry of `AbstractTableFilterField`.
-     */
-    public function testSecondFilterFieldWithTheSameIdentifierThrows(): void
-    {
-        $filter = new TableFilter(identifier: 'duplicateField', httpRequest: HttpRequestFactory::create());
-        $createField = static fn(): TextFilterField => new TextFilterField(
+        $first = new TableFilter(
+            identifier: 'duplicateFilter',
+            httpRequest: HttpRequestFactory::create(),
+            session: $this->session,
+            csrfTokenSource: null,
+        );
+        $second = new TableFilter(
+            identifier: 'duplicateFilter',
+            httpRequest: HttpRequestFactory::create(),
+            session: $this->session,
+            csrfTokenSource: null,
+        );
+        $createField = static fn(TableFilter $filter): TextFilterField => new TextFilterField(
             parentFilter: $filter,
             filterFieldIdentifier: 'name',
             label: HtmlText::fromHtml(html: 'Name'),
             dataTableColumnReference: 'users.name',
         );
-        $createField();
 
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessageIs('There is already a column filter with the same identifier duplicateField_name');
-
-        $createField();
+        $this->assertNotSame($first, $second);
+        $this->assertSame($createField($first)->identifier, $createField($first)->identifier);
     }
 
     private function renderFilter(TableFilter $filter): string

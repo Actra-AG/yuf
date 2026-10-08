@@ -10,53 +10,36 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\auth;
 
 use actra\yuf\auth\AccessRightCollection;
-use actra\yuf\auth\Authenticator;
 use actra\yuf\auth\AuthResultEnum;
 use actra\yuf\auth\AuthSession;
-use actra\yuf\session\AbstractSessionHandler;
+use actra\yuf\session\ArraySessionStorage;
+use actra\yuf\session\Session;
 use actra\yuf\tests\Double\auth\RecordingAuthenticator;
 use actra\yuf\tests\Double\auth\TestAuthUser;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
-use ReflectionProperty;
 
 /**
- * Characterization of the session behaviour before the redesign (docs/session/plan.md, step 1): what a login writes
- * into the session (checked through `AuthSession`) and the single-instance guards of `Authenticator` and `AuthUser`.
- *
- * `Authenticator` and the session handler are singletons without a reset method: like in `AuthSessionTest`, they are
- * reset through reflection after each test (removed in step 2).
+ * What a login writes into the session (checked through `AuthSession`) and how the `Authenticator` handles the login
+ * state. Several authenticators and users per request are possible (no static guards).
  */
 final class AuthenticatorTest extends TestCase
 {
+    private AuthSession $authSession;
+
     #[Override]
     protected function setUp(): void
     {
-        $_SESSION = [];
-        new ReflectionProperty(class: AbstractSessionHandler::class, property: 'abstractSessionHandler')->setValue(
-            null,
-            new AuthenticatorTestSessionHandler(),
-        );
-    }
-
-    #[Override]
-    protected function tearDown(): void
-    {
-        TestAuthUser::release();
-        new ReflectionProperty(class: Authenticator::class, property: 'instance')->setValue(null, null);
-        new ReflectionProperty(class: AbstractSessionHandler::class, property: 'abstractSessionHandler')->setValue(
-            null,
-            null,
-        );
-        unset($_SESSION);
+        $this->authSession = new AuthSession(session: new Session(storage: new ArraySessionStorage()));
     }
 
     public function testLogsAnUnknownUserWithNamedArguments(): void
     {
         $authenticator = new RecordingAuthenticator(
             httpRequest: HttpRequestFactory::create(remoteAddress: '203.0.113.5'),
+            authSession: $this->authSession,
             authUser: null,
         );
 
@@ -66,7 +49,7 @@ final class AuthenticatorTest extends TestCase
             [
                 [
                     'userId' => null,
-                    'sessionId' => '',
+                    'sessionId' => 'array-session',
                     'ip' => '203.0.113.5',
                     'userName' => 'nobody',
                     'authResult' => AuthResultEnum::ERROR_UNKNOWN_USER_NAME,
@@ -81,6 +64,7 @@ final class AuthenticatorTest extends TestCase
         $authUser = TestAuthUser::create(accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN]);
         $authenticator = new RecordingAuthenticator(
             httpRequest: HttpRequestFactory::create(remoteAddress: '203.0.113.5'),
+            authSession: $this->authSession,
             authUser: $authUser,
         );
 
@@ -90,7 +74,7 @@ final class AuthenticatorTest extends TestCase
             [
                 [
                     'userId' => 1,
-                    'sessionId' => '',
+                    'sessionId' => 'array-session',
                     'ip' => '203.0.113.5',
                     'userName' => 'user',
                     'authResult' => AuthResultEnum::SUCCESSFUL_PASSWORD_LOGIN,
@@ -106,28 +90,37 @@ final class AuthenticatorTest extends TestCase
     {
         $authenticator = new RecordingAuthenticator(
             httpRequest: HttpRequestFactory::create(),
+            authSession: $this->authSession,
             authUser: TestAuthUser::create(accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN]),
         );
 
         $authenticator->passwordLogin(userName: 'user', inputPassword: 'test');
 
-        $this->assertTrue(AuthSession::isLoggedIn());
-        $this->assertSame(0, AuthSession::getAuthSessionId());
+        $this->assertTrue($this->authSession->isLoggedIn());
+        $this->assertSame(0, $this->authSession->getAuthSessionId());
     }
 
     public function testFailedLoginLeavesTheSessionLoggedOut(): void
     {
-        $authenticator = new RecordingAuthenticator(httpRequest: HttpRequestFactory::create(), authUser: null);
+        $authenticator = new RecordingAuthenticator(
+            httpRequest: HttpRequestFactory::create(),
+            authSession: $this->authSession,
+            authUser: null,
+        );
 
         $authenticator->passwordLogin(userName: 'nobody', inputPassword: 'test');
 
-        $this->assertFalse(AuthSession::isLoggedIn());
+        $this->assertFalse($this->authSession->isLoggedIn());
     }
 
     public function testLoginOfAnAlreadyLoggedInUserThrows(): void
     {
-        AuthSession::logIn(authSessionId: 5);
-        $authenticator = new RecordingAuthenticator(httpRequest: HttpRequestFactory::create(), authUser: null);
+        $this->authSession->logIn(authSessionId: 5);
+        $authenticator = new RecordingAuthenticator(
+            httpRequest: HttpRequestFactory::create(),
+            authSession: $this->authSession,
+            authUser: null,
+        );
 
         $this->expectException(LogicException::class);
         $this->expectExceptionMessageIs('It is not allowed to log in, if user is already logged in.');
@@ -137,7 +130,11 @@ final class AuthenticatorTest extends TestCase
 
     public function testLoginTwiceWithTheSameAuthenticatorThrows(): void
     {
-        $authenticator = new RecordingAuthenticator(httpRequest: HttpRequestFactory::create(), authUser: null);
+        $authenticator = new RecordingAuthenticator(
+            httpRequest: HttpRequestFactory::create(),
+            authSession: $this->authSession,
+            authUser: null,
+        );
         $authenticator->passwordLogin(userName: 'nobody', inputPassword: 'test');
 
         $this->expectException(LogicException::class);
@@ -146,40 +143,21 @@ final class AuthenticatorTest extends TestCase
         $authenticator->passwordLogin(userName: 'nobody', inputPassword: 'test');
     }
 
-    /**
-     * Removed in step 2 together with the single-instance guard of `Authenticator`.
-     */
-    public function testSecondAuthenticatorThrows(): void
+    public function testSeveralAuthenticatorsAndUsersAreAllowed(): void
     {
-        new RecordingAuthenticator(httpRequest: HttpRequestFactory::create(), authUser: null);
+        $first = new RecordingAuthenticator(
+            httpRequest: HttpRequestFactory::create(),
+            authSession: $this->authSession,
+            authUser: TestAuthUser::create(accessRights: []),
+        );
+        $second = new RecordingAuthenticator(
+            httpRequest: HttpRequestFactory::create(),
+            authSession: $this->authSession,
+            authUser: TestAuthUser::create(accessRights: []),
+        );
 
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessageIs('There can only be one Authenticator instance.');
-
-        new RecordingAuthenticator(httpRequest: HttpRequestFactory::create(), authUser: null);
+        $this->assertNotSame($first, $second);
+        $this->assertFalse($first->passwordLogin(userName: 'user', inputPassword: 'wrong'));
+        $this->assertFalse($second->passwordLogin(userName: 'user', inputPassword: 'wrong'));
     }
-
-    /**
-     * Removed in step 2 together with the single-instance guard of `AuthUser`.
-     */
-    public function testSecondAuthUserThrows(): void
-    {
-        TestAuthUser::create(accessRights: []);
-
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessageIs('There can only be one AuthUser instance.');
-
-        TestAuthUser::create(accessRights: []);
-    }
-}
-
-final class AuthenticatorTestSessionHandler extends AbstractSessionHandler
-{
-    /**
-     * Does not start a session.
-     */
-    public function __construct() {} // @phpstan-ignore constructor.missingParentCall (the parent starts a session)
-
-    #[Override]
-    protected function executePreStartActions(): void {}
 }

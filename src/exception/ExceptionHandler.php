@@ -20,7 +20,9 @@ use actra\yuf\html\HtmlReplacement;
 use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\html\HtmlSnippet;
 use actra\yuf\response\HttpErrorResponseContent;
-use actra\yuf\security\CsrfToken;
+use actra\yuf\security\CsrfHiddenFieldRenderer;
+use actra\yuf\security\CsrfTokenSource;
+use actra\yuf\session\Session;
 use LogicException;
 use Throwable;
 
@@ -33,6 +35,10 @@ class ExceptionHandler
     // Set by Core as soon as the request data exists; an exception before that uses fallback values
     private ?RequestHandler $requestHandler = null;
     private ?ContentHandler $contentHandler = null;
+    // Set by Core as soon as the session exists (`null` without sessions); an exception before that has none
+    private ?Session $session = null;
+    private ?CsrfTokenSource $csrfTokenSource = null;
+    private bool $sessionIsSet = false;
 
     public function __construct(
         protected readonly HtmlReplacementCollection $htmlReplacementCollection = new HtmlReplacementCollection(),
@@ -76,6 +82,22 @@ class ExceptionHandler
             throw new LogicException(message: 'The content handler is already set.');
         }
         $this->contentHandler = $contentHandler;
+    }
+
+    /**
+     * @param ?Session $session Shown in the debug page (`null` without sessions)
+     * @param ?CsrfTokenSource $csrfTokenSource Renders the `csrfField` of the error pages (`null` without sessions)
+     *
+     * @throws LogicException if the session is already set
+     */
+    public function setSession(?Session $session, ?CsrfTokenSource $csrfTokenSource): void
+    {
+        if ($this->sessionIsSet) {
+            throw new LogicException(message: 'The session is already set.');
+        }
+        $this->sessionIsSet = true;
+        $this->session = $session;
+        $this->csrfTokenSource = $csrfTokenSource;
     }
 
     protected function getContext(): ExceptionHandlerContext
@@ -164,12 +186,12 @@ class ExceptionHandler
         );
         $this->htmlReplacementCollection->addHtml(
             identifier: 'vardump_sess',
-            html: isset($_SESSION) ? htmlentities(
+            html: $this->session === null ? '' : htmlentities(
                 string: var_export(
-                    value: $_SESSION,
+                    value: $this->session->export(),
                     return: true,
                 ),
-            ) : '',
+            ),
         );
         $this->sendHttpResponseAndExit(
             httpStatusCode: $httpStatusCode,
@@ -259,7 +281,7 @@ class ExceptionHandler
         );
         $htmlReplacementCollection->addHtml(
             identifier: 'csrfField',
-            html: CsrfToken::renderAsHiddenPostField(),
+            html: CsrfHiddenFieldRenderer::render(csrfTokenSource: $this->csrfTokenSource),
         );
         $htmlReplacementCollection->addHtml(
             identifier: 'robots',

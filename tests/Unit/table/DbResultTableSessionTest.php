@@ -11,49 +11,40 @@ namespace actra\yuf\tests\Unit\table;
 
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
-use actra\yuf\session\AbstractSessionHandler;
+use actra\yuf\session\ArraySessionStorage;
+use actra\yuf\session\Session;
+use actra\yuf\session\SessionSectionEnum;
 use actra\yuf\table\column\DefaultColumn;
 use actra\yuf\table\renderer\TableHeadRenderer;
 use actra\yuf\table\table\DbResultTable;
 use actra\yuf\table\table\SmartTable;
 use actra\yuf\table\TableItemCollection;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
-use actra\yuf\tests\Double\table\StaticTableRegistries;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
-use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
-use TypeError;
 
 /**
- * Characterization of the session behaviour before the redesign (docs/session/plan.md, step 1): what a
- * `DbResultTable` remembers across requests (sorting, page), when it forgets it, and the static
- * `saveToSession()` / `getFromSession()`. `DbResultTableRequestTest` covers where the input comes from; this class
- * covers the session.
+ * What a `DbResultTable` remembers across requests (sorting, page) in `yuf.tables.<identifier>`, when it forgets it,
+ * and that reading never writes. `DbResultTableRequestTest` covers where the input comes from; this class covers the
+ * session.
  *
- * A request is simulated by building the table again with the same identifier and the `$_SESSION` of the previous
- * one. The static identifier registries have no reset method, so `StaticTableRegistries::reset()` empties them
- * through reflection (removed in step 2 together with the registries).
- *
+ * A request is simulated by building the table again with the same identifier and the session of the previous one.
  * The behaviour tests only use `request()`, `seedState()` and `storedState()`; the keys and value shapes of the
- * storage are pinned in `testStorageLayout…()` only (they may change in step 2).
+ * storage are pinned in `testStorageLayout…()` only.
  */
 final class DbResultTableSessionTest extends TestCase
 {
     private const string ID = 'sessionItems';
 
+    private ArraySessionStorage $storage;
+    private Session $session;
+
     #[Override]
     protected function setUp(): void
     {
-        StaticTableRegistries::reset();
-        $_SESSION = [];
-    }
-
-    #[Override]
-    protected function tearDown(): void
-    {
-        StaticTableRegistries::reset();
-        unset($_SESSION); // Sessions are disabled in the CLI
+        $this->storage = new ArraySessionStorage();
+        $this->session = new Session(storage: $this->storage);
     }
 
     /**
@@ -71,6 +62,7 @@ final class DbResultTableSessionTest extends TestCase
                 templateBaseDirectory: sys_get_temp_dir() . '/',
             ),
             httpRequest: HttpRequestFactory::create(queryParameters: $query, postParameters: $post),
+            session: $this->session,
         );
         $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'id', label: 'Id', isSortable: true));
         $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'name', label: 'Name', isSortable: true));
@@ -94,7 +86,6 @@ final class DbResultTableSessionTest extends TestCase
      */
     private function request(array $query = [], string $identifier = DbResultTableSessionTest::ID): DbResultTable
     {
-        StaticTableRegistries::reset();
         $table = $this->createTable(identifier: $identifier, query: $query);
         $table->fillBySelectQuery();
 
@@ -102,28 +93,21 @@ final class DbResultTableSessionTest extends TestCase
     }
 
     /**
-     * @param array<string, string> $state sort_column, sort_direction, pagination_page
+     * @param array<string, string> $state sortColumn, sortDirection, paginationPage
      */
     private function seedState(array $state, string $identifier = DbResultTableSessionTest::ID): void
     {
-        $_SESSION['table'] = [$identifier => $state];
+        $this->session->setSection(section: SessionSectionEnum::TABLES, data: [$identifier => $state]);
     }
 
     /**
-     * @return array<string, string>
+     * @return array<array-key, mixed>
      */
     private function storedState(string $identifier = DbResultTableSessionTest::ID): array
     {
-        $tables = $_SESSION['table'] ?? [];
-        $state = is_array(value: $tables) ? $tables[$identifier] ?? [] : [];
-        $result = [];
-        foreach (is_array(value: $state) ? $state : [] as $index => $value) {
-            if (is_string(value: $index) && is_string(value: $value)) {
-                $result[$index] = $value;
-            }
-        }
+        $state = $this->session->getSection(section: SessionSectionEnum::TABLES)[$identifier] ?? [];
 
-        return $result;
+        return is_array(value: $state) ? $state : [];
     }
 
     private function sortParameter(string $column, string $direction, string $identifier = DbResultTableSessionTest::ID): string
@@ -131,39 +115,42 @@ final class DbResultTableSessionTest extends TestCase
         return $identifier . '|' . $column . '|' . $direction;
     }
 
-    public function testStorageLayoutIsOneArrayPerTableBelowTheKeyTable(): void
+    public function testStorageLayoutIsOneArrayPerTableInTheTablesSection(): void
     {
         $this->request(query: ['sort' => $this->sortParameter(column: 'name', direction: 'DESC'), 'page' => '3|' . DbResultTableSessionTest::ID]);
 
         $this->assertSame(
             [
-                'table' => [
-                    DbResultTableSessionTest::ID => [
-                        'sort_column' => 'name',
-                        'sort_direction' => 'DESC',
-                        'pagination_page' => '3',
+                'yuf' => [
+                    'tables' => [
+                        DbResultTableSessionTest::ID => [
+                            'sortColumn' => 'name',
+                            'sortDirection' => 'DESC',
+                            'paginationPage' => '3',
+                        ],
                     ],
                 ],
             ],
-            $_SESSION,
+            $this->storage->all(),
         );
     }
 
-    public function testStorageLayoutOfTheDefaultStateIsWrittenOnReadAndPageIsAString(): void
+    /**
+     * Fix of v4.30.0: before, the default sorting and the first page were written on the first request.
+     */
+    public function testDefaultStateIsNotWrittenIntoTheSession(): void
     {
         $this->request();
+        $this->request(query: ['find' => '']);
 
-        $this->assertSame(
-            ['sort_column' => 'id', 'sort_direction' => 'ASC', 'pagination_page' => '1'],
-            $this->storedState(),
-        );
+        $this->assertSame([], $this->storage->all());
     }
 
-    public function testStorageLayoutOfTheStaticAccessors(): void
+    public function testPageIsStoredAsString(): void
     {
-        DbResultTable::saveToSession(dataType: 'custom', identifier: 'one', index: 'key', value: 'value');
+        $this->request(query: ['page' => '3|' . DbResultTableSessionTest::ID]);
 
-        $this->assertSame(['custom' => ['one' => ['key' => 'value']]], $_SESSION);
+        $this->assertSame(['paginationPage' => '3'], $this->storedState());
     }
 
     public function testFirstColumnAscendingIsTheDefaultSorting(): void
@@ -176,7 +163,6 @@ final class DbResultTableSessionTest extends TestCase
 
     public function testDefaultSortColumnAndItsDirectionAreUsedWithoutChoice(): void
     {
-        StaticTableRegistries::reset();
         $table = $this->createTable(identifier: DbResultTableSessionTest::ID);
         $table->addColumn(
             abstractTableColumn: new DefaultColumn(
@@ -324,7 +310,7 @@ final class DbResultTableSessionTest extends TestCase
     public function testStateOfAnotherSessionStartsFromTheDefaults(): void
     {
         $this->request(query: ['sort' => $this->sortParameter(column: 'name', direction: 'DESC'), 'page' => '3|' . DbResultTableSessionTest::ID]);
-        $_SESSION = [];
+        $this->storage->replaceAll(data: []);
 
         $table = $this->request();
 
@@ -334,9 +320,9 @@ final class DbResultTableSessionTest extends TestCase
 
     public function testStateIsGoneAfterTheUserDataWasCleared(): void
     {
-        $this->seedState(state: ['sort_column' => 'name', 'sort_direction' => 'DESC', 'pagination_page' => '3']);
+        $this->seedState(state: ['sortColumn' => 'name', 'sortDirection' => 'DESC', 'paginationPage' => '3']);
 
-        AbstractSessionHandler::clearUserData();
+        $this->session->clearUserData();
 
         $this->assertSame([], $this->storedState());
         $this->assertSame('id', $this->request()->getCurrentSortColumn());
@@ -344,7 +330,7 @@ final class DbResultTableSessionTest extends TestCase
 
     public function testRememberedStateIsUsedAsStored(): void
     {
-        $this->seedState(state: ['sort_column' => 'created', 'sort_direction' => 'ASC', 'pagination_page' => '7']);
+        $this->seedState(state: ['sortColumn' => 'created', 'sortDirection' => 'ASC', 'paginationPage' => '7']);
 
         $table = $this->request();
 
@@ -355,7 +341,7 @@ final class DbResultTableSessionTest extends TestCase
 
     public function testRememberedPageBelowOneGoesBackToTheFirstPage(): void
     {
-        $this->seedState(state: ['sort_column' => 'id', 'sort_direction' => 'ASC', 'pagination_page' => '0']);
+        $this->seedState(state: ['sortColumn' => 'id', 'sortDirection' => 'ASC', 'paginationPage' => '0']);
 
         $this->assertSame(1, $this->request()->getCurrentPaginationPage());
     }
@@ -370,13 +356,35 @@ final class DbResultTableSessionTest extends TestCase
         $this->assertSame(6, $this->request()->getCurrentPaginationPage());
     }
 
-    public function testSortDirectionBeforeTheTableWasFilledIsAnError(): void
+    /**
+     * Fix of v4.30.0: before, the direction of a table that was not filled yet was a `TypeError`.
+     */
+    public function testSortColumnAndDirectionBeforeTheTableWasFilledAreTheDefaults(): void
     {
         $table = $this->createTable(identifier: DbResultTableSessionTest::ID);
 
-        $this->expectException(TypeError::class);
+        $this->assertSame('id', $table->getCurrentSortColumn());
+        $this->assertSame('ASC', $table->getCurrentSortDirection());
+        $this->assertSame(1, $table->getCurrentPaginationPage());
+        $this->assertSame([], $this->storage->all());
+    }
 
-        $table->getCurrentSortDirection();
+    public function testTableWithoutColumnsHasNoSortColumn(): void
+    {
+        $table = new DbResultTable(
+            identifier: DbResultTableSessionTest::ID,
+            db: DbResultTableSessionTest::createStub(FrameworkDb::class),
+            dbQuery: DbResultTableSessionTest::createStub(DbQuery::class),
+            templateEngine: TemplateEngineFactory::create(
+                cacheDirectory: sys_get_temp_dir() . '/yuf-db-result-table-test/',
+                templateBaseDirectory: sys_get_temp_dir() . '/',
+            ),
+            httpRequest: HttpRequestFactory::create(),
+            session: $this->session,
+        );
+
+        $this->assertNull($table->getCurrentSortColumn());
+        $this->assertSame('ASC', $table->getCurrentSortDirection());
     }
 
     public function testStateIsNotReadFromThePostedData(): void
@@ -392,95 +400,67 @@ final class DbResultTableSessionTest extends TestCase
         $this->assertSame(1, $table->getCurrentPaginationPage());
     }
 
-    public function testStaticAccessorsReturnWhatWasSaved(): void
+    public function testResetRemovesTheStoredSorting(): void
     {
-        DbResultTable::saveToSession(dataType: 'custom', identifier: 'one', index: 'key', value: 'value');
+        $this->seedState(state: ['sortColumn' => 'name', 'sortDirection' => 'DESC', 'paginationPage' => '3']);
 
-        $this->assertSame('value', DbResultTable::getFromSession(dataType: 'custom', identifier: 'one', index: 'key'));
+        $this->request(query: ['reset' => '']);
+
+        $this->assertSame(['paginationPage' => '1'], $this->storedState());
     }
 
-    public function testStaticAccessorsOverwriteAndKeepOtherIndexes(): void
+    public function testStateIsKeptInTheSessionOnlyForTheTablesOfTheRequest(): void
     {
-        DbResultTable::saveToSession(dataType: 'custom', identifier: 'one', index: 'a', value: '1');
-        DbResultTable::saveToSession(dataType: 'custom', identifier: 'one', index: 'b', value: '2');
-        DbResultTable::saveToSession(dataType: 'custom', identifier: 'one', index: 'a', value: '3');
-
-        $this->assertSame('3', DbResultTable::getFromSession(dataType: 'custom', identifier: 'one', index: 'a'));
-        $this->assertSame('2', DbResultTable::getFromSession(dataType: 'custom', identifier: 'one', index: 'b'));
-    }
-
-    public function testStaticAccessorsKeepDataTypesAndIdentifiersApart(): void
-    {
-        DbResultTable::saveToSession(dataType: 'custom', identifier: 'one', index: 'key', value: 'value');
-
-        $this->assertNull(DbResultTable::getFromSession(dataType: 'other', identifier: 'one', index: 'key'));
-        $this->assertNull(DbResultTable::getFromSession(dataType: 'custom', identifier: 'two', index: 'key'));
-    }
-
-    public function testStaticReadOfUnknownDataReturnsNullAndWritesAnEmptyArray(): void
-    {
-        $this->assertNull(DbResultTable::getFromSession(dataType: 'custom', identifier: 'one', index: 'key'));
-
-        $this->assertSame(['custom' => ['one' => []]], $_SESSION);
-    }
-
-    public function testTableWorksWithoutSessionWithinTheRequest(): void
-    {
-        unset($_SESSION);
-
-        $table = $this->createTable(
-            identifier: DbResultTableSessionTest::ID,
-            query: ['sort' => $this->sortParameter(column: 'name', direction: 'DESC'), 'page' => '2|' . DbResultTableSessionTest::ID],
+        $this->request(query: ['sort' => $this->sortParameter(column: 'name', direction: 'DESC')]);
+        $this->request(
+            query: ['sort' => $this->sortParameter(column: 'id', direction: 'DESC', identifier: 'otherItems')],
+            identifier: 'otherItems',
         );
-        $table->fillBySelectQuery();
 
-        $this->assertSame('name', $table->getCurrentSortColumn());
-        $this->assertSame('DESC', $table->getCurrentSortDirection());
-        $this->assertSame(2, $table->getCurrentPaginationPage());
-    }
-
-    public function testWithoutSessionNothingIsRememberedForTheNextRequest(): void
-    {
-        unset($_SESSION);
-        $first = $this->createTable(
-            identifier: DbResultTableSessionTest::ID,
-            query: ['sort' => $this->sortParameter(column: 'name', direction: 'DESC')],
+        $this->assertSame(['sortColumn' => 'name', 'sortDirection' => 'DESC'], $this->storedState());
+        $this->assertSame(
+            ['sortColumn' => 'id', 'sortDirection' => 'DESC'],
+            $this->storedState(identifier: 'otherItems'),
         );
-        $first->fillBySelectQuery();
-        unset($_SESSION); // the next request starts without the data of this one
-
-        $table = $this->request();
-
-        $this->assertSame('id', $table->getCurrentSortColumn());
     }
 
     /**
-     * Removed in step 2 together with the static registry of `SmartTable`.
+     * The identifier is the session key: tables of one page must have different identifiers (documented in the
+     * README), tables with the same identifier share their state.
      */
-    public function testSecondTableWithTheSameIdentifierThrows(): void
+    public function testTablesWithTheSameIdentifierShareTheirState(): void
     {
-        $this->createTable(identifier: DbResultTableSessionTest::ID);
+        $first = $this->createTable(identifier: DbResultTableSessionTest::ID);
+        $second = $this->createTable(identifier: DbResultTableSessionTest::ID);
 
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessageIs('There is already a table with the same identifier ' . DbResultTableSessionTest::ID);
+        $first->setCurrentPaginationPage(page: 4);
 
-        $this->createTable(identifier: DbResultTableSessionTest::ID);
+        $this->assertSame(4, $second->getCurrentPaginationPage());
     }
 
-    /**
-     * Removed in step 2 together with the static registry of `SmartTable`.
-     */
-    public function testSmartTableAndDbResultTableShareTheIdentifierRegistry(): void
+    public function testSmartTableNeedsNoSessionAndIdentifiersMayRepeat(): void
     {
-        $this->createTable(identifier: DbResultTableSessionTest::ID);
-
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessageIs('There is already a table with the same identifier ' . DbResultTableSessionTest::ID);
-
-        new SmartTable(
+        $first = new SmartTable(
             identifier: DbResultTableSessionTest::ID,
             tableHeadRenderer: new TableHeadRenderer(),
             tableItemCollection: new TableItemCollection(),
         );
+        $second = new SmartTable(
+            identifier: DbResultTableSessionTest::ID,
+            tableHeadRenderer: new TableHeadRenderer(),
+            tableItemCollection: new TableItemCollection(),
+        );
+
+        $this->assertNotSame($first, $second);
+    }
+
+    public function testSettingTheSamePageAgainDoesNotChangeTheSession(): void
+    {
+        $table = $this->request(query: ['page' => '3|' . DbResultTableSessionTest::ID]);
+        $before = $this->storage->all();
+
+        $table->setCurrentPaginationPage(page: 3);
+
+        $this->assertSame($before, $this->storage->all());
     }
 }

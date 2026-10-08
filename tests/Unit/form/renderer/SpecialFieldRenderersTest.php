@@ -17,12 +17,11 @@ use actra\yuf\form\component\field\PhoneNumberField;
 use actra\yuf\form\component\field\ZipCodeField;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
-use actra\yuf\form\FormNameRegistry;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\settings\PasswordPurposeEnum;
 use actra\yuf\html\HtmlText;
+use actra\yuf\tests\Double\form\FormContextFactory;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
-use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -34,12 +33,6 @@ use PHPUnit\Framework\TestCase;
 final class SpecialFieldRenderersTest extends TestCase
 {
     private static int $formCounter = 0;
-
-    #[Override]
-    protected function setUp(): void
-    {
-        FormNameRegistry::reset();
-    }
 
     private function text(string $text): HtmlText
     {
@@ -83,9 +76,9 @@ final class SpecialFieldRenderersTest extends TestCase
     private function createForm(FormMessages $messages = new FormMessages()): Form
     {
         return new Form(
+            context: FormContextFactory::create(csrfTokenSource: new InMemoryCsrfTokenSource(token: 'tok+en/1=')),
             name: 'specialFieldsForm' . SpecialFieldRenderersTest::$formCounter++,
             messages: $messages,
-            csrfTokenSource: new InMemoryCsrfTokenSource(token: 'tok+en/1='),
         );
     }
 
