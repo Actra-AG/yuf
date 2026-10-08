@@ -8,6 +8,8 @@ Decision of the user (2026-10-08): everything that is still open in yuf, includi
 `src/common/`, `src/core/`, the remaining baseline), is finished before `actra/backend` follows. Work continues with the
 postponed areas.
 
+The plan for the remaining work is [docs/standard-completion/plan.md](../standard-completion/plan.md).
+
 ## Decisions for the remaining work
 
 - Order: the template engine first ([docs/template-engine/](../template-engine/plan.md), done with v4.27.0, own tags included), then the other
