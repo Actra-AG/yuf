@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\common;
 
 /**
- * Operators of the boolean search text understood by SearchHelper::createBooleanQuery().
+ * Operators of the boolean search text understood by SearchQueryBuilder::createBooleanQuery().
  *
  * @internal Part of the search text parser, not meant for use in projects
  */

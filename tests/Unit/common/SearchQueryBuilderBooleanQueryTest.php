@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\common;
 
-use actra\yuf\common\SearchHelper;
+use actra\yuf\common\SearchQueryBuilder;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\DbQueryData;
 use InvalidArgumentException;
@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 use PHPUnit\Framework\TestCase;
 
-final class SearchHelperBooleanQueryTest extends TestCase
+final class SearchQueryBuilderBooleanQueryTest extends TestCase
 {
     private const string LIKE = " LIKE ? ESCAPE '!'";
 
@@ -32,7 +32,7 @@ final class SearchHelperBooleanQueryTest extends TestCase
         string $queryText,
         string $fieldNames = 'name',
     ): void {
-        $data = SearchHelper::createBooleanQuery(spaceSeparatedFieldNames: $fieldNames, queryText: $queryText);
+        $data = SearchQueryBuilder::createBooleanQuery(spaceSeparatedFieldNames: $fieldNames, queryText: $queryText);
 
         $this->assertSame($expectedQuery, $data->query);
         $this->assertSame($expectedParameters, $data->params);
@@ -40,13 +40,14 @@ final class SearchHelperBooleanQueryTest extends TestCase
 
     public function testSingleWordIsLowercasedAndWrappedInWildcards(): void
     {
-        $this->assertBooleanQuery('((name' . SearchHelperBooleanQueryTest::LIKE . '))', ['%haas%'], 'Haas');
+        $this->assertBooleanQuery('((name' . SearchQueryBuilderBooleanQueryTest::LIKE . '))', ['%haas%'], 'Haas');
     }
 
     public function testEveryFieldGetsItsOwnCondition(): void
     {
         $this->assertBooleanQuery(
-            '((a.name' . SearchHelperBooleanQueryTest::LIKE . ' OR b.city' . SearchHelperBooleanQueryTest::LIKE . '))',
+            '((a.name' . SearchQueryBuilderBooleanQueryTest::LIKE . ' OR b.city'
+                . SearchQueryBuilderBooleanQueryTest::LIKE . '))',
             ['%haas%', '%haas%'],
             'haas',
             'a.name b.city',
@@ -56,7 +57,8 @@ final class SearchHelperBooleanQueryTest extends TestCase
     public function testSeveralWordsAreCombinedWithOr(): void
     {
         $this->assertBooleanQuery(
-            '((name' . SearchHelperBooleanQueryTest::LIKE . ') OR (name' . SearchHelperBooleanQueryTest::LIKE . '))',
+            '((name' . SearchQueryBuilderBooleanQueryTest::LIKE . ') OR (name'
+                . SearchQueryBuilderBooleanQueryTest::LIKE . '))',
             ['%haas%', '%kap%'],
             'haas  kap',
         );
@@ -67,7 +69,7 @@ final class SearchHelperBooleanQueryTest extends TestCase
      */
     public static function operatorProvider(): array
     {
-        $word = '(name' . SearchHelperBooleanQueryTest::LIKE . ')';
+        $word = '(name' . SearchQueryBuilderBooleanQueryTest::LIKE . ')';
 
         return [
             'and' => ['haas and kap', '(' . $word . ' AND ' . $word . ')', ['%haas%', '%kap%']],
@@ -78,12 +80,24 @@ final class SearchHelperBooleanQueryTest extends TestCase
                 '(' . $word . ' AND ' . $word . ' AND (NOT ' . $word . '))',
                 ['%haas%', '%kap%', '%bar%'],
             ],
-            'shorthand before a phrase' => ['haas -"a b"', '(' . $word . ' AND (NOT ' . $word . '))', ['%haas%', '%a b%']],
-            'operator word after an operator' => ['haas and or', '(' . $word . ' AND ' . $word . ')', ['%haas%', '%or%']],
+            'shorthand before a phrase' => [
+                'haas -"a b"',
+                '(' . $word . ' AND (NOT ' . $word . '))',
+                ['%haas%', '%a b%'],
+            ],
+            'operator word after an operator' => [
+                'haas and or',
+                '(' . $word . ' AND ' . $word . ')',
+                ['%haas%', '%or%'],
+            ],
             'leading operator is a word' => ['not haas', '(' . $word . ' OR ' . $word . ')', ['%not%', '%haas%']],
             'leading shorthand is a word' => ['+haas', '(' . $word . ')', ['%+haas%']],
             'trailing operator is ignored' => ['haas and', '(' . $word . ')', ['%haas%']],
-            'lone shorthand applies to the next word' => ['haas + kap', '(' . $word . ' AND ' . $word . ')', ['%haas%', '%kap%']],
+            'lone shorthand applies to the next word' => [
+                'haas + kap',
+                '(' . $word . ' AND ' . $word . ')',
+                ['%haas%', '%kap%'],
+            ],
             'shorthand within a word is literal' => ['haas-kap', '(' . $word . ')', ['%haas-kap%']],
         ];
     }
@@ -99,7 +113,7 @@ final class SearchHelperBooleanQueryTest extends TestCase
 
     public function testQuotedPhraseIsOneWordAndQuotedOperatorsAreLiteral(): void
     {
-        $word = '(name' . SearchHelperBooleanQueryTest::LIKE . ')';
+        $word = '(name' . SearchQueryBuilderBooleanQueryTest::LIKE . ')';
         $this->assertBooleanQuery(
             '(' . $word . ' OR ' . $word . ' OR ' . $word . ' OR ' . $word . ')',
             ['%foo%', '%haas kap%', '%and%', '%a -b%'],
@@ -126,7 +140,7 @@ final class SearchHelperBooleanQueryTest extends TestCase
     public function testSpecialCharactersAreBoundLiterally(string $queryText, string $expectedParameter): void
     {
         $this->assertBooleanQuery(
-            '((name' . SearchHelperBooleanQueryTest::LIKE . '))',
+            '((name' . SearchQueryBuilderBooleanQueryTest::LIKE . '))',
             [$expectedParameter],
             $queryText,
         );
@@ -153,7 +167,11 @@ final class SearchHelperBooleanQueryTest extends TestCase
 
     public function testTagsAreStripped(): void
     {
-        $this->assertBooleanQuery('((name' . SearchHelperBooleanQueryTest::LIKE . '))', ['%haas%'], ' <b>Haas</b> ');
+        $this->assertBooleanQuery(
+            '((name' . SearchQueryBuilderBooleanQueryTest::LIKE . '))',
+            ['%haas%'],
+            ' <b>Haas</b> ',
+        );
     }
 
     /**
@@ -178,12 +196,12 @@ final class SearchHelperBooleanQueryTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        $_ = SearchHelper::createBooleanQuery(spaceSeparatedFieldNames: $fieldNames, queryText: 'haas');
+        $_ = SearchQueryBuilder::createBooleanQuery(spaceSeparatedFieldNames: $fieldNames, queryText: 'haas');
     }
 
     public function testValidFieldNames(): void
     {
-        $data = SearchHelper::createBooleanQuery(
+        $data = SearchQueryBuilder::createBooleanQuery(
             spaceSeparatedFieldNames: '2011_module.titel `order` db.t.c $col',
             queryText: 'haas',
         );
@@ -197,7 +215,7 @@ final class SearchHelperBooleanQueryTest extends TestCase
 
     public function testDbQueryAcceptsQueryWithQuestionMark(): void
     {
-        $data = SearchHelper::createBooleanQuery(spaceSeparatedFieldNames: 'name', queryText: '?haas kap');
+        $data = SearchQueryBuilder::createBooleanQuery(spaceSeparatedFieldNames: 'name', queryText: '?haas kap');
         $dbQuery = DbQuery::createFromSqlQuery(query: 'SELECT id FROM item');
 
         $dbQuery->addWherePart(wherePart: $data->query, parameters: $data->params);
@@ -245,7 +263,7 @@ final class SearchHelperBooleanQueryTest extends TestCase
         );
         $dbQuery = DbQuery::createFromSqlQuery(query: 'SELECT id FROM item');
         $dbQuery->addOrderPart(column: 'id');
-        $data = SearchHelper::createBooleanQuery(spaceSeparatedFieldNames: 'name', queryText: $queryText);
+        $data = SearchQueryBuilder::createBooleanQuery(spaceSeparatedFieldNames: 'name', queryText: $queryText);
         $dbQuery->addWherePart(wherePart: $data->query, parameters: $data->params);
         $queryData = $dbQuery->getDbQueryData(offset: 0, rowCount: 100);
 

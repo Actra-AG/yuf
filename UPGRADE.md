@@ -4,6 +4,36 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.48.0] – 2026-10-08
+
+`SearchHelper` had two purposes and is split. Search your project for `SearchHelper`.
+
+### ⚠️ `SearchHelper` is replaced by `SearchQueryBuilder` and `SearchState`
+
+`SearchHelper` is removed without an alias. The pure SQL builders moved to the new `final` class
+`actra\yuf\common\SearchQueryBuilder`, the stored search state of a search form to `actra\yuf\common\SearchState`.
+Behaviour, arguments and results are unchanged; replace the class name and the `use` statement:
+
+| Before | After |
+|:--|:--|
+| `SearchHelper::createSqlFilters(` | `SearchQueryBuilder::createSqlFilters(` |
+| `SearchHelper::createBooleanQuery(` | `SearchQueryBuilder::createBooleanQuery(` |
+| `$searchHelper->createSqlSearch(string:, columns:)` (instance method) | `SearchQueryBuilder::createSqlSearch(string:, columns:)` (static, no instance needed) |
+| `SearchHelper::create(instanceName:, httpRequest:, valueSource:, session:)` | `SearchState::create(instanceName:, httpRequest:, valueSource:, session:)` |
+| `SearchHelper::getInstance(instanceName:)` (removed in an earlier release) | `SearchState::create(instanceName:, httpRequest:, valueSource:, session:)` |
+| `SearchHelper::PARAM_RESET`, `SearchHelper::PARAM_FIND` | `SearchState::PARAM_RESET`, `SearchState::PARAM_FIND` |
+| `$searchHelper->checkSearchTerm()`, `checkString()`, `checkFilter()`, `checkMultiFilter()`, `checkDateRangeFilter()` | the same methods on `SearchState` |
+| `$searchHelper->checkDate(date:)` (instance method) | `SearchState::checkDate(date:)` (static) |
+| Type `SearchHelper` (properties, parameters, return types) | `SearchState` |
+
+`createSqlSearch()` and `checkDate()` used no instance state, so they are static now. Calls through an instance
+(`$helper->checkDate(...)`) still work in PHP, but static analysis reports them; use the class name.
+
+The session section is unchanged (`SessionSectionEnum::SEARCH`, `yuf.search.<instance name>`, same keys), so stored
+search states keep working across the update.
+
+---
+
 ## [v4.47.0] – 2026-10-08
 
 A visitor without a session no longer gets one just because a route has a language. Search your project for

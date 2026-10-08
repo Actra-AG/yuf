@@ -9,19 +9,20 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\common;
 
-use actra\yuf\common\SearchHelper;
+use actra\yuf\common\SearchState;
 use actra\yuf\core\InputSourceEnum;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use Override;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
  * The search state of the user is kept in the session; the values come from the declared source of the request, the
  * parameters `reset` and `find` from the query string. The helper never writes into the superglobals of the request.
  */
-final class SearchHelperRequestTest extends TestCase
+final class SearchStateRequestTest extends TestCase
 {
     /** @var array<mixed> */
     private array $savedGet = [];
@@ -49,8 +50,8 @@ final class SearchHelperRequestTest extends TestCase
         array $query = [],
         array $post = [],
         InputSourceEnum $source = InputSourceEnum::POST,
-    ): SearchHelper {
-        return SearchHelper::create(
+    ): SearchState {
+        return SearchState::create(
             instanceName: 'users',
             httpRequest: HttpRequestFactory::create(queryParameters: $query, postParameters: $post),
             valueSource: $source,
@@ -170,5 +171,27 @@ final class SearchHelperRequestTest extends TestCase
         $helper->checkString(fieldName: 'status');
 
         $this->assertSame(['untouched' => '1'], $_GET);
+    }
+
+    /**
+     * @return array<string, array{string, ?string}>
+     */
+    public static function dateProvider(): array
+    {
+        return [
+            'german date' => ['07.03.2026', '2026-03-07'],
+            'iso date' => ['2026-03-07', '2026-03-07'],
+            'empty' => ['', null],
+            'text' => ['not a date', null],
+            'impossible date' => ['2026-02-30', null],
+        ];
+    }
+
+    #[DataProvider('dateProvider')]
+    public function testCheckDate(string $date, ?string $expected): void
+    {
+        $result = SearchState::checkDate(date: $date);
+
+        $this->assertSame($expected, $result?->format(format: 'Y-m-d'));
     }
 }

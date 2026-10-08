@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\common;
 
-use actra\yuf\common\SearchHelper;
+use actra\yuf\common\SearchState;
 use actra\yuf\core\InputSourceEnum;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
@@ -18,14 +18,14 @@ use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
- * What a `SearchHelper` remembers across requests (in `yuf.search.<instance name>`) and when it forgets it.
- * `SearchHelperRequestTest` covers where the input comes from and the basics; this class adds the edge cases and the
+ * What a `SearchState` remembers across requests (in `yuf.search.<instance name>`) and when it forgets it.
+ * `SearchStateRequestTest` covers where the input comes from and the basics; this class adds the edge cases and the
  * storage layout. Defaults are returned but not written: only what the user chose is remembered.
  *
  * A request is simulated by creating a helper with the session of the previous request. The behaviour tests only
  * use `helper()` and the return values; the value shapes are pinned in `testStorageLayout…()` only.
  */
-final class SearchHelperSessionTest extends TestCase
+final class SearchStateSessionTest extends TestCase
 {
     private const array RANGE = ['minDate' => '2026-01-01', 'maxDate' => '2026-12-31'];
 
@@ -43,9 +43,9 @@ final class SearchHelperSessionTest extends TestCase
      * @param array<array-key, mixed> $query
      * @param array<array-key, mixed> $post
      */
-    private function helper(array $query = [], array $post = [], string $instanceName = 'users'): SearchHelper
+    private function helper(array $query = [], array $post = [], string $instanceName = 'users'): SearchState
     {
-        return SearchHelper::create(
+        return SearchState::create(
             instanceName: $instanceName,
             httpRequest: HttpRequestFactory::create(queryParameters: $query, postParameters: $post),
             valueSource: InputSourceEnum::POST,
@@ -62,7 +62,7 @@ final class SearchHelperSessionTest extends TestCase
             fieldName: 'groups',
         );
         $this->helper(post: ['from' => '2026-03-01', 'to' => '2026-04-30'])->checkDateRangeFilter(
-            dateRange: SearchHelperSessionTest::RANGE,
+            dateRange: SearchStateSessionTest::RANGE,
             fromField: 'from',
             toField: 'to',
         );
@@ -94,7 +94,7 @@ final class SearchHelperSessionTest extends TestCase
         $this->assertSame([3], $this->helper()->checkMultiFilter(array: [], fieldName: 'groups', default: [3]));
         $this->assertSame('a', $this->helper()->checkFilter(array: ['a' => 'A'], fieldName: 'level', default: 'a'));
         $range = $this->helper()->checkDateRangeFilter(
-            dateRange: SearchHelperSessionTest::RANGE,
+            dateRange: SearchStateSessionTest::RANGE,
             fromField: 'from',
             toField: 'to',
         );
@@ -107,7 +107,7 @@ final class SearchHelperSessionTest extends TestCase
     public function testStorageLayoutOfTheDateRangeIsTheDisplayFormatOfTheChosenDates(): void
     {
         $this->helper(post: ['from' => '2026-03-01'])->checkDateRangeFilter(
-            dateRange: SearchHelperSessionTest::RANGE,
+            dateRange: SearchStateSessionTest::RANGE,
             fromField: 'from',
             toField: 'to',
         );
@@ -242,18 +242,18 @@ final class SearchHelperSessionTest extends TestCase
     public function testDateRangeIsRememberedAndFindAndResetGoBackToTheWholeRange(): void
     {
         $this->helper(post: ['from' => '2026-03-01', 'to' => '2026-04-30'])->checkDateRangeFilter(
-            dateRange: SearchHelperSessionTest::RANGE,
+            dateRange: SearchStateSessionTest::RANGE,
             fromField: 'from',
             toField: 'to',
         );
 
         $remembered = $this->helper()->checkDateRangeFilter(
-            dateRange: SearchHelperSessionTest::RANGE,
+            dateRange: SearchStateSessionTest::RANGE,
             fromField: 'from',
             toField: 'to',
         );
         $reset = $this->helper(query: ['reset' => ''])->checkDateRangeFilter(
-            dateRange: SearchHelperSessionTest::RANGE,
+            dateRange: SearchStateSessionTest::RANGE,
             fromField: 'from',
             toField: 'to',
             defaultFrom: '2026-02-01',
@@ -268,12 +268,12 @@ final class SearchHelperSessionTest extends TestCase
     public function testDateRangeWithInvalidOrReversedInputIsCorrected(): void
     {
         $reversed = $this->helper(post: ['from' => '2026-06-01', 'to' => '2026-03-01'])->checkDateRangeFilter(
-            dateRange: SearchHelperSessionTest::RANGE,
+            dateRange: SearchStateSessionTest::RANGE,
             fromField: 'from',
             toField: 'to',
         );
         $invalid = $this->helper(post: ['from' => 'nonsense', 'to' => ''])->checkDateRangeFilter(
-            dateRange: SearchHelperSessionTest::RANGE,
+            dateRange: SearchStateSessionTest::RANGE,
             fromField: 'from',
             toField: 'to',
         );
@@ -284,7 +284,7 @@ final class SearchHelperSessionTest extends TestCase
         $this->assertSame(
             '2026-01-01',
             $this->helper()->checkDateRangeFilter(
-                dateRange: SearchHelperSessionTest::RANGE,
+                dateRange: SearchStateSessionTest::RANGE,
                 fromField: 'from',
                 toField: 'to',
             )['dateFrom']->format(format: 'Y-m-d'),

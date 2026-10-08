@@ -29,7 +29,7 @@ enum SessionSectionEnum: string
     case TABLES = 'tables';
     /** The values of table filters and their fields (`TableFilter`). */
     case TABLE_FILTERS = 'tableFilters';
-    /** The state of the search forms (`SearchHelper`). */
+    /** The state of the search forms (`SearchState`). */
     case SEARCH = 'search';
     /** The pointers to uploaded files (`SessionFileUploadStorage`). */
     case UPLOADS = 'uploads';

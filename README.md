@@ -153,11 +153,11 @@ only. `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT` and `UNION` are rejected, becaus
 
 ## Boolean search
 
-`SearchHelper::createBooleanQuery()` turns a search text into a `WHERE` condition with bound parameters. Pass its
+`SearchQueryBuilder::createBooleanQuery()` turns a search text into a `WHERE` condition with bound parameters. Pass its
 `DbQueryData` to `addWherePart()`:
 
 ```php
-$data = SearchHelper::createBooleanQuery(
+$data = SearchQueryBuilder::createBooleanQuery(
     spaceSeparatedFieldNames: 'person.firstName person.lastName',
     queryText: $searchTerm // e.g. 'haas +kap -"old address"'
 );
@@ -315,13 +315,13 @@ check on every API request would cost 50 ms and 64 MB; for a password with littl
 quickly. Never use it for something a human types.
 
 Identifiers are session keys: **form names, table identifiers, filter identifiers and the instance names of
-`SearchHelper` must be unique per page.** Two tables with the same identifier share their sorting and page, two forms
+`SearchState` must be unique per page.** Two tables with the same identifier share their sorting and page, two forms
 with the same name share the sent indicator. yuf does not check this.
 
 Without a session (`$context->session === null`) forms and the table filter do without CSRF protection: CSRF needs a
 session cookie that the browser sends along on its own, without a session there is nothing to abuse. The `FormContext`
 has no `CsrfTokenSource` then, so a form has no CSRF field and checks no token, and a table filter accepts its posted
-input without a token. Tables, `SearchHelper` and upload storage need a `Session` (build one on an
+input without a token. Tables, `SearchState` and upload storage need a `Session` (build one on an
 `ArraySessionStorage` if they are used without sessions, the state then lives for one request).
 
 ## REST/API Endpoints

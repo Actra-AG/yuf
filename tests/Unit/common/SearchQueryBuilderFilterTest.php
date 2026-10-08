@@ -9,12 +9,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\common;
 
-use actra\yuf\common\SearchHelper;
-use actra\yuf\core\InputSourceEnum;
+use actra\yuf\common\SearchQueryBuilder;
 use actra\yuf\db\DbQuery;
-use actra\yuf\session\ArraySessionStorage;
-use actra\yuf\session\Session;
-use actra\yuf\tests\Double\core\HttpRequestFactory;
 use InvalidArgumentException;
 use PDO;
 use PDOStatement;
@@ -22,7 +18,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 use PHPUnit\Framework\TestCase;
 
-final class SearchHelperFilterTest extends TestCase
+final class SearchQueryBuilderFilterTest extends TestCase
 {
     private const string LIKE = " LIKE ? ESCAPE '!'";
 
@@ -31,8 +27,8 @@ final class SearchHelperFilterTest extends TestCase
      */
     public static function filterProvider(): array
     {
-        $like = 'c' . SearchHelperFilterTest::LIKE;
-        $notLike = '((c NOT' . SearchHelperFilterTest::LIKE . ') OR c IS NULL)';
+        $like = 'c' . SearchQueryBuilderFilterTest::LIKE;
+        $notLike = '((c NOT' . SearchQueryBuilderFilterTest::LIKE . ') OR c IS NULL)';
 
         return [
             'empty' => ['  ', '1=1', []],
@@ -42,16 +38,40 @@ final class SearchHelperFilterTest extends TestCase
             'contains phrase' => ['*foo bar*', $like, ['%foo bar%']],
             'contains phrase with percent' => ['*50%*', $like, ['%50!%%']],
             'percent is literal' => ['%foo%', '(' . $like . ')', ['%!%foo!%%']],
-            'underscore and escape character are literal' => ['a_b wow!', '(' . $like . ' OR ' . $like . ')', ['%a!_b%', '%wow!!%']],
+            'underscore and escape character are literal' => [
+                'a_b wow!',
+                '(' . $like . ' OR ' . $like . ')',
+                ['%a!_b%', '%wow!!%'],
+            ],
             'question mark is bound' => ['?x', '(' . $like . ')', ['%?x%']],
             'star is a wildcard' => ['a*b', '(' . $like . ')', ['%a%b%']],
-            'words separated by space or comma' => ['foo bar,baz', '(' . $like . ' OR ' . $like . ' OR ' . $like . ')', ['%foo%', '%bar%', '%baz%']],
+            'words separated by space or comma' => [
+                'foo bar,baz',
+                '(' . $like . ' OR ' . $like . ' OR ' . $like . ')',
+                ['%foo%', '%bar%', '%baz%'],
+            ],
             'double-quoted phrase is equal' => ['foo "bar baz"', 'c=? AND (' . $like . ')', ['bar baz', '%foo%']],
-            'single-quoted phrase is contained' => ["foo 'bar baz'", '(' . $like . ' OR ' . $like . ')', ['%foo%', '%bar baz%']],
-            'apostrophes are no quotes' => ["o'neil o'brien", '(' . $like . ' OR ' . $like . ')', ["%o'neil%", "%o'brien%"]],
-            'operators' => ['-foo +bar baz', $notLike . ' AND ' . $like . ' AND (' . $like . ')', ['%foo%', '%bar%', '%baz%']],
+            'single-quoted phrase is contained' => [
+                "foo 'bar baz'",
+                '(' . $like . ' OR ' . $like . ')',
+                ['%foo%', '%bar baz%'],
+            ],
+            'apostrophes are no quotes' => [
+                "o'neil o'brien",
+                '(' . $like . ' OR ' . $like . ')',
+                ["%o'neil%", "%o'brien%"],
+            ],
+            'operators' => [
+                '-foo +bar baz',
+                $notLike . ' AND ' . $like . ' AND (' . $like . ')',
+                ['%foo%', '%bar%', '%baz%'],
+            ],
             'exclamation mark' => ['!foo', $notLike, ['%foo%']],
-            'operator before phrase' => ['-"foo bar" +\'baz qux\'', $notLike . ' AND ' . $like, ['%foo bar%', '%baz qux%']],
+            'operator before phrase' => [
+                '-"foo bar" +\'baz qux\'',
+                $notLike . ' AND ' . $like,
+                ['%foo bar%', '%baz qux%'],
+            ],
             'lone operator is ignored' => ['- x', '(' . $like . ')', ['%x%']],
         ];
     }
@@ -62,7 +82,7 @@ final class SearchHelperFilterTest extends TestCase
     #[DataProvider('filterProvider')]
     public function testCreateSQLFilters(string $value, string $expectedQuery, array $expectedParameters): void
     {
-        $data = SearchHelper::createSqlFilters(filterArr: [' c ' => $value]);
+        $data = SearchQueryBuilder::createSqlFilters(filterArr: [' c ' => $value]);
 
         $this->assertSame($expectedQuery, $data->query);
         $this->assertSame($expectedParameters, $data->params);
@@ -70,15 +90,15 @@ final class SearchHelperFilterTest extends TestCase
 
     public function testCreateSQLFiltersCombinesColumnsAndAcceptsExpressions(): void
     {
-        $data = SearchHelper::createSqlFilters(filterArr: [
+        $data = SearchQueryBuilder::createSqlFilters(filterArr: [
             "CONCAT_WS(' ', a.firstName, a.lastName)" => 'haas',
             'b.city' => '',
             'b.zip' => 80,
         ]);
 
         $this->assertSame(
-            "(CONCAT_WS(' ', a.firstName, a.lastName)" . SearchHelperFilterTest::LIKE . ') AND (b.zip'
-            . SearchHelperFilterTest::LIKE . ')',
+            "(CONCAT_WS(' ', a.firstName, a.lastName)" . SearchQueryBuilderFilterTest::LIKE . ') AND (b.zip'
+            . SearchQueryBuilderFilterTest::LIKE . ')',
             $data->query,
         );
         $this->assertSame(['%haas%', '%80%'], $data->params);
@@ -100,7 +120,7 @@ final class SearchHelperFilterTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        SearchHelper::createSqlFilters(filterArr: [$column => 'haas']);
+        SearchQueryBuilder::createSqlFilters(filterArr: [$column => 'haas']);
     }
 
     /**
@@ -134,7 +154,7 @@ final class SearchHelperFilterTest extends TestCase
         );
         $dbQuery = DbQuery::createFromSqlQuery(query: 'SELECT id FROM item');
         $dbQuery->addOrderPart(column: 'id');
-        $data = SearchHelper::createSqlFilters(filterArr: ["name || ' ' || city" => $value]);
+        $data = SearchQueryBuilder::createSqlFilters(filterArr: ["name || ' ' || city" => $value]);
         $dbQuery->addWherePart(wherePart: $data->query, parameters: $data->params);
         $queryData = $dbQuery->getDbQueryData(offset: 0, rowCount: 100);
 
@@ -147,22 +167,27 @@ final class SearchHelperFilterTest extends TestCase
 
     public function testCreateSQLSearchQuotesColumnsAndEscapesWords(): void
     {
-        $result = SearchHelper::create(
-            instanceName: 'test',
-            httpRequest: HttpRequestFactory::create(),
-            valueSource: InputSourceEnum::POST,
-            session: new Session(storage: new ArraySessionStorage()),
-        )->createSqlSearch(
+        $result = SearchQueryBuilder::createSqlSearch(
             string: 'foo "bar baz" 50%',
             columns: ['name', 't.city', '`order`'],
         );
-        $word = '(`name`' . SearchHelperFilterTest::LIKE . ' OR `t`.`city`' . SearchHelperFilterTest::LIKE
-            . ' OR `order`' . SearchHelperFilterTest::LIKE . ')';
+        $word = '(`name`' . SearchQueryBuilderFilterTest::LIKE . ' OR `t`.`city`' . SearchQueryBuilderFilterTest::LIKE
+            . ' OR `order`' . SearchQueryBuilderFilterTest::LIKE . ')';
 
         $this->assertSame(
             [
                 'sql' => '(' . $word . ' AND ' . $word . ' AND ' . $word . ')',
-                'params' => ['%foo%', '%foo%', '%foo%', '%bar baz%', '%bar baz%', '%bar baz%', '%50!%%', '%50!%%', '%50!%%'],
+                'params' => [
+                    '%foo%',
+                    '%foo%',
+                    '%foo%',
+                    '%bar baz%',
+                    '%bar baz%',
+                    '%bar baz%',
+                    '%50!%%',
+                    '%50!%%',
+                    '%50!%%',
+                ],
                 'searchWords' => ['foo', 'bar baz', '50%'],
             ],
             $result,
@@ -173,12 +198,7 @@ final class SearchHelperFilterTest extends TestCase
     {
         $this->assertSame(
             ['sql' => '', 'params' => [], 'searchWords' => []],
-            SearchHelper::create(
-                instanceName: 'test',
-                httpRequest: HttpRequestFactory::create(),
-                valueSource: InputSourceEnum::POST,
-                session: new Session(storage: new ArraySessionStorage()),
-            )->createSqlSearch(string: ' , ', columns: ['name']),
+            SearchQueryBuilder::createSqlSearch(string: ' , ', columns: ['name']),
         );
     }
 
@@ -204,38 +224,6 @@ final class SearchHelperFilterTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        SearchHelper::create(
-            instanceName: 'test',
-            httpRequest: HttpRequestFactory::create(),
-            valueSource: InputSourceEnum::POST,
-            session: new Session(storage: new ArraySessionStorage()),
-        )->createSqlSearch(string: 'foo', columns: $columns);
-    }
-
-    /**
-     * @return array<string, array{string, ?string}>
-     */
-    public static function dateProvider(): array
-    {
-        return [
-            'german date' => ['07.03.2026', '2026-03-07'],
-            'iso date' => ['2026-03-07', '2026-03-07'],
-            'empty' => ['', null],
-            'text' => ['not a date', null],
-            'impossible date' => ['2026-02-30', null],
-        ];
-    }
-
-    #[DataProvider('dateProvider')]
-    public function testCheckDate(string $date, ?string $expected): void
-    {
-        $result = SearchHelper::create(
-            instanceName: 'test',
-            httpRequest: HttpRequestFactory::create(),
-            valueSource: InputSourceEnum::POST,
-            session: new Session(storage: new ArraySessionStorage()),
-        )->checkDate(date: $date);
-
-        $this->assertSame($expected, $result?->format(format: 'Y-m-d'));
+        SearchQueryBuilder::createSqlSearch(string: 'foo', columns: $columns);
     }
 }

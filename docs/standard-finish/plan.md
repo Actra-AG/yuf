@@ -341,3 +341,32 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   `NativeSessionStorage` delegation, `RequestHandler` language route (inactive: storage never used, data unchanged;
   active: written) and root redirect (inactive: preferred language ignored, storage never used).
 - Open: a visitor without a session who calls only language routes never gets a preferred language (decided).
+
+### Step 7 (v4.48.0) – done
+
+- `SearchHelper` removed (no alias). New `final` classes in `src/common/`:
+  - `SearchQueryBuilder`: static `createSqlFilters()`, `createBooleanQuery()`, `createSqlSearch()` and all private
+    helpers; the constants `LIKE_PLACEHOLDER`, `LIKE_ESCAPE_MAP`, `COLUMN_NAME_PART`, `FIELD_NAME_PATTERN` are private
+    there (they are not needed by `SearchState`).
+  - `SearchState`: `create()`, `checkSearchTerm()`, `checkString()`, `checkFilter()`, `checkMultiFilter()`,
+    `checkDateRangeFilter()`, `PARAM_RESET` / `PARAM_FIND`, the session handling. Session section and keys unchanged;
+    doc comment of `SessionSectionEnum::SEARCH` updated.
+- Decisions: `createSqlSearch()` used no instance state -> static in `SearchQueryBuilder` (was an instance method, so
+  it needed a `SearchHelper` instance with request and session for nothing). `checkDate()` used no state either, but it
+  is only used by `checkDateRangeFilter()` and is date parsing of the search form, not SQL -> `public static` in
+  `SearchState` (a private method would have lost the direct test; a third class is not worth it). No private
+  constructor in `SearchQueryBuilder` (the repo's other static helper classes have none).
+- Usages updated: `TextFilterField` (`SearchQueryBuilder::createSqlFilters()`), `BooleanSearchOperatorEnum` and
+  `SessionSectionEnum` doc comments, README (boolean search, session notes), `phpstan.neon`
+  (`actraSuperglobalsAllowIn`: `tests/Unit/common/SearchStateRequestTest.php`). `example/` does not use it.
+- `actra/backend` (read only, not changed): `src/libs/form/AbstractSearchForm.php` (type `SearchHelper`,
+  `SearchHelper::getInstance(instanceName: $name)`, comment) -> `SearchState::create(…)` with request, value source and
+  session; `src/libs/table/UserTable.php`, `TokenTable.php`, `VisitTable.php` (`SearchHelper::createBooleanQuery(`) ->
+  `SearchQueryBuilder::createBooleanQuery(`. `backend/UPGRADE.md` (line 152) only mentions it in text.
+- Tests: 12230 -> 12230 (50 test methods before and after, no assertion removed). `SearchHelperBooleanQueryTest` ->
+  `SearchQueryBuilderBooleanQueryTest`, `SearchHelperFilterTest` -> `SearchQueryBuilderFilterTest` (filters and
+  `createSqlSearch()`, now called statically), `SearchHelperRequestTest` -> `SearchStateRequestTest` (plus the
+  `checkDate()` tests from the filter test), `SearchHelperSessionTest` -> `SearchStateSessionTest`. Long lines wrapped.
+- `UPGRADE.md`: `## [v4.48.0]` with the before/after table.
+- `ddev composer check` green, baseline empty, `example/` answers 200.
+- Open: none.
