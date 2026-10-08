@@ -4,6 +4,21 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.54.0] – 2026-10-08
+
+⚠️ **`PhoneNumberField` accepts valid numbers only.**
+
+- Before: without `allowedNumberTypes:` the field accepted every number of a possible length for its country, e.g. the
+  Swiss `044 668 18 00 / 12` or `012 345 67 89`.
+- After: the number has to be valid (`PhoneNumber::isValid()`), otherwise the field adds `invalidErrorMessage`. A number
+  that is not valid stays as typed (it is no longer stored in the internal format). With `allowedNumberTypes:` nothing
+  changes: valid and of one of the types.
+
+Search your project for `PhoneNumberField`: forms that accepted unusual numbers (extensions typed with a slash,
+unassigned prefixes, test numbers) reject them now. Stored numbers are not affected.
+
+---
+
 ## [v4.53.1] – 2026-10-08
 
 Bug fixes of the phone number parsing and rendering, so they behave like libphonenumber. No API changes. Some inputs

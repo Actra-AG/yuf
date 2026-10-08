@@ -26,16 +26,16 @@ use Override;
  * `renderInternalFormat`, in the internal format. A number without country code is read with the country code of the
  * field, which can be posted with the field (named `countryCodeFieldName`; manipulated input is ignored). An invalid
  * number stays as typed (trimmed) and adds `invalidErrorMessage` when the field is validated (a number is accepted
- * if its length is possible for its country). With `allowedNumberTypes`, the number must be valid and of one of the
- * types (a number that fits fixed line and mobile numbers fits both types), otherwise `numberTypeErrorMessage`
- * (default: `invalidErrorMessage`) is added.
+ * if it is valid for its country, not only possible by its length). With `allowedNumberTypes`, the number must also
+ * be of one of the types (a number that fits fixed line and mobile numbers fits both types), otherwise
+ * `numberTypeErrorMessage` (default: `invalidErrorMessage`) is added.
  */
 final class PhoneNumberField extends SettableStringInputField
 {
     public private(set) string $countryCode;
 
     /**
-     * @param list<PhoneNumberTypeEnum> $allowedNumberTypes empty: every number of a possible length is accepted
+     * @param list<PhoneNumberTypeEnum> $allowedNumberTypes empty: every valid number is accepted
      */
     public function __construct(
         string $name,
@@ -142,9 +142,11 @@ final class PhoneNumberField extends SettableStringInputField
             return null;
         }
         try {
-            return PhoneNumber::createFromString(input: $text, defaultCountryCode: $this->countryCode);
+            $phoneNumber = PhoneNumber::createFromString(input: $text, defaultCountryCode: $this->countryCode);
         } catch (PhoneParseException) {
             return null;
         }
+
+        return $phoneNumber->isValid() ? $phoneNumber : null;
     }
 }

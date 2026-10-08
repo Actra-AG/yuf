@@ -56,16 +56,35 @@ final class PhoneNumberFieldNumberTypeTest extends TestCase
         yield 'fixed line' => ['044 123 45 67', true];
         yield 'mobile' => ['079 123 45 67', true];
         yield 'premium rate' => ['0900 123 456', true];
-        yield 'possible length but no assigned number (as before)' => ['012 345 67 89', true];
+        yield 'possible length but no assigned number' => ['012 345 67 89', false];
+        yield 'possible length but not valid (extension typed as digits)' => ['044 668 18 00 / 12', false];
         yield 'too short' => ['12', false];
     }
 
     #[DataProvider('withoutAllowListProvider')]
-    public function testWithoutAllowListEveryPossibleNumberIsAccepted(string $input, bool $expected): void
+    public function testWithoutAllowListOnlyValidNumbersAreAccepted(string $input, bool $expected): void
     {
         $field = $this->createField();
 
         $this->assertSame($expected, $field->validate(input: FormInput::fromArray(data: ['phone' => $input])));
+    }
+
+    public function testPossibleButInvalidNumberAddsTheInvalidErrorAndStaysAsTyped(): void
+    {
+        $field = $this->createField();
+
+        $field->validate(input: FormInput::fromArray(data: ['phone' => ' 012 345 67 89 ']));
+
+        $this->assertSame(['Invalid'], $this->listErrors(field: $field));
+        $this->assertSame('012 345 67 89', $field->getValueAsString());
+        $this->assertSame('012 345 67 89', $field->renderValue());
+    }
+
+    public function testPossibleButInvalidNumberOfAnotherCountryIsRejected(): void
+    {
+        $field = $this->createField(countryCode: 'DE');
+
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['phone' => '+41 12 345 67 89'])));
     }
 
     /**

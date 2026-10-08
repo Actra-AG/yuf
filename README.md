@@ -667,8 +667,9 @@ A possible number has a length that exists in its country; a valid number also m
 that is not valid. `FIXED_LINE_OR_MOBILE` is returned where both cannot be told apart (e.g. in the US);
 `isValidForType(numberType:)` accepts such a number as `FIXED_LINE` and as `MOBILE`.
 
-`PhoneNumberField` accepts every possible number. With `allowedNumberTypes:` (list of `PhoneNumberTypeEnum`) the number
-has to be valid and of one of the types, otherwise the field adds `numberTypeErrorMessage:` (default: the
+`PhoneNumberField` accepts valid numbers only (`isValid()`), not numbers that are merely possible; otherwise it adds
+`invalidErrorMessage:`. With `allowedNumberTypes:` (list of `PhoneNumberTypeEnum`) the number also has to be of one of
+the types, otherwise the field adds `numberTypeErrorMessage:` (default: the
 `invalidErrorMessage:`):
 
 ```php

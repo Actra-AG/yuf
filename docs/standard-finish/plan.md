@@ -131,12 +131,23 @@ each small enough to release on its own. `actra/backend` follows when the plan i
      number with every alternative of the pattern (as Java's `matches()`, which libphonenumber uses); the parser keeps
      the national prefix when the number without it no longer matches (GA fixed line example). Tests over all example
      numbers through the parser.
-14. **v4.54.0 – SMTP authentication:** more methods than `AUTH LOGIN` in `SmtpMailer` (e.g. `AUTH PLAIN`).
-15. **v4.55.0 – redirect codes:** `acceptRedirectionResponseCode()` also for 302, 307, 308.
+13.2. **v4.54.0 – `PhoneNumberField` checks validity by default (⚠️ behaviour, decision of the user after step
+     13.1):** without `allowedNumberTypes:` the field accepts valid numbers only (today: possible numbers, i.e. the
+     length only, so `044 668 18 00 / 12` passes since v4.53.1).
+14. **v4.55.0 – SMTP authentication:** `AUTH PLAIN` besides `AUTH LOGIN` (chosen from the methods the server announces
+    in its EHLO answer, or fixed by an argument) and `XOAUTH2` (Microsoft 365, Gmail) with the token from a small
+    interface (`OAuthTokenProvider`, implemented by the project or by step 15); no `CRAM-MD5`.
+15. **v4.56.0 – Microsoft Graph mailer (decision of the user: Microsoft ends basic SMTP authentication):** a mailer
+    that sends through the Graph API (`POST /users/{sender}/sendMail` with the MIME message that yuf builds, so
+    attachments, HTML and headers work as with SMTP), authenticated with the OAuth 2.0 client credentials flow
+    (tenant, client id, client secret) through `CurlClient`; the token provider also serves `XOAUTH2` of step 14. Size
+    limit of the Graph request (4 MB) checked with a clear exception. Tests with the local HTTP server doubles of
+    `tests/Double/api/`.
+16. **v4.57.0 – redirect codes:** `acceptRedirectionResponseCode()` also for 302, 307, 308.
 
 ### End
 
-16. Update [docs/standard-migration/remaining.md](../standard-migration/remaining.md) to the final state, so that
+17. Update [docs/standard-migration/remaining.md](../standard-migration/remaining.md) to the final state, so that
     `actra/backend` can follow.
 
 ## Handover notes
@@ -574,3 +585,17 @@ each small enough to release on its own. `actra/backend` follows when the plan i
 - Review: the two viability tests called the private `stripNationalPrefix()` through reflection (forbidden). It is
   `public static` now (`PhoneParser` is `@internal`, the method has no state; `matchNationalNumber()` static too) and
   the tests call it directly; no reflection in `tests/Unit/phone/`.
+
+### Step 13.2 (v4.54.0) – done
+
+- **Field:** `PhoneNumberField::parsePhoneNumber()` returns the number only if `PhoneNumber::isValid()`. So the default
+  accepts valid numbers only; an invalid (also a possible) number stays as typed (not normalized to the internal format,
+  so the user sees what they typed) and adds `invalidErrorMessage`. With `allowedNumberTypes:` unchanged (valid and of one
+  of the types, `numberTypeErrorMessage`). Constructor and `setValue()` keep a not valid number as typed too.
+- **Changed expectation:** `PhoneNumberFieldNumberTypeTest` provider case `012 345 67 89` (CH, possible, no assigned
+  number): accepted (`true`) -> rejected (`false`); test renamed `testWithoutAllowListOnlyValidNumbersAreAccepted`. No
+  other test number was affected (all others are valid). New cases: `044 668 18 00 / 12`, stays as typed, other country.
+- **Other places:** no other validation of phone numbers in `src/` (`PhoneNumber::createFromString()` is only used by
+  the field and in `src/phone/`); no datacheck validator for phone numbers; `example/` has no phone field.
+- `UPGRADE.md`: `## [v4.54.0]`, README "Phone numbers". `ddev composer check` green, baseline empty.
+- Tests: 20455 -> 20458.
