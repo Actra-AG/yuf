@@ -11,6 +11,7 @@ parameters:
         - src/session/NativeSessionStorage.php
         - src/session/AbstractSessionHandler.php
         # Tests that prepare or inspect superglobals
+        - tests/Double/api/echo-server.php
         - tests/Unit/common/SearchHelperRequestTest.php
         - tests/Unit/core/HttpRequestFromGlobalsTest.php
         - tests/Unit/core/HttpRequestGetallheadersTest.php

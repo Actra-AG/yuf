@@ -9,224 +9,258 @@ declare(strict_types=1);
 
 namespace actra\yuf\api;
 
-use CurlHandle;
+use actra\yuf\core\RequestMethodEnum;
+use InvalidArgumentException;
 use LogicException;
+use SensitiveParameter;
 
+/**
+ * Base of the request classes (`CurlGetRequest`, `CurlPostRequest`, ...): what is sent, not how. A request is sent by
+ * a `CurlClient`; `execute()` does this with a client of its own. Not an extension point for projects, use one of the
+ * request classes.
+ *
+ * Safe by default: the certificate and host name of the server are always verified, only http and https URLs
+ * are accepted, redirects are not followed, credentials are only sent over HTTPS (or to this machine), the transfer
+ * has timeouts and a limit for the size of the response.
+ */
 abstract class AbstractCurlRequest
 {
+    public const int DEFAULT_TIMEOUT_IN_SECONDS = 10;
+    public const int DEFAULT_MAX_RESPONSE_SIZE_IN_BYTES = 33554432;
     private const string CONTENT_TYPE = 'Content-Type';
     private const string CONTENT_LENGTH = 'Content-Length';
-    private const array PROTECTED_HTTP_HEADERS = [
-        AbstractCurlRequest::CONTENT_TYPE,
-        AbstractCurlRequest::CONTENT_LENGTH,
-    ];
-    private const array PROTECTED_CURL_OPTIONS = [
-        CURLOPT_URL,
-        CURLOPT_CONNECTTIMEOUT,
-        CURLOPT_TIMEOUT,
-        CURLOPT_POSTFIELDS,
-        CURLOPT_CUSTOMREQUEST,
-        CURLOPT_HTTPGET,
-        CURLOPT_NOBODY,
-        CURLOPT_HEADER,
-        CURLOPT_POST,
-        CURLOPT_HTTPHEADER,
-        CURLOPT_SSL_VERIFYHOST,
-        CURLOPT_SSL_VERIFYPEER,
-        CURLOPT_HTTPAUTH,
-        CURLOPT_USERPWD,
-    ];
 
-    private static ?CurlHandle $curlHandle = null; // Use connection persistence for multiple requests to the same url
-    private static array $instances = [];
-
-    private int $instanceIndex;
+    /** @var array<string, CurlHeader> by lower case name */
     private array $httpHeaders = [];
-    private array $curlOptions = [
-        CURLOPT_CONNECTTIMEOUT => 10,
-        CURLOPT_TIMEOUT => 10,
-        CURLOPT_RETURNTRANSFER => true,
-    ];
+    private ?string $body = null;
+    private ?CurlBodyTypeEnum $bodyType = null;
+    private ?CurlAuthentication $authentication = null;
+    private int $connectTimeoutInSeconds = AbstractCurlRequest::DEFAULT_TIMEOUT_IN_SECONDS;
+    private int $requestTimeoutInSeconds = AbstractCurlRequest::DEFAULT_TIMEOUT_IN_SECONDS;
+    private int $maxResponseSizeInBytes = AbstractCurlRequest::DEFAULT_MAX_RESPONSE_SIZE_IN_BYTES;
     private bool $acceptRedirectionResponseCode = false;
-    private bool $isExecuted = false;
+    private readonly CurlTargetUrl $targetUrl;
 
-    protected function __construct(string $requestTargetUrl, array $requestTypeSpecificCurlOptions)
-    {
-        $this->instanceIndex = (count(AbstractCurlRequest::$instances) === 0) ? 1 : max(
-            value: array_keys(
-                array: AbstractCurlRequest::$instances,
-            ),
-        ) + 1;
-        AbstractCurlRequest::$instances[$this->instanceIndex] = $this;
-        $this->curlOptions[CURLOPT_URL] = $requestTargetUrl;
-        foreach ($requestTypeSpecificCurlOptions as $key => $val) {
-            $this->curlOptions[$key] = $val;
-        }
+    /**
+     * @throws InvalidArgumentException If the URL is no absolute http or https URL or contains a user name or password
+     */
+    protected function __construct(
+        private readonly RequestMethodEnum $method,
+        string $requestTargetUrl,
+    ) {
+        $this->targetUrl = new CurlTargetUrl(url: $requestTargetUrl);
     }
 
-    public function __destruct()
-    {
-        unset(AbstractCurlRequest::$instances[$this->instanceIndex]);
-        if (
-            count(value: AbstractCurlRequest::$instances) === 0
-            && AbstractCurlRequest::$curlHandle !== null
-        ) {
-            AbstractCurlRequest::$curlHandle = null;
-        }
-    }
-
+    /**
+     * @throws InvalidArgumentException If a timeout is less than 1 second (cURL would wait forever for 0)
+     * @throws LogicException If the connect timeout is longer than the request timeout
+     */
     public function setTimeoutInSeconds(int $connectTimeOut, int $requestTimeOut): void
     {
+        if ($connectTimeOut < 1 || $requestTimeOut < 1) {
+            throw new InvalidArgumentException(message: 'A timeout must be at least 1 second.');
+        }
         if ($connectTimeOut > $requestTimeOut) {
             throw new LogicException(message: 'Connect timeout cannot be more than request timeout.');
         }
-
-        $this->curlOptions[CURLOPT_CONNECTTIMEOUT] = $connectTimeOut;
-        $this->curlOptions[CURLOPT_TIMEOUT] = $requestTimeOut;
+        $this->connectTimeoutInSeconds = $connectTimeOut;
+        $this->requestTimeoutInSeconds = $requestTimeOut;
     }
 
-    public function setHttpHeader(string $key, string $value): void
+    /**
+     * A response with a larger body is aborted and reported as `CurlResponse::ERROR_RESPONSE_TOO_LARGE`.
+     */
+    public function setMaxResponseSizeInBytes(int $maxResponseSizeInBytes): void
     {
-        if (in_array(needle: $key, haystack: AbstractCurlRequest::PROTECTED_HTTP_HEADERS, strict: true)) {
+        if ($maxResponseSizeInBytes < 1) {
+            throw new InvalidArgumentException(message: 'The maximum response size must be at least 1 byte.');
+        }
+        $this->maxResponseSizeInBytes = $maxResponseSizeInBytes;
+    }
+
+    /**
+     * Sets a header, a header of the same name (in any case) is replaced.
+     *
+     * @throws LogicException For `Content-Type` and `Content-Length`: they come from the body
+     * @throws InvalidArgumentException If the name is no valid header name or the value has line breaks or other
+     *                                  control characters (header injection)
+     */
+    public function setHttpHeader(string $key, #[SensitiveParameter] string $value): void
+    {
+        if (
+            strcasecmp(string1: $key, string2: AbstractCurlRequest::CONTENT_TYPE) === 0
+            || strcasecmp(string1: $key, string2: AbstractCurlRequest::CONTENT_LENGTH) === 0
+        ) {
             throw new LogicException(message: 'You are not allowed to overwrite the HTTP-Header ' . $key);
         }
-        $this->httpHeaders[$key] = $value;
+        $this->putHeader(header: new CurlHeader(name: $key, value: $value));
     }
 
-    public function setCurlOption(int $optionIdentifier, string|int|bool|null $newValue): void
-    {
-        if (in_array(needle: $optionIdentifier, haystack: AbstractCurlRequest::PROTECTED_CURL_OPTIONS, strict: true)) {
-            throw new LogicException(message: 'You are not allowed to overwrite the cURL-Option ' . $optionIdentifier);
-        }
-        $this->curlOptions[$optionIdentifier] = $newValue;
-    }
-
-    public function removeCurlOption(int $optionIdentifier): void
-    {
-        if (in_array(needle: $optionIdentifier, haystack: AbstractCurlRequest::PROTECTED_CURL_OPTIONS, strict: true)) {
-            throw new LogicException(message: 'You are not allowed to remove the cURL-Option ' . $optionIdentifier);
-        }
-        unset($this->curlOptions[$optionIdentifier]);
-    }
-
-    public function disableSslCheck(): void
-    {
-        $this->curlOptions[CURLOPT_SSL_VERIFYHOST] = 0;
-        $this->curlOptions[CURLOPT_SSL_VERIFYPEER] = false;
-    }
-
+    /**
+     * Redirects are never followed. By default, every status code of 300 or more is an error; this accepts 301 and
+     * 303 as an answer (the target is in the `Location` header of the response).
+     */
     public function acceptRedirectionResponseCode(): void
     {
         $this->acceptRedirectionResponseCode = true;
     }
 
-    public function useBasicHttpAuthentication(string $authUserNamePassword): void
+    /**
+     * @param string $authUserNamePassword `user:password`
+     *
+     * @throws LogicException If the target is not HTTPS (plain HTTP is only accepted for localhost)
+     */
+    public function useBasicHttpAuthentication(#[SensitiveParameter] string $authUserNamePassword): void
     {
-        $this->curlOptions[CURLOPT_HTTPAUTH] = CURLAUTH_BASIC;
-        $this->curlOptions[CURLOPT_USERPWD] = $authUserNamePassword;
+        $this->assertCredentialsAreSafeToSend();
+        $this->authentication = CurlAuthentication::basic(userNameAndPassword: $authUserNamePassword);
     }
 
-    public function useTokenAuthentication(string $token): void
+    /**
+     * @throws LogicException If the target is not HTTPS (plain HTTP is only accepted for localhost)
+     * @throws InvalidArgumentException If the token has spaces, line breaks or other characters that are not visible
+     *                                  ASCII
+     */
+    public function useTokenAuthentication(#[SensitiveParameter] string $token): void
     {
-        $this->curlOptions[CURLOPT_HTTPAUTH] = CURLAUTH_BEARER;
-        $this->curlOptions[CURLOPT_XOAUTH2_BEARER] = $token;
+        $this->assertCredentialsAreSafeToSend();
+        $this->authentication = CurlAuthentication::bearer(token: $token);
     }
 
-    public function execute(): CurlResponse
+    /**
+     * Sends the request with a new client (and a new connection). To send several requests over the same connection
+     * use `CurlClient::send()`.
+     */
+    public function execute(?CurlClient $curlClient = null): CurlResponse
     {
-        if ($this->isExecuted) {
-            throw new LogicException(message: 'This cURL-Request is already executed.');
-        }
-        $this->isExecuted = true;
-
-        if (AbstractCurlRequest::$curlHandle === null) {
-            AbstractCurlRequest::$curlHandle = curl_init();
-        } else {
-            curl_reset(AbstractCurlRequest::$curlHandle);
-        }
-
-        $httpHeaders = [];
-        foreach ($this->httpHeaders as $key => $val) {
-            $httpHeaders[] = $key . ': ' . $val;
-        }
-        $this->curlOptions[CURLOPT_HTTPHEADER] = $httpHeaders;
-        curl_setopt_array(handle: AbstractCurlRequest::$curlHandle, options: $this->curlOptions);
-
-        return CurlResponse::createFromPreparedCurlHandle(
-            preparedCurlHandle: AbstractCurlRequest::$curlHandle,
-            acceptRedirectionResponseCode: $this->acceptRedirectionResponseCode,
-        );
+        return ($curlClient ?? new CurlClient())->send(request: $this);
     }
 
+    public function getMethod(): RequestMethodEnum
+    {
+        return $this->method;
+    }
+
+    public function getUrl(): string
+    {
+        return $this->targetUrl->url;
+    }
+
+    /**
+     * @return list<CurlHeader> The headers that are sent, including the `Content-Type` of the body
+     */
+    public function getHttpHeaders(): array
+    {
+        $headers = array_values(array: $this->httpHeaders);
+        if ($this->bodyType !== null) {
+            $headers[] = new CurlHeader(
+                name: AbstractCurlRequest::CONTENT_TYPE,
+                value: $this->bodyType->getContentType(),
+            );
+        }
+
+        return $headers;
+    }
+
+    public function getBody(): ?string
+    {
+        return $this->body;
+    }
+
+    public function getConnectTimeoutInSeconds(): int
+    {
+        return $this->connectTimeoutInSeconds;
+    }
+
+    public function getRequestTimeoutInSeconds(): int
+    {
+        return $this->requestTimeoutInSeconds;
+    }
+
+    public function getMaxResponseSizeInBytes(): int
+    {
+        return $this->maxResponseSizeInBytes;
+    }
+
+    public function isRedirectionResponseCodeAccepted(): bool
+    {
+        return $this->acceptRedirectionResponseCode;
+    }
+
+    /**
+     * @internal
+     */
+    public function getAuthentication(): ?CurlAuthentication
+    {
+        return $this->authentication;
+    }
+
+    /**
+     * Never shows the secrets (headers can carry API keys; the target URL a token).
+     *
+     * @return array{method: string, host: string, hasBody: bool, hasAuthentication: bool}
+     */
+    public function __debugInfo(): array
+    {
+        return [
+            'method' => $this->method->value,
+            'host' => $this->targetUrl->host,
+            'hasBody' => $this->body !== null,
+            'hasAuthentication' => $this->authentication !== null,
+        ];
+    }
+
+    /**
+     * @param array<array-key, mixed> $postData see `CurlFormEncoder`
+     */
     protected function setPostBody(array $postData): void
     {
-        $postFieldsString = http_build_query(
-            data: AbstractCurlRequest::convertAllDataToString(data: $postData),
-            encoding_type: PHP_QUERY_RFC3986,
+        $this->setBody(
+            bodyType: CurlBodyTypeEnum::FORM_URLENCODED,
+            content: CurlFormEncoder::encode(postData: $postData),
         );
-        $this->httpHeaders[AbstractCurlRequest::CONTENT_TYPE] = 'application/x-www-form-urlencoded; charset=utf-8';
-        $this->httpHeaders[AbstractCurlRequest::CONTENT_LENGTH] = strlen(string: $postFieldsString);
-        $this->curlOptions[CURLOPT_POSTFIELDS] = $postFieldsString;
-    }
-
-    private static function convertAllDataToString(mixed $data): array|string
-    {
-        if (is_bool(value: $data)) {
-            return (string) (($data) ? 1 : 0);
-        }
-
-        if (is_object(value: $data)) {
-            $arrPrepared = [];
-            foreach (get_object_vars(object: $data) as $strKey => $val) {
-                $strKey = AbstractCurlRequest::convertAllDataToString(data: $strKey);
-                $val = AbstractCurlRequest::convertAllDataToString(data: $val);
-                $arrPrepared[$strKey] = $val;
-            }
-
-            return $arrPrepared;
-        }
-
-        if (is_array(value: $data)) {
-            $arrPrepared = [];
-            foreach ($data as $strKey => $val) {
-                $strKey = AbstractCurlRequest::convertAllDataToString(data: $strKey);
-                $val = AbstractCurlRequest::convertAllDataToString(data: $val);
-                $arrPrepared[$strKey] = $val;
-            }
-
-            return $arrPrepared;
-        }
-
-        return (string) $data;
     }
 
     protected function setXmlBody(string $xmlString): void
     {
-        $this->httpHeaders[AbstractCurlRequest::CONTENT_TYPE] = 'text/xml; charset=utf-8';
-        $this->httpHeaders['HTTP_PRETTY_PRINT'] = 'TRUE';
-        $this->httpHeaders[AbstractCurlRequest::CONTENT_LENGTH] = strlen(string: $xmlString);
-        $this->curlOptions[CURLOPT_POSTFIELDS] = $xmlString;
+        $this->setBody(bodyType: CurlBodyTypeEnum::XML, content: $xmlString);
     }
 
     protected function setJsonBody(string $jsonString): void
     {
-        $this->httpHeaders[AbstractCurlRequest::CONTENT_TYPE] = 'application/json; charset=utf-8';
-        $this->httpHeaders[AbstractCurlRequest::CONTENT_LENGTH] = strlen(string: $jsonString);
-        $this->curlOptions[CURLOPT_POSTFIELDS] = $jsonString;
+        $this->setBody(bodyType: CurlBodyTypeEnum::JSON, content: $jsonString);
     }
 
     protected function setJsonApiBody(string $jsonString): void
     {
-        $this->httpHeaders[AbstractCurlRequest::CONTENT_TYPE] = 'application/vnd.api+json';
-        $this->httpHeaders['Accept'] = 'application/vnd.api+json';
-        $this->httpHeaders[AbstractCurlRequest::CONTENT_LENGTH] = strlen(string: $jsonString);
-        $this->curlOptions[CURLOPT_POSTFIELDS] = $jsonString;
+        $this->setBody(bodyType: CurlBodyTypeEnum::JSON_API, content: $jsonString);
     }
 
     protected function setPlainTextBody(string $plainText): void
     {
-        $this->httpHeaders[AbstractCurlRequest::CONTENT_TYPE] = 'text/plain; charset=utf-8';
-        $this->httpHeaders[AbstractCurlRequest::CONTENT_LENGTH] = strlen(string: $plainText);
-        $this->curlOptions[CURLOPT_POSTFIELDS] = $plainText;
+        $this->setBody(bodyType: CurlBodyTypeEnum::PLAIN_TEXT, content: $plainText);
+    }
+
+    private function setBody(CurlBodyTypeEnum $bodyType, string $content): void
+    {
+        $this->bodyType = $bodyType;
+        $this->body = $content;
+        foreach ($bodyType->getDefaultHeaders() as $name => $value) {
+            $this->putHeader(header: new CurlHeader(name: $name, value: $value));
+        }
+    }
+
+    private function putHeader(CurlHeader $header): void
+    {
+        $this->httpHeaders[strtolower(string: $header->name)] = $header;
+    }
+
+    private function assertCredentialsAreSafeToSend(): void
+    {
+        if (!$this->targetUrl->isSafeForCredentials()) {
+            throw new LogicException(
+                message: 'Credentials are only sent over HTTPS (plain HTTP is only accepted for localhost).',
+            );
+        }
     }
 }

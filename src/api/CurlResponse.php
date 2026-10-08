@@ -12,105 +12,94 @@ namespace actra\yuf\api;
 use actra\yuf\common\JsonUtils;
 use actra\yuf\common\SimpleXmlExtended;
 use actra\yuf\core\HttpStatusCodeEnum;
-use CurlHandle;
+use JsonException;
+use RuntimeException;
 use stdClass;
+use UnexpectedValueException;
 
-class CurlResponse
+/**
+ * The result of one request. `$rawResponseBody` is `false` if the transfer failed (no response, timeout, response too
+ * large); `$errorCode` / `$errorMessage` then say why. An HTTP status code of 300 or more is an error too
+ * (`ERROR_BAD_HTTP_RESPONSE_CODE`), but the body is available.
+ */
+final readonly class CurlResponse
 {
     public const int ERROR_BAD_HTTP_RESPONSE_CODE = 900;
+    public const int ERROR_RESPONSE_TOO_LARGE = 901;
 
-    private function __construct(
-        public readonly false|string $rawResponseBody,
-        public readonly array $curlInfo,
-        public readonly HttpStatusCodeEnum $responseHttpCode,
-        public readonly float $totalRequestTime,
-        public readonly int $errorCode,
-        public readonly string $errorMessage,
+    /**
+     * @param array{url: string, http_code: int, total_time: float, redirect_count: int, ...<string, mixed>} $curlInfo
+     *     The result of `curl_getinfo()`
+     * @param array<string, list<string>> $headers The values of the response headers by lower case name
+     */
+    public function __construct(
+        public false|string $rawResponseBody,
+        public array $curlInfo,
+        public HttpStatusCodeEnum $responseHttpCode,
+        public float $totalRequestTime,
+        public int $errorCode,
+        public string $errorMessage,
+        public array $headers = [],
     ) {}
-
-    public static function createFromPreparedCurlHandle(
-        CurlHandle $preparedCurlHandle,
-        bool $acceptRedirectionResponseCode,
-    ): CurlResponse {
-        $rawResponseBody = curl_exec(handle: $preparedCurlHandle);
-        $curlInfo = curl_getinfo(handle: $preparedCurlHandle);
-        $responseHttpCode = HttpStatusCodeEnum::tryFrom(value: (int) $curlInfo['http_code']);
-        if ($responseHttpCode === null) {
-            $responseHttpCode = HttpStatusCodeEnum::HTTP_UNKNOWN;
-        }
-        $errorCode = curl_errno(handle: $preparedCurlHandle);
-        $errorMessage = curl_error(handle: $preparedCurlHandle);
-
-        if ($errorCode !== CURLE_OK) {
-            $errorMessage = __CLASS__ . ': (' . $errorCode . ') ' . $errorMessage;
-            // See http://www.php.net/manual/en/function.curl-errno.php for further values of interest.
-            $errorMessage .= match ($errorCode) {
-                CURLE_FTP_ACCESS_DENIED => '; Hint: (Remote) Access denied.',
-                CURLE_SSL_CONNECT_ERROR => '; Hint: Problem with ssl connection.',
-                CURLE_HTTP_PORT_FAILED => '; Hint: Interface failed. Maybe problem with networking on server?',
-                CURLE_GOT_NOTHING => '; Hint: Got no data.',
-                CURLE_SSL_CERTPROBLEM => '; Hint: Problem with certificate on ssl connection.',
-                CURLE_SSL_PEER_CERTIFICATE => '; Hint: Problem with CA certificate on ssl connection. Maybe OS update missing on server?',
-                67 => '; Hint: Login denied.',
-                default => '',
-            };
-        } elseif (
-            $responseHttpCode->value >= 300
-            && $responseHttpCode->value < 600
-            && (
-                !$acceptRedirectionResponseCode
-                || !in_array(
-                    needle: $responseHttpCode,
-                    haystack: [
-                        HttpStatusCodeEnum::HTTP_MOVED_PERMANENTLY,
-                        HttpStatusCodeEnum::HTTP_SEE_OTHER,
-                    ],
-                    strict: true,
-                )
-            )
-        ) {
-            $errorCode = CurlResponse::ERROR_BAD_HTTP_RESPONSE_CODE;
-            $errorMessage = __CLASS__ . ': Bad HTTP response code received: ' . $responseHttpCode->value;
-            $errorMessage .= match ($responseHttpCode) {
-                HttpStatusCodeEnum::HTTP_MOVED_PERMANENTLY => ' ("moved permanently". Check URL/settings.)',
-                HttpStatusCodeEnum::HTTP_SEE_OTHER => ' ("Redirect". Maybe HTTP-to-HTTPS? Check URL/settings.)',
-                HttpStatusCodeEnum::HTTP_UNAUTHORIZED => ' ("unauthorized". Check credentials or request format.)',
-                HttpStatusCodeEnum::HTTP_NOT_FOUND => ' ("not found" on server)',
-                HttpStatusCodeEnum::HTTP_METHOD_NOT_ALLOWED => ' ("method not allowed". Check URL or request format/data.)',
-                HttpStatusCodeEnum::HTTP_NOT_ACCEPTABLE => ' ("not acceptable" on server. Check request format/data.)',
-                HttpStatusCodeEnum::HTTP_INTERNAL_SERVER_ERROR => ' (remote "Server error")',
-                default => '',
-            };
-        }
-
-        return new CurlResponse(
-            rawResponseBody: $rawResponseBody,
-            curlInfo: $curlInfo,
-            responseHttpCode: $responseHttpCode,
-            totalRequestTime: (float) $curlInfo['total_time'],
-            errorCode: $errorCode,
-            errorMessage: $errorMessage,
-        );
-    }
 
     public function hasErrors(): bool
     {
-        return ($this->errorCode !== CURLE_OK);
+        return $this->errorCode !== CURLE_OK;
     }
 
+    /**
+     * @return list<string> All values of a response header (name in any case), empty if it was not sent
+     */
+    public function getHeaderValues(string $name): array
+    {
+        $lowerCaseName = strtolower(string: $name);
+
+        return array_key_exists(key: $lowerCaseName, array: $this->headers) ? $this->headers[$lowerCaseName] : [];
+    }
+
+    /**
+     * @return ?string The first value of a response header (name in any case), `null` if it was not sent
+     */
+    public function getHeader(string $name): ?string
+    {
+        $values = $this->getHeaderValues(name: $name);
+
+        return $values === [] ? null : $values[0];
+    }
+
+    /**
+     * @return stdClass|array<array-key, mixed>
+     *
+     * @throws RuntimeException If the request failed and there is no body
+     * @throws JsonException If the body is no valid JSON
+     * @throws UnexpectedValueException If the JSON is no object and no array
+     */
     public function getJsonResponse(): stdClass|array
     {
         return JsonUtils::decodeJsonString(
-            jsonString: $this->rawResponseBody,
+            jsonString: $this->requireBody(),
             returnAssociativeArray: false,
         );
     }
 
+    /**
+     * @throws RuntimeException If the request failed and there is no body
+     */
     public function getXmlResponse(): SimpleXmlExtended
     {
+        // LIBXML_NONET: the document must not load anything from the network; entities are not substituted
         return new SimpleXmlExtended(
-            data: $this->rawResponseBody,
-            options: LIBXML_NOCDATA,
+            data: $this->requireBody(),
+            options: LIBXML_NOCDATA | LIBXML_NONET,
         );
+    }
+
+    private function requireBody(): string
+    {
+        if ($this->rawResponseBody === false) {
+            throw new RuntimeException(message: 'The request failed, there is no response body to read.');
+        }
+
+        return $this->rawResponseBody;
     }
 }

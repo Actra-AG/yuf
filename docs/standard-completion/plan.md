@@ -67,7 +67,7 @@ too large.
 8. `table` (37) and `pagination` (3), done in v4.35.0.
 9. `mailer` (33, full standard; characterization tests of the MIME output first), done in v4.36.0.
 10. `auth` (26), `security` (0) and the rest of `session` (2), done in v4.37.0.
-11. `api` (27).
+11. `api` (27), done in v4.38.0.
 12. `html` (25) and `layout` (0, `final` only).
 13. `exception` (10) and `datacheck` (13).
 14. `form` (0 baseline; `final` / extension points of its classes).
@@ -498,6 +498,78 @@ too large.
 - **Open / for later:** `IpValidator` is in `datacheck` (step 13); `UnauthorizedException` in `exception` (step 13);
   `HttpResponse::redirectAndExit()` is static and exits (step 4 area); `Session` / `NativeSessionStorage` /
   `ArraySessionStorage` / `SessionStorage` were already clean and only got line breaks.
+
+### Step 11 (v4.38.0) – done
+
+- Area `api`. Baseline 75 -> 48 (all 27 entries of `src/api/` removed, no new entry). Tests now 11345
+  (`tests/Unit/api/`: 249). Details and before/after in `UPGRADE.md`.
+- **Usage in other projects (read-only search, `actra\yuf\api`):** `crm.actra.ch` (`AbaNinja*`: `CurlGetRequest::prepare` (renamed `create`, see below),
+  `CurlPostRequest::prepareWithJsonBody`, `useTokenAuthentication`, `setHttpHeader`, `setTimeoutInSeconds`, `execute`,
+  `rawResponseBody`, `hasErrors`, `errorMessage`, `getJsonResponse`), `actra.domains` (`OpusClient`, `RealtimeClient`,
+  `OpenProviderClient`, `Crm*`, `ExternalApiRequest` (takes `AbstractCurlRequest`), `CronApiRequest`,
+  `ActionSyncSwitchErrors` (`useBasicHttpAuthentication`, `responseHttpCode`), `HttpApiCommand`, `syncExchangeRates`:
+  the same calls plus `prepareWithPostBody`, `prepareWithoutBody`, Put / Patch / Delete requests, `curlInfo`, `errorCode`),
+  `drogeriehaas.ch` (`hciSync`: `prepareWithPostBody`, `getXmlResponse`, `curlInfo`). Nobody uses `setCurlOption`,
+  `removeCurlOption`, `disableSslCheck`, `acceptRedirectionResponseCode`, `CurlHeadRequest`,
+  `createFromPreparedCurlHandle` or extends a request class. `my.cmas.ch` and `cron.actra.ch` have an old own copy
+  (`framework\api`), not yuf. **Follow-up in projects:** rename `prepare…` to `create…` for the request classes; check that their API URLs are `https://` (credentials over plain
+  HTTP are refused now) and that no server needs TLS 1.0 / 1.1 or an untrusted certificate; nothing else changes.
+- **Characterization first** (`CurlRequestCharacterizationTest`, 54 tests, passed against the old code before the
+  change): method, URL and query, form encoding (booleans, `null`, nested, objects, RFC 3986), the five body kinds with
+  `Content-Type` of POST / PUT / PATCH, `HTTP_PRETTY_PRINT`, `Accept` of JSON:API, custom headers, basic and bearer
+  authentication, timeouts, status codes 300-599 and their messages, accepted 301 / 303, redirects not followed,
+  connection refused, request timeout, JSON / XML responses, independent requests. The tests of the fixes and of the
+  new rules came after the change; the one test that pinned "a request can be executed once" was replaced.
+- **Network in the tests:** no internet, no mock. `LocalHttpServer` starts PHP's built-in web server (`php -S` on a free
+  loopback port, router `tests/Double/api/echo-server.php`: echoes method, URI, headers and body as JSON and has fixed
+  paths for status codes, redirects, repeated headers, big and chunked bodies, JSON and XML) in a separate process,
+  because `curl_exec()` blocks the process of the test. `LocalTlsServer` + `tls-server.php`: a TLS server with a
+  self-signed certificate (generated per test) for the certificate check. The timeout test connects to a listening
+  socket of the test process that never answers. `EchoedRequest` reads the echo. `phpstan.neon` allows the superglobals
+  in `echo-server.php`; the two `proc_open()` calls carry a `@phpstan-ignore disallowed.function` with a reason.
+- **Design / static:** `AbstractCurlRequest` describes the request (method as `RequestMethodEnum`, `CurlTargetUrl`,
+  `CurlHeader`s, body, timeouts, limit, `CurlAuthentication`); `CurlClient` sends it (one `CurlHandle` per client,
+  `curl_reset()` before every request); `CurlOptionsBuilder` (pure) translates it into cURL options;
+  `CurlResponseCollector` (pure) collects body and headers and enforces the size limit; `CurlErrorEvaluator` (pure) decides
+  about errors; `CurlFormEncoder` (pure) encodes post fields. No static property in the area. The static factories stay
+  (stateless); decision of the user: renamed `prepare…()` -> `create…()` in this release (no aliases, table in
+  `UPGRADE.md`; about 35 call sites in `crm.actra.ch`, `actra.domains`, `drogeriehaas.ch` to follow).
+- **final / extension points:** the six request classes and `CurlResponse` (`final readonly`) and `CurlClient` are `final`;
+  `AbstractCurlRequest` stays an abstract type for signatures (`ExternalApiRequest`), documented as no extension point.
+  `@internal`: `CurlBodyTypeEnum`, `CurlAuthentication`, `CurlAuthenticationMethodEnum`, `CurlTargetUrl`, `CurlFormEncoder`,
+  `CurlOptionsBuilder`, `CurlResponseCollector`, `CurlErrorEvaluator`, `CurlResponseError`.
+- **Enums:** `RequestMethodEnum` is reused for the methods (all six classes map to a case; `OPTIONS` has no request class
+  but the `match` is exhaustive), `CurlBodyTypeEnum` (form, XML, JSON, JSON:API, plain text with content type and default
+  headers), `CurlAuthenticationMethodEnum`. `ERROR_BAD_HTTP_RESPONSE_CODE` / `ERROR_RESPONSE_TOO_LARGE` stay typed constants
+  (error codes next to the cURL codes, not a closed set). `mixed`: only `CurlFormEncoder::convertValue()` (any value of a
+  form array, narrowed right there) and the unsealed rest of the `curl_getinfo()` shape.
+- **Security findings and fixes:** (1) `disableSslCheck()` and `setCurlOption()` could switch off certificate and host name
+  checks, protocols and more: removed; verification is set explicitly (`VERIFYPEER`, `VERIFYHOST` 2, TLS 1.2+). (2) Any
+  scheme (`file://`, `gopher://`, ...) reached cURL: URL validated (http / https, host, no user info, no control
+  characters or backslashes) and `CURLOPT_PROTOCOLS_STR` / `CURLOPT_REDIR_PROTOCOLS_STR` set. (3) Redirects: never followed
+  (`FOLLOWLOCATION` false, as before), so credentials cannot reach another host. (4) Header injection through values
+  and names of `setHttpHeader()`, the bearer token and the basic credentials: validated, messages without the value.
+  (5) `content-type` in other spellings bypassed the protected headers. (6) Timeouts of 0 (infinite) are rejected;
+  defaults unchanged. (7) Unlimited response bodies: 32 MiB default limit (Content-Length check and a write callback for
+  streamed bodies). (8) Credentials over plain HTTP: refused except for loopback. (9) Secrets in debug output:
+  `__debugInfo()` of the request and `CurlAuthentication` (the secret is private). (10) `getXmlResponse()` with
+  `LIBXML_NONET`; no entity substitution (as before; tested with an external file entity). (11) Exceptions and messages
+  never contain a URL (query tokens), header value, token or body; `CurlResponse::$errorMessage` has the text of cURL
+  (host names, no query). **Not changed / for the user:** the application must validate target URLs that come from user
+  input (SSRF: yuf does not know the allowed hosts); an API key in `setHttpHeader('X-Api-Key')` over `http://` is not
+  detected; `curlInfo` contains the full URL (query included), the callers who log it (`OpusClient`, `RealtimeClient`,
+  `OpenProviderClient` do) should know; proxy variables of the environment (`https_proxy`) are still honoured by libcurl.
+- **Bugs found and fixed:** status codes missing from `HttpStatusCodeEnum` (`429`, `418`, ...) were no error; `content-type`
+  spelling bypass; `getJsonResponse()` / `getXmlResponse()` of a failed request threw a `TypeError`; HEAD requests returned
+  the raw header text as body (now headers are parsed for every request).
+- **Stays untested:** a successful TLS handshake (only the refusal of an untrusted certificate is tested), the minimum
+  TLS version, connection reuse of `CurlClient` (the option reset is tested, the reuse is cURL), the proxy environment,
+  `CURLE_UNSUPPORTED_PROTOCOL` from cURL itself (the URL is rejected earlier), response headers over the 300 KB limit of
+  libcurl, HTTP/2, real servers.
+- **Open / for later:** `acceptRedirectionResponseCode()` accepts only 301 and 303 (not 302 / 307 / 308), as before;
+  `useBasicHttpAuthentication()` takes `user:password` as one string (unchanged API); no retry, no proxy setting, no
+  cookie jar, no streaming to a file (the whole body is in memory up to the limit); `CurlResponse::$curlInfo` is the raw
+  cURL array; a `PUT` / `PATCH` / `DELETE` with a body of another kind than the five factories needs a new `create…()`.
 
 ### Superglobals rule – done
 

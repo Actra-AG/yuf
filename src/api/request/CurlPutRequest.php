@@ -10,23 +10,24 @@ declare(strict_types=1);
 namespace actra\yuf\api\request;
 
 use actra\yuf\api\AbstractCurlRequest;
+use actra\yuf\core\RequestMethodEnum;
 
 /**
  * Replaces all current representations of the target resource with the request payload.
  */
-class CurlPutRequest extends AbstractCurlRequest
+final class CurlPutRequest extends AbstractCurlRequest
 {
     private function __construct(string $requestTargetUrl)
     {
-        parent::__construct(
-            requestTargetUrl: $requestTargetUrl,
-            requestTypeSpecificCurlOptions: [CURLOPT_CUSTOMREQUEST => 'PUT'],
-        );
+        parent::__construct(method: RequestMethodEnum::PUT, requestTargetUrl: $requestTargetUrl);
     }
 
-    public static function prepareWithPostBody(
+    /**
+     * @param array<array-key, mixed> $postData Form fields: scalars, `null`, objects or nested arrays of them
+     */
+    public static function createWithPostBody(
         string $requestTargetUrl,
-        array  $postData,
+        array $postData,
     ): CurlPutRequest {
         $curlPutRequest = new CurlPutRequest(requestTargetUrl: $requestTargetUrl);
         $curlPutRequest->setPostBody(postData: $postData);
@@ -34,7 +35,7 @@ class CurlPutRequest extends AbstractCurlRequest
         return $curlPutRequest;
     }
 
-    public static function prepareWithXmlBody(
+    public static function createWithXmlBody(
         string $requestTargetUrl,
         string $xmlString,
     ): CurlPutRequest {
@@ -44,7 +45,7 @@ class CurlPutRequest extends AbstractCurlRequest
         return $curlPutRequest;
     }
 
-    public static function prepareWithJsonBody(
+    public static function createWithJsonBody(
         string $requestTargetUrl,
         string $jsonString,
     ): CurlPutRequest {
@@ -54,7 +55,7 @@ class CurlPutRequest extends AbstractCurlRequest
         return $curlPutRequest;
     }
 
-    public static function prepareJsonApiRequest(
+    public static function createJsonApiRequest(
         string $requestTargetUrl,
         string $jsonString,
     ): CurlPutRequest {
@@ -64,7 +65,7 @@ class CurlPutRequest extends AbstractCurlRequest
         return $curlPutRequest;
     }
 
-    public static function prepareWithPlainTextBody(
+    public static function createWithPlainTextBody(
         string $requestTargetUrl,
         string $plainText,
     ): CurlPutRequest {

@@ -4,6 +4,167 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.38.0] – 2026-10-08
+
+Area release for `src/api/` (the cURL client): no static state any more (the shared cURL handle and the registry of
+requests are replaced by `CurlClient`), safe by default (certificate and host name are always verified, TLS 1.2 or
+newer, only `http` / `https`, no redirects, credentials only over HTTPS, a limit for the size of the response, header
+injection is rejected) and every class is `final`. The usual code (`CurlGetRequest::create()`, `createWithJsonBody()`,
+`setHttpHeader()`, `setTimeoutInSeconds()`, `useTokenAuthentication()`, `execute()`, `rawResponseBody`, `hasErrors()`,
+`getJsonResponse()`) keeps working after the rename of the factories (first entry below). Search your project for `setCurlOption`, `removeCurlOption`,
+`disableSslCheck`, `createFromPreparedCurlHandle`, `extends AbstractCurlRequest`, `setTimeoutInSeconds`,
+`useBasicHttpAuthentication`, `useTokenAuthentication`, `CurlHeadRequest`, `prepare`, `rawResponseBody` and `http://` URLs of API
+calls.
+
+### ⚠️ Factories: `prepare…()` is `create…()`
+
+Named constructors are called `create…()` (naming.md). Every public static factory of the six request classes is renamed,
+the suffix stays, there are no aliases. Search your project case-insensitively for `prepare` in the files that use a
+`Curl…Request` (`CurlGetRequest::prepare`, `->prepareWith`, `::prepareJsonApiRequest`) and replace `prepare` with
+`create`; do not touch `Core::prepareHttpResponse()` or `prepareSelect()`.
+
+| Before | After |
+|:--|:--|
+| `CurlGetRequest::prepare()` | `CurlGetRequest::create()` |
+| `CurlHeadRequest::prepare()` | `CurlHeadRequest::create()` |
+| `CurlDeleteRequest::prepare()` | `CurlDeleteRequest::create()` |
+| `CurlPostRequest::prepareWithPostBody()` | `CurlPostRequest::createWithPostBody()` |
+| `CurlPostRequest::prepareWithXmlBody()` | `CurlPostRequest::createWithXmlBody()` |
+| `CurlPostRequest::prepareWithJsonBody()` | `CurlPostRequest::createWithJsonBody()` |
+| `CurlPostRequest::prepareJsonApiRequest()` | `CurlPostRequest::createJsonApiRequest()` |
+| `CurlPostRequest::prepareWithPlainTextBody()` | `CurlPostRequest::createWithPlainTextBody()` |
+| `CurlPutRequest::prepareWith…()` / `prepareJsonApiRequest()` (the same five) | `CurlPutRequest::createWith…()` / `createJsonApiRequest()` |
+| `CurlPatchRequest::prepareWith…()` / `prepareJsonApiRequest()` (the same five) | `CurlPatchRequest::createWith…()` / `createJsonApiRequest()` |
+| `CurlPatchRequest::prepareWithoutBody()` | `CurlPatchRequest::createWithoutBody()` |
+
+```php
+// Before
+$response = CurlPostRequest::prepareWithJsonBody(requestTargetUrl: $url, jsonString: $json)->execute();
+// After
+$response = CurlPostRequest::createWithJsonBody(requestTargetUrl: $url, jsonString: $json)->execute();
+```
+
+### ⚠️ `setCurlOption()`, `removeCurlOption()` and `disableSslCheck()` are removed
+
+Raw cURL options let a caller weaken every setting of the client (the old protected list did not contain `CURLOPT_PROTOCOLS`,
+`CURLOPT_FOLLOWLOCATION`, `CURLOPT_PROXY`, ...), and `disableSslCheck()` switched off the certificate and host name
+check. The client sets what it needs and nothing can be changed from outside. A server with a certificate that is not
+trusted by the server your code runs on must get a trusted certificate (or its CA must be installed on the machine /
+`curl.cainfo` in `php.ini`); the check cannot be switched off any more.
+
+| Before | After |
+|:--|:--|
+| `$request->setCurlOption(CURLOPT_..., $value)` | removed |
+| `$request->removeCurlOption(CURLOPT_...)` | removed |
+| `$request->disableSslCheck()` | removed |
+
+### ⚠️ Static state is gone: `execute()` and `CurlClient`
+
+`AbstractCurlRequest::$curlHandle` (a cURL handle shared by all requests of the process) and `$instances` are removed.
+`CurlClient` keeps a handle for its lifetime: send several requests to the same server through one client to reuse the
+connection. `$request->execute()` still works and uses a client of its own. A request can be sent more than once now
+(it was a `LogicException` before).
+
+| Before | After |
+|:--|:--|
+| `$request->execute()` | unchanged (new client per call) |
+| - | `$client = new CurlClient(); $client->send(request: $request)` or `$request->execute(curlClient: $client)` |
+| second `execute()` of a request: `LogicException` | allowed |
+
+### ⚠️ The request target is validated
+
+`create…()` throws an `InvalidArgumentException` if the URL is no absolute `http://` or `https://` URL with a host name,
+contains spaces, control characters or backslashes, or has a user name or password. Before, `file://`, `ftp://`,
+`gopher://` and so on were handed to cURL, and an invalid URL showed up as a cURL error in the response. The message does
+not contain the URL (a query string may carry a token). User name and password do not belong into a URL (they end up in
+logs): use `useBasicHttpAuthentication()`.
+
+| Before | After |
+|:--|:--|
+| `CurlGetRequest::create('ftp://example.com/')`: cURL error at `execute()` or a transfer | `InvalidArgumentException` |
+| `CurlGetRequest::create('https://user:pass@example.com/')` | `InvalidArgumentException`, use `useBasicHttpAuthentication('user:pass')` |
+| `CurlGetRequest::create('not a url')`: `CURLE_URL_MALFORMAT` in the response | `InvalidArgumentException` |
+
+### ⚠️ Credentials are only sent over HTTPS
+
+`useBasicHttpAuthentication()` and `useTokenAuthentication()` throw a `LogicException` if the URL is `http://` (a server
+on this machine - `localhost`, `127.x.x.x`, `[::1]` - is allowed). Basic authentication and bearer tokens over plain
+HTTP can be read by everybody on the way. Use `https://`. The token must consist of visible ASCII characters (no space,
+no line break; header injection), the basic credentials must not be empty or contain control characters
+(`InvalidArgumentException`). API keys that you send with `setHttpHeader()` are not checked for the protocol: use `https://`.
+
+| Before | After |
+|:--|:--|
+| `create('http://api.example.com/')->useTokenAuthentication($token)` | `LogicException`; use `https://` |
+
+### ⚠️ Headers are validated, protected headers are case-insensitive
+
+`setHttpHeader()` throws an `InvalidArgumentException` if the name is no valid header name (letters, digits and
+``!#$%&'*+.^_`|~-``) or the value contains a line break, `\0` or another control character (tab is allowed). Before, a
+value like `"x\r\nBcc: ..."` added headers to the request (header injection). The messages name the header, never the
+value. `Content-Type` and `Content-Length` cannot be set in any spelling (`content-type` was possible, then two
+different `Content-Type` headers were sent). A header you set again (in any spelling) replaces the earlier one. The
+`Content-Length` header is no longer set by hand, cURL sends it for the body.
+
+### ⚠️ Timeouts of 0 are rejected
+
+`setTimeoutInSeconds(0, 0)` meant "wait forever" for cURL. Both timeouts must be at least 1 second
+(`InvalidArgumentException`, was no check); a connect timeout longer than the request timeout is still a
+`LogicException`. The defaults are unchanged (10 seconds each).
+
+### ⚠️ Limit for the size of the response, TLS 1.2 or newer
+
+A response body larger than 32 MiB (`AbstractCurlRequest::DEFAULT_MAX_RESPONSE_SIZE_IN_BYTES`) is aborted: `hasErrors()`
+is `true`, `errorCode` is the new `CurlResponse::ERROR_RESPONSE_TOO_LARGE` (901) and `rawResponseBody` is `false`. A
+server that announces a larger `Content-Length` is refused before the transfer, a streamed response is cut at the limit.
+Change it per request with `setMaxResponseSizeInBytes()`. The client also refuses servers that only speak TLS 1.0 / 1.1.
+Redirects were never followed and still are not (neither is a redirect to another protocol): with
+`acceptRedirectionResponseCode()` a 301 / 303 is no error and the target is in the `Location` header of the response.
+
+### ⚠️ `CurlResponse`: `final readonly`, new constructor, headers, exceptions for failed requests
+
+`CurlResponse::createFromPreparedCurlHandle()` is removed (`CurlClient` builds the response; the constructor is public
+for tests). The properties (`rawResponseBody`, `curlInfo`, `responseHttpCode`, `totalRequestTime`, `errorCode`,
+`errorMessage`) are unchanged; `rawResponseBody` is `false` if the transfer failed (no connection, timeout, too large).
+New: `$headers`, `getHeader($name)` (first value, name in any case, `null` if missing) and `getHeaderValues($name)`.
+`getJsonResponse()` and `getXmlResponse()` of a failed request (no body) throw a `RuntimeException` (was a `TypeError`
+because of `false`); `getXmlResponse()` loads nothing from the network (`LIBXML_NONET`).
+
+| Before | After |
+|:--|:--|
+| `CurlResponse::createFromPreparedCurlHandle($handle, $accept)` | removed, use `CurlClient::send()` |
+| `class CurlResponse` | `final readonly class CurlResponse` |
+| `CurlHeadRequest`: `rawResponseBody` is the raw header text | `rawResponseBody` is `''`, the headers are in `getHeader()` / `$headers` |
+| `getJsonResponse()` after a failed request: `TypeError` | `RuntimeException` |
+
+### ⚠️ Request classes are `final`, `AbstractCurlRequest` is not an extension point
+
+`CurlGetRequest`, `CurlPostRequest`, `CurlPutRequest`, `CurlPatchRequest`, `CurlDeleteRequest` and `CurlHeadRequest` are
+`final` (their constructors were private already). `AbstractCurlRequest` stays the type to accept both in signatures; its
+protected constructor takes the `RequestMethodEnum` and the URL now (`__construct(RequestMethodEnum $method, string
+$requestTargetUrl)`), and it is not meant to be extended by projects. The factories are renamed (see above).
+`CurlPostRequest`, `CurlPutRequest` and `CurlPatchRequest` take `array<array-key, mixed> $postData` (scalars, `null`,
+objects, nested arrays; a resource is an `InvalidArgumentException` now).
+New getters for what is sent: `getMethod()`, `getUrl()`, `getHttpHeaders()`, `getBody()`, `getConnectTimeoutInSeconds()`,
+`getRequestTimeoutInSeconds()`, `getMaxResponseSizeInBytes()`, `isRedirectionResponseCodeAccepted()`. Debug output
+(`print_r()`, `var_dump()`) of a request shows method, host and flags only, no URL, header or body.
+
+### ⚠️ New and internal classes
+
+New `final`: `CurlClient` (public); `@internal`: `CurlBodyTypeEnum`, `CurlHeader` (value of `getHttpHeaders()`),
+`CurlAuthentication`, `CurlAuthenticationMethodEnum`, `CurlTargetUrl`, `CurlFormEncoder`, `CurlOptionsBuilder`,
+`CurlResponseCollector`, `CurlErrorEvaluator`, `CurlResponseError`.
+
+### Fixed
+
+- **A status code that `HttpStatusCodeEnum` does not know was no error:** `429`, `418`, `599` ... gave `responseHttpCode ===
+  HTTP_UNKNOWN` and `hasErrors() === false`, the request looked successful. The check uses the number now
+  (`errorCode` 900 for every status from 300 to 599), `responseHttpCode` is still `HTTP_UNKNOWN` for them.
+- `setHttpHeader('content-type', ...)` bypassed the protection of the body headers (see above).
+- `getJsonResponse()` / `getXmlResponse()` after a failed transfer threw a `TypeError` (see above).
+- The error message of `CURLE_SSL_PEER_CERTIFICATE` (60, a certificate that cannot be verified) says that the check is
+  always on.
+
 ## [v4.37.0] – 2026-10-08
 
 Area release for `src/auth/`, `src/security/` and `src/session/`: passwords are hashed with `password_hash()` (Argon2id)

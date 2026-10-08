@@ -10,24 +10,19 @@ declare(strict_types=1);
 namespace actra\yuf\api\request;
 
 use actra\yuf\api\AbstractCurlRequest;
+use actra\yuf\core\RequestMethodEnum;
 
 /**
  * Asks for a response identical to that of a GET request, but without the response body.
  */
-class CurlHeadRequest extends AbstractCurlRequest
+final class CurlHeadRequest extends AbstractCurlRequest
 {
     private function __construct(string $requestTargetUrl)
     {
-        parent::__construct(
-            requestTargetUrl: $requestTargetUrl,
-            requestTypeSpecificCurlOptions: [
-                CURLOPT_NOBODY => true,
-                CURLOPT_HEADER => true,
-            ],
-        );
+        parent::__construct(method: RequestMethodEnum::HEAD, requestTargetUrl: $requestTargetUrl);
     }
 
-    public static function prepare(string $requestTargetUrl): CurlHeadRequest
+    public static function create(string $requestTargetUrl): CurlHeadRequest
     {
         return new CurlHeadRequest(requestTargetUrl: $requestTargetUrl);
     }

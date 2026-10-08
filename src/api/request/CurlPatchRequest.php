@@ -10,26 +10,27 @@ declare(strict_types=1);
 namespace actra\yuf\api\request;
 
 use actra\yuf\api\AbstractCurlRequest;
+use actra\yuf\core\RequestMethodEnum;
 
 /**
  * Apply partial modifications to a resource.
  */
-class CurlPatchRequest extends AbstractCurlRequest
+final class CurlPatchRequest extends AbstractCurlRequest
 {
     private function __construct(string $requestTargetUrl)
     {
-        parent::__construct(
-            requestTargetUrl: $requestTargetUrl,
-            requestTypeSpecificCurlOptions: [CURLOPT_CUSTOMREQUEST => 'PATCH'],
-        );
+        parent::__construct(method: RequestMethodEnum::PATCH, requestTargetUrl: $requestTargetUrl);
     }
 
-    public static function prepareWithoutBody(string $requestTargetUrl): CurlPatchRequest
+    public static function createWithoutBody(string $requestTargetUrl): CurlPatchRequest
     {
         return new CurlPatchRequest(requestTargetUrl: $requestTargetUrl);
     }
 
-    public static function prepareWithPostBody(string $requestTargetUrl, array $postData): CurlPatchRequest
+    /**
+     * @param array<array-key, mixed> $postData Form fields: scalars, `null`, objects or nested arrays of them
+     */
+    public static function createWithPostBody(string $requestTargetUrl, array $postData): CurlPatchRequest
     {
         $curlPatchRequest = new CurlPatchRequest(requestTargetUrl: $requestTargetUrl);
         $curlPatchRequest->setPostBody(postData: $postData);
@@ -37,7 +38,7 @@ class CurlPatchRequest extends AbstractCurlRequest
         return $curlPatchRequest;
     }
 
-    public static function prepareWithXmlBody(string $requestTargetUrl, string $xmlString): CurlPatchRequest
+    public static function createWithXmlBody(string $requestTargetUrl, string $xmlString): CurlPatchRequest
     {
         $curlPatchRequest = new CurlPatchRequest(requestTargetUrl: $requestTargetUrl);
         $curlPatchRequest->setXmlBody(xmlString: $xmlString);
@@ -45,7 +46,7 @@ class CurlPatchRequest extends AbstractCurlRequest
         return $curlPatchRequest;
     }
 
-    public static function prepareWithJsonBody(string $requestTargetUrl, string $jsonString): CurlPatchRequest
+    public static function createWithJsonBody(string $requestTargetUrl, string $jsonString): CurlPatchRequest
     {
         $curlPatchRequest = new CurlPatchRequest(requestTargetUrl: $requestTargetUrl);
         $curlPatchRequest->setJsonBody(jsonString: $jsonString);
@@ -53,7 +54,7 @@ class CurlPatchRequest extends AbstractCurlRequest
         return $curlPatchRequest;
     }
 
-    public static function prepareJsonApiRequest(string $requestTargetUrl, string $jsonString): CurlPatchRequest
+    public static function createJsonApiRequest(string $requestTargetUrl, string $jsonString): CurlPatchRequest
     {
         $curlPatchRequest = new CurlPatchRequest(requestTargetUrl: $requestTargetUrl);
         $curlPatchRequest->setJsonApiBody(jsonString: $jsonString);
@@ -61,7 +62,7 @@ class CurlPatchRequest extends AbstractCurlRequest
         return $curlPatchRequest;
     }
 
-    public static function prepareWithPlainTextBody(string $requestTargetUrl, string $plainText): CurlPatchRequest
+    public static function createWithPlainTextBody(string $requestTargetUrl, string $plainText): CurlPatchRequest
     {
         $curlPatchRequest = new CurlPatchRequest(requestTargetUrl: $requestTargetUrl);
         $curlPatchRequest->setPlainTextBody(plainText: $plainText);
