@@ -247,3 +247,67 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   exception handler then printed into the buffer of the failed view, which PHP flushed at the end: partial view output
   could precede the error page). The buffer is discarded now (`try` / `catch`, rethrow); the test checks the level.
 - Open: template tags are still built twice per request (see above).
+
+### Step 5 (v4.46.0) – done
+
+- `AbstractSessionHandler`: the constructor starts nothing. New public `ensureStarted()` (idempotent; the former
+  `start()`: settings, save handler, `session_start()` with strict mode, new / untrusted / expired / regeneration
+  handling, last activity; the flag is set right after the native start, so the nested `regenerateId()` of the start
+  works), `isStarted()`, `isClosed()`, `writeClose()`. The handler already inherits `SessionHandler::close()` (the PHP
+  save handler callback), so the new method is `writeClose()`. `writeClose()` calls `session_write_close()` (throws
+  `RuntimeException` if it fails), is idempotent and marks the handler closed also if it was never started (a later
+  start then throws `LogicException`, so a close before the first use cannot be undone by accident). `getId()`,
+  `regenerateId()`, `getTrustedRemoteAddress()`, `getTrustedUserAgent()`, `getSessionCreated()` call `ensureStarted()`;
+  `regenerateId()` throws after the close. `validateId()` / `updateTimestamp()` are PHP callbacks and need no start.
+  `ensureStarted()` throws a `LogicException` if output was sent (`protected isOutputSent()` = `headers_sent()`, a hook
+  so a test double can produce the state; PHPUnit holds output back) or if the session was closed before its first
+  use. `changeCookieSameSiteToLax()` / `…ToNone()` return if the session was not started, throw `LogicException` if it
+  is closed.
+- `NativeSessionStorage`: `ensureStarted()` before every read and write (replaces `assertStarted()`); `set()`,
+  `remove()`, `replaceAll()`, `regenerateId()` throw `LogicException` ("The session is closed: it cannot be changed any
+  more.") after the close, reads work from the closed `$_SESSION`; new `close()`. `SessionStorage::close()` is new
+  (⚠️ own storages), `ArraySessionStorage` has the same write rules, new `Session::close()`.
+- `Core::prepareHttpResponse()`: after `processRequest()` and before the `ContentResponseFactory`, a started session
+  is closed (`isStarted()` then `writeClose()`); an unstarted one is left alone. If the view throws, the exception
+  handler answers and the session is written at the end of the script (after `fastcgi_finish_request()`), as before.
+- Lazy reading (item 2), where the session was read on every request without being needed:
+  `HtmlDocument` read the CSRF token in its constructor (every HTML page started the session) and `ExceptionHandler`
+  did the same for every error page (also 404). `csrfField` is lazy now: new `HtmlReplacementCollection::addLazyHtml()`
+  / `HtmlReplacement::fromLazyHtml()` hand the template a `TrustedHtml` that wraps a function (`TrustedHtml` has a
+  hooked virtual property `html` that runs the function once on first read; the class is not `readonly` any more). The
+  token is only read if a template uses `csrfField`. `ErrorPageValues::$csrfFieldHtml` is a function (`@internal`).
+  The error page and the debug page must not fail because the session cannot be started (the failed start can be the
+  reason of the error page): `ExceptionHandler::renderCsrfField()` catches `Throwable` and gives an empty field,
+  `ExceptionDebugInfo` shows "The session could not be read: <message>" instead of the export.
+- Checked, no read in the constructor / on creation: `Core::prepareHttpResponse()` (handler, `Session`,
+  `SessionCsrfTokenSource`, `FormContext`: objects only), `ExceptionHandler::setSession()`, `AuthSession` creation in
+  `ContentHandler`, `SessionPreferredLanguage`, `Logger` (does not use the session), `Form` / `CsrfTokenField` (read on
+  render / validate). Still start the session on a request, with reason: `RequestHandler::resolveRoute()` for a route
+  with a language (it reads the preferred language and writes it when it differs: the "remember my language" feature
+  needs the session; a language-less route does not touch it), `findRouteForRootRequest()` (request of `/`, reads the
+  preferred language), the debug page (exports the session), and what a view uses (`AuthSession`, forms with CSRF,
+  tables, `SearchHelper`, uploads, `MicrosoftAuthenticator`). Idea, not done: remember the language only when the
+  session is started for another reason.
+- Not unit tested: the real `headers_sent()` (`isOutputSent()` is overridden in a double), the interplay with
+  `fastcgi_finish_request()`, parallel requests of one session (the example runs with `individualSessionHandler:
+  false`, so there is nothing to measure there; a throw-away script with a real `FileSessionHandler` confirmed: no
+  file before the first access, one after it, `session_status()` is `PHP_SESSION_NONE` after `writeClose()`, read works,
+  write throws).
+- Doubles: `NonStartingSessionHandler` follows the real rules now (records `starts`, `closes`, `regenerations`,
+  `sameSiteLaxChanges`; its constructor calls the parent, the former `@phpstan-ignore` is gone; the test sets
+  `$_SESSION`), new `OutputSentSessionHandler`, `FailingSessionStorage`, `CountingCsrfTokenSource`. `phpstan.neon`:
+  `tests/Unit/CoreTest.php` joined `actraSuperglobalsAllowIn` (sets and unsets `$_SESSION` for the double).
+- Tests: 12178 -> 12213. `AbstractSessionHandlerTest` (separate processes) calls `ensureStarted()` where it relied on
+  the eager start and has new tests (lazy start, start by storage read / write, close then read / write / cookie
+  change / start, output sent); `NativeSessionStorageTest` (no start without access, every access starts once, close,
+  writes after close), `ArraySessionStorageTest`, `SessionTest`, `CoreTest` (unstarted session untouched, started one
+  closed after the view, write after prepare throws), `HtmlDocumentTest` (token only read if the template uses it),
+  `ExceptionHandlerTest` (page without `csrfField` never reads the session, failing session on the error page and the
+  debug page), `HtmlReplacementCollectionTest`, `TrustedHtmlTest`.
+- `ddev composer check` green, baseline empty, no new `@phpstan-ignore`. `example/`: `/` 200, `/nothing-here.html` 404
+  (no `Set-Cookie` in either), `http://` 303.
+- Open: a request with a session cookie that does not touch the session and redirects with the Lax change keeps the
+  cookie of the browser as it is (Strict): no `Set-Cookie` is sent, as decided ("nothing to change"); it only matters
+  if a project relied on the redirect to re-send the cookie as Lax. `NativeResponseSender` could close a started
+  session before `fastcgi_finish_request()` for responses that views send themselves (`sendAndExit()` in a view): today
+  the lock is held until the end of the script there.

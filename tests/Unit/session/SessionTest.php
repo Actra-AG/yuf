@@ -13,6 +13,7 @@ use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\session\SessionSectionEnum;
 use InvalidArgumentException;
+use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
 use stdClass;
@@ -251,5 +252,42 @@ final class SessionTest extends TestCase
         $this->session->regenerateId();
 
         $this->assertSame('full', $this->session->getString(key: 'cart'));
+    }
+
+    public function testCloseDelegatesToTheStorageAndKeepsTheDataReadable(): void
+    {
+        $this->session->set(key: 'cart', value: 'full');
+
+        $this->session->close();
+
+        $this->assertSame('full', $this->session->getString(key: 'cart'));
+        $this->assertTrue($this->session->has(key: 'cart'));
+        $this->assertSame('array-session', $this->session->getId());
+        $this->assertSame(['cart' => 'full'], $this->session->export());
+    }
+
+    public function testWritingAfterCloseThrows(): void
+    {
+        $this->session->set(key: 'cart', value: 'full');
+        $this->session->close();
+
+        foreach (
+            [
+                fn() => $this->session->set(key: 'cart', value: 'empty'),
+                fn() => $this->session->remove(key: 'cart'),
+                fn() => $this->session->regenerateId(),
+                fn() => $this->session->clearUserData(),
+                fn() => $this->session->setSection(section: SessionSectionEnum::CSRF, data: ['token' => 'x']),
+            ] as $write
+        ) {
+            try {
+                $write();
+                SessionTest::fail('The write after the close must throw.');
+            } catch (LogicException $logicException) {
+                $this->assertStringContainsString('The session is closed', $logicException->getMessage());
+            }
+        }
+
+        $this->assertSame(['cart' => 'full'], $this->session->export());
     }
 }

@@ -36,6 +36,8 @@ use actra\yuf\tests\Double\core\RecordingResponseSender;
 use actra\yuf\tests\Double\exception\ContextExposingExceptionHandler;
 use actra\yuf\tests\Double\exception\ExceptionHandlerContextFactory;
 use actra\yuf\tests\Double\exception\TeapotExceptionHandler;
+use actra\yuf\tests\Double\security\CountingCsrfTokenSource;
+use actra\yuf\tests\Double\session\FailingSessionStorage;
 use actra\yuf\tests\Double\template\TemplateWorkDirectory;
 use JsonException;
 use LogicException;
@@ -479,6 +481,43 @@ final class ExceptionHandlerTest extends TestCase
             '#<div id="csrf"><input type="hidden" name="[^"]+" value="[^"]+"></div>#',
             $content,
         );
+    }
+
+    public function testPageWithoutCsrfFieldNeverReadsTheSession(): void
+    {
+        $directory = $this->workDirectory->templateDirectory;
+        file_put_contents(filename: $directory . 'notFound.html', data: '<h1>plain</h1>');
+        $handler = $this->register(context: $this->createContext(errorDocsDirectory: $directory));
+        $csrfTokenSource = new CountingCsrfTokenSource();
+        $handler->setSession(session: null, csrfTokenSource: $csrfTokenSource);
+
+        $content = self::content(response: $handler->createResponse(throwable: new NotFoundException()));
+
+        $this->assertStringContainsString('<h1>plain</h1>', $content);
+        $this->assertSame(0, $csrfTokenSource->tokenReads);
+    }
+
+    public function testPageIsShownWithoutCsrfFieldIfTheSessionCannotBeStarted(): void
+    {
+        $handler = $this->register();
+        $session = new Session(storage: new FailingSessionStorage());
+        $handler->setSession(session: $session, csrfTokenSource: new SessionCsrfTokenSource(session: $session));
+
+        $content = self::content(response: $handler->createResponse(throwable: new NotFoundException()));
+
+        $this->assertStringContainsString('<h1>Not found page</h1>', $content);
+        $this->assertStringContainsString('<div id="csrf"></div>', $content);
+    }
+
+    public function testDebugPageShowsTheErrorIfTheSessionCannotBeStarted(): void
+    {
+        $handler = $this->register(context: $this->createContext(isDebug: true));
+        $handler->setSession(session: new Session(storage: new FailingSessionStorage()), csrfTokenSource: null);
+
+        $content = self::content(response: $handler->createResponse(throwable: new RuntimeException('the error')));
+
+        $this->assertStringContainsString('<p id="message">the error</p>', $content);
+        $this->assertStringContainsString('The session could not be read: The session could not be started.', $content);
     }
 
     public function testPageHasTheLanguageAndTheRootOfTheRequest(): void

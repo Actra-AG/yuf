@@ -11,6 +11,7 @@ namespace actra\yuf\exception;
 
 use actra\yuf\html\HtmlReplacement;
 use actra\yuf\html\HtmlReplacementCollection;
+use Closure;
 
 /**
  * The values every error page can use besides its own: language, copyright, nonce, CSRF field and the like. Plain
@@ -26,7 +27,8 @@ final readonly class ErrorPageValues
     /**
      * @param ?string $languageCode `en` if the request has no language yet
      * @param string $languageRoot The path of the start page of the language (`/` if the request is not known yet)
-     * @param string $csrfFieldHtml The hidden field with the CSRF token, empty without session
+     * @param Closure(): string $csrfFieldHtml Builds the hidden field with the CSRF token (empty without session); it
+     *                                         only runs if the error page uses `csrfField`
      * @param ?string $requestedFileName The file name of the request: user input
      */
     public function __construct(
@@ -35,7 +37,7 @@ final readonly class ErrorPageValues
         public ?string $languageCode,
         public string $languageRoot,
         public string $cspNonce,
-        public string $csrfFieldHtml,
+        public Closure $csrfFieldHtml,
         public ?string $requestedFileName,
     ) {}
 
@@ -53,7 +55,7 @@ final readonly class ErrorPageValues
         $replacements->addText(identifier: 'langRoot', text: $this->languageRoot);
         $replacements->addText(identifier: 'charset', text: 'UTF-8');
         $replacements->addText(identifier: 'cspNonce', text: $this->cspNonce);
-        $replacements->addHtml(identifier: 'csrfField', html: $this->csrfFieldHtml);
+        $replacements->addLazyHtml(identifier: 'csrfField', html: $this->csrfFieldHtml);
         $replacements->addText(identifier: 'robots', text: 'noindex,nofollow');
         $replacements->set(
             identifier: 'pageTitle',

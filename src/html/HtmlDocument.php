@@ -53,9 +53,10 @@ final class HtmlDocument
         $this->replacements->addText(identifier: 'robots', text: $settings->robots);
         $this->replacements->addHtml(identifier: 'scripts', html: '');
         $this->replacements->addText(identifier: 'cspNonce', text: $cspNonce->value);
-        $this->replacements->addHtml(
+        // Built when a template uses it: the token needs the session, which only starts on its first access
+        $this->replacements->addLazyHtml(
             identifier: 'csrfField',
-            html: CsrfHiddenFieldRenderer::render(csrfTokenSource: $csrfTokenSource),
+            html: static fn(): string => CsrfHiddenFieldRenderer::render(csrfTokenSource: $csrfTokenSource),
         );
         $this->replacements->addText(identifier: 'requestedFileName', text: $settings->fileName);
     }

@@ -14,8 +14,10 @@ use Override;
 
 /**
  * The session data in PHP's `$_SESSION`. Together with the session handler, this is the only class that touches
- * `$_SESSION`. The session must be started (by the handler) before the storage is used. Values that are not
- * supported by `Session` (objects, resources) are read as `null` and left out of arrays.
+ * `$_SESSION`. Every access starts the session through the handler if that did not happen yet (`ensureStarted()`), so a
+ * request that never uses the storage starts no session. After `close()` the data can still be read, but writing
+ * throws a `LogicException` (the change would be lost). Values that are not supported by `Session` (objects,
+ * resources) are read as `null` and left out of arrays.
  *
  * @phpstan-import-type SessionValue from Session
  */
@@ -40,14 +42,14 @@ final readonly class NativeSessionStorage implements SessionStorage
     #[Override]
     public function set(string $key, string|int|float|bool|array|null $value): void
     {
-        $this->assertStarted();
+        $this->ensureWritable();
         $_SESSION[$key] = $value;
     }
 
     #[Override]
     public function remove(string $key): void
     {
-        $this->assertStarted();
+        $this->ensureWritable();
         unset($_SESSION[$key]);
     }
 
@@ -65,7 +67,7 @@ final readonly class NativeSessionStorage implements SessionStorage
     #[Override]
     public function replaceAll(array $data): void
     {
-        $this->assertStarted();
+        $this->ensureWritable();
         $_SESSION = $data;
     }
 
@@ -78,7 +80,14 @@ final readonly class NativeSessionStorage implements SessionStorage
     #[Override]
     public function regenerateId(): void
     {
+        $this->ensureWritable();
         $this->sessionHandler->regenerateId();
+    }
+
+    #[Override]
+    public function close(): void
+    {
+        $this->sessionHandler->writeClose();
     }
 
     /**
@@ -86,15 +95,19 @@ final readonly class NativeSessionStorage implements SessionStorage
      */
     private function readAll(): array
     {
-        $this->assertStarted();
+        $this->sessionHandler->ensureStarted();
 
         return $_SESSION;
     }
 
-    private function assertStarted(): void
+    /**
+     * @throws LogicException if the session is closed: a write would be lost without notice
+     */
+    private function ensureWritable(): void
     {
-        if (!is_array(value: $_SESSION ?? null)) {
-            throw new LogicException(message: 'The session is not started.');
+        $this->sessionHandler->ensureStarted();
+        if ($this->sessionHandler->isClosed()) {
+            throw new LogicException(message: 'The session is closed: it cannot be changed any more.');
         }
     }
 

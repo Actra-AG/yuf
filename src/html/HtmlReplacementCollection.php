@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\html;
 
 use ArrayObject;
+use Closure;
 
 /**
  * The values of a template by identifier. `addText()` and `addHtml()` say what they do: plain text is escaped, HTML
@@ -55,6 +56,17 @@ final class HtmlReplacementCollection
         ?HtmlReplacement $htmlReplacement,
     ): void {
         $this->replacements[$identifier] = $htmlReplacement;
+    }
+
+    /**
+     * Adds HTML that is only built when a template reads the value (not when the replacements are rendered into the
+     * template data without the template using it).
+     *
+     * @param Closure(): string $html Returns trusted HTML, output as it is
+     */
+    public function addLazyHtml(string $identifier, Closure $html): void
+    {
+        $this->set(identifier: $identifier, htmlReplacement: HtmlReplacement::fromLazyHtml(html: $html));
     }
 
     /**

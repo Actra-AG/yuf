@@ -15,6 +15,8 @@ use actra\yuf\html\HtmlReplacement;
 use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\html\HtmlText;
 use actra\yuf\html\HtmlTextCollection;
+use actra\yuf\template\runtime\TrustedHtml;
+use ArrayObject;
 use PHPUnit\Framework\TestCase;
 
 final class HtmlReplacementCollectionTest extends TestCase
@@ -171,5 +173,28 @@ final class HtmlReplacementCollectionTest extends TestCase
             'x',
             HtmlReplacement::fromHtmlText(htmlText: HtmlText::fromHtml(html: 'x'))->getDataForRenderer(),
         );
+    }
+
+    public function testLazyHtmlIsBuiltWhenTheTemplateReadsIt(): void
+    {
+        $calls = new ArrayObject();
+        $replacements = new HtmlReplacementCollection();
+        $replacements->addLazyHtml(
+            identifier: 'lazy',
+            html: static function () use ($calls): string {
+                $calls[] = 'called';
+
+                return '<b>x</b>';
+            },
+        );
+
+        $values = $replacements->getArrayObject();
+
+        $this->assertCount(0, $calls);
+        $lazy = $values['lazy'];
+        $this->assertInstanceOf(TrustedHtml::class, $lazy);
+        $this->assertSame('<b>x</b>', $lazy->html);
+        $this->assertCount(1, $calls);
+        $this->assertTrue($replacements->has(identifier: 'lazy'));
     }
 }

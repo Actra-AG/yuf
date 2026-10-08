@@ -16,7 +16,9 @@ use actra\yuf\session\NativeSessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\session\SessionSettings;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\session\OutputSentSessionHandler;
 use DateTimeImmutable;
+use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -80,7 +82,7 @@ final class AbstractSessionHandlerTest extends TestCase
         );
 
         try {
-            new FileSessionHandler(
+            $sessionHandler = new FileSessionHandler(
                 httpRequest: $httpRequest,
                 sessionSettings: new SessionSettings(
                     savePath: $savePath,
@@ -89,6 +91,7 @@ final class AbstractSessionHandlerTest extends TestCase
                 defaultSavePath: '/not/used',
                 clock: new FixedClock(now: new DateTimeImmutable(datetime: '@1790000000')),
             );
+            $sessionHandler->ensureStarted();
             $session = $_SESSION;
             session_write_close();
         } finally {
@@ -139,7 +142,7 @@ final class AbstractSessionHandlerTest extends TestCase
         );
 
         try {
-            new FileSessionHandler(
+            $sessionHandler = new FileSessionHandler(
                 httpRequest: $httpRequest,
                 sessionSettings: new SessionSettings(
                     savePath: $savePath,
@@ -148,6 +151,7 @@ final class AbstractSessionHandlerTest extends TestCase
                 defaultSavePath: '/not/used',
                 clock: new FixedClock(now: new DateTimeImmutable(datetime: '@1790000200')),
             );
+            $sessionHandler->ensureStarted();
             $session = $_SESSION;
             session_write_close();
         } finally {
@@ -407,6 +411,7 @@ final class AbstractSessionHandlerTest extends TestCase
                 ),
                 defaultSavePath: '/not/used',
             );
+            $sessionHandler->ensureStarted();
             $existing = $sessionHandler->validateId(id: AbstractSessionHandlerTest::REQUESTED_SESSION_ID);
             $unknown = $sessionHandler->validateId(id: 'bbbbbbbbbbbbbbbbbbbbbbbb');
             $path = $sessionHandler->validateId(id: '../' . AbstractSessionHandlerTest::REQUESTED_SESSION_ID);
@@ -483,7 +488,7 @@ final class AbstractSessionHandlerTest extends TestCase
         );
 
         try {
-            new FileSessionHandler(
+            $sessionHandler = new FileSessionHandler(
                 httpRequest: $httpRequest,
                 sessionSettings: new SessionSettings(
                     savePath: $savePath,
@@ -492,6 +497,7 @@ final class AbstractSessionHandlerTest extends TestCase
                 ),
                 defaultSavePath: '/not/used',
             );
+            $sessionHandler->ensureStarted();
             $parameters = session_get_cookie_params();
             $useStrictMode = ini_get(option: 'session.use_strict_mode');
             $useOnlyCookies = ini_get(option: 'session.use_only_cookies');
@@ -558,6 +564,7 @@ final class AbstractSessionHandlerTest extends TestCase
                 ),
                 defaultSavePath: '/not/used',
             );
+            $sessionHandler->ensureStarted();
             $sessionHandler->changeCookieSameSiteToNone();
             $none = session_get_cookie_params();
             $sessionHandler->changeCookieSameSiteToLax();
@@ -656,7 +663,7 @@ final class AbstractSessionHandlerTest extends TestCase
         $httpRequest = HttpRequestFactory::create();
 
         try {
-            new FileSessionHandler(
+            $sessionHandler = new FileSessionHandler(
                 httpRequest: $httpRequest,
                 sessionSettings: new SessionSettings(
                     savePath: $savePath,
@@ -664,6 +671,7 @@ final class AbstractSessionHandlerTest extends TestCase
                 ),
                 defaultSavePath: '/not/used',
             );
+            $sessionHandler->ensureStarted();
             $permissions = fileperms(filename: $savePath) & 0o777;
             session_write_close();
         } finally {
@@ -686,14 +694,210 @@ final class AbstractSessionHandlerTest extends TestCase
         try {
             $this->expectException(RuntimeException::class);
 
-            new FileSessionHandler(
+            $sessionHandler = new FileSessionHandler(
                 httpRequest: $httpRequest,
                 sessionSettings: new SessionSettings(savePath: $blocker . DIRECTORY_SEPARATOR . 'sessions'),
                 defaultSavePath: '/not/used',
             );
+            $sessionHandler->ensureStarted();
         } finally {
             unlink(filename: $blocker);
         }
+    }
+
+    /**
+     * The session starts on its first use: construction and the SameSite changes start nothing (no lock, no cookie, no
+     * file), `ensureStarted()` starts it once.
+     */
+    #[RunInSeparateProcess]
+    public function testSessionStartsOnFirstUseOnly(): void
+    {
+        $savePath = $this->createSessionSavePath();
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        $httpRequest = HttpRequestFactory::create(
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
+        );
+
+        try {
+            $sessionHandler = new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+            );
+            $sessionHandler->changeCookieSameSiteToLax();
+            $sessionHandler->changeCookieSameSiteToNone();
+            $statusBefore = session_status();
+            $isStartedBefore = $sessionHandler->isStarted();
+            $sameSiteBefore = session_get_cookie_params()['samesite'];
+            $nameBefore = session_name();
+            $sessionHandler->ensureStarted();
+            $sessionId = $sessionHandler->getId();
+            $sessionHandler->ensureStarted();
+            $statusAfter = session_status();
+            $idAfter = session_id();
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertSame(PHP_SESSION_NONE, $statusBefore);
+        $this->assertFalse($isStartedBefore);
+        $this->assertNotSame('Lax', $sameSiteBefore);
+        $this->assertNotSame('None', $sameSiteBefore);
+        $this->assertNotSame(AbstractSessionHandlerTest::SESSION_NAME, $nameBefore);
+        $this->assertSame(PHP_SESSION_ACTIVE, $statusAfter);
+        $this->assertTrue($sessionHandler->isStarted());
+        $this->assertSame($idAfter, $sessionId);
+        $this->assertSame(AbstractSessionHandlerTest::COOKIE_SESSION_ID, $sessionId);
+    }
+
+    /**
+     * The first access through the storage (read or write) starts the session.
+     */
+    #[DataProvider('storageAccessProvider')]
+    #[RunInSeparateProcess]
+    public function testStorageAccessStartsTheSession(bool $isWrite): void
+    {
+        $savePath = $this->createSessionSavePath();
+        $httpRequest = HttpRequestFactory::create();
+
+        try {
+            $sessionHandler = new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+            );
+            $session = new Session(storage: new NativeSessionStorage(sessionHandler: $sessionHandler));
+            $isStartedBefore = $sessionHandler->isStarted();
+            if ($isWrite) {
+                $session->set(key: 'cart', value: 'full');
+            } else {
+                $session->getString(key: 'cart');
+            }
+            $isStartedAfter = $sessionHandler->isStarted();
+            $statusAfter = session_status();
+            session_write_close();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertFalse($isStartedBefore);
+        $this->assertTrue($isStartedAfter);
+        $this->assertSame(PHP_SESSION_ACTIVE, $statusAfter);
+    }
+
+    /**
+     * @return iterable<string, array{bool}>
+     */
+    public static function storageAccessProvider(): iterable
+    {
+        yield 'read' => [false];
+        yield 'write' => [true];
+    }
+
+    /**
+     * `writeClose()` writes the session and releases the lock; the data stays readable, writing and changing the
+     * cookie throw (the change would be lost).
+     */
+    #[RunInSeparateProcess]
+    public function testClosedSessionIsWrittenCanBeReadButNotChanged(): void
+    {
+        $savePath = $this->createSessionSavePath();
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        $httpRequest = HttpRequestFactory::create(
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
+        );
+
+        try {
+            $sessionHandler = new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+            );
+            $session = new Session(storage: new NativeSessionStorage(sessionHandler: $sessionHandler));
+            $session->set(key: 'cart', value: 'full');
+            $sessionHandler->writeClose();
+            $sessionHandler->writeClose();
+            $statusAfterClose = session_status();
+            $stored = file_get_contents(
+                filename: $savePath . DIRECTORY_SEPARATOR . 'sess_' . AbstractSessionHandlerTest::COOKIE_SESSION_ID,
+            );
+            $read = $session->getString(key: 'cart');
+            $sessionId = $session->getId();
+            $failures = [];
+            foreach (
+                [
+                    fn() => $session->set(key: 'cart', value: 'empty'),
+                    fn() => $session->regenerateId(),
+                    fn() => $sessionHandler->regenerateId(),
+                    fn() => $sessionHandler->changeCookieSameSiteToLax(),
+                    fn() => $sessionHandler->changeCookieSameSiteToNone(),
+                ] as $change
+            ) {
+                try {
+                    $change();
+                } catch (LogicException $logicException) {
+                    $failures[] = $logicException->getMessage();
+                }
+            }
+            $sessionHandler->ensureStarted();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertSame(PHP_SESSION_NONE, $statusAfterClose);
+        $this->assertTrue($sessionHandler->isClosed());
+        $this->assertIsString($stored);
+        $this->assertStringContainsString('full', $stored);
+        $this->assertSame('full', $read);
+        $this->assertSame(AbstractSessionHandlerTest::COOKIE_SESSION_ID, $sessionId);
+        $this->assertCount(5, $failures);
+        foreach ($failures as $failure) {
+            $this->assertSame('The session is closed: it cannot be changed any more.', $failure);
+        }
+    }
+
+    public function testSessionClosedBeforeItsFirstUseCannotBeStarted(): void
+    {
+        $sessionHandler = new FileSessionHandler(
+            httpRequest: HttpRequestFactory::create(),
+            sessionSettings: new SessionSettings(),
+            defaultSavePath: '/not/used',
+        );
+
+        $sessionHandler->writeClose();
+
+        $this->assertTrue($sessionHandler->isClosed());
+        $this->assertFalse($sessionHandler->isStarted());
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIs('The session cannot be started: it was closed before its first use.');
+
+        $sessionHandler->ensureStarted();
+    }
+
+    /**
+     * A start after the response was sent (output reached the client) cannot send the session cookie any more: it
+     * fails with a clear message instead of a PHP warning.
+     */
+    public function testSessionCannotBeStartedAfterTheOutputWasSent(): void
+    {
+        $sessionHandler = new OutputSentSessionHandler();
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIs(
+            'The session cannot be started after the response was sent: access the session while the view runs.',
+        );
+
+        $sessionHandler->ensureStarted();
     }
 
     private function writeExistingSession(string $savePath, int $lastActivity): void

@@ -4,6 +4,64 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.46.0] – 2026-10-08
+
+The session starts on first use and its lock is released early, so responses are faster and parallel requests of one
+user do not wait for each other. Search your project for `$_SESSION`, `register_shutdown_function(`, `__destruct(`,
+`implements SessionStorage`, `extends AbstractSessionHandler` and `session_start(`.
+
+### ⚠️ The session starts on first use
+
+| Before | After |
+|:--|:--|
+| `Core::prepareHttpResponse()` started the session (`session_start()`, lock, cookie, session file) for every request | The session starts with its first access (`Session`, `NativeSessionStorage`, `AbstractSessionHandler::ensureStarted()`); a request that never uses it takes no lock, sends no session cookie and creates no file |
+| `new FileSessionHandler(…)` started the session in its constructor | The constructor starts nothing; new public methods `ensureStarted()` (idempotent), `isStarted()`, `isClosed()` and `writeClose()` |
+| Every HTML page and every error page read the CSRF token, so the session was always started | The `csrfField` of the page template and of the error pages is built when a template uses it |
+| `changeCookieSameSiteToLax()` / `changeCookieSameSiteToNone()` always (re)started the session | They do nothing if the session was not started in this request (no cookie is sent, so none can be changed); they throw a `LogicException` if the session is closed |
+| A session start after the response was sent: PHP warning (`PhpException`) | `LogicException` ("The session cannot be started after the response was sent …") |
+
+Still read on every request: a route with a language remembers it as the preferred language (`RequestHandler`), so the
+session starts for such a route; and a request of `/` reads it to find the route of the user. Code that needs the
+session before the first byte of output is sent (e.g. `session_start()` of your own) has to use
+`$core->sessionHandler?->ensureStarted()`; do not call `session_start()` yourself.
+
+Project handlers (`extends AbstractSessionHandler`) get the lazy start for free; their constructor must not rely on a
+started session.
+
+### ⚠️ The session is closed after the view
+
+| Before | After |
+|:--|:--|
+| The session was written at the end of the script (after `sendAndExit()`, destructors and shutdown functions) and kept its lock until then | `Core::prepareHttpResponse()` writes and closes a started session after the view, before it builds the response (`AbstractSessionHandler::writeClose()`) |
+| Writes after the view (destructors, shutdown functions, code after `prepareHttpResponse()`) were saved | They throw a `LogicException` ("The session is closed: it cannot be changed any more."): `Session::set()`, `remove()`, `regenerateId()`, `clearUserData()`, `NativeSessionStorage::replaceAll()` and everything built on them (login, CSRF token, table and search state). Reads still work from the data of the closed session |
+| Starting the session again was not a topic | Not supported: a session that was closed before its first use throws a `LogicException` on the first access |
+
+Migration: write the session while the view runs. Search for `$_SESSION` / `Session` use in `register_shutdown_function(`
+callbacks and `__destruct(` methods, in code that runs after `prepareHttpResponse()` and in log or statistics code that
+runs after the response; move it into the view or keep the data without the session.
+
+### ⚠️ New method `SessionStorage::close()`
+
+Own implementations of `SessionStorage` (tests, scripts, other stores) must implement `public function close(): void`:
+write what the storage holds and release it; afterwards `set()`, `remove()`, `replaceAll()` and `regenerateId()` must
+throw a `LogicException`, reads keep working, a second call does nothing. `ArraySessionStorage` does exactly this, so
+tests behave like production.
+
+### New: `Session::close()`
+
+A view that runs long (export, report) calls `$this->context->session?->close()` after its last session access, so
+the lock is released before the long work and parallel requests of the user do not wait. `Core` closes the session after
+the view anyway; `close()` is only for releasing it earlier. After `close()` the session can be read, not written.
+
+### Template internals
+
+`TrustedHtml` (`@internal`) accepts a function that builds the HTML when a template reads the value, and is not
+`readonly` any more. `HtmlReplacementCollection::addLazyHtml()` adds such a value. `ErrorPageValues::$csrfFieldHtml`
+(`@internal`) is a function now. An error page whose CSRF field cannot be built (e.g. the session cannot be started)
+is shown without the field, and the debug page shows the failed session export as text.
+
+---
+
 ## [v4.45.0] – 2026-10-08
 
 `Core` is created from explicit settings, so it can be tested; the global part moved to `Core::fromEnvironment()`.

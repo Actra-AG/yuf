@@ -92,7 +92,8 @@ class instead of reading them statically.
   the reset.
 - Optional: `opcache.preload` with a script that loads the classes of yuf and your application.
 - With PHP-FPM, yuf calls `fastcgi_finish_request()` after the response is sent: the client has the response before
-  the session is written and the shutdown functions run. Nothing can be output after the response.
+  the destructors and the shutdown functions run (the session is already written and closed after the view, see
+  [Session](#session)). Nothing can be output after the response.
 
 ## Error log
 
@@ -250,11 +251,21 @@ the integer range count as not an integer.
 
 ## Session
 
-`Core::prepareHttpResponse()` starts the session handler and creates one `Session` per request: `$core->session` and
+`Core::prepareHttpResponse()` creates the session handler and one `Session` per request: `$core->session` and
 `$this->context->session` in a view (`null` with `individualSessionHandler: false`, the example app runs without
 sessions). The `Session` is the only way to read and write session data: **projects must not use `$_SESSION`**, also
 not for their own data (cart, order data, flash messages, `requestedPageAfterLogin`). Only `NativeSessionStorage` and
 the session handler touch `$_SESSION`.
+
+The PHP session starts lazily, on the first access of the `Session` (read or write, also through a form with CSRF
+protection, the preferred language of a route with a language or `AuthSession`). A request that never uses it takes no
+lock, sends no session cookie and creates no session file. `Core::prepareHttpResponse()` writes and closes a started
+session after the view, before the response is built: the lock is released early, so parallel requests of the user do
+not wait for each other. Afterwards the session can still be read, but every write (`set()`, `remove()`,
+`regenerateId()`, `clearUserData()`, `AuthSession::logIn()`, a new CSRF token, …) throws a `LogicException`, as does a
+first access after the response was sent: write the session while the view runs, not in a destructor or a shutdown
+function. A view that runs long (an export, a report) calls `$this->context->session?->close()` after its last write
+to release the lock earlier.
 
 ```php
 $session = $this->context->session;                    // ?Session
@@ -265,8 +276,8 @@ $session?->remove(key: 'cart');
 ```
 
 The typed getters return `null` for a missing key or a value of another type and never write. Objects are rejected (no
-serialization surprises). The key `yuf` is reserved for yuf. `getId()`, `regenerateId()` and `export()` (all data, for
-the debug page) complete the API; tests and scripts build a `Session` on an `ArraySessionStorage` (`new
+serialization surprises). The key `yuf` is reserved for yuf. `getId()`, `regenerateId()`, `close()` and `export()` (all
+data, for the debug page) complete the API; tests and scripts build a `Session` on an `ArraySessionStorage` (`new
 Session(storage: new ArraySessionStorage())`).
 
 All data of yuf lives below `$_SESSION['yuf']` in documented sections (`SessionSectionEnum`): `handler` (session

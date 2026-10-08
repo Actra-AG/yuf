@@ -1,5 +1,9 @@
 # Remaining differences to the coding standard
 
+> In progress: the open points below are worked through in
+> [docs/standard-finish/plan.md](../standard-finish/plan.md) (v4.42.0 and later, see its handover notes and
+> `UPGRADE.md`). This file is updated to the final state in the last step of that plan.
+
 Final state after v4.41.0 (2026-10-08), `actra/coding-standard` v1.3.0: the plan
 [docs/standard-completion/plan.md](../standard-completion/plan.md) is complete, `composer check` is green and the PHPStan
 baseline is empty. Only the open points below remain. Counts come from searches in `src/` without the generated phone

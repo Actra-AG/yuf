@@ -9,17 +9,20 @@ declare(strict_types=1);
 
 namespace actra\yuf\session;
 
+use LogicException;
 use Override;
 
 /**
  * Keeps the session data in memory: for tests and scripts without a PHP session. The ID changes with
- * `regenerateId()` (`<id>`, `<id>-1`, `<id>-2`, …).
+ * `regenerateId()` (`<id>`, `<id>-1`, `<id>-2`, …). After `close()` writing throws like with `NativeSessionStorage`,
+ * so tests behave like production.
  *
  * @phpstan-import-type SessionValue from Session
  */
 final class ArraySessionStorage implements SessionStorage
 {
     private int $regenerations = 0;
+    private bool $isClosed = false;
 
     /**
      * @param array<string, SessionValue> $data
@@ -41,12 +44,14 @@ final class ArraySessionStorage implements SessionStorage
     #[Override]
     public function set(string $key, string|int|float|bool|array|null $value): void
     {
+        $this->assertNotClosed();
         $this->data[$key] = $value;
     }
 
     #[Override]
     public function remove(string $key): void
     {
+        $this->assertNotClosed();
         unset($this->data[$key]);
     }
 
@@ -59,6 +64,7 @@ final class ArraySessionStorage implements SessionStorage
     #[Override]
     public function replaceAll(array $data): void
     {
+        $this->assertNotClosed();
         $this->data = $data;
     }
 
@@ -71,6 +77,23 @@ final class ArraySessionStorage implements SessionStorage
     #[Override]
     public function regenerateId(): void
     {
+        $this->assertNotClosed();
         $this->regenerations++;
+    }
+
+    #[Override]
+    public function close(): void
+    {
+        $this->isClosed = true;
+    }
+
+    /**
+     * @throws LogicException if the storage is closed
+     */
+    private function assertNotClosed(): void
+    {
+        if ($this->isClosed) {
+            throw new LogicException(message: 'The session is closed: it cannot be changed any more.');
+        }
     }
 }

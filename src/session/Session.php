@@ -14,7 +14,8 @@ use InvalidArgumentException;
 /**
  * The session of the current request and the only way to read and write session data outside of the session handler
  * (also for the own data of a project, e.g. a cart or flash messages). `Core` creates one per request
- * (`Core::$session`, `null` without sessions); views get it as `ViewContext::$session`.
+ * (`Core::$session`, `null` without sessions); views get it as `ViewContext::$session`. The PHP session starts on the
+ * first access (read or write); `Core` closes it after the view, `close()` does it earlier.
  *
  * Values are strings, numbers, booleans, `null` and arrays of these, nested as deep as needed (no objects, so
  * nothing is (un)serialized with surprises; `set()` checks arrays recursively, the PHPDoc alias cannot express it). The
@@ -102,6 +103,18 @@ final readonly class Session
     public function regenerateId(): void
     {
         $this->storage->regenerateId();
+    }
+
+    /**
+     * Writes the session and releases its lock, so parallel requests of the user (e.g. loading a page while a long
+     * export runs) do not wait any longer. `Core` does this after the view anyway; call it earlier in a view that runs
+     * long, after the last write. Afterwards reading still works, but `set()`, `remove()`, `regenerateId()`,
+     * `clearUserData()` and everything else that writes (login, CSRF token, table and search state) throws a
+     * `LogicException`; a session that was not used before cannot be used any more.
+     */
+    public function close(): void
+    {
+        $this->storage->close();
     }
 
     /**

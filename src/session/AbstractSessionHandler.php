@@ -22,11 +22,17 @@ use Throwable;
 use UnexpectedValueException;
 
 /**
- * Extension point: starts the PHP session of the request with the security settings of yuf and protects it: the session
- * is bound to the remote address and the user agent of the client that created it, expires after `maxLifeTime` without
- * activity, and gets a new ID every 30 minutes. A session that fails one of the first two checks is replaced by a new,
- * empty one (the data of the old session is never handed to another client). A project class extends it to store the
- * sessions elsewhere than in files (`executePreStartActions()`); `FileSessionHandler` is the standard.
+ * Extension point: starts the PHP session of the request with the security settings of yuf and protects it. The session
+ * starts lazily, on the first access (`ensureStarted()`; `NativeSessionStorage` calls it before every access), so a
+ * request that never touches the session takes no lock and sends no cookie. `writeClose()` writes the session and
+ * releases its lock (`Core` does it after the view, `Session::close()` can do it earlier); a closed session can still
+ * be read but not written or started.
+ *
+ * The session is bound to the remote address and the user agent of the client that created it, expires after
+ * `maxLifeTime` without activity, and gets a new ID every 30 minutes. A session that fails one of the first two checks
+ * is replaced by a new, empty one (the data of the old session is never handed to another client). A project class
+ * extends it to store the sessions elsewhere than in files (`executePreStartActions()`); `FileSessionHandler` is the
+ * standard.
  *
  * The session cookie is `Secure` (so sessions need HTTPS), `HttpOnly` and `SameSite` (`Strict`, or `Lax` with
  * `SessionSettings::$isSameSiteStrict = false`); the session ID is only read from the cookie, never from the request
@@ -44,6 +50,8 @@ abstract class AbstractSessionHandler extends SessionHandler implements SessionU
     private const string VALID_SESSION_ID_PATTERN = '/^[A-Za-z0-9,-]{1,256}$/D';
     private int $currentTime;
     private ?string $id = null;
+    private bool $isStarted = false;
+    private bool $isClosed = false;
     private string $clientRemoteAddress;
     private string $clientUserAgent;
 
@@ -55,12 +63,30 @@ abstract class AbstractSessionHandler extends SessionHandler implements SessionU
         $this->currentTime = $this->clock->now()->getTimestamp();
         $this->clientRemoteAddress = $httpRequest->getRemoteAddress();
         $this->clientUserAgent = $httpRequest->getUserAgent();
-
-        $this->start();
     }
 
-    private function start(): void
+    /**
+     * Starts the session if that did not happen yet (settings, save handler, `session_start()` with strict mode, new /
+     * untrusted / expired session, ID regeneration, last activity). Starting sets the session cookie, so it has to
+     * happen before the response is sent.
+     *
+     * @throws LogicException if the session was closed before it was started, or the response was already sent
+     * @throws UnauthorizedException if the session file belongs to another user of the server
+     */
+    public function ensureStarted(): void
     {
+        if ($this->isStarted) {
+            return;
+        }
+        if ($this->isClosed) {
+            throw new LogicException(message: 'The session cannot be started: it was closed before its first use.');
+        }
+        if ($this->isOutputSent()) {
+            throw new LogicException(
+                message: 'The session cannot be started after the response was sent: access the session while the'
+                . ' view runs.',
+            );
+        }
         $sessionSettings = $this->sessionSettings;
         $this->setDefaultConfigurationOptions(sessionSettings: $sessionSettings);
         $this->setDefaultSecuritySettings(isSameSiteStrict: $sessionSettings->isSameSiteStrict);
@@ -69,6 +95,7 @@ abstract class AbstractSessionHandler extends SessionHandler implements SessionU
         // Named parameters are not supported for alternative prototypes: https://github.com/php/php-src/issues/17263
         session_set_save_handler($this, true);
         $this->startNativeSession();
+        $this->isStarted = true;
         if (!$this->isSessionCreated()) {
             $this->initDefaultSessionData();
         } elseif (!$this->isTrustedClient() || $this->isSessionExpired()) {
@@ -80,6 +107,58 @@ abstract class AbstractSessionHandler extends SessionHandler implements SessionU
         }
 
         $this->setLastAction();
+    }
+
+    /**
+     * Whether output was sent already, so the session cookie cannot be sent any more.
+     */
+    protected function isOutputSent(): bool
+    {
+        return headers_sent();
+    }
+
+    /**
+     * Whether the session was started in this request (it has a cookie then).
+     */
+    public function isStarted(): bool
+    {
+        return $this->isStarted;
+    }
+
+    /**
+     * Whether the session was closed: it can be read, but not written, regenerated or started.
+     */
+    public function isClosed(): bool
+    {
+        return $this->isClosed;
+    }
+
+    /**
+     * Writes the session and releases its lock, so parallel requests of the user do not wait for this one any longer.
+     * Does nothing if the session is already closed. A session that was not started is not started by this, but it
+     * cannot be started afterwards.
+     *
+     * @throws RuntimeException if the session could not be written
+     */
+    public function writeClose(): void
+    {
+        if ($this->isClosed) {
+            return;
+        }
+        if ($this->isStarted && !session_write_close()) {
+            throw new RuntimeException(message: 'The session could not be written.');
+        }
+        $this->isClosed = true;
+    }
+
+    /**
+     * @throws LogicException if the session is closed
+     */
+    private function assertNotClosed(): void
+    {
+        if ($this->isClosed) {
+            throw new LogicException(message: 'The session is closed: it cannot be changed any more.');
+        }
     }
 
     private function startNativeSession(): void
@@ -270,6 +349,7 @@ abstract class AbstractSessionHandler extends SessionHandler implements SessionU
 
     public function getTrustedRemoteAddress(): string
     {
+        $this->ensureStarted();
         $trustedRemoteAddress = $this->readHandlerValue(
             key: AbstractSessionHandler::TRUSTED_REMOTE_ADDRESS_INDICATOR,
         );
@@ -282,6 +362,7 @@ abstract class AbstractSessionHandler extends SessionHandler implements SessionU
 
     public function getTrustedUserAgent(): string
     {
+        $this->ensureStarted();
         $trustedUserAgent = $this->readHandlerValue(key: AbstractSessionHandler::TRUSTED_USER_AGENT_INDICATOR);
         if (!is_string(value: $trustedUserAgent)) {
             throw new UnexpectedValueException(message: 'The session contains no trusted user agent.');
@@ -309,6 +390,7 @@ abstract class AbstractSessionHandler extends SessionHandler implements SessionU
 
     public function getSessionCreated(): int
     {
+        $this->ensureStarted();
         $sessionCreated = $this->readHandlerValue(key: AbstractSessionHandler::SESSION_CREATED_INDICATOR);
         if (!is_int(value: $sessionCreated)) {
             throw new UnexpectedValueException(message: 'The session contains no creation time.');
@@ -322,6 +404,8 @@ abstract class AbstractSessionHandler extends SessionHandler implements SessionU
      */
     public function regenerateId(): void
     {
+        $this->ensureStarted();
+        $this->assertNotClosed();
         session_regenerate_id(delete_old_session: true);
         $this->id = AbstractSessionHandler::readSessionId();
         $this->setSessionCreated();
@@ -334,6 +418,7 @@ abstract class AbstractSessionHandler extends SessionHandler implements SessionU
 
     public function getId(): string
     {
+        $this->ensureStarted();
         if ($this->id === null) {
             $this->id = AbstractSessionHandler::readSessionId();
         }
@@ -408,13 +493,21 @@ abstract class AbstractSessionHandler extends SessionHandler implements SessionU
         $_SESSION[SessionSectionEnum::ROOT_KEY] = $yufData;
     }
 
+    /**
+     * Does nothing if the session was not started in this request: no session cookie is sent, so none can be changed.
+     *
+     * @throws LogicException if the session is closed (its cookie is sent already)
+     */
     public function changeCookieSameSiteToLax(): void
     {
         $this->changeCookieSameSite(sameSite: 'Lax');
     }
 
     /**
-     * For the return of an identity provider (form post from another site): the cookie must be sent along.
+     * For the return of an identity provider (form post from another site): the cookie must be sent along. Does
+     * nothing if the session was not started in this request.
+     *
+     * @throws LogicException if the session is closed (its cookie is sent already)
      */
     public function changeCookieSameSiteToNone(): void
     {
@@ -426,6 +519,10 @@ abstract class AbstractSessionHandler extends SessionHandler implements SessionU
      */
     private function changeCookieSameSite(string $sameSite): void
     {
+        if (!$this->isStarted) {
+            return;
+        }
+        $this->assertNotClosed();
         if (session_status() === PHP_SESSION_ACTIVE) {
             // Prevent from "Session cookie parameters cannot be changed when a session is active" exception
             session_write_close();

@@ -47,4 +47,11 @@ interface SessionStorage
      * Gives the session a new ID and deletes the old session.
      */
     public function regenerateId(): void;
+
+    /**
+     * Writes the data and releases what the storage holds (e.g. the lock of the session file), so parallel requests
+     * of the user do not wait any longer. Afterwards the data can still be read, but `set()`, `remove()`,
+     * `replaceAll()` and `regenerateId()` throw a `LogicException`. Closing twice does nothing.
+     */
+    public function close(): void;
 }

@@ -57,6 +57,7 @@ final class CoreTest extends TestCase
             restore_exception_handler();
         }
         $this->workDirectory->cleanUp();
+        unset($_SESSION); // Sessions are disabled in the CLI
     }
 
     private function isExceptionHandlerRegistered(): bool
@@ -208,6 +209,81 @@ final class CoreTest extends TestCase
         $this->assertSame($sessionHandler, $core->sessionHandler);
         $this->assertNotNull($core->session);
         $this->assertNotNull($core->formContext->csrfTokenSource);
+    }
+
+    public function testSessionIsNotStartedIfNothingUsesIt(): void
+    {
+        $sessionHandler = new NonStartingSessionHandler();
+        $core = $this->createCore();
+
+        $core->prepareHttpResponse(
+            logger: new RecordingLogger(),
+            routeCollection: new RouteCollection(routes: [$this->createTextRoute()]),
+            individualSessionHandler: $sessionHandler,
+        );
+
+        $this->assertSame(0, $sessionHandler->starts);
+        $this->assertSame(0, $sessionHandler->closes);
+        $this->assertFalse($sessionHandler->isClosed());
+    }
+
+    public function testStartedSessionIsClosedAfterTheViewAndBeforeTheResponse(): void
+    {
+        $_SESSION = [];
+        $sessionHandler = new NonStartingSessionHandler();
+        $core = $this->createCore();
+        $closesDuringView = -1;
+        $route = new Route(
+            path: '/',
+            viewDirectory: $this->workDirectory->viewDirectory,
+            viewCallback: function () use ($core, $sessionHandler, &$closesDuringView): string {
+                $core->session?->set(key: 'cart', value: 'full');
+                $closesDuringView = $sessionHandler->closes;
+
+                return 'Hello World!';
+            },
+            defaultContentType: ContentType::createTxt(),
+        );
+
+        $httpResponse = $core->prepareHttpResponse(
+            logger: new RecordingLogger(),
+            routeCollection: new RouteCollection(routes: [$route]),
+            individualSessionHandler: $sessionHandler,
+        );
+
+        $this->assertSame('Hello World!', $httpResponse->getContentString());
+        $this->assertSame(0, $closesDuringView);
+        $this->assertSame(1, $sessionHandler->starts);
+        $this->assertSame(1, $sessionHandler->closes);
+        $this->assertTrue($sessionHandler->isClosed());
+        $this->assertSame('full', $core->session?->getString(key: 'cart'));
+    }
+
+    public function testSessionCannotBeWrittenAfterTheResponseIsPrepared(): void
+    {
+        $_SESSION = [];
+        $sessionHandler = new NonStartingSessionHandler();
+        $core = $this->createCore();
+        $route = new Route(
+            path: '/',
+            viewDirectory: $this->workDirectory->viewDirectory,
+            viewCallback: function () use ($core): string {
+                $core->session?->getString(key: 'cart');
+
+                return 'Hello World!';
+            },
+            defaultContentType: ContentType::createTxt(),
+        );
+        $core->prepareHttpResponse(
+            logger: new RecordingLogger(),
+            routeCollection: new RouteCollection(routes: [$route]),
+            individualSessionHandler: $sessionHandler,
+        );
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIs('The session is closed: it cannot be changed any more.');
+
+        $core->session?->set(key: 'cart', value: 'late');
     }
 
     public function testPrepareHttpResponseRedirectsAnInsecureRequestToHttps(): void

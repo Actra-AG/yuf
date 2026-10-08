@@ -14,6 +14,7 @@ use actra\yuf\html\HtmlDocument;
 use actra\yuf\html\HtmlDocumentSettings;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CsrfTokenSource;
+use actra\yuf\tests\Double\security\CountingCsrfTokenSource;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
 use actra\yuf\tests\Double\template\TemplateWorkDirectory;
@@ -132,6 +133,23 @@ final class HtmlDocumentTest extends TestCase
         $this->writeContent(name: 'page.html', source: "[{tst:text value='csrfField'}]");
 
         $this->assertSame('[]', $this->createDocument()->render());
+    }
+
+    public function testTheCsrfTokenIsOnlyReadIfTheTemplateUsesTheField(): void
+    {
+        $csrfTokenSource = new CountingCsrfTokenSource();
+        $this->writeContent(name: 'page.html', source: '<p>no form</p>');
+        $document = $this->createDocument(csrfTokenSource: $csrfTokenSource);
+
+        $this->assertSame('<p>no form</p>', $document->render());
+        $this->assertSame(0, $csrfTokenSource->tokenReads);
+
+        $this->writeContent(name: 'page.html', source: "[{tst:text value='csrfField'}]");
+        $csrfTokenSource = new CountingCsrfTokenSource();
+        $document = $this->createDocument(csrfTokenSource: $csrfTokenSource);
+
+        $this->assertSame('[<input type="hidden" name="csrftoken" value="counted-token">]', $document->render());
+        $this->assertSame(1, $csrfTokenSource->tokenReads);
     }
 
     public function testRequestValuesAreEscaped(): void

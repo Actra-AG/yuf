@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\session;
 
 use actra\yuf\session\ArraySessionStorage;
+use LogicException;
 use PHPUnit\Framework\TestCase;
 
 final class ArraySessionStorageTest extends TestCase
@@ -59,5 +60,43 @@ final class ArraySessionStorageTest extends TestCase
 
         $storage->regenerateId();
         $this->assertSame('custom-2', $storage->getId());
+    }
+
+    public function testClosedStorageCanBeRead(): void
+    {
+        $storage = new ArraySessionStorage(data: ['a' => 1]);
+
+        $storage->close();
+        $storage->close();
+
+        $this->assertSame(1, $storage->get(key: 'a'));
+        $this->assertTrue($storage->has(key: 'a'));
+        $this->assertSame(['a' => 1], $storage->all());
+        $this->assertSame('array-session', $storage->getId());
+    }
+
+    public function testClosedStorageCannotBeWritten(): void
+    {
+        $storage = new ArraySessionStorage(data: ['a' => 1]);
+        $storage->close();
+
+        foreach (
+            [
+                static fn() => $storage->set(key: 'a', value: 2),
+                static fn() => $storage->remove(key: 'a'),
+                static fn() => $storage->replaceAll(data: []),
+                static fn() => $storage->regenerateId(),
+            ] as $write
+        ) {
+            try {
+                $write();
+                ArraySessionStorageTest::fail('The write after the close must throw.');
+            } catch (LogicException $logicException) {
+                $this->assertStringContainsString('The session is closed', $logicException->getMessage());
+            }
+        }
+
+        $this->assertSame(['a' => 1], $storage->all());
+        $this->assertSame('array-session', $storage->getId());
     }
 }

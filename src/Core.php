@@ -290,6 +290,10 @@ final class Core
      * up for it), else the response of the matching route. Registers the exception handler, so call it once, as the
      * last statement of the front controller before sending the response.
      *
+     * The session is not started here, only when the route, the view or a form uses it. A session that was started is
+     * written and closed after the view, before the response is built: later writes (destructors, shutdown functions)
+     * throw a `LogicException`.
+     *
      * @param list<TemplateTag> $templateTags The own tags of the project, known to views, snippets, tables and error
      *                                        pages; a name of a built-in or another own tag throws
      *
@@ -396,6 +400,10 @@ final class Core
             robots: $this->robots,
             responseSender: $this->responseSender,
         );
+        // Release the lock of the session before the response is built and sent: parallel requests of the user go on
+        if ($this->sessionHandler !== null && $this->sessionHandler->isStarted()) {
+            $this->sessionHandler->writeClose();
+        }
         $this->httpResponse = new ContentResponseFactory(
             httpRequest: $this->httpRequest,
             cspPolicySettings: $this->cspPolicySettings,

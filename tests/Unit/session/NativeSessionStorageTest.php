@@ -11,13 +11,16 @@ namespace actra\yuf\tests\Unit\session;
 
 use actra\yuf\session\NativeSessionStorage;
 use actra\yuf\tests\Double\session\NonStartingSessionHandler;
+use Closure;
 use LogicException;
 use Override;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
 /**
- * The storage on `$_SESSION` (the array of the test stands in for a started session).
+ * The storage on `$_SESSION` (the array of the test stands in for a started session; the handler double records when it
+ * is started and closed).
  */
 final class NativeSessionStorageTest extends TestCase
 {
@@ -84,12 +87,119 @@ final class NativeSessionStorageTest extends TestCase
         $this->assertSame(1, $this->sessionHandler->regenerations);
     }
 
-    public function testUsingTheStorageWithoutStartedSessionThrows(): void
+    public function testNoSessionIsStartedUntilTheStorageIsUsed(): void
     {
-        unset($_SESSION);
+        $this->assertSame(0, $this->sessionHandler->starts);
+        $this->assertFalse($this->sessionHandler->isStarted());
+    }
+
+    public function testFirstReadStartsTheSession(): void
+    {
+        $this->storage->get(key: 'a');
+
+        $this->assertSame(1, $this->sessionHandler->starts);
+    }
+
+    /**
+     * @param Closure(NativeSessionStorage): void $access
+     */
+    #[DataProvider('accessProvider')]
+    public function testEveryAccessStartsTheSessionOnce(Closure $access): void
+    {
+        $access($this->storage);
+        $access($this->storage);
+
+        $this->assertSame(1, $this->sessionHandler->starts);
+    }
+
+    /**
+     * @return iterable<string, array{Closure(NativeSessionStorage): void}>
+     */
+    public static function accessProvider(): iterable
+    {
+        yield 'has' => [static function (NativeSessionStorage $storage): void {
+            $storage->has(key: 'a');
+        }];
+        yield 'get' => [static function (NativeSessionStorage $storage): void {
+            $storage->get(key: 'a');
+        }];
+        yield 'all' => [static function (NativeSessionStorage $storage): void {
+            $storage->all();
+        }];
+        yield 'set' => [static function (NativeSessionStorage $storage): void {
+            $storage->set(key: 'a', value: 1);
+        }];
+        yield 'remove' => [static function (NativeSessionStorage $storage): void {
+            $storage->remove(key: 'a');
+        }];
+        yield 'replaceAll' => [static function (NativeSessionStorage $storage): void {
+            $storage->replaceAll(data: []);
+        }];
+        yield 'getId' => [static function (NativeSessionStorage $storage): void {
+            $storage->getId();
+        }];
+        yield 'regenerateId' => [static function (NativeSessionStorage $storage): void {
+            $storage->regenerateId();
+        }];
+    }
+
+    public function testClosedSessionCanStillBeRead(): void
+    {
+        $this->storage->set(key: 'a', value: 'b');
+
+        $this->storage->close();
+
+        $this->assertSame(1, $this->sessionHandler->closes);
+        $this->assertSame('b', $this->storage->get(key: 'a'));
+        $this->assertTrue($this->storage->has(key: 'a'));
+        $this->assertSame(['a' => 'b'], $this->storage->all());
+        $this->assertSame('native-test-session-0', $this->storage->getId());
+    }
+
+    /**
+     * @param Closure(NativeSessionStorage): void $write
+     */
+    #[DataProvider('writeProvider')]
+    public function testClosedSessionCannotBeWritten(Closure $write): void
+    {
+        $this->storage->set(key: 'a', value: 'b');
+        $this->storage->close();
+
+        try {
+            $write($this->storage);
+            NativeSessionStorageTest::fail('The write after the close must throw.');
+        } catch (LogicException $logicException) {
+            $this->assertStringContainsString('The session is closed', $logicException->getMessage());
+        }
+
+        $this->assertSame(['a' => 'b'], $_SESSION);
+        $this->assertSame(0, $this->sessionHandler->regenerations);
+    }
+
+    /**
+     * @return iterable<string, array{Closure(NativeSessionStorage): void}>
+     */
+    public static function writeProvider(): iterable
+    {
+        yield 'set' => [static function (NativeSessionStorage $storage): void {
+            $storage->set(key: 'a', value: 'c');
+        }];
+        yield 'remove' => [static function (NativeSessionStorage $storage): void {
+            $storage->remove(key: 'a');
+        }];
+        yield 'replaceAll' => [static function (NativeSessionStorage $storage): void {
+            $storage->replaceAll(data: []);
+        }];
+        yield 'regenerateId' => [static function (NativeSessionStorage $storage): void {
+            $storage->regenerateId();
+        }];
+    }
+
+    public function testSessionClosedBeforeItsFirstUseCannotBeStarted(): void
+    {
+        $this->storage->close();
 
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessageIs('The session is not started.');
 
         $this->storage->get(key: 'a');
     }

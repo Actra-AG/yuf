@@ -59,8 +59,21 @@ final readonly class ExceptionDebugInfo
             queryParameters: var_export(value: $httpRequest->getQueryParameters(), return: true),
             postParameters: var_export(value: $httpRequest->getPostParameters(), return: true),
             files: var_export(value: $httpRequest->getRawFiles(), return: true),
-            session: $session === null ? '' : var_export(value: $session->export(), return: true),
+            session: $session === null ? '' : ExceptionDebugInfo::exportSession(session: $session),
         );
+    }
+
+    /**
+     * The session starts on its first access, so exporting it can fail (the exception may be the failed start of the
+     * session itself): the debug page must still show the original exception.
+     */
+    private static function exportSession(Session $session): string
+    {
+        try {
+            return var_export(value: $session->export(), return: true);
+        } catch (Throwable $throwable) {
+            return 'The session could not be read: ' . $throwable->getMessage();
+        }
     }
 
     /**

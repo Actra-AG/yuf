@@ -249,6 +249,19 @@ class ExceptionHandler
         );
     }
 
+    /**
+     * The session starts on its first access, which can be what failed (e.g. its save path is not writable): the error
+     * page is shown without the CSRF field then, instead of failing in the exception handler.
+     */
+    private function renderCsrfField(): string
+    {
+        try {
+            return CsrfHiddenFieldRenderer::render(csrfTokenSource: $this->csrfTokenSource);
+        } catch (Throwable) {
+            return '';
+        }
+    }
+
     private function renderErrorPage(string $htmlFileName, string $fallbackText): string
     {
         $context = $this->getContext();
@@ -259,7 +272,7 @@ class ExceptionHandler
             languageCode: $requestHandler?->language?->code,
             languageRoot: $requestHandler === null ? '/' : $requestHandler->getLanguageRoot(),
             cspNonce: $context->cspNonce->value,
-            csrfFieldHtml: CsrfHiddenFieldRenderer::render(csrfTokenSource: $this->csrfTokenSource),
+            csrfFieldHtml: $this->renderCsrfField(...),
             requestedFileName: $requestHandler?->fileName,
         )->addTo(replacements: $this->htmlReplacementCollection);
 
