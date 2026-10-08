@@ -37,6 +37,10 @@ This project follows the Actra coding standard, installed as development depende
 - `.ddev/config.yaml` provides PHP 8.5 without a database.
 - `example/` is a minimal running app (https://yuf.ddev.site/) using the sources of `src/`. Keep it working when changing
   the library, and check it in the browser after changes to routing, views, templates or HTML output.
+- Every yuf release: check whether `../yuf-skeleton` (https://github.com/Actra-AG/yuf-skeleton, the starting point of
+  `composer create-project`) needs an update: the `actra/yuf` constraint for a new major version, code affected by a ⚠️
+  entry of `UPGRADE.md`, setup or settings changed in the README. Report the result; if it needs an update, give the
+  prompt for a separate session in that project.
 - `.gitignore` whitelists tracked files: new top-level files or directories must be added there.
 
 ## Deviations from the global standard
