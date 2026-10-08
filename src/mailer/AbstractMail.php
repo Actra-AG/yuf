@@ -15,7 +15,7 @@ declare(strict_types=1);
  * @author    Jim Jagielski (jimjag) <jimjag@gmail.com>
  * @author    Andy Prevost (codeworxtech) <codeworxtech@users.sourceforge.net>
  * @author    Brent R. Matzelle (original founder)
- * @author    Actra AG (for derived, reduced code) - www.actra.ch
+ * @author    Actra AG (for derived, reduced code)  - www.actra.ch
  * @copyright 2012 - 2020 Marcus Bointon
  * @copyright 2010 - 2012 Jim Jagielski
  * @copyright 2004 - 2009 Andy Prevost
@@ -28,11 +28,16 @@ declare(strict_types=1);
 
 namespace actra\yuf\mailer;
 
+use actra\yuf\mailer\attachment\MailerAttachment;
 use actra\yuf\mailer\attachment\MailerAttachmentCollection;
-use actra\yuf\mailer\attachment\MailerFileAttachment;
-use actra\yuf\mailer\attachment\MailerStringAttachment;
-use Throwable;
 
+/**
+ * Extension point: a mail of a project extends it, sets the body with `setTextBody()` or `setHtmlBody()` and is sent
+ * with `send()`. `TextMail` and `HtmlMail` are the ready-made mails.
+ *
+ * Every string that comes from outside (addresses, names, subject, file names) is checked or stripped of line breaks
+ * before it goes into a header.
+ */
 abstract class AbstractMail
 {
     public readonly MailerAddress $sender;
@@ -41,11 +46,11 @@ abstract class AbstractMail
     public int $wordWrap = 0;
     private bool $isSent = false;
     private ?MailerAddress $confirmReadingToAddress = null;
-    private string $body;
+    private string $body = '';
     private string $alternativeBody = '';
     private bool $isHtmlBody = false;
-    private MailerAttachmentCollection $mailerAttachmentCollection;
-    private MailerHeaderCollection $customHeaders;
+    private readonly MailerAttachmentCollection $mailerAttachmentCollection;
+    private readonly MailerHeaderCollection $customHeaders;
     private readonly string $subject;
 
     protected function __construct(
@@ -55,9 +60,9 @@ abstract class AbstractMail
         string $toEmail,
         string $toName,
         string $subject,
-        public readonly string $charSet = MailerConstants::CHARSET_UTF8,
-        private readonly string $encoding = MailerConstants::ENCODING_QUOTED_PRINTABLE,
-        private readonly int $priority = MailerConstants::PRIORITY_NORMAL,
+        public readonly MailerCharsetEnum $charSet = MailerCharsetEnum::UTF8,
+        private readonly MailerEncodingEnum $encoding = MailerEncodingEnum::QUOTED_PRINTABLE,
+        private readonly MailerPriorityEnum $priority = MailerPriorityEnum::NORMAL,
     ) {
         $this->sender = MailerAddress::createSenderAddress(inputEmail: $senderEmail, inputName: '');
         $this->fromAddress = MailerAddress::createFromAddress(inputEmail: $fromEmail, inputName: $fromName);
@@ -66,60 +71,33 @@ abstract class AbstractMail
         $this->customHeaders = new MailerHeaderCollection();
         $this->addTo(inputEmail: $toEmail, inputName: $toName);
         $this->subject = trim(string: $subject);
-        if (!in_array(needle: $this->charSet, haystack: MailerConstants::CHARSET_LIST, strict: true)) {
-            throw new MailerException(
-                message: 'Invalid charset "' . $this->charSet . '". See MailerConstants::CHARSET_LIST[].',
-            );
-        }
-        if (!in_array(needle: $this->encoding, haystack: MailerConstants::ENCODING_LIST, strict: true)) {
-            throw new MailerException(
-                message: 'Invalid encoding "' . $this->encoding . '". See MailerConstants::ENCODING_LIST[].',
-            );
-        }
-        if (!in_array(needle: $this->priority, haystack: MailerConstants::PRIORITY_LIST, strict: true)) {
-            throw new MailerException(
-                message: 'Invalid priority "' . $this->priority . '". See MailerConstants::PRIORITY_LIST[].',
-            );
-        }
     }
 
     public function addTo(string $inputEmail, string $inputName = ''): void
     {
         $this->mailerAddressCollection->addItem(
-            mailerAddress: MailerAddress::createToAddress(
-                inputEmail: $inputEmail,
-                inputName: $inputName,
-            ),
+            mailerAddress: MailerAddress::createToAddress(inputEmail: $inputEmail, inputName: $inputName),
         );
     }
 
     public function addReplyTo(string $inputEmail, string $inputName = ''): void
     {
         $this->mailerAddressCollection->addItem(
-            mailerAddress: MailerAddress::createReplyToAddress(
-                inputEmail: $inputEmail,
-                inputName: $inputName,
-            ),
+            mailerAddress: MailerAddress::createReplyToAddress(inputEmail: $inputEmail, inputName: $inputName),
         );
     }
 
     public function addCc(string $inputEmail, string $inputName = ''): void
     {
         $this->mailerAddressCollection->addItem(
-            mailerAddress: MailerAddress::createCcAddress(
-                inputEmail: $inputEmail,
-                inputName: $inputName,
-            ),
+            mailerAddress: MailerAddress::createCcAddress(inputEmail: $inputEmail, inputName: $inputName),
         );
     }
 
     public function addBcc(string $inputEmail, string $inputName = ''): void
     {
         $this->mailerAddressCollection->addItem(
-            mailerAddress: MailerAddress::createBccAddress(
-                inputEmail: $inputEmail,
-                inputName: $inputName,
-            ),
+            mailerAddress: MailerAddress::createBccAddress(inputEmail: $inputEmail, inputName: $inputName),
         );
     }
 
@@ -131,11 +109,14 @@ abstract class AbstractMail
         );
     }
 
-    public function addAttachment(MailerFileAttachment|MailerStringAttachment $mailerAttachment): void
+    public function addAttachment(MailerAttachment $mailerAttachment): void
     {
         $this->mailerAttachmentCollection->addItem(mailerAttachment: $mailerAttachment);
     }
 
+    /**
+     * @param int $maxLineLength line length of the encoded words of a value with special characters
+     */
     public function addCustomHeader(
         string $name,
         string $value,
@@ -156,137 +137,81 @@ abstract class AbstractMail
         if ($this->isSent) {
             throw new MailerException(message: 'You cannot send the same email multiple times.');
         }
-
-        $body = $this->body;
-        if ($body === '') {
+        if ($this->body === '') {
             throw new MailerException(message: 'Message body is empty');
         }
-        $alternativeBody = $this->alternativeBody;
-        $alternativeExists = ($alternativeBody !== '');
-        $mailerAttachmentCollection = $this->mailerAttachmentCollection;
 
-        $type = [];
-        if ($alternativeExists) {
-            $type[] = 'alt';
-        }
-        if ($mailerAttachmentCollection->hasInlineImages()) {
-            $type[] = 'inline';
-        }
-        if ($mailerAttachmentCollection->hasAttachments()) {
-            $type[] = 'attach';
-        }
-        $messageType = implode(separator: '_', array: $type);
-        //The 'plain' messageType refers to the message having a single body element, not that it is plain-text
-        $messageType = ($messageType === '') ? 'plain' : $messageType;
-        $wordWrap = $this->wordWrap;
-        $charSet = $this->charSet;
-        if ($wordWrap > 0) {
-            switch ($messageType) {
-                case 'alt':
-                case 'alt_inline':
-                case 'alt_attach':
-                case 'alt_inline_attach':
-                    $alternativeBody = MailerFunctions::wrapText(
-                        message: $alternativeBody,
-                        length: $wordWrap,
-                        charSet: $charSet,
-                        qpMode: false,
-                    );
-                    break;
-                default:
-                    $body = MailerFunctions::wrapText(
-                        message: $body,
-                        length: $wordWrap,
-                        charSet: $charSet,
-                        qpMode: false,
-                    );
-                    break;
+        $messageType = MailerMessageTypeEnum::fromParts(
+            hasAlternative: $this->alternativeBody !== '',
+            hasInlineImages: $this->mailerAttachmentCollection->hasInlineImages(),
+            hasAttachments: $this->mailerAttachmentCollection->hasAttachments(),
+        );
+        $body = $this->body;
+        $alternativeBody = $this->alternativeBody;
+        if ($this->wordWrap > 0) {
+            if ($messageType->hasAlternative()) {
+                $alternativeBody = $this->wrap(text: $alternativeBody);
+            } else {
+                $body = $this->wrap(text: $body);
             }
         }
-
-        if ($alternativeExists) {
-            $contentType = MailerConstants::CONTENT_TYPE_MULTIPART_ALTERNATIVE;
-        } elseif ($this->isHtmlBody) {
-            $contentType = MailerConstants::CONTENT_TYPE_TEXT_HTML;
-        } else {
-            $contentType = MailerConstants::CONTENT_TYPE_PLAINTEXT;
+        $contentType = match (true) {
+            $messageType->hasAlternative() => MailerContentTypeEnum::MULTIPART_ALTERNATIVE,
+            $this->isHtmlBody => MailerContentTypeEnum::TEXT_HTML,
+            default => MailerContentTypeEnum::TEXT_PLAIN,
+        };
+        $encoding = $this->encoding;
+        // The single part of the message must fit in the lines of a message, the parts of a multipart message are
+        // checked one by one
+        if (
+            $messageType === MailerMessageTypeEnum::PLAIN
+            && $encoding !== MailerEncodingEnum::BASE64
+            && MailerContentEncoder::hasLineLongerThanMaximum(text: $body)
+        ) {
+            $encoding = MailerEncodingEnum::QUOTED_PRINTABLE;
         }
 
-        $encoding = $this->encoding;
-        $uniqueId = $this->generateId();
+        $uniqueId = $abstractMailer->createUniqueId();
         $boundary1 = 'b1_' . $uniqueId;
-        $boundary2 = 'b2_' . $uniqueId;
-        $boundary3 = 'b3_' . $uniqueId;
-
-        $mailerAddressCollection = $this->mailerAddressCollection;
         $maxLineLength = $abstractMailer->getMaxLineLength();
         $abstractMailer->sendMail(
             abstractMail: $this,
             mailMimeHeader: new MailMimeHeader(
                 abstractMailer: $abstractMailer,
                 subjectForHeader: $this->getSubjectForHeader(maxLineLength: $maxLineLength),
-                defaultCharSet: $charSet,
                 fromAddress: $this->fromAddress,
-                mailerAddressCollection: $mailerAddressCollection,
+                mailerAddressCollection: $this->mailerAddressCollection,
                 uniqueId: $uniqueId,
                 priority: $this->priority,
                 confirmReadingToAddress: $this->confirmReadingToAddress,
                 customHeaders: $this->customHeaders,
                 messageType: $messageType,
                 contentType: $contentType,
-                charSet: $charSet,
+                charSet: $this->charSet,
                 encoding: $encoding,
                 boundary1: $boundary1,
             ),
             mailMimeBody: new MailMimeBody(
                 maxLineLength: $maxLineLength,
-                charSet: $charSet,
+                charSet: $this->charSet,
                 contentType: $contentType,
                 encoding: $encoding,
                 messageType: $messageType,
                 rawBody: $body,
                 alternativeBody: $alternativeBody,
                 boundary1: $boundary1,
-                boundary2: $boundary2,
-                boundary3: $boundary3,
-                mailerAttachmentCollection: $mailerAttachmentCollection,
+                boundary2: 'b2_' . $uniqueId,
+                boundary3: 'b3_' . $uniqueId,
+                mailerAttachmentCollection: $this->mailerAttachmentCollection,
             ),
         );
         $this->isSent = true;
     }
 
-    private function generateId(): string
-    {
-        $bytes = '';
-        try {
-            $bytes = random_bytes(length: 32); // 32 bytes = 256 bits
-        } catch (Throwable) {
-            //Do nothing
-        }
-        if ($bytes === '') {
-            // We failed to produce a proper random string, so make do.
-            // Use a hash to force the length to the same as the other methods
-            $bytes = hash(algo: 'sha256', data: uniqid(prefix: (string) mt_rand(), more_entropy: true), binary: true);
-        }
-
-        // We don't care about messing up base64 format here, just want a random string
-        return str_replace(
-            search: ['=', '+', '/'],
-            replace: '',
-            subject: base64_encode(
-                string: hash(
-                    algo: 'sha256',
-                    data: $bytes,
-                    binary: true,
-                ),
-            ),
-        );
-    }
-
     public function getSubjectForHeader(int $maxLineLength): string
     {
-        return MailerFunctions::encodeHeaderText(
-            string: MailerFunctions::secureHeader(string: $this->subject),
+        return MailerHeaderEncoder::encodeText(
+            string: MailerHeaderEncoder::secure(string: $this->subject),
             maxLineLength: $maxLineLength,
             defaultCharSet: $this->charSet,
         );
@@ -302,5 +227,15 @@ abstract class AbstractMail
         $this->body = trim(string: $htmlBody);
         $this->alternativeBody = trim(string: $alternativeBody);
         $this->isHtmlBody = true;
+    }
+
+    private function wrap(string $text): string
+    {
+        return MailerTextWrapper::wrap(
+            message: $text,
+            length: $this->wordWrap,
+            charSet: $this->charSet,
+            qpMode: false,
+        );
     }
 }

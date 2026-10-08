@@ -4,6 +4,198 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.36.0] – 2026-10-08
+
+Area release for `src/mailer/` (derived from PHPMailer, the licence notices and `gpl-3.0.txt` / `lgpl-3.0.txt` are
+unchanged): enums instead of string and int constants, `final` classes, the I/O of `SmtpMailer` and `MailMailer` behind
+small interfaces, injectable time, random id and server name, TLS that fails closed, no `Bcc` header in SMTP messages and
+fixes for header injection and several crashes found while characterizing the MIME output. The extension points of the
+area are `AbstractMail` (a project mail extends it, as `TextMail` and `HtmlMail` do) and `AbstractMailer`; everything
+else is `final` or an interface. Search your project for `MailerConstants::`, `MailerFunctions`, `MailerException`,
+`catch (`, `new SmtpMailer(`, `new MailMailer(`, `charSet:`, `encoding:`, `priority:`, `MailerFileAttachment(`,
+`MailerStringAttachment(`, `->lastReply`, `->log`, `sendData(`, `extends AbstractMailer`, `extends TextMail`,
+`extends HtmlMail`, `MailMimeHeader` and `MailMimeBody`.
+
+### ⚠️ Charset, encoding, priority and content type are enums
+
+`MailerConstants::CHARSET_*`, `ENCODING_*`, `PRIORITY_*`, `CONTENT_TYPE_*` and the `*_LIST` arrays are removed. The
+values of the enums are the old strings and numbers. The mail classes, `MailerFileAttachment` and the address and header
+methods take the enums; an invalid value is a `TypeError` now (before: a `MailerException` with the list of allowed
+values). `MailerConstants` keeps `CRLF`, `MAIL_MAX_LINE_LENGTH`, `MAX_LINE_LENGTH` and `STD_LINE_LENGTH` (no sets of
+values) and is `final`.
+
+| Before                                      | After                                |
+|:--------------------------------------------|:-------------------------------------|
+| `MailerConstants::CHARSET_UTF8` / `_ASCII`  | `MailerCharsetEnum::UTF8` / `ASCII`  |
+| `MailerConstants::ENCODING_7BIT`            | `MailerEncodingEnum::SEVEN_BIT`      |
+| `MailerConstants::ENCODING_8BIT`            | `MailerEncodingEnum::EIGHT_BIT`      |
+| `MailerConstants::ENCODING_BASE64`          | `MailerEncodingEnum::BASE64`         |
+| `MailerConstants::ENCODING_BINARY`          | `MailerEncodingEnum::BINARY`         |
+| `MailerConstants::ENCODING_QUOTED_PRINTABLE` | `MailerEncodingEnum::QUOTED_PRINTABLE` |
+| `MailerConstants::PRIORITY_HIGH` / `NORMAL` / `LOW` | `MailerPriorityEnum::HIGH` / `NORMAL` / `LOW` |
+| `MailerConstants::CONTENT_TYPE_*`           | `MailerContentTypeEnum::TEXT_PLAIN`, `TEXT_HTML`, `MULTIPART_*` (only used by the mailer itself) |
+
+Before:
+
+```php
+new TextMail(
+    ...,
+    textBody: $text,
+    encoding: MailerConstants::ENCODING_BASE64,
+    priority: MailerConstants::PRIORITY_HIGH,
+);
+new MailerFileAttachment(path: $path, encoding: MailerConstants::ENCODING_QUOTED_PRINTABLE);
+```
+
+After:
+
+```php
+new TextMail(
+    ...,
+    textBody: $text,
+    encoding: MailerEncodingEnum::BASE64,
+    priority: MailerPriorityEnum::HIGH,
+);
+new MailerFileAttachment(path: $path, encoding: MailerEncodingEnum::QUOTED_PRINTABLE);
+```
+
+The SMTP login has one method (`AUTH LOGIN`), so there is no enum for it.
+
+### ⚠️ `MailerException` is a `RuntimeException`, SMTP errors are `MailerException`
+
+`MailerException` extends `RuntimeException` (before: `Exception`) and is `final`. `SmtpMailer` throws `MailerException`
+for every delivery problem (before: `RuntimeException` for connection and server answers, `Exception` for commands with
+line breaks). A `catch (MailerException)` now also catches the SMTP errors; a `catch (RuntimeException)` or
+`catch (Exception)` still does. The messages say what is wrong and never contain passwords, the content of a message or
+(new) the addresses and header values that were rejected: `Unexpected answer of the SMTP server to the password: code 535
+instead of 235.` (before: `Unexpected server response code 535`).
+
+### ⚠️ `AbstractMailer`: new abstract method and optional constructor arguments
+
+A mailer of your own (`extends AbstractMailer`) implements the new `headerHasBcc(): bool`: `true` if the transport
+removes the `Bcc` header itself (`mail()`), `false` for SMTP (see "Fixed"). The constructor has three more optional
+arguments (`Clock $clock`, `MimeIdGenerator $mimeIdGenerator`, `ServerNameResolver $serverNameResolver`) for tests; the
+methods `getClock()` and `createUniqueId()` are new. `AbstractMailer` is a documented extension point. `MailMimeHeader` and
+`MailMimeBody` are `@internal` and `final` (their constructors changed, a mailer only reads `getMimeHeader()` and
+`getMimeBody()`).
+
+### ⚠️ `SmtpMailer` and `MailMailer`: `final`, new arguments, TLS fails closed
+
+Both are `final`. New optional arguments at the end: `SmtpMailer(..., SmtpTransport $transport, Clock $clock,
+MimeIdGenerator $mimeIdGenerator, ServerNameResolver $serverNameResolver)` and `MailMailer(string $serverAddress,
+MailFunction $mailFunction, Clock $clock, ...)`; `SmtpMailer::sendData()` is private (it never worked outside `sendMail()`).
+`SmtpMailer` throws an `InvalidArgumentException` for a host name that is no host name or IP address (spaces, line breaks)
+and for a port outside 1 to 65535.
+
+With `useTls: true` (the default) the delivery now stops if STARTTLS is refused or the TLS handshake fails (before: the
+result of `stream_socket_enable_crypto()` was ignored, the mailer went on and sent the credentials and the message
+without encryption if the handshake had failed). The certificate chain and the host name `$hostName` are verified
+(`verify_peer`, `verify_peer_name`, no self-signed certificates), TLS 1.2 or 1.3 is required. A server with a
+self-signed certificate or an old TLS version needs a valid certificate; there is no switch to turn the verification off.
+`useTls: false` still sends everything, also the password of `AUTH LOGIN`, unencrypted: use it only for a server on the
+same host (e.g. a local development mail catcher).
+
+`$log` of `SmtpMailer` holds the lines of the last delivery only (it grew with every delivery before) and shows
+`(hidden)` instead of the base64 user name and password. `$lastReply` is empty at the start of a delivery.
+
+### ⚠️ `MailerFunctions` is removed
+
+The internal helper class is split by purpose (all `@internal`, static and pure):
+
+| Before                                                          | After                                                       |
+|:----------------------------------------------------------------|:------------------------------------------------------------|
+| `MailerFunctions::encodeHeaderText()`                           | `MailerHeaderEncoder::encodeText()`                         |
+| `MailerFunctions::encodeHeaderPhrase()`                         | `MailerHeaderEncoder::encodePhrase()`                       |
+| `MailerFunctions::secureHeader()`                               | `MailerHeaderEncoder::secure()`                             |
+| `MailerFunctions::wrapText()`                                   | `MailerTextWrapper::wrap()`                                 |
+| `MailerFunctions::encodeString()`, `has8bitChars()`             | `MailerContentEncoder::encode()`, `has8bitChars()`          |
+| `MailerFunctions::mbPathinfo()`, `filenameToType()`             | `MailerFileName::baseName()` / `extension()`, `MailerMimeTypes::getByFileName()` |
+| `MailerFunctions::validateAddress()`, `punyEncodeDomain()`      | private in `MailerAddress`                                  |
+| `MailerFunctions::fileIsAccessible()`                           | private in `MailerFileAttachment`                           |
+| `MailerFunctions::isShellSafe()`, `textLine()`, `stripTrailingWsp()` | private in `MailMailer`, removed, removed              |
+
+`MailerMimeTypes`, `MailerHeader` and `MailerHeaderCollection` are `@internal` and `final`.
+
+### ⚠️ Attachments: `MailerAttachment` interface, stricter file names and types
+
+`AbstractMail::addAttachment()` takes the new interface `MailerAttachment` (implemented by `MailerFileAttachment` and
+`MailerStringAttachment`, both `final readonly`; callers do not change). `MailerAttachmentCollection::list()` returns a
+list (before: an array keyed by file name). `MailerStringAttachment::$encoding` and `MailerFileAttachment::$encoding` are
+`MailerEncodingEnum`. The collection and the address collection are `final`.
+
+- The file name is reduced to its last path segment and loses control characters: `../../etc/passwd` is sent as
+  `passwd` (before: as given, including the directories).
+- The type must be `type/subtype` (`text/plain`, `application/vnd.api+json`); parameters (`text/plain; charset=utf-8`)
+  and line breaks throw a `MailerException` (before: the string went into the `Content-Type` header unchecked).
+- A `MailerFileAttachment` for a directory throws (before it was accepted and failed when sending).
+- The content of a `MailerStringAttachment` is no longer trimmed (before: leading and trailing white space and `\0`
+  bytes of the data were removed); only an empty content throws.
+
+### ⚠️ Custom headers: the name is validated
+
+`AbstractMail::addCustomHeader()` accepts only names of printable ASCII characters without a colon and without white
+space (`X-Request-Id`); `X-A: b` and `X A` throw a `MailerException` (before: the colon went into the header line). The
+signature is unchanged.
+
+### ⚠️ `MailerAddress`, `MailerAddressCollection`: `final`, no address in the messages
+
+Both are `final` (`MailerAddress` also `readonly`). The `defaultCharSet` arguments of `getFormattedAddressForMailer()`,
+`getHeaderString()` and `listAsCommaSeparatedString()` are `MailerCharsetEnum`. The exception messages no longer contain
+the address (personal data in logs): `Invalid To address.`, `Missing @-sign in the To address.`, `The address is already
+a recipient (Cc).` (before: `Invalid address (To): anna@example.com`, `Address exists already: anna@example.com`).
+`MailerAddress` throws a `MailerException` for a domain that cannot be punycode encoded (before: a `TypeError`).
+
+### ⚠️ `TextMail` and `HtmlMail` are `final`
+
+Nothing in `actra/backend` extends them. A project mail extends `AbstractMail` (the constructor and `setTextBody()` /
+`setHtmlBody()` stay protected).
+
+### ⚠️ `getServerName()`: invalid server address and host names from DNS
+
+The host name of the server (message id, `EHLO`) is a plain host name (letters, digits, `.`, `-`) or the server address.
+A reverse DNS entry with other characters is ignored (the owner of the address range controls it: line breaks would have
+reached the `EHLO` command), an empty or invalid `serverAddress` gives `localhost` (before: an empty name and a PHP
+warning from `gethostbyaddr()`).
+
+### ⚠️ `mail()`: sender parameter only for ASCII
+
+`MailMailer` passes `-f<sender>` only if the sender consists of ASCII letters, digits and `@_.-` (before: `ctype_alnum()`
+of the current locale). Other senders (`a+b@example.com`) still fall back to the default sender of the server.
+
+### Fixed
+
+- **`Bcc` was in the header of SMTP messages:** every recipient saw the blind copies. `SmtpMailer` messages have no `Bcc`
+  header any more (the blind recipients stay `RCPT TO`); `MailMailer` keeps it, `sendmail` removes it.
+- **Attachments were sent twice** in messages with inline images and attachments: the related part of the HTML and the
+  inline images contained the normal attachments too (with a `Content-ID`).
+- **Header injection:** the type of an attachment (`text/plain\r\nBcc: ...`) could add header lines to a part; it is
+  validated now (see above). Line breaks in subject and names were already removed, in addresses and custom headers they
+  were already rejected (covered by tests now).
+- **Subjects and names crashed with a `TypeError`** if more than a third of the text is non-ASCII (`Привет`, `äöü`, Greek,
+  CJK): the base64 encoding of multibyte text passed a float to `mb_substr()`.
+- **Long encoded headers threw `Invalid header name or value`:** values that need several encoded words (a long name or
+  subject with umlauts in a `mail()` message with its 63 character lines, a subject longer than 998 characters in SMTP)
+  were rejected because of their folds. The folds `\r\n ` of encoded words are valid now; every other line break in a
+  header is still rejected.
+- **Dot stuffing in `DATA`:** a line that was split because it is longer than 998 characters was stuffed by the
+  start of the rest of the line, not by the start of the part that is sent, so a part that starts with `.` could end the
+  message early (`\r\n.\r\n`); every sent line that starts with a dot is stuffed now.
+- **Single part messages with a line of 1000 or more characters** and the encoding `7bit`, `8bit` or `binary` were sent
+  as they are (SMTP broke the line at an arbitrary place); they are sent quoted-printable now, as the parts of a
+  multipart message already were.
+- **A server that closes the connection** (`TypeError` from `substr()`) is a `MailerException` that names the command.
+- No `uniqid()` / `mt_rand()` fallback for the ids: the unique id comes from `random_bytes()` or the delivery fails.
+
+### New
+
+- Interfaces for testing and for your own transport: `SmtpTransport` (`StreamSmtpTransport` is the default),
+  `MailFunction` (`NativeMailFunction`), `MimeIdGenerator` (`RandomMimeIdGenerator`), `ServerNameResolver`
+  (`ReverseDnsServerNameResolver`). `Clock` (`FixedClock` in tests) was already there. Hand-written doubles are in
+  `tests/Double/mailer/`.
+- Not changed, but good to know: `AbstractMail::$wordWrap` stays a public property; all addresses are lower cased (also
+  the local part); `X-Mailer: PHP/<version>` is still sent; the line breaks of a text body are encoded as `=0A` in
+  quoted-printable (valid, as before).
+
 ## [v4.35.0] – 2026-10-08
 
 Area release for `src/table/` and `src/pagination/`: sort directions as enum, `final` classes, escaped labels, URL

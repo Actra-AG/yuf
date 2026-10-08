@@ -9,9 +9,12 @@ declare(strict_types=1);
 
 namespace actra\yuf\mailer;
 
-class MailerHeaderCollection
+/**
+ * @internal
+ */
+final class MailerHeaderCollection
 {
-    /** @var MailerHeader[] */
+    /** @var list<MailerHeader> */
     private array $items = [];
 
     public function addItem(MailerHeader $mailerHeader): void
@@ -20,7 +23,7 @@ class MailerHeaderCollection
     }
 
     /**
-     * @return MailerHeader[]
+     * @return list<MailerHeader>
      */
     public function list(): array
     {

@@ -16,16 +16,16 @@ The plan for the remaining work is [docs/standard-completion/plan.md](../standar
   areas.
 - `final`: every class becomes `final` unless it is a documented extension point (abstract base class or PHPDoc
   "Extension point: …"); inventory first, including what `actra/backend` extends.
-- `src/phone/` (port of libphonenumber, done in v4.33.0) and `src/mailer/` (derived from PHPMailer, license notices kept) are brought to
+- `src/phone/` (port of libphonenumber, done in v4.33.0) and `src/mailer/` (derived from PHPMailer, license notices kept, done in v4.36.0) are brought to
   the full standard like own code, with characterization tests first.
 
-## PHPStan baseline: 136 entries
+## PHPStan baseline: 103 entries
 
-State after v4.35.0 (532 at v4.27.0, 447 at v4.30.0, 375 at v4.31.0, 307 at v4.32.0, 229 at v4.33.0, 176 at v4.34.0; v4.35.0 removed `table` 37 and `pagination` 3).
+State after v4.36.0 (532 at v4.27.0, 447 at v4.30.0, 375 at v4.31.0, 307 at v4.32.0, 229 at v4.33.0, 176 at v4.34.0, 136 at v4.35.0; v4.36.0 removed `mailer` 33).
 
-- By area: `mailer` 33, `api` 27, `auth` 26, `html` 25, `datacheck` 13, `exception` 10, `session` 2. `core`, `Core.php`,
-  `request`, `response`, `common`, `phone`, `db`, `table`, `pagination`, `security`, `src/form/` and `src/template/` have
-  none.
+- By area: `api` 27, `auth` 26, `html` 25, `datacheck` 13, `exception` 10, `session` 2. `core`, `Core.php`,
+  `request`, `response`, `common`, `phone`, `db`, `table`, `pagination`, `mailer`, `security`, `src/form/` and
+  `src/template/` have none.
 - Most frequent identifiers (counted with `count:` at v4.33.0, 250 errors in 229 entries): `argument.type` 64,
   `missingType.iterableValue` 62, `offsetAccess.notFound` 20, `return.type` 13, `disallowed.isset` 10, `binaryOp.invalid` 8,
   `method.nonObject` 7, `assign.propertyType` 5, `if.condNotBoolean` 5, `missingType.parameter` 5, `disallowed.switch` 5,
@@ -52,24 +52,24 @@ State after v4.35.0 (532 at v4.27.0, 447 at v4.30.0, 375 at v4.31.0, 307 at v4.3
 
 ## Explicit comparisons (`php.md`, section 5)
 
-- `isset()` 1, `empty()` 0, loose `==` / `!=` 1 (searched in `src/` after v4.34.0; `common`, `phone` and `db` are clean).
+- `isset()` 1, `empty()` 0, loose `==` / `!=` 1 (searched in `src/` after v4.36.0; `common`, `phone`, `db` and `mailer` are clean).
 
 ## Types (`php.md`, section 3)
 
-- About 105 `class` declarations are not `final` (searched after v4.35.0; `core`, `Core.php`, `request`, `response`, `common`, `phone`, `db`, `table` and `pagination` are done; `FrameworkDb`, `DbResultTable`, `SmartTable`, `AbstractTableColumn`, `TableHeadRenderer`, `TableFilter` and `AbstractTableFilterField` stay documented extension points). Some are intended extension points (views, forms, fields, columns, exception
+- About 84 `class` declarations are not `final` (searched after v4.36.0; `core`, `Core.php`, `request`, `response`, `common`, `phone`, `db`, `table`, `pagination` and `mailer` are done; `AbstractMail` and `AbstractMailer` stay documented extension points; `FrameworkDb`, `DbResultTable`, `SmartTable`, `AbstractTableColumn`, `TableHeadRenderer`, `TableFilter` and `AbstractTableFilterField` stay documented extension points). Some are intended extension points (views, forms, fields, columns, exception
   handler); every class needs a review (`final`, or documented extension point, or `@internal`).
 - `mixed` in own code: about 15 (e.g. `TableItem::getRawValue()`, documented as the values of any data source); `Core::config()` was removed in v4.31.0; `common` keeps only
   `JsonUtils::convertToJsonString(mixed)` and the narrowed JSON/XML data.
-- Enums first: fixed sets still as string constants (126 public string/int constants, not all of them fixed sets), e.g.
-  `MailerConstants` (`HttpRequest::PROTOCOL_*` became `ProtocolEnum` in v4.29.0).
+- Enums first: fixed sets still as string constants (about 80 public string/int constants after v4.36.0, not all of them fixed sets); done so far:
+  (`HttpRequest::PROTOCOL_*` became `ProtocolEnum` in v4.29.0; the sets of `MailerConstants` became enums in v4.36.0).
 - Missing types: see the baseline (`missingType.*`, about 70 entries).
 
 ## Exceptions and style (`php.md`, sections 4 and 6)
 
-- Plain `new Exception(…)` instead of SPL or yuf exceptions: 4 (`form` 2, `mailer` 2; `common` was cleaned in v4.32.0; the template engine
-  throws `TemplateException`; `core` was cleaned in v4.31.0).
-- `switch` instead of `match`: 5.
-- `@` error suppression: 3.
+- Plain `new Exception(…)` instead of SPL or yuf exceptions: 2 (`form`; `mailer` was cleaned in v4.36.0, `common` in v4.32.0; the template
+  engine throws `TemplateException`; `core` was cleaned in v4.31.0).
+- `switch` instead of `match`: 0 (the five of `mailer` are gone).
+- `@` error suppression: 0.
 
 ## Names (`naming.md`)
 

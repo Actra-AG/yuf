@@ -28,7 +28,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\mailer;
 
-class HtmlMail extends AbstractMail
+final class HtmlMail extends AbstractMail
 {
     public function __construct(
         string $senderEmail,
@@ -39,9 +39,9 @@ class HtmlMail extends AbstractMail
         string $subject,
         string $htmlBody,
         string $alternativeBody,
-        string $charSet = MailerConstants::CHARSET_UTF8,
-        string $encoding = MailerConstants::ENCODING_QUOTED_PRINTABLE,
-        int $priority = MailerConstants::PRIORITY_NORMAL,
+        MailerCharsetEnum $charSet = MailerCharsetEnum::UTF8,
+        MailerEncodingEnum $encoding = MailerEncodingEnum::QUOTED_PRINTABLE,
+        MailerPriorityEnum $priority = MailerPriorityEnum::NORMAL,
     ) {
         parent::__construct(
             senderEmail: $senderEmail,

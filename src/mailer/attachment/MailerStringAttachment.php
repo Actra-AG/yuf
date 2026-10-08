@@ -7,15 +7,15 @@
 
 declare(strict_types=1);
 /**
- * Integral adaptive work to derived PHPMailer classes by Actra AG.
- * For the original library, please see:
+ * Derived work from PHPMailer, reduced to the code needed by this Framework.
+ * For the original full library, please see:
  *
  * @see       https://github.com/PHPMailer/PHPMailer/ The PHPMailer GitHub project
  * @author    Marcus Bointon (Synchro/coolbru) <phpmailer@synchromedia.co.uk>
  * @author    Jim Jagielski (jimjag) <jimjag@gmail.com>
  * @author    Andy Prevost (codeworxtech) <codeworxtech@users.sourceforge.net>
  * @author    Brent R. Matzelle (original founder)
- * @author    Actra AG (for this class)  - www.actra.ch
+ * @author    Actra AG (for derived, reduced code)  - www.actra.ch
  * @copyright 2012 - 2020 Marcus Bointon
  * @copyright 2010 - 2012 Jim Jagielski
  * @copyright 2004 - 2009 Andy Prevost
@@ -28,35 +28,56 @@ declare(strict_types=1);
 
 namespace actra\yuf\mailer\attachment;
 
-use actra\yuf\mailer\MailerConstants;
+use actra\yuf\mailer\MailerEncodingEnum;
 use actra\yuf\mailer\MailerException;
-use actra\yuf\mailer\MailerFunctions;
+use actra\yuf\mailer\MailerFileName;
+use actra\yuf\mailer\MailerMimeTypes;
+use Override;
 
-readonly class MailerStringAttachment
+/**
+ * An attachment whose content is a string in memory. It is sent base64 encoded.
+ */
+final readonly class MailerStringAttachment implements MailerAttachment
 {
     public string $contentString;
+    #[Override]
     public string $fileName;
+    #[Override]
     public string $type;
-    public string $encoding;
+    #[Override]
+    public MailerEncodingEnum $encoding;
 
+    /**
+     * @param string $fileName the name the recipient sees; only its last path segment is used
+     * @param string $type `type/subtype`, empty for the type of the file extension
+     */
     public function __construct(
         string $contentString,
         string $fileName,
         string $type,
+        #[Override]
         public bool $dispositionInline = false,
     ) {
-        $contentString = trim(string: $contentString);
-        $fileName = trim(string: $fileName);
-        $this->encoding = MailerConstants::ENCODING_BASE64;
+        $fileName = MailerFileName::sanitizeAttachmentName(fileName: $fileName);
         if ($contentString === '' || $fileName === '') {
             throw new MailerException(message: 'Empty contentString or fileName.');
         }
         $type = trim(string: $type);
         if ($type === '') {
-            $type = MailerFunctions::filenameToType(fileName: $fileName);
+            $type = MailerMimeTypes::getByFileName(fileName: $fileName);
         }
+        if (!MailerMimeTypes::isValidType(type: $type)) {
+            throw new MailerException(message: 'Invalid type of the attachment: use type/subtype, e.g. text/plain.');
+        }
+        $this->encoding = MailerEncodingEnum::BASE64;
         $this->contentString = $contentString;
         $this->fileName = $fileName;
         $this->type = $type;
+    }
+
+    #[Override]
+    public function getContent(): string
+    {
+        return $this->contentString;
     }
 }

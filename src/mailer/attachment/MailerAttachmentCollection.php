@@ -11,12 +11,12 @@ namespace actra\yuf\mailer\attachment;
 
 use actra\yuf\mailer\MailerException;
 
-class MailerAttachmentCollection
+final class MailerAttachmentCollection
 {
-    /** @var MailerFileAttachment[]|MailerStringAttachment[] */
+    /** @var array<int|string, MailerAttachment> by file name (a numeric name becomes an int key) */
     private array $items = [];
 
-    public function addItem(MailerFileAttachment|MailerStringAttachment $mailerAttachment): void
+    public function addItem(MailerAttachment $mailerAttachment): void
     {
         $fileName = $mailerAttachment->fileName;
         if (array_key_exists(key: $fileName, array: $this->items)) {
@@ -26,20 +26,26 @@ class MailerAttachmentCollection
     }
 
     /**
-     * @return MailerFileAttachment[]|MailerStringAttachment[]
+     * @return list<MailerAttachment> in the order they were added
      */
     public function list(): array
     {
-        return $this->items;
+        return array_values(array: $this->items);
     }
 
     public function hasInlineImages(): bool
     {
-        return array_any($this->items, fn($mailerAttachment) => $mailerAttachment->dispositionInline);
+        return array_any(
+            array: $this->items,
+            callback: static fn(MailerAttachment $mailerAttachment): bool => $mailerAttachment->dispositionInline,
+        );
     }
 
     public function hasAttachments(): bool
     {
-        return array_any($this->items, fn($mailerAttachment) => !$mailerAttachment->dispositionInline);
+        return array_any(
+            array: $this->items,
+            callback: static fn(MailerAttachment $mailerAttachment): bool => !$mailerAttachment->dispositionInline,
+        );
     }
 }

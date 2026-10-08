@@ -7,15 +7,15 @@
 
 declare(strict_types=1);
 /**
- * Integral adaptive work to derived PHPMailer classes by Actra AG.
- * For the original library, please see:
+ * Derived work from PHPMailer, reduced to the code needed by this Framework.
+ * For the original full library, please see:
  *
  * @see       https://github.com/PHPMailer/PHPMailer/ The PHPMailer GitHub project
  * @author    Marcus Bointon (Synchro/coolbru) <phpmailer@synchromedia.co.uk>
  * @author    Jim Jagielski (jimjag) <jimjag@gmail.com>
  * @author    Andy Prevost (codeworxtech) <codeworxtech@users.sourceforge.net>
  * @author    Brent R. Matzelle (original founder)
- * @author    Actra AG (for this class)  - www.actra.ch
+ * @author    Actra AG (for derived, reduced code)  - www.actra.ch
  * @copyright 2012 - 2020 Marcus Bointon
  * @copyright 2010 - 2012 Jim Jagielski
  * @copyright 2004 - 2009 Andy Prevost
@@ -28,45 +28,94 @@ declare(strict_types=1);
 
 namespace actra\yuf\mailer\attachment;
 
-use actra\yuf\mailer\MailerConstants;
+use actra\yuf\mailer\MailerEncodingEnum;
 use actra\yuf\mailer\MailerException;
-use actra\yuf\mailer\MailerFunctions;
+use actra\yuf\mailer\MailerFileName;
+use actra\yuf\mailer\MailerMimeTypes;
+use Override;
 
-readonly class MailerFileAttachment
+/**
+ * An attachment that is read from a file when the message is sent.
+ *
+ * The path is trusted: never pass a path that comes from a user without resolving it into an allowed directory. The
+ * recipient only sees the file name, not the path.
+ */
+final readonly class MailerFileAttachment implements MailerAttachment
 {
     public string $path;
+    #[Override]
     public string $fileName;
+    #[Override]
     public string $type;
 
+    /**
+     * @param string $fileName the name the recipient sees (only its last path segment is used), empty for the name of
+     *                         the file
+     * @param string $type `type/subtype`, empty for the type of the file extension
+     */
     public function __construct(
         string $path,
         string $fileName = '',
-        public string $encoding = MailerConstants::ENCODING_BASE64,
+        #[Override]
+        public MailerEncodingEnum $encoding = MailerEncodingEnum::BASE64,
         string $type = '',
+        #[Override]
         public bool $dispositionInline = false,
     ) {
-        if (!in_array(needle: $this->encoding, haystack: MailerConstants::ENCODING_LIST, strict: true)) {
-            throw new MailerException(
-                message: 'Invalid encoding "' . $this->encoding . '". See MailerConstants::ENCODING_LIST[].',
-            );
-        }
         $path = trim(string: $path);
         if ($path === '') {
             throw new MailerException(message: 'Empty path.');
         }
-        if (!MailerFunctions::fileIsAccessible(path: $path)) {
+        if (!MailerFileAttachment::isAccessible(path: $path)) {
             throw new MailerException(message: 'Could not access file: ' . $path);
         }
         $this->path = $path;
-        $fileName = trim(string: $fileName);
+        $fileName = MailerFileName::sanitizeAttachmentName(fileName: $fileName);
         if ($fileName === '') {
-            $fileName = MailerFunctions::mbPathinfo(path: $path, options: PATHINFO_BASENAME);
+            $fileName = MailerFileName::sanitizeAttachmentName(fileName: $path);
+        }
+        if ($fileName === '') {
+            throw new MailerException(message: 'The attachment has no file name: ' . $path);
         }
         $this->fileName = $fileName;
         $type = trim(string: $type);
         if ($type === '') {
-            $type = MailerFunctions::filenameToType(fileName: $path);
+            $type = MailerMimeTypes::getByFileName(fileName: $path);
+        }
+        if (!MailerMimeTypes::isValidType(type: $type)) {
+            throw new MailerException(message: 'Invalid type of the attachment: use type/subtype, e.g. text/plain.');
         }
         $this->type = $type;
+    }
+
+    #[Override]
+    public function getContent(): string
+    {
+        if (!MailerFileAttachment::isAccessible(path: $this->path)) {
+            throw new MailerException(message: 'File Error: Could not open file: ' . $this->path);
+        }
+        $content = file_get_contents(filename: $this->path);
+        if ($content === false) {
+            throw new MailerException(message: 'File Error: Could not open file: ' . $this->path);
+        }
+
+        return $content;
+    }
+
+    /**
+     * A path with a stream wrapper (`http://`, `phar://`, `file://`, ...) is no file of this server and is never
+     * read.
+     */
+    private static function isAccessible(string $path): bool
+    {
+        if (preg_match(pattern: '#^[a-z][a-z\d+.-]*://#i', subject: $path) === 1) {
+            return false;
+        }
+        // A UNC path (starts with \\) is not checked for read permission
+        if (str_starts_with(haystack: $path, needle: '\\\\')) {
+            return file_exists(filename: $path);
+        }
+
+        return is_file(filename: $path) && is_readable(filename: $path);
     }
 }

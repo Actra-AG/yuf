@@ -9,10 +9,30 @@ declare(strict_types=1);
 
 namespace actra\yuf\mailer;
 
+use actra\yuf\clock\Clock;
+use actra\yuf\clock\SystemClock;
 use Override;
 
-class MailMailer extends AbstractMailer
+/**
+ * Sends with the PHP function `mail()`: the `sendmail` of the server delivers the message.
+ */
+final class MailMailer extends AbstractMailer
 {
+    public function __construct(
+        string $serverAddress,
+        private readonly MailFunction $mailFunction = new NativeMailFunction(),
+        Clock $clock = new SystemClock(),
+        MimeIdGenerator $mimeIdGenerator = new RandomMimeIdGenerator(),
+        ServerNameResolver $serverNameResolver = new ReverseDnsServerNameResolver(),
+    ) {
+        parent::__construct(
+            serverAddress: $serverAddress,
+            clock: $clock,
+            mimeIdGenerator: $mimeIdGenerator,
+            serverNameResolver: $serverNameResolver,
+        );
+    }
+
     #[Override]
     public function headerHasTo(): bool
     {
@@ -26,13 +46,24 @@ class MailMailer extends AbstractMailer
     }
 
     #[Override]
+    public function headerHasBcc(): bool
+    {
+        return true;
+    }
+
+    #[Override]
+    public function getMaxLineLength(): int
+    {
+        return MailerConstants::MAIL_MAX_LINE_LENGTH;
+    }
+
+    #[Override]
     public function sendMail(
         AbstractMail $abstractMail,
         MailMimeHeader $mailMimeHeader,
         MailMimeBody $mailMimeBody,
     ): void {
-        $senderEmail = $abstractMail->sender->getPunyEncodedEmail();
-        $result = mail(
+        $sentToSendmail = $this->mailFunction->send(
             to: $abstractMail->mailerAddressCollection->listAsCommaSeparatedString(
                 mailerAddressKindEnum: MailerAddressKindEnum::KIND_TO,
                 maxLineLength: $this->getMaxLineLength(),
@@ -40,17 +71,29 @@ class MailMailer extends AbstractMailer
             ),
             subject: $abstractMail->getSubjectForHeader(maxLineLength: $this->getMaxLineLength()),
             message: $mailMimeBody->getMimeBody(),
-            additional_headers: $mailMimeHeader->getMimeHeader() . MailerConstants::CRLF . MailerConstants::CRLF,
-            additional_params: MailerFunctions::isShellSafe(string: $senderEmail) ? '-f' . $senderEmail : '',
+            additionalHeaders: $mailMimeHeader->getMimeHeader() . MailerConstants::CRLF . MailerConstants::CRLF,
+            additionalParameters: $this->envelopeSenderParameter(
+                senderEmail: $abstractMail->sender->getPunyEncodedEmail(),
+            ),
         );
-        if ($result === false) {
-            throw new MailerException(message: 'Could not instantiate mail function.');
+        if (!$sentToSendmail) {
+            throw new MailerException(message: 'The mail() function did not accept the message.');
         }
     }
 
-    #[Override]
-    public function getMaxLineLength(): int
+    /**
+     * The `-f` argument of `sendmail` sets the envelope sender. It is only passed on if every character is harmless in
+     * a shell (letters, digits and `@_-.`), otherwise the default sender of the server is used.
+     */
+    private function envelopeSenderParameter(string $senderEmail): string
     {
-        return MailerConstants::MAIL_MAX_LINE_LENGTH;
+        return MailMailer::isShellSafe(string: $senderEmail) ? '-f' . $senderEmail : '';
+    }
+
+    private static function isShellSafe(string $string): bool
+    {
+        // Every other character has a special meaning in at least one common shell, including = and +. A full stop
+        // has a special meaning in cmd.exe, but its impact is negligible here
+        return preg_match(pattern: '/^[A-Za-z0-9@_.-]+$/D', subject: $string) === 1;
     }
 }

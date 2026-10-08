@@ -7,15 +7,15 @@
 
 declare(strict_types=1);
 /**
- * Integral adaptive work to derived PHPMailer classes by Actra AG.
- * For the original library, please see:
+ * Derived work from PHPMailer, reduced to the code needed by this Framework.
+ * For the original full library, please see:
  *
  * @see       https://github.com/PHPMailer/PHPMailer/ The PHPMailer GitHub project
  * @author    Marcus Bointon (Synchro/coolbru) <phpmailer@synchromedia.co.uk>
  * @author    Jim Jagielski (jimjag) <jimjag@gmail.com>
  * @author    Andy Prevost (codeworxtech) <codeworxtech@users.sourceforge.net>
  * @author    Brent R. Matzelle (original founder)
- * @author    Actra AG (for this class)  - www.actra.ch
+ * @author    Actra AG (for derived, reduced code)  - www.actra.ch
  * @copyright 2012 - 2020 Marcus Bointon
  * @copyright 2010 - 2012 Jim Jagielski
  * @copyright 2004 - 2009 Andy Prevost
@@ -28,6 +28,9 @@ declare(strict_types=1);
 
 namespace actra\yuf\mailer;
 
-use Exception;
+use RuntimeException;
 
-class MailerException extends Exception {}
+/**
+ * A message cannot be built or sent. The messages never contain passwords or the content of a message.
+ */
+final class MailerException extends RuntimeException {}

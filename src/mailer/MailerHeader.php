@@ -7,15 +7,15 @@
 
 declare(strict_types=1);
 /**
- * Integral adaptive work to derived PHPMailer classes by Actra AG.
- * For the original library, please see:
+ * Derived work from PHPMailer, reduced to the code needed by this Framework.
+ * For the original full library, please see:
  *
  * @see       https://github.com/PHPMailer/PHPMailer/ The PHPMailer GitHub project
  * @author    Marcus Bointon (Synchro/coolbru) <phpmailer@synchromedia.co.uk>
  * @author    Jim Jagielski (jimjag) <jimjag@gmail.com>
  * @author    Andy Prevost (codeworxtech) <codeworxtech@users.sourceforge.net>
  * @author    Brent R. Matzelle (original founder)
- * @author    Actra AG (for this class)  - www.actra.ch
+ * @author    Actra AG (for derived, reduced code)  - www.actra.ch
  * @copyright 2012 - 2020 Marcus Bointon
  * @copyright 2010 - 2012 Jim Jagielski
  * @copyright 2004 - 2009 Andy Prevost
@@ -28,7 +28,13 @@ declare(strict_types=1);
 
 namespace actra\yuf\mailer;
 
-readonly class MailerHeader
+/**
+ * One header line. A line break in the name or the value would start a new header (header injection): the only line
+ * breaks allowed are the folds `\r\n ` of encoded words.
+ *
+ * @internal
+ */
+final readonly class MailerHeader
 {
     private string $name;
     private string $value;
@@ -40,14 +46,21 @@ readonly class MailerHeader
         $name = trim(string: $name);
         $value = trim(string: $value);
 
-        // Ensure name is not empty, and that neither name nor value contain line breaks
-        if ($name === '' || strpbrk(string: $name . $value, characters: MailerConstants::CRLF) !== false) {
-            throw new MailerException(message: 'Invalid header name or value');
+        // RFC 5322 section 2.2: the name consists of printable US-ASCII characters except the colon
+        if (preg_match(pattern: '/^[\x21-\x39\x3B-\x7E]+$/D', subject: $name) !== 1) {
+            throw new MailerException(message: 'Invalid header name: use printable ASCII characters without colon.');
+        }
+        $withoutFolds = preg_replace(pattern: '/\r\n(?=[ \t])/', replacement: '', subject: $value);
+        if ($withoutFolds === null || strpbrk(string: $withoutFolds, characters: MailerConstants::CRLF) !== false) {
+            throw new MailerException(message: 'Invalid header value: it contains a line break.');
         }
         $this->name = $name;
         $this->value = $value;
     }
 
+    /**
+     * @param string $value already encoded: only a line break followed by white space is accepted
+     */
     public static function createRaw(
         string $name,
         string $value,
@@ -58,24 +71,32 @@ readonly class MailerHeader
         )->get();
     }
 
-    public function get(): string
-    {
-        return $this->name . ': ' . $this->value . MailerConstants::CRLF;
-    }
-
+    /**
+     * @param string $value text of the header: it may contain any character but line breaks
+     */
     public static function createEncodedHeaderText(
         string $name,
         string $value,
         int $maxLineLength,
-        string $defaultCharSet,
+        MailerCharsetEnum $defaultCharSet,
     ): MailerHeader {
-        return (new MailerHeader(
+        // Line breaks are no characters to encode: reject them before the encoder can pass them on
+        if (strpbrk(string: $value, characters: MailerConstants::CRLF) !== false) {
+            throw new MailerException(message: 'Invalid header value: it contains a line break.');
+        }
+
+        return new MailerHeader(
             name: $name,
-            value: MailerFunctions::encodeHeaderText(
+            value: MailerHeaderEncoder::encodeText(
                 string: $value,
                 maxLineLength: $maxLineLength,
                 defaultCharSet: $defaultCharSet,
             ),
-        ));
+        );
+    }
+
+    public function get(): string
+    {
+        return $this->name . ': ' . $this->value . MailerConstants::CRLF;
     }
 }

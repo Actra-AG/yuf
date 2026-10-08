@@ -9,28 +9,63 @@ declare(strict_types=1);
 
 namespace actra\yuf\mailer;
 
-use actra\yuf\common\StringUtils;
-use Exception;
+use actra\yuf\clock\Clock;
+use actra\yuf\clock\SystemClock;
+use InvalidArgumentException;
 use Override;
-use RuntimeException;
-use Throwable;
+use SensitiveParameter;
 
-class SmtpMailer extends AbstractMailer
+/**
+ * Sends with an SMTP server (EHLO, STARTTLS, AUTH LOGIN, MAIL FROM, RCPT TO, DATA).
+ *
+ * With `$useTls` the connection is encrypted with STARTTLS before the credentials are sent; the certificate of the
+ * server must be valid for `$hostName`, TLS 1.2 or newer is required, and a server without STARTTLS or a failed
+ * handshake aborts the delivery (there is no fallback to plain text). Without `$useTls` everything, also the
+ * password, goes over the network unencrypted: only for a server on the same host.
+ */
+final class SmtpMailer extends AbstractMailer
 {
+    private const int CONNECT_TIMEOUT = 30;
+    private const int COMMAND_TIMEOUT = 10;
+    // https://www.rfc-editor.org/rfc/rfc2821#section-4.5.3.2
+    private const int GREETING_TIMEOUT = 300;
+    private const int SENDER_AND_RECIPIENT_TIMEOUT = 300;
+    private const int DATA_START_TIMEOUT = 120;
+    private const int DATA_END_TIMEOUT = 600;
+    private const int QUIT_TIMEOUT = 60;
+    private const string HIDDEN_COMMAND = '(hidden)';
+
+    /** @var string The last answer of the server (all lines of it) */
     public private(set) string $lastReply = '';
+
+    /** @var list<string> The lines of the last delivery: the answers and the commands, without credentials */
     public private(set) array $log = [];
-    /** @var resource $stream */
-    private $stream;
 
     public function __construct(
         string $serverAddress,
         private readonly string $hostName,
         private readonly string $smtpUserName,
+        #[SensitiveParameter]
         private readonly string $smtpPassword,
         private readonly int $port = 587,
         private readonly bool $useTls = true,
+        private readonly SmtpTransport $transport = new StreamSmtpTransport(),
+        Clock $clock = new SystemClock(),
+        MimeIdGenerator $mimeIdGenerator = new RandomMimeIdGenerator(),
+        ServerNameResolver $serverNameResolver = new ReverseDnsServerNameResolver(),
     ) {
-        parent::__construct(serverAddress: $serverAddress);
+        if (preg_match(pattern: '/^[A-Za-z0-9._:\[\]-]+$/D', subject: $hostName) !== 1) {
+            throw new InvalidArgumentException(message: 'Invalid SMTP host name: use a host name or an IP address.');
+        }
+        if ($port < 1 || $port > 65535) {
+            throw new InvalidArgumentException(message: 'Invalid SMTP port ' . $port . ': use 1 to 65535.');
+        }
+        parent::__construct(
+            serverAddress: $serverAddress,
+            clock: $clock,
+            mimeIdGenerator: $mimeIdGenerator,
+            serverNameResolver: $serverNameResolver,
+        );
     }
 
     #[Override]
@@ -46,6 +81,12 @@ class SmtpMailer extends AbstractMailer
     }
 
     #[Override]
+    public function headerHasBcc(): bool
+    {
+        return false;
+    }
+
+    #[Override]
     public function getMaxLineLength(): int
     {
         return MailerConstants::MAX_LINE_LENGTH;
@@ -57,407 +98,202 @@ class SmtpMailer extends AbstractMailer
         MailMimeHeader $mailMimeHeader,
         MailMimeBody $mailMimeBody,
     ): void {
-        $this->stream = fsockopen(
-            hostname: $this->hostName,
+        $this->lastReply = '';
+        $this->log = [];
+        $this->transport->open(
+            hostName: $this->hostName,
             port: $this->port,
-            error_code: $enum,
-            error_message: $estr,
-            timeout: 30,
+            timeoutSeconds: SmtpMailer::CONNECT_TIMEOUT,
         );
-        if ($this->stream === false) {
-            throw new RuntimeException(message: 'Socket connection error: ' . $this->hostName);
+        try {
+            $this->deliver(abstractMail: $abstractMail, mailMimeHeader: $mailMimeHeader, mailMimeBody: $mailMimeBody);
+        } finally {
+            $this->transport->close();
         }
-        $this->checkResponse(
+    }
+
+    private function deliver(
+        AbstractMail $abstractMail,
+        MailMimeHeader $mailMimeHeader,
+        MailMimeBody $mailMimeBody,
+    ): void {
+        $this->readReply(
             expectedCode: 220,
-            commandTimeout: 300,
+            timeoutSeconds: SmtpMailer::GREETING_TIMEOUT,
+            description: 'the connection',
         );
-        $serverName = $this->getServerName();
-        $this->sendCommandEhlo(serverName: $serverName);
+        $this->ehlo();
         if ($this->useTls) {
-            $this->sendCommandStartTls();
-            stream_socket_enable_crypto(
-                stream: $this->stream,
-                enable: true,
-                crypto_method: STREAM_CRYPTO_METHOD_TLS_CLIENT,
-            );
-            $this->sendCommandEhlo(serverName: $serverName);
+            $this->startTls();
+            $this->ehlo();
         }
         if ($this->smtpUserName !== '') {
-            $this->sendCommandAuthLogin();
-            $this->sendCommandSmtpUserName();
-            $this->sendCommandSmtpPassword();
+            $this->authenticate();
         }
-        $this->sendCommandMailFrom(sender: $abstractMail->sender);
-        foreach (
-            $abstractMail->mailerAddressCollection->list(
-                mailerAddressKindEnum: MailerAddressKindEnum::KIND_TO,
-            ) as $mailerAddress
-        ) {
-            $this->sendCommandRecipient(recipient: $mailerAddress);
-        }
-        foreach (
-            $abstractMail->mailerAddressCollection->list(
-                mailerAddressKindEnum: MailerAddressKindEnum::KIND_CC,
-            ) as $mailerAddress
-        ) {
-            $this->sendCommandRecipient(recipient: $mailerAddress);
-        }
-        foreach (
-            $abstractMail->mailerAddressCollection->list(
-                mailerAddressKindEnum: MailerAddressKindEnum::KIND_BCC,
-            ) as $mailerAddress
-        ) {
-            $this->sendCommandRecipient(recipient: $mailerAddress);
-        }
-        $this->sendData(
-            data: implode(
-                separator: StringUtils::IMPLODE_DEFAULT_SEPARATOR,
-                array: [
-                    $mailMimeHeader->getMimeHeader(),
-                    MailerConstants::CRLF,
-                    MailerConstants::CRLF,
-                    $mailMimeBody->getMimeBody(),
-                ],
-            ),
+        $this->sendCommand(
+            command: 'MAIL FROM: <' . $abstractMail->sender->getPunyEncodedEmail() . '>',
+            expectedCode: 250,
+            timeoutSeconds: SmtpMailer::SENDER_AND_RECIPIENT_TIMEOUT,
+            description: 'MAIL FROM',
         );
-        $this->sendCommandQuit();
-        $this->close();
-    }
-
-    private function checkResponse(
-        int $expectedCode,
-        int $commandTimeout, // https://www.rfc-editor.org/rfc/rfc2821#section-4.5.3.2
-    ): void {
-        stream_set_timeout(
-            stream: $this->stream,
-            seconds: $commandTimeout,
-        );
-        $this->lastReply = $this->getLines(commandTimeout: $commandTimeout);
-        if ($this->lastReply === '') {
-            fclose(stream: $this->stream);
-            throw new RuntimeException(message: 'Empty response');
-        }
-        if (
-            preg_match(
-                pattern: '/^(\d{3})[ -](?:(\d\.\d\.\d{1,2}) )?/',
-                subject: $this->lastReply,
-                matches: $matches,
-            ) === 1
-        ) {
-            $responseCode = (int) $matches[1];
-        } else {
-            $responseCode = (int) substr(
-                string: $this->lastReply,
-                offset: 0,
-                length: 3,
-            );
-        }
-        if ($responseCode === $expectedCode) {
-            return;
-        }
-        fclose(stream: $this->stream);
-        throw new RuntimeException(message: 'Unexpected server response code ' . $responseCode);
-    }
-
-    private function getLines(int $commandTimeout): string
-    {
-        if (!is_resource(value: $this->stream)) {
-            return '';
-        }
-        $data = '';
-        $endTime = time() + $commandTimeout;
-        $selectRead = [$this->stream];
-        $selectWrite = null;
-        while (!feof(stream: $this->stream)) {
-            try {
-                stream_select(
-                    read: $selectRead,
-                    write: $selectWrite,
-                    except: $selectWrite,
-                    seconds: $commandTimeout,
+        $recipientKinds = [
+            MailerAddressKindEnum::KIND_TO,
+            MailerAddressKindEnum::KIND_CC,
+            MailerAddressKindEnum::KIND_BCC,
+        ];
+        foreach ($recipientKinds as $kind) {
+            foreach ($abstractMail->mailerAddressCollection->list(mailerAddressKindEnum: $kind) as $recipient) {
+                $this->sendCommand(
+                    command: 'RCPT TO: <' . $recipient->getPunyEncodedEmail() . '>',
+                    expectedCode: 250,
+                    timeoutSeconds: SmtpMailer::SENDER_AND_RECIPIENT_TIMEOUT,
+                    description: 'RCPT TO',
                 );
-            } catch (Throwable $throwable) {
-                if (str_contains(haystack: $throwable->getMessage(), needle: 'interrupted system call')) {
-                    continue;
-                }
-                throw $throwable;
-            }
-            $str = fgets(
-                stream: $this->stream,
-                length: 512, // https://www.rfc-editor.org/rfc/rfc5321#section-4.5.3.1.5
-            );
-            $this->log[] = $str;
-            $data .= $str;
-            //If response is only 3 chars (not valid, but RFC5321 S4.2 says it must be handled),
-            //or 4th character is a space or a line break char, we are done reading, break the loop.
-            if (in_array(
-                needle: substr(string: $str, offset: 3, length: 1),
-                haystack: [
-                    '',
-                    ' ',
-                    "\r",
-                    "\n",
-                ],
-                strict: true,
-            )) {
-                break;
-            }
-            $info = stream_get_meta_data(stream: $this->stream);
-            if ($info['timed_out']) {
-                throw new RuntimeException(message: 'Server timeout');
-            }
-            if ($endTime && time() > $endTime) {
-                throw new RuntimeException(message: 'Time limit reached (' . $commandTimeout . ' seconds)');
             }
         }
-
-        return $data;
+        $this->sendData(data: $mailMimeHeader->getMimeHeader() . "\r\n\r\n" . $mailMimeBody->getMimeBody());
+        $this->sendCommand(
+            command: 'QUIT',
+            expectedCode: 221,
+            timeoutSeconds: SmtpMailer::QUIT_TIMEOUT,
+            description: 'QUIT',
+        );
     }
 
-    private function sendCommandEhlo(string $serverName): void
+    private function ehlo(): void
     {
         $this->sendCommand(
-            command: 'EHLO ' . $serverName,
-            expectedResponseCode: 250,
-            commandTimeout: 10,
+            command: 'EHLO ' . $this->getServerName(),
+            expectedCode: 250,
+            timeoutSeconds: SmtpMailer::COMMAND_TIMEOUT,
+            description: 'EHLO',
         );
     }
 
-    private function sendCommand(
-        string $command,
-        int $expectedResponseCode,
-        int $commandTimeout,
-    ): void {
-        if (!$this->isConnected()) {
-            throw new Exception(message: 'Tried to send command without being connected');
-        }
-        if (
-            str_contains(haystack: $command, needle: "\n")
-            || str_contains(haystack: $command, needle: "\r")
-        ) {
-            throw new Exception(message: 'Command contained line breaks');
-        }
-        $this->sendRawDataToServer(data: $command);
-        $this->checkResponse(
-            expectedCode: $expectedResponseCode,
-            commandTimeout: $commandTimeout,
-        );
-    }
-
-    private function isConnected(): bool
-    {
-        if (!is_resource(value: $this->stream)) {
-            return false;
-        }
-        $sockStatus = stream_get_meta_data(stream: $this->stream);
-        if ($sockStatus['eof']) {
-            return false;
-        }
-
-        return true;
-    }
-
-    private function sendRawDataToServer(string $data): void
-    {
-        $this->log[] = $data;
-        fwrite(stream: $this->stream, data: $data . MailerConstants::CRLF);
-    }
-
-    private function sendCommandStartTls(): void
+    private function startTls(): void
     {
         $this->sendCommand(
             command: 'STARTTLS',
-            expectedResponseCode: 220,
-            commandTimeout: 10,
+            expectedCode: 220,
+            timeoutSeconds: SmtpMailer::COMMAND_TIMEOUT,
+            description: 'STARTTLS',
         );
+        if (!$this->transport->enableTls()) {
+            throw new MailerException(
+                message: 'The TLS connection to the SMTP server could not be established: check the certificate of '
+                    . $this->hostName . '. Nothing was sent.',
+            );
+        }
     }
 
-    private function sendCommandAuthLogin(): void
+    private function authenticate(): void
     {
         $this->sendCommand(
             command: 'AUTH LOGIN',
-            expectedResponseCode: 334,
-            commandTimeout: 10,
+            expectedCode: 334,
+            timeoutSeconds: SmtpMailer::COMMAND_TIMEOUT,
+            description: 'AUTH LOGIN',
         );
-    }
-
-    private function sendCommandSmtpUserName(): void
-    {
         $this->sendCommand(
             command: base64_encode(string: $this->smtpUserName),
-            expectedResponseCode: 334,
-            commandTimeout: 10,
+            expectedCode: 334,
+            timeoutSeconds: SmtpMailer::COMMAND_TIMEOUT,
+            description: 'the user name',
+            isCredential: true,
         );
-    }
-
-    private function sendCommandSmtpPassword(): void
-    {
         $this->sendCommand(
             command: base64_encode(string: $this->smtpPassword),
-            expectedResponseCode: 235,
-            commandTimeout: 10,
-        );
-    }
-
-    private function sendCommandMailFrom(MailerAddress $sender): void
-    {
-        $this->sendCommand(
-            command: 'MAIL FROM: <' . $sender->getPunyEncodedEmail() . '>',
-            expectedResponseCode: 250,
-            commandTimeout: 300,
-        );
-    }
-
-    private function sendCommandRecipient(MailerAddress $recipient): void
-    {
-        $this->sendCommand(
-            command: 'RCPT TO: <' . $recipient->getPunyEncodedEmail() . '>',
-            expectedResponseCode: 250,
-            commandTimeout: 300,
+            expectedCode: 235,
+            timeoutSeconds: SmtpMailer::COMMAND_TIMEOUT,
+            description: 'the password',
+            isCredential: true,
         );
     }
 
     /**
-     * Send an SMTP DATA command.
-     * Issues a data command and sends the msg_data to the server,
-     * finalizing the mail transaction. $msgData is the message
-     * that is to be sent with the headers. Each header needs to be
-     * on a single line followed by a <CRLF> with the message headers
-     * and the message body being separated by an additional <CRLF>.
-     * Implements RFC 821: DATA <CRLF>.
-     *
-     * @param string $data Message data to send
+     * Sends the `DATA` command and the message (RFC 5321 section 4.1.1.4): header and body are separated by an empty
+     * line.
      */
-    public function sendData(string $data): void
-    {
-        $this->sendCommandDataStart();
-        /**
-         * The server is ready to accept data!
-         * According to rfc821 we should not send more than 1000 characters on a single line (including the LE)
-         * so we will break the data up into lines by \r and/or \n then if needed we will break each of those into
-         * smaller lines to fit within the limit.
-         * We will also look for lines that start with a '.' and prepend an additional '.'.
-         * NOTE: this does not count towards line-length limit.
-         */
-
-        // Normalize line breaks before exploding
-        $lines = explode(
-            separator: "\n",
-            string: str_replace(
-                search: [
-                    "\r\n",
-                    "\r",
-                ],
-                replace: "\n",
-                subject: $data,
-            ),
-        );
-
-        /**
-         * To distinguish between a complete RFC822 message and a plain message body, we check if the first field
-         * of the first line (':' separated) does not contain a space then it _should_ be a header, and we will
-         * process all lines before a blank line as headers.
-         */
-        $field = substr(
-            string: $lines[0],
-            offset: 0,
-            length: strpos(
-                haystack: $lines[0],
-                needle: ':',
-            ),
-        );
-        $inHeaders = false;
-        if (
-            $field !== ''
-            && !str_contains(haystack: $field, needle: ' ')
-        ) {
-            $inHeaders = true;
-        }
-        foreach ($lines as $line) {
-            $linesOut = [];
-            if ($inHeaders && $line === '') {
-                $inHeaders = false;
-            }
-            // Break this line up into several smaller lines if it's too long
-            while (strlen(string: $line) > MailerConstants::MAX_LINE_LENGTH) {
-                // Working backwards, try to find a space within the last MAX_LINE_LENGTH chars of the line to break on
-                // so to avoid breaking in the middle of a word
-                $pos = strrpos(
-                    haystack: substr(
-                        string: $line,
-                        offset: 0,
-                        length: MailerConstants::MAX_LINE_LENGTH,
-                    ),
-                    needle: ' ',
-                );
-                if ($pos === false || $pos === 0) {
-                    // No nice break found, add a hard break
-                    $pos = MailerConstants::MAX_LINE_LENGTH - 1;
-                    $linesOut[] = substr(string: $line, offset: 0, length: $pos);
-                    $line = substr(string: $line, offset: $pos);
-                } else {
-                    // Break at the found point
-                    $linesOut[] = substr(string: $line, offset: 0, length: $pos);
-                    // Move along by the amount we dealt with
-                    $line = substr(string: $line, offset: $pos + 1);
-                }
-                // If processing headers add a LWSP-char to the front of new line RFC822 section 3.1.1
-                if ($inHeaders) {
-                    $line = "\t" . $line;
-                }
-            }
-            $linesOut[] = $line;
-
-            // Send the lines to the server
-            foreach ($linesOut as $lineOut) {
-                // Dot-stuffing as per RFC5321 section 4.5.2
-                // https://tools.ietf.org/html/rfc5321#section-4.5.2
-                if (str_starts_with(haystack: $line, needle: '.')) {
-                    $lineOut = '.' . $lineOut;
-                }
-                $this->sendRawDataToServer(data: $lineOut);
-            }
-        }
-        $this->sendCommandDataEnd();
-    }
-
-    private function sendCommandDataStart(): void
+    private function sendData(string $data): void
     {
         $this->sendCommand(
             command: 'DATA',
-            expectedResponseCode: 354,
-            commandTimeout: 120,
+            expectedCode: 354,
+            timeoutSeconds: SmtpMailer::DATA_START_TIMEOUT,
+            description: 'DATA',
         );
-    }
-
-    private function sendCommandDataEnd(): void
-    {
+        foreach (SmtpDataFormatter::toLines(data: $data) as $line) {
+            $this->writeLine(line: $line, isCredential: false);
+        }
         $this->sendCommand(
             command: '.',
-            expectedResponseCode: 250,
-            commandTimeout: 600,
+            expectedCode: 250,
+            timeoutSeconds: SmtpMailer::DATA_END_TIMEOUT,
+            description: 'the end of the message',
         );
     }
 
-    private function sendCommandQuit(): void
-    {
-        $this->sendCommand(
-            command: 'QUIT',
-            expectedResponseCode: 221,
-            commandTimeout: 60,
-        );
+    /**
+     * @param bool $isCredential the command carries the user name or the password: it is not logged
+     */
+    private function sendCommand(
+        string $command,
+        int $expectedCode,
+        int $timeoutSeconds,
+        string $description,
+        bool $isCredential = false,
+    ): void {
+        if (!$this->transport->isOpen()) {
+            throw new MailerException(message: 'Tried to send ' . $description . ' without being connected.');
+        }
+        // A line break would end the command and start another one (SMTP command injection)
+        if (strpbrk(string: $command, characters: MailerConstants::CRLF) !== false) {
+            throw new MailerException(message: 'The command ' . $description . ' contains a line break.');
+        }
+        $this->writeLine(line: $command, isCredential: $isCredential);
+        $this->readReply(expectedCode: $expectedCode, timeoutSeconds: $timeoutSeconds, description: $description);
     }
 
-    private function close(): void
+    private function writeLine(string $line, bool $isCredential): void
     {
-        if (is_resource(value: $this->stream)) {
-            fclose(stream: $this->stream);
-            $this->stream = null;
+        $this->log[] = $isCredential ? SmtpMailer::HIDDEN_COMMAND : $line;
+        $this->transport->writeLine(line: $line);
+    }
+
+    private function readReply(int $expectedCode, int $timeoutSeconds, string $description): void
+    {
+        $this->lastReply = $this->readLines(timeoutSeconds: $timeoutSeconds);
+        if ($this->lastReply === '') {
+            throw new MailerException(
+                message: 'The SMTP server closed the connection (waiting for the answer to ' . $description . ').',
+            );
+        }
+        $code = (int) substr(string: $this->lastReply, offset: 0, length: 3);
+        if ($code !== $expectedCode) {
+            throw new MailerException(
+                message: 'Unexpected answer of the SMTP server to ' . $description . ': code ' . $code
+                    . ' instead of ' . $expectedCode . '.',
+            );
         }
     }
 
-    public function __destruct()
+    /**
+     * Reads the lines of one answer: the last line has a space (or nothing) after the code, the lines before have a
+     * hyphen.
+     */
+    private function readLines(int $timeoutSeconds): string
     {
-        $this->close();
+        $data = '';
+        while (($line = $this->transport->readLine(timeoutSeconds: $timeoutSeconds)) !== null) {
+            $this->log[] = $line;
+            $data .= $line;
+            // An answer of only 3 characters is not valid, but RFC 5321 section 4.2 says it must be handled
+            $separator = substr(string: $line, offset: 3, length: 1);
+            if (in_array(needle: $separator, haystack: ['', ' ', "\r", "\n"], strict: true)) {
+                break;
+            }
+        }
+
+        return $data;
     }
 }

@@ -9,16 +9,18 @@ declare(strict_types=1);
 
 namespace actra\yuf\mailer;
 
-class MailerAddressCollection
+final class MailerAddressCollection
 {
-    /** @var MailerAddress[] */
+    /** @var array<string, MailerAddress> by punycode encoded address */
     private array $items = [];
 
     public function addItem(MailerAddress $mailerAddress): void
     {
         $email = $mailerAddress->getPunyEncodedEmail();
         if (array_key_exists(key: $email, array: $this->items)) {
-            throw new MailerException(message: 'Address exists already: ' . $email);
+            throw new MailerException(
+                message: 'The address is already a recipient (' . $mailerAddress->mailerAddressKindEnum->value . ').',
+            );
         }
 
         $this->items[$email] = $mailerAddress;
@@ -27,7 +29,7 @@ class MailerAddressCollection
     public function getHeaderString(
         MailerAddressKindEnum $mailerAddressKindEnum,
         int $maxLineLength,
-        string $defaultCharSet,
+        MailerCharsetEnum $defaultCharSet,
     ): string {
         $listAsCommaSeparatedString = $this->listAsCommaSeparatedString(
             mailerAddressKindEnum: $mailerAddressKindEnum,
@@ -35,7 +37,7 @@ class MailerAddressCollection
             defaultCharSet: $defaultCharSet,
         );
 
-        return ($listAsCommaSeparatedString === '') ? '' : MailerHeader::createRaw(
+        return $listAsCommaSeparatedString === '' ? '' : MailerHeader::createRaw(
             name: $mailerAddressKindEnum->value,
             value: $listAsCommaSeparatedString,
         );
@@ -44,40 +46,39 @@ class MailerAddressCollection
     public function listAsCommaSeparatedString(
         MailerAddressKindEnum $mailerAddressKindEnum,
         int $maxLineLength,
-        string $defaultCharSet,
+        MailerCharsetEnum $defaultCharSet,
     ): string {
-        if (!$this->has(mailerAddressKindEnum: $mailerAddressKindEnum)) {
-            return '';
-        }
-        $array = [];
+        $formattedAddresses = [];
         foreach ($this->list(mailerAddressKindEnum: $mailerAddressKindEnum) as $mailerAddress) {
-            $array[] = $mailerAddress->getFormattedAddressForMailer(
+            $formattedAddresses[] = $mailerAddress->getFormattedAddressForMailer(
                 maxLineLength: $maxLineLength,
                 defaultCharSet: $defaultCharSet,
             );
         }
 
-        return implode(separator: ', ', array: $array);
+        return implode(separator: ', ', array: $formattedAddresses);
     }
 
     public function has(MailerAddressKindEnum $mailerAddressKindEnum): bool
     {
-        return (count(value: $this->list(mailerAddressKindEnum: $mailerAddressKindEnum)) > 0);
+        return array_any(
+            array: $this->items,
+            callback: static fn(MailerAddress $mailerAddress): bool => $mailerAddress->mailerAddressKindEnum
+                === $mailerAddressKindEnum,
+        );
     }
 
     /**
-     * @return MailerAddress[]
+     * @return list<MailerAddress> in the order they were added
      */
     public function list(MailerAddressKindEnum $mailerAddressKindEnum): array
     {
-        $list = [];
-        foreach ($this->items as $mailerAddress) {
-            if ($mailerAddress->mailerAddressKindEnum !== $mailerAddressKindEnum) {
-                continue;
-            }
-            $list[] = $mailerAddress;
-        }
-
-        return $list;
+        return array_values(
+            array: array_filter(
+                array: $this->items,
+                callback: static fn(MailerAddress $mailerAddress): bool => $mailerAddress->mailerAddressKindEnum
+                    === $mailerAddressKindEnum,
+            ),
+        );
     }
 }

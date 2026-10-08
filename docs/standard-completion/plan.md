@@ -65,7 +65,7 @@ too large.
 6. `phone` (78, full standard; characterization tests first), done in v4.33.0.
 7. `db` (51), done in v4.34.0.
 8. `table` (37) and `pagination` (3), done in v4.35.0.
-9. `mailer` (33, full standard; characterization tests of the MIME output first).
+9. `mailer` (33, full standard; characterization tests of the MIME output first), done in v4.36.0.
 10. `auth` (26), `security` (0) and the rest of `session` (2).
 11. `api` (27).
 12. `html` (25) and `layout` (0, `final` only).
@@ -349,6 +349,77 @@ too large.
   relative formats (`tomorrow`): harmless for a filter, a stricter format would be a behaviour change; `actra/backend`
   uses the removed `totalAmountMessage_*` names and the pre-4.29 `DbResultTable` constants (it follows with its own
   task).
+
+### Step 9 (v4.36.0) – done
+
+- Area `mailer` (derived from PHPMailer; the licence docblocks are in every derived file including the new ones split out
+  of `MailerFunctions`, `gpl-3.0.txt` / `lgpl-3.0.txt` untouched). Baseline 136 -> 103 (all 33 entries of `src/mailer/`
+  removed, no new entry). Tests 10653 -> 10905 (`tests/Unit/mailer/`: 252). Details and before/after in `UPGRADE.md`.
+- **Characterization first:** 134 tests passed against the old code before the change: the complete header and body of
+  text mails (quoted-printable, base64, 7bit, 8bit, binary), HTML mails with alternative text, all eight message types
+  (alt, inline, attach and the combinations) with string and file attachments, recipients (to, cc, bcc, reply-to,
+  confirm reading), non-ASCII names and subjects, punycode, word wrap, `mail()` line length, header injection (subject,
+  names, addresses, custom headers, attachment names), address validation (valid and invalid cases), header and content
+  encoders, text wrapper, file names and MIME types, attachments. The SMTP dialogue of the old `SmtpMailer` could not be
+  tested without a socket: it was recorded once against a local socket server (greeting, EHLO, AUTH LOGIN, MAIL FROM,
+  RCPT TO, DATA with dot stuffing, QUIT, rejected credentials, rejected recipient, bad greeting) and is reproduced with
+  the fake transport in `SmtpMailerTest` (`MailMailer` could not be called at all without `mail()`; its arguments are
+  tested with the new `MailFunction` double). The old behaviour that is wrong (see "Bugs found") was not pinned: those
+  tests came with the fixes; the two tests that showed the duplicated attachments were flipped with the fix.
+- **final / extension points:** `AbstractMail` (a project mail extends it, `setTextBody()` / `setHtmlBody()` protected)
+  and `AbstractMailer` are documented extension points; everything else is `final`, value classes `readonly`.
+  `TextMail`, `HtmlMail`, `SmtpMailer`, `MailMailer` are `final` (nothing in `actra/backend` extends them; backend uses
+  `TextMail` and `SmtpMailer`). `@internal`: `MailMimeBody`, `MailMimeHeader`, `MailMimePart`, `MailerHeader`,
+  `MailerHeaderCollection`, `MailerHeaderEncoder`, `MailerTextWrapper`, `MailerContentEncoder`, `MailerFileName`,
+  `MailerMimeTypes`, `MailerMessageTypeEnum`, `StreamSmtpTransport`, `SmtpDataFormatter`.
+- **Enums:** `MailerCharsetEnum`, `MailerEncodingEnum`, `MailerPriorityEnum`, `MailerContentTypeEnum`,
+  `MailerMessageTypeEnum` (internal, replaces the strings `alt_inline_attach` ...). `MailerAddressKindEnum` was already
+  one. No enum for SMTP authentication (there is only `AUTH LOGIN`) and none for MIME types of attachments (open set).
+- **I/O and randomness testable:** `SmtpTransport` (open, readLine, writeLine, enableTls, close; `StreamSmtpTransport`
+  is the only class that touches the socket, tested against a loopback server of the test process), `MailFunction`
+  (`NativeMailFunction` calls `mail()`), `MimeIdGenerator`, `ServerNameResolver` (reverse DNS) and the existing `Clock`
+  are constructor arguments of `AbstractMailer` / `SmtpMailer` / `MailMailer` with the production implementations as
+  defaults. Doubles in `tests/Double/mailer/`: `CapturingMailer` (fixed date, id `ID`, server `mail.example.com`),
+  `FakeSmtpTransport`, `RecordingMailFunction`, `FixedMimeIdGenerator`, `FixedServerNameResolver`, `ProjectHtmlMail`.
+- **Structure:** `MailerFunctions` (519 lines, seven purposes) is split into `MailerHeaderEncoder`, `MailerTextWrapper`,
+  `MailerContentEncoder`, `MailerFileName`, `MailerMimeTypes::getByFileName()`; the MIME body is built per message type
+  by `MailMimeBody` and `MailMimePart` (the 130-line `switch` is a `match`); `SmtpDataFormatter` is the pure part of
+  `DATA`; the attachments have a common interface `MailerAttachment` with `getContent()` (the body no longer asks
+  `instanceof`). The static classes stay static on purpose: pure functions of their arguments without state (no static
+  property in the area).
+- **Security findings and fixes:** (1) `Bcc` header in every SMTP message (all recipients saw the blind copies):
+  `headerHasBcc()`. (2) Header injection through the type of an attachment (`Content-Type` of the part): validated as
+  `type/subtype`; custom header names validated (no colon, no space); line breaks in header values rejected before the
+  encoder (an encoder fold `\r\n ` is the only line break a header may have). (3) `STARTTLS`: the result of
+  `stream_socket_enable_crypto()` was ignored (credentials and message in plain text after a failed handshake):
+  fails closed now, certificate chain and host name verified explicitly, TLS 1.2+; checked against a self-signed
+  server (handshake refused). (4) Credentials: the log (public `$log`) held the base64 user name and password; exceptions
+  never contained them, now they also do not contain addresses or header values (personal data, log forging). (5) SMTP
+  command injection: addresses cannot contain line breaks (validated, tested), the `EHLO` name comes from reverse DNS
+  and is now a plain host name or the address, `sendCommand()` still rejects line breaks. (6) Dot stuffing of long lines
+  (see below). (7) Attachment names: directories and control characters removed, path of `MailerFileAttachment` is
+  trusted (documented), stream wrappers (`phar://`, `http://`) are rejected, directories are rejected. (8) `mail()`:
+  the `-f` sender is only passed if it matches `[A-Za-z0-9@_.-]+` (ASCII; was `ctype_alnum()` of the locale).
+  (9) `SmtpMailer` validates host name and port in the constructor.
+- **Bugs found and fixed (with tests, see `UPGRADE.md`):** Bcc leak; attachments sent twice in the related part;
+  `TypeError` for subjects and names with more than a third non-ASCII characters (Cyrillic, CJK, `äöü`); header values
+  with several encoded words were rejected (`Invalid header name or value`, e.g. every long non-ASCII name in a `mail()`
+  message); dot stuffing of split lines; single part 7bit / 8bit / binary messages with lines of 1000+ characters;
+  `TypeError` when the server closes the connection; `MailerStringAttachment` trimmed the (binary) content; the
+  `$log` of `SmtpMailer` grew with every delivery and could hold `false` (`fgets()` failure).
+- **Stays untested:** `NativeMailFunction` (calls `mail()`), the TLS handshake of `StreamSmtpTransport` with a valid
+  certificate (only the refusal of a plain server is tested; the self-signed refusal was checked once by hand), reverse
+  DNS (`gethostbyaddr()`; only the choice of the name is tested), the `X-Mailer` version (replaced in the tests),
+  delivery to a real SMTP server and `sendmail`.
+- **Open / for later:** a text body is quoted-printable encoded with `=0A` for its line breaks (PHPMailer behaviour,
+  valid; real line breaks would be nicer); the lower casing of the local part of an address and `X-Mailer: PHP/<version>`
+  (discloses the PHP version) are unchanged; addresses with non-ASCII local parts are sent without SMTPUTF8 negotiation;
+  `SmtpMailer` only knows `AUTH LOGIN` and port 587 / STARTTLS (no implicit TLS on port 465, no `AUTH PLAIN` / OAuth);
+  `addCustomHeader()` still takes the `maxLineLength` of the encoded words from the caller (a mailer-specific value that
+  the mail does not know); with `useTls: false` the password goes over the network unencrypted (documented).
+  `actra/backend` (`Mailer::sendTextMail()`): it still builds `SmtpMailer` without `serverAddress` (needs
+  `HttpRequest::getServerAddress()` since v4.29.0) and passes `new SMTPMailer(...)` (class name case); nothing else of
+  this release affects it (`TextMail` and `SmtpMailer` with default arguments).
 
 ### Superglobals rule – done
 
