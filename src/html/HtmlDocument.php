@@ -9,88 +9,55 @@ declare(strict_types=1);
 
 namespace actra\yuf\html;
 
-use actra\yuf\Core;
-use actra\yuf\core\RequestHandler;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CsrfHiddenFieldRenderer;
 use actra\yuf\security\CsrfTokenSource;
 use actra\yuf\template\TemplateData;
 use actra\yuf\template\TemplateEngine;
+use OutOfBoundsException;
+use RuntimeException;
 
-class HtmlDocument
+/**
+ * The page of a request: the content file of the view inside a template, with the replacements of the view. Created
+ * by `ContentHandler` once per request, views reach it with `BaseView::getHtmlDocument()`.
+ *
+ * The navigation elements of the output (`id="nav-<key>"`) get the class `active` for the keys that views register
+ * with `setActiveHtmlId()`.
+ */
+final class HtmlDocument
 {
     public readonly HtmlReplacementCollection $replacements;
-    public string $templateDirectory {
-        set {
-            $this->templateDirectory = $value;
-        }
-    }
-    public string $contentFileDirectory {
-        set {
-            $this->contentFileDirectory = $value;
-        }
-    }
+    public string $templateDirectory;
+    public string $contentFileDirectory;
     public string $templateName = 'default';
-    public string $contentFileName {
-        set {
-            $this->contentFileName = $value;
-        }
-    }
+    public string $contentFileName;
+    /** @var array<int, string> */
     private array $activeHtmlIds = [];
 
     public function __construct(
-        private readonly RequestHandler $requestHandler,
+        private readonly HtmlDocumentSettings $settings,
         CspNonce $cspNonce,
-        private readonly Core $core,
         private readonly TemplateEngine $templateEngine,
         ?CsrfTokenSource $csrfTokenSource,
     ) {
-        $requestHandler = $this->requestHandler;
-        $viewDirectory = $requestHandler->route->viewDirectory;
-        $this->templateDirectory = $viewDirectory . 'templates/';
-        $this->contentFileDirectory = $viewDirectory . 'html/';
-        $fileTitle = $requestHandler->fileTitle;
-        $this->contentFileName = $fileTitle . '.html';
+        $this->templateDirectory = $settings->viewDirectory . 'templates/';
+        $this->contentFileDirectory = $settings->viewDirectory . 'html/';
+        $this->contentFileName = $settings->fileTitle . '.html';
         $this->replacements = new HtmlReplacementCollection();
-        $replacements = $this->replacements;
-        $core = $this->core;
-        $replacements->addHtml(
-            identifier: 'bodyClassName',
-            html: 'body-' . $fileTitle,
-        );
-        $replacements->addHtml(
-            identifier: 'language',
-            html: $requestHandler->language->code,
-        );
-        $replacements->addHtml(
-            identifier: 'charset',
-            html: 'UTF-8',
-        );
-        $replacements->addHtml(
-            identifier: 'copyright',
-            html: $core->renderCopyrightYear(),
-        );
-        $replacements->addHtml(
-            identifier: 'robots',
-            html: $core->robots,
-        );
-        $replacements->addHtml(
-            identifier: 'scripts',
-            html: '',
-        );
-        $replacements->addHtml(
-            identifier: 'cspNonce',
-            html: $cspNonce->value,
-        );
-        $replacements->addHtml(
+        // Everything that comes from the request is text and escaped; only the CSRF field is HTML of ours
+        $this->replacements->addText(identifier: 'bodyClassName', text: 'body-' . $settings->fileTitle);
+        $this->replacements->addText(identifier: 'language', text: $settings->languageCode);
+        $this->replacements->addHtml(identifier: 'charset', html: 'UTF-8');
+        $this->replacements->addText(identifier: 'copyright', text: $settings->copyright);
+        $this->replacements->addText(identifier: 'robots', text: $settings->robots);
+        $this->replacements->addHtml(identifier: 'scripts', html: '');
+        $this->replacements->addText(identifier: 'cspNonce', text: $cspNonce->value);
+        $this->replacements->addHtml(
             identifier: 'csrfField',
             html: CsrfHiddenFieldRenderer::render(csrfTokenSource: $csrfTokenSource),
         );
-        $replacements->addHtml(
-            identifier: 'requestedFileName',
-            html: $requestHandler->fileName,
-        );
+        $this->replacements->addText(identifier: 'requestedFileName', text: $settings->fileName);
     }
 
     public function setActiveHtmlId(int $key, string $val): void
@@ -100,84 +67,114 @@ class HtmlDocument
 
     public function isActiveHtmlIdSet(int $key): bool
     {
-        return array_key_exists(
-            key: $key,
-            array: $this->activeHtmlIds,
-        );
+        return array_key_exists(key: $key, array: $this->activeHtmlIds);
     }
 
+    /**
+     * @throws OutOfBoundsException if no id is set for the key (check with `isActiveHtmlIdSet()`)
+     */
     public function getActiveHtmlId(int $key): string
     {
+        if (!array_key_exists(key: $key, array: $this->activeHtmlIds)) {
+            throw new OutOfBoundsException(
+                message: 'No active HTML id is set for key ' . $key . '; check isActiveHtmlIdSet() first.',
+            );
+        }
+
         return $this->activeHtmlIds[$key];
     }
 
+    /**
+     * @return array<int, string>
+     */
     public function listActiveHtmlIds(): array
     {
         return $this->activeHtmlIds;
     }
 
+    /**
+     * Renders the template with the content file. Without an active id, the requested file (with its group) is the
+     * active one.
+     *
+     * @throws NotFoundException if there is no content file, or the requested group or file title leaves the content
+     *                           directory (`..`, absolute path, backslash)
+     * @throws RuntimeException if the active navigation cannot be marked in the output
+     */
     public function render(): string
     {
-        $contentFileName = $this->contentFileName;
-        if ($contentFileName === '') {
-            throw new NotFoundException();
-        }
-        $contentFileDirectory = $this->contentFileDirectory;
-        $requestHandler = $this->requestHandler;
-        $fileGroup = $requestHandler->fileGroup;
-        if ($fileGroup !== null) {
-            $contentFileDirectory .= $fileGroup . '/';
-        }
-        $fullContentFilePath = $contentFileDirectory . $contentFileName;
-        if (!is_file(filename: $fullContentFilePath)) {
-            throw new NotFoundException();
-        }
-        $this->replacements->addHtml(
-            identifier: 'this',
-            html: $fullContentFilePath,
-        );
-        $templateName = $this->templateName;
-        $templateFilePath = $this->templateDirectory . $templateName . '.html';
-        if (
-            $templateName === ''
-            || !is_file(filename: $templateFilePath)
-        ) {
+        $fullContentFilePath = $this->findContentFile();
+        $this->replacements->addHtml(identifier: 'this', html: $fullContentFilePath);
+        $templateFilePath = $this->templateDirectory . $this->templateName . '.html';
+        if ($this->templateName === '' || !is_file(filename: $templateFilePath)) {
             $templateFilePath = $fullContentFilePath;
         }
         if ($this->activeHtmlIds === []) {
-            $fileTitle = $requestHandler->fileTitle;
+            $fileGroup = $this->settings->fileGroup;
             $this->setActiveHtmlId(
                 key: 1,
-                val: $fileGroup === null ? $fileTitle : $fileGroup . '-' . $fileTitle,
+                val: $fileGroup === null ? $this->settings->fileTitle : $fileGroup . '-' . $this->settings->fileTitle,
             );
         }
-        $htmlAfterReplacements = $this->templateEngine->render(
+        $html = $this->templateEngine->render(
             templateFile: $templateFilePath,
             data: TemplateData::fromReplacements(replacements: $this->replacements),
         );
 
-        return preg_replace_callback(
-            pattern: '/(\s+id="nav-(.+?)")(\s+class="(.+?)")?/',
-            callback: [
-                $this,
-                'setCssActive',
-            ],
-            subject: $htmlAfterReplacements,
-        );
+        return $this->markActiveNavigation(html: $html);
     }
 
-    private function setCssActive(array $m): string
+    private function findContentFile(): string
     {
-        if (!in_array(
-            needle: $m[2],
-            haystack: $this->activeHtmlIds,
-            strict: true,
-        )) {
-            // The id is not within activeHtmlIds, so we just return the whole unmodified string
-            return $m[0];
+        $fileGroup = $this->settings->fileGroup;
+        // The group and the title come from the request, the content file name is set by the view
+        if (
+            $this->contentFileName === ''
+            || !HtmlDocument::isInsideDirectory(path: $this->settings->fileTitle)
+            || ($fileGroup !== null && !HtmlDocument::isInsideDirectory(path: $fileGroup))
+        ) {
+            throw new NotFoundException();
+        }
+        $directory = $fileGroup === null ? $this->contentFileDirectory : $this->contentFileDirectory . $fileGroup . '/';
+        $fullContentFilePath = $directory . $this->contentFileName;
+        if (!is_file(filename: $fullContentFilePath)) {
+            throw new NotFoundException();
         }
 
-        // The id is within activeHtmlIds, so we need to add the "active" class
-        return $m[1] . ' class="' . (array_key_exists(key: 4, array: $m) ? $m[4] . ' ' : '') . 'active"';
+        return $fullContentFilePath;
+    }
+
+    /**
+     * A path that comes from the request must stay below the directory it is appended to.
+     */
+    private static function isInsideDirectory(string $path): bool
+    {
+        return !str_contains(haystack: $path, needle: "\0")
+            && !str_contains(haystack: $path, needle: '\\')
+            && !str_starts_with(haystack: $path, needle: '/')
+            && preg_match(pattern: '#(^|/)\.\.(/|$)#', subject: $path) === 0;
+    }
+
+    private function markActiveNavigation(string $html): string
+    {
+        $result = preg_replace_callback(
+            pattern: '/(\s+id="nav-(.+?)")(\s+class="(.+?)")?/',
+            callback: function (array $matches): string {
+                if (!in_array(needle: $matches[2], haystack: $this->activeHtmlIds, strict: true)) {
+                    // The id is not active, the match stays as it is
+                    return $matches[0];
+                }
+                $classes = array_key_exists(key: 4, array: $matches) ? $matches[4] . ' ' : '';
+
+                return $matches[1] . ' class="' . $classes . 'active"';
+            },
+            subject: $html,
+        );
+        if ($result === null) {
+            throw new RuntimeException(
+                message: 'The active navigation could not be marked: ' . preg_last_error_msg() . '.',
+            );
+        }
+
+        return $result;
     }
 }

@@ -9,8 +9,16 @@ declare(strict_types=1);
 
 namespace actra\yuf\html;
 
-class DetailDataObject extends HtmlDataObject
+/**
+ * A label with a value for detail lists. The label is trusted HTML and is never escaped; the value is escaped unless
+ * `$isHtml` is `true`.
+ */
+final class DetailDataObject extends HtmlDataObject
 {
+    /**
+     * @param string $name Trusted HTML, stored as it is
+     * @param string $value Plain text (escaped here) or, with `$isHtml`, trusted HTML
+     */
     public function __construct(
         string $name,
         string $value,

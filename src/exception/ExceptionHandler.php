@@ -292,7 +292,7 @@ class ExceptionHandler
             identifier: 'pageTitle',
             htmlReplacement: $htmlReplacementCollection->has(identifier: 'title') ? $htmlReplacementCollection->get(
                 identifier: 'title',
-            ) : HtmlReplacement::html(html: 'Error'),
+            ) : HtmlReplacement::fromHtml(html: 'Error'),
         );
         $htmlReplacementCollection->addHtml(
             identifier: 'bodyClassName',

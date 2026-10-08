@@ -9,13 +9,16 @@ declare(strict_types=1);
 
 namespace actra\yuf\html;
 
-class HtmlTextCollection
+/**
+ * A list of texts for a `for` loop of a template.
+ */
+final class HtmlTextCollection
 {
-    /** @var HtmlText[] */
+    /** @var list<HtmlText> */
     public private(set) array $items = [];
 
     /**
-     * @param HtmlText[] $items
+     * @param list<HtmlText> $items
      */
     public function __construct(array $items = [])
     {

@@ -13,6 +13,7 @@ use actra\yuf\auth\AuthSession;
 use actra\yuf\Core;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\html\HtmlDocument;
+use actra\yuf\html\HtmlDocumentSettings;
 use actra\yuf\security\CspNonce;
 use actra\yuf\template\TemplateEngine;
 use InvalidArgumentException;
@@ -49,10 +50,18 @@ final class ContentHandler
                     message: 'The HTML document is only available while the request is processed.',
                 );
             }
+            $language = $this->requestHandler->language;
             $this->htmlDocument = new HtmlDocument(
-                requestHandler: $this->requestHandler,
+                settings: new HtmlDocumentSettings(
+                    viewDirectory: $this->requestHandler->route->viewDirectory,
+                    fileGroup: $this->requestHandler->fileGroup,
+                    fileTitle: $this->requestHandler->fileTitle,
+                    fileName: $this->requestHandler->fileName,
+                    languageCode: $language === null ? '' : $language->code,
+                    copyright: $this->core->renderCopyrightYear(),
+                    robots: $this->core->robots,
+                ),
                 cspNonce: $this->cspNonce,
-                core: $this->core,
                 templateEngine: $this->templateEngine,
                 csrfTokenSource: $this->core->formContext->csrfTokenSource,
             );

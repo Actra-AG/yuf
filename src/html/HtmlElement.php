@@ -9,19 +9,21 @@ declare(strict_types=1);
 
 namespace actra\yuf\html;
 
+/**
+ * Base of everything that renders to HTML: `HtmlTag`, `HtmlTagAttribute`, `HtmlText` and the form components.
+ *
+ * Extension point: only for the components of `src/form/`; projects extend `FormComponent` or its subclasses, not
+ * this class.
+ */
 abstract class HtmlElement
 {
     /**
-     * Protected constructor to make sure we overwrite it in child classes.
-     *
-     * @param string $name : Name to be set by the constructor
+     * Protected, so that the subclasses have to offer their own constructor.
      */
-    protected function __construct(public private(set) readonly string $name) {}
+    protected function __construct(public readonly string $name) {}
 
     /**
-     * Abstract render-method to make sure that every child does implement it
-     *
-     * @return string : Content, which can be used for output
+     * @return string HTML for the output
      */
     abstract public function render(): string;
 }

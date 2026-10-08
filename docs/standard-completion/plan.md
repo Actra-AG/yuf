@@ -68,7 +68,7 @@ too large.
 9. `mailer` (33, full standard; characterization tests of the MIME output first), done in v4.36.0.
 10. `auth` (26), `security` (0) and the rest of `session` (2), done in v4.37.0.
 11. `api` (27), done in v4.38.0.
-12. `html` (25) and `layout` (0, `final` only).
+12. `html` (25) and `layout` (0, `final` only), done in v4.39.0.
 13. `exception` (10) and `datacheck` (13).
 14. `form` (0 baseline; `final` / extension points of its classes).
 
@@ -570,6 +570,69 @@ too large.
   `useBasicHttpAuthentication()` takes `user:password` as one string (unchanged API); no retry, no proxy setting, no
   cookie jar, no streaming to a file (the whole body is in memory up to the limit); `CurlResponse::$curlInfo` is the raw
   cURL array; a `PUT` / `PATCH` / `DELETE` with a body of another kind than the five factories needs a new `create…()`.
+
+### Step 12 (v4.39.0) – done
+
+- Area `html` and `layout`. Baseline 48 -> 23 (all 25 entries of `src/html/` removed, no new entry). Tests 11345 -> 11513
+  (`tests/Unit/html/`, `tests/Unit/layout/`). Details and before/after in `UPGRADE.md`.
+- **Characterization first:** `HtmlEncoder`, `HtmlTag` / `HtmlTagAttribute` / `HtmlText` (markup, attribute escaping,
+  boolean attributes, self-closing tags), `HtmlDataObject` / `DetailDataObject` / the collections, `HtmlReplacementCollection`
+  (every `add…()` and `getArrayObject()`), `NavigationItem` / `NavigationItemCollection` (access rights, active item,
+  CSS classes) ran against the old code before the change: all passed except the ones that pin the later fixes (invalid
+  UTF-8, `addInt()` as `int`, sticky `isActive`, validation). `HtmlDocument` could not be built without `Core`; its tests
+  came after the change and the scenarios (template + content file, group, active ids, class handling) were compared
+  with the old class through a throw-away probe (reflection on the old class, outside the repository): identical
+  output.
+- **`HtmlDocument` without `Core`:** it takes a `HtmlDocumentSettings` (view directory, file group, file title, file name,
+  language code, copyright, robots; `ContentHandler` builds it) instead of `RequestHandler` and `Core`; tests render
+  real pages with a temporary directory and the `TemplateEngineFactory`, no reflection. `ContentHandler::processRequest()`
+  itself is still not tested (it needs a `Core` for the settings), see "Stays untested".
+- **final / extension points:** everything `final` except `HtmlElement` (abstract base of the form components, documented:
+  projects extend `FormComponent`, not it) and `HtmlDataObject` (documented: subclasses fill their data in the constructor,
+  `DetailDataObject` is the example). `readonly` where possible (`HtmlReplacement`, `NavigationItem`,
+  `HtmlDocumentSettings`, `HtmlTagAttribute` / `HtmlText` properties; `HtmlTag` and the collections are mutable by
+  design). No `@internal` class: all of them are used by projects (`HtmlDocumentSettings` is only built by
+  `ContentHandler` and tests).
+- **Enums:** none. `HtmlText` has an `isHtml` flag, `DetailDataObject` an `$isHtml` and `HtmlTagAttribute` a
+  `valueIsEncodedForRendering` flag (two states, no set of values). The CSS class defaults of `NavigationItem` are
+  values, no set.
+- **Static:** `HtmlEncoder` stays a static class (`final readonly`: pure functions of their argument, no state,
+  no dependency). No static property in the area.
+- **`mixed`:** only `HtmlReplacementCollection::getArrayObject(): ArrayObject<string, mixed>`: `ArrayObject` is invariant
+  and the template engine and its tests add arrays and objects to it; the values `HtmlReplacement` hands over are
+  `RendererValue` (string, int, float, bool, `stdClass`, lists, `null`).
+- **Security findings and fixes:** (1) `HtmlDocument` added values of the request (`bodyClassName`, `requestedFileName`)
+  as HTML: reflected XSS when a view renders a page for a URL-controlled name; all of them go through `addText()` now
+  (`charset`, `scripts` and the CSRF field are HTML of ours). (2) The file group and title of the request were appended
+  to the content directory without a check (`..`): 404 for `..` segments, absolute paths, backslash, null byte.
+  (3) Tag and attribute names were output as they are: validated. (4) `valueIsEncodedForRendering: true` with a double
+  quote made broken or injectable HTML: rejected. (5) `HtmlEncoder::encode()` lacked `ENT_SUBSTITUTE` (invalid UTF-8 gave an empty string,
+  a silent loss of the value); now `ENT_QUOTES | ENT_SUBSTITUTE`, `UTF-8`. (6) `encodeKeepQuotes()` (no quote encoding) is only
+  used between tags (`FileField` messages, `TableItem`, table columns, `ActionsColumn` labels; checked all callers); it
+  is documented as never for attributes and carries one `@phpstan-ignore disallowed.function` with the reason.
+  (7) `NavigationItem::$href` is checked (no `javascript:` / `data:`, no quote or angle bracket); its `title`, `svgPath`
+  and CSS classes are trusted HTML of the application (documented). (8) `encodeArray()` / `encodeObject()` mutated their
+  argument and nothing used them: removed.
+- **Bugs found and fixed:** see "Fixed" in `UPGRADE.md` (request values as HTML, path traversal, invalid UTF-8,
+  `addInt()` handing over a `float`, sticky `NavigationItemCollection::$isActive`). `HtmlReplacement::getDataForRenderer()`
+  did not list `int` in its return type, that was the cause of the float.
+- **HTML output:** byte-identical for normal input (template characterization tests, the `HtmlDocument` scenarios and
+  the example are unchanged). Differences only for values with special characters in the request-controlled parts
+  (now escaped) and for invalid UTF-8.
+- **Outside the area:** `HtmlReplacement::fromHtml()` in `ExceptionHandler`, `HtmlDocumentSettings` in `ContentHandler`,
+  one cast removed in `TemplateData::fromReplacements()` (the keys are `string` now), `TemplateDataTest` expects an `int`.
+- **Stays untested:** `ContentHandler::processRequest()` and the creation of `HtmlDocument` from `Core` /
+  `RequestHandler` (`Core` cannot be built), the combination of `HtmlDocument` with a real view.
+- **Open / for later:** `NavigationItemCollection::addItem()` replaces an item with the same `navKey` silently;
+  `HtmlDataObject` is a mutable `stdClass` wrapper (the templates read `data` directly); `HtmlDocument::render()` still
+  changes its own replacements (`this`) and active ids when it renders (rendering twice is safe, tested);
+  `HtmlSnippet::render()` adds the nonce to the caller's replacements (unchanged); `DetailDataObject` takes the label as
+  HTML, a plain-text label would be a new argument; the form renderers still pass `valueIsEncodedForRendering: true`
+  in 90 places (a `fromText()` / `fromHtml()` pair like `HtmlText` would be the safer API: a breaking change in all
+  renderers and in `actra/backend`).
+- **Follow-up in `actra/backend`:** only the names it already has to change (`HtmlDocument::get()`,
+  `HtmlText::unencoded()` / `encoded()`, `addEncodedText()`); `new NavigationItem(...)` keeps working (its hrefs are
+  relative); `HtmlTag` / `HtmlTagAttribute` calls of `SearchQueryField` and `SearchSelectOptionsField` use valid names.
 
 ### Superglobals rule – done
 

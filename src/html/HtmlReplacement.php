@@ -11,83 +11,95 @@ namespace actra\yuf\html;
 
 use stdClass;
 
-readonly class HtmlReplacement
+/**
+ * One value of a template: HTML text, a scalar, a data object or a list of them.
+ *
+ * @phpstan-type RendererValue string|int|float|bool|stdClass|list<string>|list<stdClass>|null
+ */
+final readonly class HtmlReplacement
 {
     private function __construct(
         public HtmlText|bool|HtmlDataObject|HtmlTextCollection|HtmlDataObjectCollection|int|float|null $content,
     ) {}
 
-    public static function htmlText(?HtmlText $htmlText): HtmlReplacement
+    public static function fromHtmlText(?HtmlText $htmlText): HtmlReplacement
     {
         return new HtmlReplacement(content: $htmlText);
     }
 
-    public static function html(?string $html): HtmlReplacement
+    /**
+     * @param string|null $html Trusted HTML, output as it is
+     */
+    public static function fromHtml(?string $html): HtmlReplacement
     {
         return new HtmlReplacement(content: $html === null ? null : HtmlText::fromHtml(html: $html));
     }
 
-    public static function text(?string $text): HtmlReplacement
+    /**
+     * @param string|null $text Plain text, escaped when rendered
+     */
+    public static function fromText(?string $text): HtmlReplacement
     {
         return new HtmlReplacement(content: $text === null ? null : HtmlText::fromText(text: $text));
     }
 
-    public static function bool(?bool $bool): HtmlReplacement
+    public static function fromBool(?bool $bool): HtmlReplacement
     {
         return new HtmlReplacement(content: $bool);
     }
 
-    public static function int(?int $int): HtmlReplacement
+    public static function fromInt(?int $int): HtmlReplacement
     {
         return new HtmlReplacement(content: $int);
     }
 
-    public static function float(?float $float): HtmlReplacement
+    public static function fromFloat(?float $float): HtmlReplacement
     {
         return new HtmlReplacement(content: $float);
     }
 
-    public static function dataObject(?HtmlDataObject $htmlDataObject): HtmlReplacement
+    public static function fromDataObject(?HtmlDataObject $htmlDataObject): HtmlReplacement
     {
         return new HtmlReplacement(content: $htmlDataObject);
     }
 
-    public static function textCollection(?HtmlTextCollection $collection): HtmlReplacement
+    public static function fromTextCollection(?HtmlTextCollection $collection): HtmlReplacement
     {
         return new HtmlReplacement(content: $collection);
     }
 
-    public static function htmlDataObjectCollection(?HtmlDataObjectCollection $collection): HtmlReplacement
+    public static function fromHtmlDataObjectCollection(?HtmlDataObjectCollection $collection): HtmlReplacement
     {
         return new HtmlReplacement(content: $collection);
     }
 
-    public function getDataForRenderer(): string|bool|stdClass|array|float|null
+    /**
+     * The value for the template engine: texts are rendered to HTML (escaped or as they are).
+     *
+     * @return RendererValue
+     */
+    public function getDataForRenderer(): string|int|float|bool|stdClass|array|null
     {
-        if ($this->content instanceof HtmlText) {
-            return $this->content->render();
+        $content = $this->content;
+        if ($content instanceof HtmlText) {
+            return $content->render();
         }
-        if ($this->content instanceof HtmlTextCollection) {
-            $array = [];
-            foreach ($this->content->items as $htmlText) {
-                $array[] = $htmlText->render();
-            }
-
-            return $array;
+        if ($content instanceof HtmlTextCollection) {
+            return array_map(
+                callback: static fn(HtmlText $htmlText): string => $htmlText->render(),
+                array: $content->items,
+            );
         }
-        if ($this->content instanceof HtmlDataObjectCollection) {
-            $array = [];
-            foreach ($this->content->items as $htmlDataObject) {
-                $array[] = $htmlDataObject->data;
-            }
-
-            return $array;
+        if ($content instanceof HtmlDataObjectCollection) {
+            return array_map(
+                callback: static fn(HtmlDataObject $htmlDataObject): stdClass => $htmlDataObject->data,
+                array: $content->items,
+            );
         }
-
-        if ($this->content instanceof HtmlDataObject) {
-            return $this->content->data;
+        if ($content instanceof HtmlDataObject) {
+            return $content->data;
         }
 
-        return $this->content;
+        return $content;
     }
 }

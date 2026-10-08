@@ -9,9 +9,12 @@ declare(strict_types=1);
 
 namespace actra\yuf\html;
 
-class HtmlDataObjectCollection
+/**
+ * A list of items for a `for` loop of a template.
+ */
+final class HtmlDataObjectCollection
 {
-    /** @var HtmlDataObject[] */
+    /** @var list<HtmlDataObject> */
     public private(set) array $items = [];
 
     public function add(HtmlDataObject $htmlDataObject): void

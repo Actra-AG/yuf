@@ -11,6 +11,13 @@ namespace actra\yuf\html;
 
 use stdClass;
 
+/**
+ * The properties of one item that a template reads with selectors (`item.name`). Text is made safe when it is added:
+ * `addText()` escapes it, `addHtml()` takes HTML that the application built itself and stores it as it is; the
+ * template engine outputs the stored strings as they are.
+ *
+ * Extension point: a subclass fills its properties in its constructor (see `DetailDataObject`).
+ */
 class HtmlDataObject
 {
     public private(set) stdClass $data;
@@ -42,7 +49,7 @@ class HtmlDataObject
     }
 
     /**
-     * @param HtmlDataObject[]|null $htmlDataObjectsArray
+     * @param list<HtmlDataObject>|null $htmlDataObjectsArray
      */
     public function addHtmlDataObjectsArray(string $propertyName, ?array $htmlDataObjectsArray): void
     {

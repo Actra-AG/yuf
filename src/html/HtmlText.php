@@ -11,16 +11,16 @@ namespace actra\yuf\html;
 
 use Override;
 
-class HtmlText extends HtmlElement
+/**
+ * A text for the output: either plain text (escaped when rendered) or trusted HTML (output as it is).
+ */
+final class HtmlText extends HtmlElement
 {
-    private string $content;
-    private bool $isHtml;
-
-    private function __construct(string $content, bool $isHtml)
-    {
-        $this->content = $content;
-        $this->isHtml = $isHtml;
-        parent::__construct('htmlText');
+    private function __construct(
+        private readonly string $content,
+        private readonly bool $isHtml,
+    ) {
+        parent::__construct(name: 'htmlText');
     }
 
     /**
@@ -39,11 +39,6 @@ class HtmlText extends HtmlElement
         return new HtmlText(content: $text, isHtml: false);
     }
 
-    /**
-     * Generate the "html-code" for this Text-Element to be used for output
-     *
-     * @return string Generated html-code
-     */
     #[Override]
     public function render(): string
     {

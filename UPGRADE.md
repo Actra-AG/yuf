@@ -4,6 +4,112 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.39.0] – 2026-10-08
+
+Area release for `src/html/` and `src/layout/`: the HTML classes are `final` (two documented extension points),
+`HtmlDocument` renders without `Core` and `RequestHandler`, values of the request are escaped before they reach the
+template, tag and attribute names are validated and every PHPStan baseline entry of the area is gone. The rendered HTML
+is byte-identical for normal input. Search your project for `new HtmlDocument`, `HtmlEncoder::encodeArray`,
+`encodeObject`, `HtmlReplacement::`, `extends HtmlTag`, `extends HtmlText`, `extends HtmlTagAttribute`, `->value =` on
+attributes, `getActiveHtmlId` and `new NavigationItem`.
+
+### ⚠️ `HtmlDocument`: constructor with `HtmlDocumentSettings`, `final`
+
+`ContentHandler` creates the document, projects only use it (`BaseView::getHtmlDocument()`). The constructor takes the
+values it reads instead of `RequestHandler` and `Core`, so a page can be rendered in a test without them. The public
+properties and methods (`replacements`, `templateDirectory`, `contentFileDirectory`, `contentFileName`, `templateName`,
+`setActiveHtmlId()`, `isActiveHtmlIdSet()`, `listActiveHtmlIds()`, `render()`) are unchanged. `listActiveHtmlIds()`
+returns `array<int, string>`; `getActiveHtmlId()` throws an `OutOfBoundsException` for a key that is not set (was a PHP
+warning that the error handler turned into an exception).
+
+| Before | After |
+|:--|:--|
+| `new HtmlDocument(requestHandler: $rh, cspNonce: $nonce, core: $core, templateEngine: $engine, csrfTokenSource: $csrf)` | `new HtmlDocument(settings: new HtmlDocumentSettings(viewDirectory: ..., fileGroup: ..., fileTitle: ..., fileName: ..., languageCode: ..., copyright: ..., robots: ...), cspNonce: $nonce, templateEngine: $engine, csrfTokenSource: $csrf)` |
+| `class HtmlDocument` | `final class HtmlDocument` |
+| `getActiveHtmlId(9)` without that key: error | `OutOfBoundsException` |
+
+### ⚠️ `HtmlTag` and `HtmlTagAttribute`: names are validated, `final`
+
+The tag name is output as it is, so a name with `>`, a space or a quote could inject HTML. `HtmlTag` accepts letters, digits
+and `-` (starting with a letter); `HtmlTagAttribute` letters, digits and `_ : . -` (starting with a letter, `_` or
+`:`; `data-id`, `aria-label`, `xml:lang`, `viewBox` work). Anything else is an `InvalidArgumentException`.
+`valueIsEncodedForRendering: true` says that the value is encoded already and is output as it is; a value with a
+double quote (which would end the attribute) is now an `InvalidArgumentException` with that flag instead of broken
+HTML. `HtmlTagAttribute::$value` is `readonly`. `HtmlTag`, `HtmlTagAttribute` and `HtmlText` are `final`; the
+`htmlTagAttributes` argument is a `list<HtmlTagAttribute>`.
+
+| Before | After |
+|:--|:--|
+| `new HtmlTag(name: 'div" onclick="x', ...)`: output as it is | `InvalidArgumentException` |
+| `new HtmlTagAttribute(name: 'a b', ...)` | `InvalidArgumentException` |
+| `new HtmlTagAttribute(name: 'title', value: 'a"b', valueIsEncodedForRendering: true)`: `title="a"b"` | `InvalidArgumentException`; pass `valueIsEncodedForRendering: false` or `HtmlEncoder::encode()` the value |
+| `$attribute->value = 'x'` | not possible (`readonly`) |
+| `class X extends HtmlTag` / `HtmlText` / `HtmlTagAttribute` | not possible (`final`) |
+
+### ⚠️ `HtmlEncoder`: `encodeArray()` and `encodeObject()` are removed, `final`
+
+Both changed the object they got in place, took untyped values and nothing used them. Encode the values when you add
+them (`HtmlDataObject::addText()`, `HtmlReplacementCollection::addText()`) or call `HtmlEncoder::encode()` for each value.
+`HtmlEncoder` is `final`; it stays static (pure functions without state). `encodeKeepQuotes()` is documented as for the
+text between tags only (quotes stay as they are); never use it for an attribute value.
+
+| Before | After |
+|:--|:--|
+| `HtmlEncoder::encodeArray($array, keepQuotes: false)` | `array_map(HtmlEncoder::encode(...), $array)` (flat array of scalars) |
+| `HtmlEncoder::encodeObject($object, keepQuotes: false)` | removed |
+
+### ⚠️ `HtmlReplacement`: named constructors are `from…()`
+
+`HtmlReplacement` is `final readonly` and its named constructors follow `naming.md`. Most code uses
+`HtmlReplacementCollection` and never calls them.
+
+| Before | After |
+|:--|:--|
+| `HtmlReplacement::htmlText($t)` | `HtmlReplacement::fromHtmlText($t)` |
+| `HtmlReplacement::html($s)` / `::text($s)` | `HtmlReplacement::fromHtml($s)` / `::fromText($s)` |
+| `HtmlReplacement::bool($b)` / `::int($i)` / `::float($f)` | `HtmlReplacement::fromBool($b)` / `::fromInt($i)` / `::fromFloat($f)` |
+| `HtmlReplacement::dataObject($o)` | `HtmlReplacement::fromDataObject($o)` |
+| `HtmlReplacement::textCollection($c)` | `HtmlReplacement::fromTextCollection($c)` |
+| `HtmlReplacement::htmlDataObjectCollection($c)` | `HtmlReplacement::fromHtmlDataObjectCollection($c)` |
+
+### ⚠️ `NavigationItem`: the `href` is checked, `final`
+
+`href` is output into an attribute as it is. A `javascript:` (or `data:`, `vbscript:`, `file:`) URL, or a value with a
+control character, a double quote or an angle bracket, is an `InvalidArgumentException`; relative URLs, `http`,
+`https`, `mailto` and `tel` are allowed. `title`, `svgPath` and the CSS classes stay trusted HTML of the application
+(documented). `NavigationItem` and `NavigationItemCollection` are `final`.
+
+| Before | After |
+|:--|:--|
+| `new NavigationItem(href: 'javascript:void(0)', ...)` | `InvalidArgumentException` |
+| `class X extends NavigationItem` / `NavigationItemCollection` | not possible (`final`) |
+
+### ⚠️ `final` classes and extension points
+
+`final`: `HtmlDocument`, `HtmlTag`, `HtmlTagAttribute`, `HtmlText`, `HtmlEncoder`, `HtmlReplacement`,
+`HtmlReplacementCollection`, `HtmlTextCollection`, `HtmlDataObjectCollection`, `DetailDataObject`, `NavigationItem`,
+`NavigationItemCollection`. Extension points (documented in the class comment): `HtmlElement` (only for the components
+of `src/form/`; extend `FormComponent` or one of its subclasses) and `HtmlDataObject` (a subclass fills its properties
+in its constructor, as `DetailDataObject` does). Nothing in `actra/backend` extends one of the `final` classes.
+`HtmlDocumentSettings` is new (`final readonly`).
+
+### Fixed
+
+- **Values of the request reached the template as HTML:** `HtmlDocument` added `bodyClassName` (`body-` + the requested
+  file title), `requestedFileName` (the requested file name), `language`, `robots` and `copyright` as HTML. A URL with a
+  `"` could break out of `<body class="{bodyClassName}">` when a view shows a page for such a name. They are escaped now
+  (identical for the usual names).
+- **Path traversal through the request:** a file group or file title with a `..` segment, an absolute path, a backslash
+  or a null byte is a 404; with a route like `/${fileGroup}/${fileName}` it could reach an `.html` file outside the
+  content directory.
+- `HtmlEncoder::encode()` and `encodeKeepQuotes()` returned an empty string for text with invalid UTF-8 (the whole
+  value was lost); the bad bytes are replaced by U+FFFD now (`ENT_SUBSTITUTE`). The same applies to `HtmlText`,
+  `HtmlTagAttribute` and everything that calls the encoder.
+- `HtmlReplacementCollection::addInt()` handed the template a `float` (`7.0`; the text output was the same):
+  it is an `int` now.
+- `NavigationItemCollection::$isActive` stayed `true` once an item was active; each `prepareForRenderer()` call
+  decides again.
+
 ## [v4.38.0] – 2026-10-08
 
 Area release for `src/api/` (the cURL client): no static state any more (the shared cURL handle and the registry of

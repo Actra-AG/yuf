@@ -12,23 +12,32 @@ namespace actra\yuf\layout;
 use actra\yuf\auth\AccessRightCollection;
 use actra\yuf\html\HtmlDataObjectCollection;
 
-class NavigationItemCollection
+/**
+ * The navigation items of one level by `navKey`.
+ */
+final class NavigationItemCollection
 {
+    /** Whether the last `prepareForRenderer()` call found the active item among the accessible items. */
     public private(set) bool $isActive = false;
-    /** @var NavigationItem[] */
+    /** @var array<string, NavigationItem> */
     private array $items = [];
 
-    public function __construct() {}
-
+    /**
+     * An item with a key that is already in the collection replaces the earlier one.
+     */
     public function addItem(NavigationItem $navigationItem): void
     {
         $this->items[$navigationItem->navKey] = $navigationItem;
     }
 
+    /**
+     * The data of the items the user may see, and remembers in `$isActive` whether one of them is the active item.
+     */
     public function prepareForRenderer(
         string $activeSubNavigationItem,
         AccessRightCollection $accessRightCollection,
     ): HtmlDataObjectCollection {
+        $this->isActive = false;
         $htmlDataObjectCollection = new HtmlDataObjectCollection();
         foreach ($this->items as $navigationItem) {
             if (!$navigationItem->hasAccess(accessRightCollection: $accessRightCollection)) {
@@ -50,21 +59,19 @@ class NavigationItemCollection
 
     public function isEmpty(AccessRightCollection $accessRightCollection): bool
     {
-        $count = 0;
-        foreach ($this->items as $navigationItem) {
-            if ($navigationItem->hasAccess(accessRightCollection: $accessRightCollection)) {
-                $count++;
-            }
-        }
-
-        return ($count === 0);
+        return !array_any(
+            $this->items,
+            static fn(NavigationItem $navigationItem): bool => $navigationItem->hasAccess(
+                accessRightCollection: $accessRightCollection,
+            ),
+        );
     }
 
     public function getFirst(AccessRightCollection $accessRightCollection): ?NavigationItem
     {
         return array_find(
             $this->items,
-            fn(NavigationItem $navigationItem) => $navigationItem->hasAccess(
+            static fn(NavigationItem $navigationItem): bool => $navigationItem->hasAccess(
                 accessRightCollection: $accessRightCollection,
             ),
         );

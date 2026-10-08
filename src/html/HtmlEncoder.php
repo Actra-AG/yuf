@@ -9,65 +9,45 @@ declare(strict_types=1);
 
 namespace actra\yuf\html;
 
-use stdClass;
-
-class HtmlEncoder
+/**
+ * Escapes values for HTML text and for quoted attribute values (UTF-8, invalid byte sequences become U+FFFD).
+ *
+ * Stays static on purpose: pure functions of their argument without state or dependencies.
+ */
+final readonly class HtmlEncoder
 {
-    public static function encodeArray(array $array, bool $keepQuotes): array
+    /**
+     * Encodes `&`, `<`, `>` and both kinds of quotes: safe for HTML text and for quoted attribute values.
+     */
+    public static function encode(string|float|int|bool|null $value): string
     {
-        foreach ($array as $key => $val) {
-            if (is_array(value: $val)) {
-                $array[$key] = HtmlEncoder::encodeArray(array: $val, keepQuotes: $keepQuotes);
-                continue;
-            }
-            if (is_object(value: $val)) {
-                $array[$key] = HtmlEncoder::encodeObject(object: $val, keepQuotes: $keepQuotes);
-                continue;
-            }
-            if ($keepQuotes) {
-                $array[$key] = HtmlEncoder::encodeKeepQuotes(value: $val);
-                continue;
-            }
-            $array[$key] = HtmlEncoder::encode(value: $val);
+        if ($value === null) {
+            return '';
         }
 
-        return $array;
-    }
-
-    public static function encodeObject(stdClass $object, bool $keepQuotes): stdClass
-    {
-        foreach (get_object_vars(object: $object) as $key => $val) {
-            if (is_array(value: $val)) {
-                $object->{$key} = HtmlEncoder::encodeArray(array: $val, keepQuotes: $keepQuotes);
-                continue;
-            }
-            if (is_object(value: $val)) {
-                $object->{$key} = HtmlEncoder::encodeObject(object: $val, keepQuotes: $keepQuotes);
-                continue;
-            }
-            if ($keepQuotes) {
-                $object->{$key} = HtmlEncoder::encodeKeepQuotes(value: $val);
-                continue;
-            }
-            $object->{$key} = HtmlEncoder::encode(value: $val);
-        }
-
-        return $object;
-    }
-
-    public static function encodeKeepQuotes(string|float|int|bool|null $value): string
-    {
-        return $value === null ? '' : htmlspecialchars(
+        return htmlspecialchars(
             string: (string) $value,
-            flags: ENT_NOQUOTES,
+            flags: ENT_QUOTES | ENT_SUBSTITUTE,
+            encoding: 'UTF-8',
         );
     }
 
-    public static function encode(string|float|int|bool|null $value): string
+    /**
+     * Encodes `&`, `<` and `>` only. Only for the content of an element (text between tags), never for attribute
+     * values: a `"` in the value would end the attribute. Use `encode()` when in doubt.
+     */
+    public static function encodeKeepQuotes(string|float|int|bool|null $value): string
     {
-        return $value === null ? '' : htmlspecialchars(
+        if ($value === null) {
+            return '';
+        }
+
+        // The standard forbids ENT_NOQUOTES because of attributes; element content is the one place where the quotes
+        // are meant to stay as they are
+        return htmlspecialchars( // @phpstan-ignore disallowed.function
             string: (string) $value,
-            flags: ENT_QUOTES,
+            flags: ENT_NOQUOTES | ENT_SUBSTITUTE,
+            encoding: 'UTF-8',
         );
     }
 }

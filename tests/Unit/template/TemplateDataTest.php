@@ -77,8 +77,7 @@ final class TemplateDataTest extends TestCase
 
         $data = TemplateData::fromReplacements(replacements: $replacements);
 
-        // The replacement classes widen an int to a float, the text output is the same
-        $this->assertSame(['int' => 5.0, 'float' => 1.5, 'bool' => true], $data->values);
+        $this->assertSame(['int' => 5, 'float' => 1.5, 'bool' => true], $data->values);
     }
 
     public function testItemsOfATextCollectionAreTrustedHtml(): void

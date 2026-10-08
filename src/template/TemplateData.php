@@ -37,7 +37,7 @@ final readonly class TemplateData
     {
         $values = [];
         foreach ($replacements->getArrayObject() as $identifier => $value) {
-            $values[(string) $identifier] = TemplateData::markAsTrusted(value: $value);
+            $values[$identifier] = TemplateData::markAsTrusted(value: $value);
         }
 
         return new TemplateData(values: $values);

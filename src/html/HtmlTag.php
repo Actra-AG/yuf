@@ -9,29 +9,39 @@ declare(strict_types=1);
 
 namespace actra\yuf\html;
 
+use InvalidArgumentException;
 use LogicException;
 use Override;
 
-class HtmlTag extends HtmlElement
+/**
+ * An HTML element with attributes and children (tags and texts), rendered as `<name attributes>children</name>`.
+ */
+final class HtmlTag extends HtmlElement
 {
-    /** @var HtmlTagAttribute[] : Array with all HtmlTag-Attributes */
+    private const string NAME_PATTERN = '/^[A-Za-z][A-Za-z0-9-]*$/D';
+
+    /** @var list<HtmlTagAttribute> */
     private array $htmlTagAttributes = [];
-    private bool $selfClosing; // Defines, if it is a self-closing tag (which can't have any child elements)
-    /** @var HtmlText[]|HtmlTag[] : Array with all child-elements which can be either Tag- or Text-Elements */
+    /** @var list<HtmlText|HtmlTag> */
     private array $childElements = [];
 
     /**
-     * @param string $name : Name of this element, will by used by renderer <{$name}{$attributes}></{$name}>
-     * @param HtmlTagAttribute[] $htmlTagAttributes
+     * @param string $name Letters, digits and `-`, starting with a letter (the name is output as it is)
+     * @param bool $selfClosing Void elements like `input` or `br`: no children, no closing tag
+     * @param list<HtmlTagAttribute> $htmlTagAttributes
+     *
+     * @throws InvalidArgumentException for an invalid tag name
      */
-    public function __construct(string $name, bool $selfClosing, array $htmlTagAttributes = [])
+    public function __construct(string $name, private readonly bool $selfClosing, array $htmlTagAttributes = [])
     {
-        $this->selfClosing = $selfClosing;
-        parent::__construct($name);
-
+        if (preg_match(pattern: HtmlTag::NAME_PATTERN, subject: $name) !== 1) {
+            throw new InvalidArgumentException(
+                message: 'Invalid HTML tag name "' . $name . '": use letters, digits and - only, starting with a letter.',
+            );
+        }
+        parent::__construct(name: $name);
         foreach ($htmlTagAttributes as $htmlTagAttribute) {
-            /** We use this way instead of direct assignment to make sure the attributes are all instances of HtmlTagAttribute */
-            $this->addHtmlTagAttribute($htmlTagAttribute);
+            $this->addHtmlTagAttribute(htmlTagAttribute: $htmlTagAttribute);
         }
     }
 
@@ -41,64 +51,44 @@ class HtmlTag extends HtmlElement
     }
 
     /**
-     * Add Tag-Element as child
-     *
-     * @param HtmlTag $htmlTag : The Tag-Element to be added as child
+     * @throws LogicException if the tag is self-closing
      */
     public function addTag(HtmlTag $htmlTag): void
     {
-        $this->addChildElement($htmlTag);
+        $this->addChildElement(childElement: $htmlTag);
     }
 
     /**
-     * Add child element. This method throws an Exception, if we try to add a child to a self-closing tag or the child element has an invalid base class.
-     *
-     * @param $childElement : The child-element to be added
-     */
-    private function addChildElement($childElement): void
-    {
-        if ($this->selfClosing) {
-            throw new LogicException('A self-closing tag cannot have child elements');
-        }
-
-        if (!($childElement instanceof HtmlTag) && !($childElement instanceof HtmlText)) {
-            throw new LogicException('The child-element must be either instance of HtmlTag or HtmlText');
-        }
-
-        $this->childElements[] = $childElement;
-    }
-
-    /**
-     * Add Text-Tag as child
-     *
-     * @param HtmlText $htmlText : The Text-Tag to be added as child
+     * @throws LogicException if the tag is self-closing
      */
     public function addText(HtmlText $htmlText): void
     {
-        $this->addChildElement($htmlText);
+        $this->addChildElement(childElement: $htmlText);
     }
 
-    /**
-     * Generate the html-code for this Tag-Element (including all children) to be used for output
-     *
-     * @return string : Generated html-code
-     */
     #[Override]
     public function render(): string
     {
-        $tagName = $this->name; // MUST be HTML-safe!
-        $html = '<' . $tagName;
+        $html = '<' . $this->name;
         foreach ($this->htmlTagAttributes as $htmlTagAttribute) {
             $html .= ' ' . $htmlTagAttribute->render();
         }
         $html .= '>';
-        if (!$this->selfClosing) {
-            foreach ($this->childElements as $childElement) {
-                $html .= $childElement->render();
-            }
-            $html .= '</' . $tagName . '>';
+        if ($this->selfClosing) {
+            return $html;
+        }
+        foreach ($this->childElements as $childElement) {
+            $html .= $childElement->render();
         }
 
-        return $html;
+        return $html . '</' . $this->name . '>';
+    }
+
+    private function addChildElement(HtmlText|HtmlTag $childElement): void
+    {
+        if ($this->selfClosing) {
+            throw new LogicException(message: 'A self-closing tag cannot have child elements');
+        }
+        $this->childElements[] = $childElement;
     }
 }
