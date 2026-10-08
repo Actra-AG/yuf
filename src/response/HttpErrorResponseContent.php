@@ -13,15 +13,13 @@ use actra\yuf\common\JsonUtils;
 use ArrayObject;
 use stdClass;
 
-class HttpErrorResponseContent extends HttpResponseContent
+final class HttpErrorResponseContent
 {
     private const string ERROR_STATUS = 'error';
 
-    private function __construct(string $content)
-    {
-        parent::__construct(content: $content);
-    }
-
+    /**
+     * @param stdClass|ArrayObject<array-key, mixed>|null $data
+     */
     public static function createJsonResponseContent(
         string $errorMessage,
         int|string|null $errorCode = null,
@@ -40,13 +38,16 @@ class HttpErrorResponseContent extends HttpResponseContent
         ) {
             $value['data'] = $data;
         }
-        return new HttpErrorResponseContent(
+        return new HttpResponseContent(
             content: JsonUtils::convertToJsonString(
                 valueToConvert: $value,
             ),
         );
     }
 
+    /**
+     * @param ArrayObject<array-key, mixed>|null $additionalInfo
+     */
     public static function createTextResponseContent(
         string $errorMessage,
         int|string|null $errorCode = null,
@@ -65,7 +66,7 @@ class HttpErrorResponseContent extends HttpResponseContent
                 return: true,
             );
         }
-        return new HttpErrorResponseContent(
+        return new HttpResponseContent(
             content: implode(
                 separator: PHP_EOL,
                 array: $content,

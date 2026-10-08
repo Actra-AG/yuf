@@ -126,4 +126,19 @@ final class RouteCollectionTest extends TestCase
 
         $this->assertNotSame($first, $second);
     }
+
+    public function testFirstRouteOfAnEmptyCollectionThrows(): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIs('The route collection is empty, there is no first route');
+
+        new RouteCollection()->getFirstRoute();
+    }
+
+    public function testRouteWithoutLanguageIsNotFoundByLanguage(): void
+    {
+        $collection = new RouteCollection(routes: [$this->createRoute(path: '/a/')]);
+
+        $this->assertNull($collection->getRouteForLanguage(languageCode: 'de'));
+    }
 }

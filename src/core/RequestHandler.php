@@ -14,20 +14,22 @@ use actra\yuf\session\Session;
 use actra\yuf\session\SessionPreferredLanguage;
 use LogicException;
 
-class RequestHandler
+final class RequestHandler
 {
+    /** @var non-empty-list<string> */
     public readonly array $pathParts;
     public readonly int $countPathParts;
-    public private(set) ?RouteCollection $defaultRoutesByLanguage = null;
+    public readonly RouteCollection $defaultRoutesByLanguage;
     // Set by resolveRoute()
     public private(set) Route $route; // @phpstan-ignore property.uninitialized
-    public ?Language $language = null;
+    public private(set) ?Language $language = null;
     // Set by resolveRoute()
     public private(set) string $fileTitle; // @phpstan-ignore property.uninitialized
     // Set by resolveRoute()
     public private(set) string $fileExtension; // @phpstan-ignore property.uninitialized
     public private(set) ?string $fileName = null;
     public private(set) ?string $fileGroup = null;
+    /** @var array<string, string> */
     public private(set) array $routeVariables = [];
     // Set by resolveRoute()
     /** @var list<string> */
@@ -54,7 +56,7 @@ class RequestHandler
         }
         $this->pathParts = explode(separator: '/', string: $this->httpRequest->getPath());
         $this->countPathParts = count(value: $this->pathParts);
-        $this->fileName = trim(string: $this->pathParts[$this->countPathParts - 1]);
+        $this->fileName = trim(string: array_last(array: $this->pathParts));
         $this->defaultRoutesByLanguage = $this->initDefaultRoutes();
     }
 
@@ -149,6 +151,11 @@ class RequestHandler
         }
     }
 
+    /**
+     * The first route with an available language for each language that has a default route.
+     *
+     * @throws LogicException if two routes are the default of the same language
+     */
     private function initDefaultRoutes(): RouteCollection
     {
         $defaultRoutes = new RouteCollection();
@@ -176,12 +183,30 @@ class RequestHandler
 
     private function initRoute(): Route
     {
-        $countDirectories = $this->countPathParts - 2;
-        $requestedDirectories = '/';
-        for ($x = 1; $x <= $countDirectories; $x++) {
-            $requestedDirectories .= $this->pathParts[$x] . '/';
+        $route = $this->findRouteOfPath();
+        if ($route !== null) {
+            return $route;
+        }
+        if ($this->httpRequest->getUri() === '/') {
+            HttpResponse::redirectAndExit(
+                relativeOrAbsoluteUri: $this->findRouteForRootRequest()->path,
+                httpRequest: $this->httpRequest,
+            );
         }
 
+        throw new NotFoundException();
+    }
+
+    /**
+     * The route of the requested directory or path pattern (`/shop/${fileGroup}/${fileName}`); the variables of the
+     * pattern are set as a side effect.
+     */
+    private function findRouteOfPath(): ?Route
+    {
+        $requestedDirectories = '/';
+        foreach (array_slice(array: $this->pathParts, offset: 1, length: max(0, $this->countPathParts - 2)) as $part) {
+            $requestedDirectories .= $part . '/';
+        }
         $requestedPath = $this->httpRequest->getPath();
         foreach ($this->routeCollection->routes as $route) {
             $routePath = $route->path;
@@ -191,64 +216,75 @@ class RequestHandler
             if (preg_match_all(
                 pattern: '#\${(.*?)}#',
                 subject: $routePath,
-                matches: $matches1,
+                matches: $variableMatches,
             ) === 0) {
                 continue;
             }
-            $pattern = '#^' . str_replace(search: $matches1[0], replace: '(.*)', subject: $routePath) . '$#';
+            $pattern = '#^' . str_replace(search: $variableMatches[0], replace: '(.*)', subject: $routePath) . '$#';
             if (preg_match(
                 pattern: $pattern,
                 subject: $requestedPath,
-                matches: $matches2,
+                matches: $valueMatches,
             ) === 0) {
                 continue;
             }
-            foreach ($matches1[1] as $nr => $variableName) {
-                $nr = $nr + 1;
-                $val = array_key_exists(key: $nr, array: $matches2) ? $matches2[$nr] : '';
-                if ($variableName === 'fileName') {
-                    $this->fileName = $val;
-                } elseif ($variableName === 'fileGroup') {
-                    $this->fileGroup = $val;
-                } else {
-                    $this->routeVariables[$variableName] = $val;
-                }
+            foreach ($variableMatches[1] as $index => $variableName) {
+                $this->setPathVariable(
+                    name: $variableName,
+                    value: array_key_exists(key: $index + 1, array: $valueMatches) ? $valueMatches[$index + 1] : '',
+                );
             }
 
             return $route;
         }
-        if ($this->httpRequest->getUri() === '/') {
-            $defaultRoutesByLanguage = $this->defaultRoutesByLanguage;
-            $preferredLanguageCode = $this->session === null
-                ? null
-                : new SessionPreferredLanguage(session: $this->session)->getCode();
-            if ($preferredLanguageCode !== null) {
-                foreach ($defaultRoutesByLanguage->routes as $route) {
-                    if ($route->language->code === $preferredLanguageCode) {
-                        HttpResponse::redirectAndExit(
-                            relativeOrAbsoluteUri: $route->path,
-                            httpRequest: $this->httpRequest,
-                        );
-                    }
-                }
+
+        return null;
+    }
+
+    private function setPathVariable(string $name, string $value): void
+    {
+        if ($name === 'fileName') {
+            $this->fileName = $value;
+        } elseif ($name === 'fileGroup') {
+            $this->fileGroup = $value;
+        } else {
+            $this->routeVariables[$name] = $value;
+        }
+    }
+
+    /**
+     * The default route that a request of "/" is redirected to: the route of the language that the session
+     * remembers, else of the first browser language that has one, else the first default route.
+     *
+     * @throws LogicException if there is no default route (`isDefaultForLanguage: true` with an available language)
+     */
+    public function findRouteForRootRequest(): Route
+    {
+        $defaultRoutesByLanguage = $this->defaultRoutesByLanguage;
+        $preferredLanguageCode = $this->session === null
+            ? null
+            : new SessionPreferredLanguage(session: $this->session)->getCode();
+        if ($preferredLanguageCode !== null) {
+            $preferredRoute = $defaultRoutesByLanguage->getRouteForLanguage(languageCode: $preferredLanguageCode);
+            if ($preferredRoute !== null) {
+                return $preferredRoute;
             }
-            foreach ($this->httpRequest->listBrowserLanguagesByQuality() as $languageCode) {
-                $routeForLanguage = $defaultRoutesByLanguage->getRouteForLanguage(languageCode: $languageCode);
-                if ($routeForLanguage !== null) {
-                    HttpResponse::redirectAndExit(
-                        relativeOrAbsoluteUri: $routeForLanguage->path,
-                        httpRequest: $this->httpRequest,
-                    );
-                }
+        }
+        foreach ($this->httpRequest->listBrowserLanguagesByQuality() as $languageCode) {
+            $routeForLanguage = $defaultRoutesByLanguage->getRouteForLanguage(languageCode: $languageCode);
+            if ($routeForLanguage !== null) {
+                return $routeForLanguage;
             }
-            // Redirect to the first default route if none is available in accepted languages
-            HttpResponse::redirectAndExit(
-                relativeOrAbsoluteUri: $defaultRoutesByLanguage->getFirstRoute()->path,
-                httpRequest: $this->httpRequest,
+        }
+        // None in the accepted languages: the first default route
+        if (!$defaultRoutesByLanguage->hasRoutes()) {
+            throw new LogicException(
+                message: 'The request of "/" has no route to be redirected to: set isDefaultForLanguage: true on a'
+                    . ' route with an available language.',
             );
         }
 
-        throw new NotFoundException();
+        return $defaultRoutesByLanguage->getFirstRoute();
     }
 
     public function getPathVar(int $nr): ?string
@@ -260,9 +296,6 @@ class RequestHandler
 
     public function getLanguageRoot(): string
     {
-        if ($this->defaultRoutesByLanguage === null) {
-            return '/';
-        }
         foreach ($this->defaultRoutesByLanguage->routes as $route) {
             if ($route->language === $this->language) {
                 return $route->path;

@@ -12,18 +12,13 @@ namespace actra\yuf\response;
 use actra\yuf\common\JsonUtils;
 use stdClass;
 
-class HttpSuccessResponseContent extends HttpResponseContent
+final class HttpSuccessResponseContent
 {
     private const string SUCCESS_STATUS = 'success';
 
-    private function __construct(string $content)
-    {
-        parent::__construct(content: $content);
-    }
-
     public static function createJsonResponseContent(stdClass $data): HttpResponseContent
     {
-        return new HttpSuccessResponseContent(content: JsonUtils::convertToJsonString([
+        return new HttpResponseContent(content: JsonUtils::convertToJsonString(valueToConvert: [
             'success' => true,
             'data' => $data,
         ]));
@@ -31,7 +26,7 @@ class HttpSuccessResponseContent extends HttpResponseContent
 
     public static function createTextResponseContent(stdClass $data): HttpResponseContent
     {
-        return new HttpSuccessResponseContent(
+        return new HttpResponseContent(
             content: HttpSuccessResponseContent::SUCCESS_STATUS . PHP_EOL . print_r(
                 value: $data,
                 return: true,

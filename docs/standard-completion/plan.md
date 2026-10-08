@@ -51,28 +51,26 @@ Every area release does all of this for the classes of its area (and nothing out
    `TableFilter` / `SearchHelper`; removes the reflection in `AuthSessionTest`, `AuthenticatorTest`; the single-instance
    guards of `AuthUser` / `Authenticator`. Several releases (decided in the design).
 
-### Areas (smallest first; after the redesigns)
+### Areas (largest first; after the redesigns)
 
-Baseline entries today in brackets (state v4.27.0, 532 in total). Each line is one release unless it turns out too
-large.
+Decision of the user: the large areas first; small areas that sit next to a large one go into its release. Baseline
+entries in brackets (state after the superglobals rule, 447 in total). Each line is one release unless it turns out
+too large.
 
-4. `response` (2), `pagination` (3), `request` (5): small, together if it stays small.
-5. `security` (2) and the rest of `session` (3).
-6. `exception` (15) and `datacheck` (13).
-7. `html` (25) and `layout` (0, `final` only).
-8. `auth` (26).
-9. `api` (27).
-10. `db` (51).
-11. `table` (47).
-12. `form` (0 baseline; `final` / extension points of 46 classes, superglobals after the redesigns).
-13. `mailer` (36, full standard; characterization tests of the MIME output first).
-14. `core` (89) and `Core.php` (18), incl. the test gaps of the request pipeline.
-    `Logger` writes all cookies (incl. the session ID) and all server variables (may contain secrets set as
-    environment variables) into the error log: decide what to mask (`security.md`: no secrets in logs).
-15. `common` (92).
-16. `phone` (78, full standard; characterization tests first).
-
-The order of 4–16 may change when a redesign already cleaned an area.
+4. `core` (47), `Core.php` (18), `request` (5), `response` (2), incl. the test gaps of the request pipeline. `Logger`
+   masks secrets (decision of the user): request line, host, IP address, user agent, referrer; GET/POST values masked
+   for keys like `password`, `token`, `secret`, `csrf`, `key`, `auth`; cookie names only; server variables from an
+   allow-list (no environment secrets). The debug page (debug mode only) stays as is.
+5. `common` (68).
+6. `phone` (78, full standard; characterization tests first).
+7. `db` (51).
+8. `table` (39) and `pagination` (3).
+9. `mailer` (33, full standard; characterization tests of the MIME output first).
+10. `auth` (26), `security` (0) and the rest of `session` (2).
+11. `api` (27).
+12. `html` (25) and `layout` (0, `final` only).
+13. `exception` (10) and `datacheck` (13).
+14. `form` (0 baseline; `final` / extension points of its classes).
 
 ## Follow-up in other projects
 
@@ -103,6 +101,45 @@ The order of 4–16 may change when a redesign already cleaned an area.
   are gone; all data of yuf is below `$_SESSION['yuf']`. Details, layout and what is not covered in
   [docs/session/plan.md](../session/plan.md). Baseline: 469 -> 447 entries.
 
+
+### Step 4 (v4.31.0) – done
+
+- Area `core`, `Core.php`, `request`, `response`. Baseline 447 -> 375 (`core` 47, `Core.php` 18, `request` 5, `response`
+  2 removed, no new entry). Tests 3134 -> 3254, no reflection in the new tests.
+- **Env settings:** `Core::config()` / `Core::$config` (`mixed`) are gone; `EnvironmentSettings` (`$core->environmentSettings`) checks
+  the six keys `Core` needs (types, time zone) and throws an `UnexpectedValueException` naming the key. Project keys
+  (flat, e.g. `mailer.hostname`) are read with `getString()` / `getInt()` / `getBool()` / `getStringList()` / `has()`. `Core` now registers the autoloader for yuf before it reads the env file
+  (the settings and directory classes are autoloaded); the application path follows after the directories.
+- **Static state:** `Core::$config`, `Core::$httpResponse` (now an instance property) and the registry of `ErrorHandler`
+  are removed. The guard `Core::$isInitialized` stays: `Core` registers the global autoloader and error handler once per
+  process. `$_SERVER['DOCUMENT_ROOT']` is still read in `Core` (needed before the autoloader and the request exist);
+  `src/Core.php` stays in `actraSuperglobalsAllowIn`.
+- **Logger (decision of the user):** `Logger` is an interface (`logException()`, `logMessage()`), `FileLogger` the
+  implementation (`maxLogSize:` argument for the tests), `RequestLogFormatter` (`@internal`, pure) builds the request part
+  of the log: request line without query string, host, IP address, user agent, referrer without query/fragment, server
+  variables from an allow-list (`REQUEST_METHOD`, `SERVER_PROTOCOL`, `HTTPS`, `HTTP_HOST`, `SERVER_NAME`, `SERVER_PORT`,
+  `REMOTE_ADDR`, `HTTP_USER_AGENT`, `HTTP_ACCEPT_LANGUAGE`, `CONTENT_TYPE`, `CONTENT_LENGTH`, `SCRIPT_NAME`; `REQUEST_URI`
+  and `QUERY_STRING` are left out because they carry the query string), GET/POST values masked as `***` for names
+  containing `password`, `token`, `secret`, `csrf`, `key`, `auth` (any depth), uploaded files without temporary path,
+  cookie names only. Decided by me: files are logged (name, type, size, error), the control characters of request values
+  are replaced (log forging).
+- **final / extension points:** everything `final` except `BaseView` (abstract, documented), the interfaces `Logger` and
+  `ViewFactory`. `ContentType` / `MimeType` constants stay constants (no fixed sets: any file extension and about 600 MIME
+  types); no enum introduced. `HttpResponseContent` is a `final readonly` value; `HttpErrorResponseContent` /
+  `HttpSuccessResponseContent` no longer extend it.
+- **Pipeline testability:** extracted `ContentResponseFactory` (processed content -> response, 404 without content),
+  `DirectoryPathResolver` (placeholders of the directory settings), `RequestHandler::findRouteForRootRequest()` (redirect
+  target of "/"), `HttpResponse` no longer exits in its constructor (a 304 is sent by `sendAndExit()`) and has
+  `getHeader()` / `listHeaders()`. **Still not covered:** `Core::__construct()` and `prepareHttpResponse()` themselves
+  (process-wide singleton, env file, `exit`), `ContentHandler::processRequest()` (needs a `Core` for `HtmlDocument`, step
+  12), `HttpResponse::sendAndExit()` / `redirectAndExit()`, the 404 / 403 answers for files (they exit), the
+  mail/`error_log` delivery of `FileLogger`.
+- **Content-Language:** `ContentType::createHtml(languageCode:)` defaults to no language; `ContentResponseFactory` passes
+  the language of `RequestHandler` (and `ExceptionHandler` for error pages) to `HttpResponse::createHtmlResponse()`.
+- **Open / for later:** `ErrorHandler` throws for every PHP
+  error regardless of `error_reporting()` (unchanged); `RequestHandler` keeps four `@phpstan-ignore property.uninitialized`
+  for the properties set by `resolveRoute()` (a split into prepared and resolved handler would remove them);
+  `FileHandler::getExtension()` (`common`, step 5) returns `false|string` although it never returns `false`.
 
 ### Superglobals rule – done
 

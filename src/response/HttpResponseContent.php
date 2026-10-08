@@ -9,7 +9,11 @@ declare(strict_types=1);
 
 namespace actra\yuf\response;
 
-abstract class HttpResponseContent
+/**
+ * The body of a JSON or text response of a view; created by `HttpSuccessResponseContent` and
+ * `HttpErrorResponseContent`.
+ */
+final readonly class HttpResponseContent
 {
-    protected function __construct(public private(set) readonly string $content) {}
+    public function __construct(public string $content) {}
 }

@@ -68,7 +68,7 @@ final class RequestHandlerTest extends TestCase
         $this->assertSame($german, $handler->language);
         $this->assertSame('x.html', $handler->fileName);
         $this->assertSame(['', 'nope', 'x.html'], $handler->pathParts);
-        $this->assertSame([$germanRoute, $englishRoute], $handler->defaultRoutesByLanguage?->routes);
+        $this->assertSame([$germanRoute, $englishRoute], $handler->defaultRoutesByLanguage->routes);
         $this->assertSame('/de/', $handler->getLanguageRoot());
     }
 

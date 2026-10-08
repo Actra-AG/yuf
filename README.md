@@ -48,9 +48,38 @@ composer create-project actra/yuf-skeleton my-project
 
 To set up a project manually:
 
-1. Create a `.env.php` file based on `.env.example.php`.
+1. Create a `.env.php` file based on `.env.example.php` (see "Environment settings" below).
 2. Create an `index.php` in your document root based on `index.example.php`.
 3. Initialize the Framework Core and provide the path to `Autoloader.php` if not using the default.
+
+## Environment settings
+
+`.env.php` returns an array; `Core` checks it once when it starts and throws an `UnexpectedValueException` that names
+the key if a setting is missing or has the wrong type. `Core` reads these keys:
+
+| Key                     | Type           | Meaning                                               |
+|:------------------------|:---------------|:------------------------------------------------------|
+| `defaultErrorReporting` | `int`          | `error_reporting()` level, e.g. `E_ALL`               |
+| `defaultTimeZone`       | `string`       | PHP time zone, e.g. `Europe/Zurich`                   |
+| `allowedDomains`        | `list<string>` | Host names the application answers to (else 404)      |
+| `logEmailRecipient`     | `string`       | Mail address of new errors, empty for no mails        |
+| `debug`                 | `bool`         | Shows the debug page for errors                       |
+| `robots`                | `string`       | Content of the `robots` meta tag                      |
+
+Own keys of a project (flat, used as given, e.g. `'mailer.hostname'`) are read from `$core->environmentSettings` with
+`getString()`, `getInt()`, `getBool()` and `getStringList()` (`has()` tells if a key exists); a missing key or a wrong
+type throws an `UnexpectedValueException` naming the key and the expected type. Pass the settings to your own settings
+class instead of reading them statically.
+
+## Error log
+
+`Core` logs every exception with `FileLogger` (`app/logs/ticket_<hash>.txt`, one file per distinct issue; a new issue is
+mailed to `logEmailRecipient`). The entry describes the request without secrets: request line (method and path, no query
+string), host, IP address, user agent, referrer (without query string), a fixed list of server variables, the query and
+post parameters, the uploaded files (name, type, size) and the cookie *names*. Values of parameters whose name contains
+`password`, `token`, `secret`, `csrf`, `key` or `auth` (case-insensitive, at any depth) are replaced by `***`. A project
+that wants another destination implements the interface `actra\yuf\core\Logger` and passes it as
+`prepareHttpResponse(logger: …)`.
 
 ## Database Query Helpers
 
@@ -542,9 +571,9 @@ default everywhere); tests pass a `FixedClock`. There is no static accessor.
 
 ```php
 use actra\yuf\clock\FixedClock;
-use actra\yuf\core\Logger;
+use actra\yuf\core\FileLogger;
 
-$logger = new Logger(
+$logger = new FileLogger(
     logEmailRecipient: '',
     logDirectory: $logDirectory,
     httpRequest: $core->httpRequest,

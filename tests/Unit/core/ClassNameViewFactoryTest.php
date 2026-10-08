@@ -43,7 +43,10 @@ final class ClassNameViewFactoryTest extends TestCase
     {
         $context = $this->createContext(fileTitle: 'index', prefix: 'app');
 
-        $this->assertSame('app\view\frontend\php\index', new ClassNameViewFactory()->createClassName(context: $context));
+        $this->assertSame(
+            'app\view\frontend\php\index',
+            new ClassNameViewFactory()->createClassName(context: $context),
+        );
     }
 
     public function testClassNameWithFileGroup(): void

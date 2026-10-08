@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
-readonly class InputParameter
+final readonly class InputParameter
 {
     /**
      * @param InputSourceEnum $source Where the value comes from: the query string or the posted form data

@@ -9,11 +9,16 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
-class LanguageCollection
+use LogicException;
+
+final class LanguageCollection
 {
-    /** @var Language[] */
+    /** @var list<Language> */
     public private(set) array $languages = [];
 
+    /**
+     * @param list<Language> $languages
+     */
     public function __construct(array $languages = [])
     {
         foreach ($languages as $language) {
@@ -33,12 +38,19 @@ class LanguageCollection
 
     public function getLanguageByCode(string $languageCode): ?Language
     {
-        return array_find($this->languages, fn($language) => $language->code === $languageCode);
+        return array_find(
+            array: $this->languages,
+            callback: fn(Language $language): bool => $language->code === $languageCode,
+        );
     }
 
+    /**
+     * @throws LogicException if the collection is empty (check `isEmpty()` first)
+     */
     public function getFirstLanguage(): Language
     {
-        return current(array: $this->languages);
+        return array_first(array: $this->languages)
+            ?? throw new LogicException(message: 'The language collection is empty, there is no first language');
     }
 
     public function isMultiLang(): bool

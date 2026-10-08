@@ -13,10 +13,9 @@ use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use PHPUnit\Framework\TestCase;
-use ReflectionProperty;
 
 /**
- * Not covered: the 304 response itself (it sends the headers and exits); `isNotModified()` is its decision.
+ * Not covered: sending the response (`sendAndExit()` prints and exits); `isNotModified()` is the 304 decision.
  */
 final class HttpResponseConditionalRequestTest extends TestCase
 {
@@ -104,11 +103,9 @@ final class HttpResponseConditionalRequestTest extends TestCase
             httpRequest: $httpRequest,
         );
 
-        $property = new ReflectionProperty(class: HttpResponse::class, property: 'headers');
-        $headers = $property->getValue(object: $httpResponse);
-        $this->assertIsArray($headers);
+        $headers = $httpResponse->listHeaders();
         $this->assertArrayHasKey('Etag', $headers);
-        $this->assertIsString($headers['Etag']);
-        $this->assertSame(32, strlen(string: $headers['Etag']));
+        $this->assertSame(64, strlen(string: $headers['Etag']));
+        $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $httpResponse->httpStatusCode);
     }
 }

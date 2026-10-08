@@ -11,13 +11,13 @@ namespace actra\yuf\core;
 
 use LogicException;
 
-class InputParameterCollection
+final class InputParameterCollection
 {
-    /** @var InputParameter[] */
+    /** @var array<string, InputParameter> */
     private array $allParameters = [];
-    /** @var InputParameter[] */
+    /** @var array<string, InputParameter> */
     private array $requiredParameters = [];
-    /** @var InputParameter[] */
+    /** @var array<string, InputParameter> */
     private array $optionalParameters = [];
 
     public function add(InputParameter $inputParameter): void
@@ -35,7 +35,7 @@ class InputParameterCollection
     }
 
     /**
-     * @return InputParameter[]
+     * @return array<string, InputParameter>
      */
     public function listAllParameters(): array
     {
@@ -43,7 +43,7 @@ class InputParameterCollection
     }
 
     /**
-     * @return InputParameter[]
+     * @return array<string, InputParameter>
      */
     public function listRequiredParameters(): array
     {
@@ -51,7 +51,7 @@ class InputParameterCollection
     }
 
     /**
-     * @return InputParameter[]
+     * @return array<string, InputParameter>
      */
     public function listOptionalParameters(): array
     {

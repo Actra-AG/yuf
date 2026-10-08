@@ -12,9 +12,10 @@ namespace actra\yuf\tests\Unit\core;
 use actra\yuf\core\Language;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\LocaleHandler;
-use Exception;
 use LogicException;
+use OutOfBoundsException;
 use PHPUnit\Framework\TestCase;
+use UnexpectedValueException;
 
 /**
  * Not covered: applySystemLocale() with a language (it calls setlocale() for the whole process).
@@ -108,10 +109,27 @@ final class LocaleHandlerTest extends TestCase
 
     public function testGetTextThrowsForMissingKey(): void
     {
-        $this->expectException(Exception::class);
+        $this->expectException(OutOfBoundsException::class);
         $this->expectExceptionMessageIs('Missing language fragment for missing');
 
         $this->createHandler()->getText(key: 'missing');
+    }
+
+    public function testLoadLanguageFileRejectsATextThatIsNoString(): void
+    {
+        $file = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-locale-' . bin2hex(string: random_bytes(length: 8))
+            . '.lang.php';
+        file_put_contents(filename: $file, data: "<?php\n\$txt = ['count' => 5];\n");
+
+        try {
+            $this->expectException(UnexpectedValueException::class);
+            $this->expectExceptionMessageIs(
+                'The text "count" of the language file ' . $file . ' must be a string, int given.',
+            );
+            $this->createHandler()->loadLanguageFile(filePath: $file);
+        } finally {
+            unlink(filename: $file);
+        }
     }
 
     public function testGetAllTextReturnsAllLoadedTexts(): void

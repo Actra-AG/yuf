@@ -33,7 +33,10 @@ final class ViewMapTest extends TestCase
 
     public function testUnknownFileTitleReturnsNull(): void
     {
-        $map = new ViewMap()->add(fileTitle: 'index', create: fn(ViewContext $context): TestView => new TestView(context: $context));
+        $map = new ViewMap()->add(
+            fileTitle: 'index',
+            create: fn(ViewContext $context): TestView => new TestView(context: $context),
+        );
 
         $this->assertNull($map->createView(context: $this->createContext(fileTitle: 'other')));
     }
@@ -82,7 +85,10 @@ final class ViewMapTest extends TestCase
 
     public function testDuplicateRegistrationThrows(): void
     {
-        $map = new ViewMap()->add(fileTitle: 'index', create: fn(ViewContext $context): TestView => new TestView(context: $context));
+        $map = new ViewMap()->add(
+            fileTitle: 'index',
+            create: fn(ViewContext $context): TestView => new TestView(context: $context),
+        );
 
         $this->expectException(LogicException::class);
         $this->expectExceptionMessageIs('A view for the file title "index" has already been added.');
@@ -98,8 +104,14 @@ final class ViewMapTest extends TestCase
         );
 
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessageIs('A view for the file title "edit" in the file group "user" has already been added.');
-        $map->add(fileTitle: 'edit', create: fn(ViewContext $context): TestView => new TestView(context: $context), fileGroup: 'user');
+        $this->expectExceptionMessageIs(
+            'A view for the file title "edit" in the file group "user" has already been added.',
+        );
+        $map->add(
+            fileTitle: 'edit',
+            create: fn(ViewContext $context): TestView => new TestView(context: $context),
+            fileGroup: 'user',
+        );
     }
 
     public function testClosureReceivesTheContextAndIsLazy(): void

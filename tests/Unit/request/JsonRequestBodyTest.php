@@ -11,6 +11,7 @@ namespace actra\yuf\tests\Unit\request;
 
 use actra\yuf\request\JsonRequestBody;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
@@ -33,6 +34,25 @@ final class JsonRequestBodyTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageIs('JSON error: Syntax error');
         JsonRequestBody::fromString(json: '{"a":');
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function noObjectProvider(): iterable
+    {
+        yield 'list' => ['[1, 2]', 'array'];
+        yield 'string' => ['"text"', 'string'];
+        yield 'number' => ['5', 'int'];
+        yield 'null' => ['null', 'null'];
+    }
+
+    #[DataProvider('noObjectProvider')]
+    public function testJsonThatIsNoObjectThrows(string $json, string $type): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageIs('JSON error: the request body must be a JSON object, ' . $type . ' given');
+        JsonRequestBody::fromString(json: $json);
     }
 
     public function testRequiredString(): void

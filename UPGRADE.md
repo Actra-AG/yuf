@@ -4,6 +4,164 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.31.0] – 2026-10-08
+
+Area release for `Core`, `src/core/`, `src/request/` and `src/response/`: typed environment settings, an interface for
+the logger, no secrets in the error log, `final` classes, strict types instead of `mixed` and `false`. Search your
+project for `Core::config(`, `new Logger(`, `ErrorHandler::register`, `extends` of the classes in the list below,
+`HttpResponseContent`, `getFirstRoute`, `getFirstLanguage` and for code that reads the error log.
+
+### ⚠️ `Core::config()` is removed, the environment settings are typed
+
+`Core` reads `.env.php` into an `EnvironmentSettings` object, available as `$core->environmentSettings`
+(`public readonly`). The six keys `Core` needs (`defaultErrorReporting` int, `defaultTimeZone` string,
+`allowedDomains` list of strings, `logEmailRecipient` string, `debug` bool, `robots` string) are checked once at the
+start: a missing key or a wrong type throws an `UnexpectedValueException` naming the key (before: `TypeError` or a PHP
+warning later). The own keys of a project (used as given, e.g. the flat key `'mailer.hostname'`) are read with the typed
+getters `getString()`, `getInt()`, `getBool()` and `getStringList()`; they throw an `UnexpectedValueException` naming
+the key and the expected type for a missing key or a wrong type, `has()` tells if a key exists. The static
+`Core::config(key)` and `Core::$config` (`mixed`) are gone.
+
+Before:
+
+```php
+final class EnvSettings
+{
+    public static function getMailerHostname(): string
+    {
+        return Core::config(key: 'mailer.hostname');
+    }
+}
+```
+
+After (the project passes `$core->environmentSettings` to its settings class; no static access):
+
+```php
+final readonly class EnvSettings
+{
+    public function __construct(private EnvironmentSettings $environmentSettings) {}
+
+    public function getMailerHostname(): string
+    {
+        return $this->environmentSettings->getString(key: 'mailer.hostname');
+    }
+}
+```
+
+Also: `Core` is `final` and registers the autoloader for the yuf classes before it reads the environment file (the
+autoloader path of the application follows once the directories exist); the directories are created with a check
+(`RuntimeException` if one cannot be created); a missing `$_SERVER['DOCUMENT_ROOT']` is an `UnexpectedValueException`;
+`Core::$cspPolicySettings` is `public private(set)` (read access unchanged).
+
+### ⚠️ `Logger` is an interface, `FileLogger` writes the files
+
+Before:
+
+```php
+use actra\yuf\core\Logger;
+
+$logger = new Logger(logEmailRecipient: '', logDirectory: $dir, httpRequest: $core->httpRequest);
+$core->prepareHttpResponse(logger: $logger, routeCollection: $routes);
+```
+
+After:
+
+```php
+use actra\yuf\core\FileLogger;
+
+$logger = new FileLogger(logEmailRecipient: '', logDirectory: $dir, httpRequest: $core->httpRequest);
+$core->prepareHttpResponse(logger: $logger, routeCollection: $routes);
+```
+
+`Logger` has `logException()` and `logMessage()`: implement it for another destination (tests use
+`RecordingLogger`). `lastIssueIsNew()` stays on `FileLogger`. New optional constructor argument `maxLogSize:` (default
+10 MB, `0` for no limit). A missing log directory throws an `InvalidArgumentException` (was `Exception`); the
+directory may be given without trailing separator.
+
+### ⚠️ The error log contains no secrets
+
+The entry of an issue no longer dumps `$_SERVER`, `$_GET`, `$_POST`, `$_FILES` and `$_COOKIE`. It contains:
+
+- the request line (method and path, **without query string**), host, IP address, user agent and referrer (without
+  query string and fragment); control characters are replaced by `?`;
+- these server variables only (allow-list): `REQUEST_METHOD`, `SERVER_PROTOCOL`, `HTTPS`, `HTTP_HOST`, `SERVER_NAME`,
+  `SERVER_PORT`, `REMOTE_ADDR`, `HTTP_USER_AGENT`, `HTTP_ACCEPT_LANGUAGE`, `CONTENT_TYPE`, `CONTENT_LENGTH`,
+  `SCRIPT_NAME` (not `REQUEST_URI`, `QUERY_STRING`, `HTTP_COOKIE`, `HTTP_AUTHORIZATION` or the environment of the
+  server);
+- the query and post parameters; the value of a parameter whose name contains `password`, `token`, `secret`, `csrf`,
+  `key` or `auth` (case-insensitive, at any depth, an array as a whole) is replaced by `***`;
+- the uploaded files (name, type, size, error code; no temporary path);
+- the names of the cookies, never their values (session ID).
+
+Tools that parse the log (`$_SERVER = Array`, `$_COOKIE = Array`) have to be adapted: the sections are now called
+`Server variables (allow-list):`, `Query parameters (secrets masked) =`, `Post parameters (secrets masked) =`,
+`Uploaded files =` and `Cookie names =`. The debug page (debug mode) is unchanged.
+
+### ⚠️ `ErrorHandler::register()` is an instance method
+
+`ErrorHandler` is `final` and `@internal`; the static registration guard is gone (`Core` registers it once).
+
+Before: `ErrorHandler::register();` After: `new ErrorHandler()->register();`
+
+### ⚠️ `final` classes and extension points
+
+`final`: `Core`, `ContentHandler`, `ContentType`, `MimeType`, `Language`, `LanguageCollection`, `LocaleHandler`, `Route`,
+`RouteCollection`, `RequestHandler`, `HttpResponse`, `InputParameter`, `InputParameterCollection`, `JsonRequestBody`,
+`ErrorHandler`, `HttpErrorResponseContent`, `HttpSuccessResponseContent`. A project that extends one of them composes
+instead (nothing in `actra/backend` extends them). The extension points stay: `BaseView` (abstract), the interfaces
+`ViewFactory` and `Logger`. `ContentType`, `MimeType`, `Language`, `Route`, `InputParameter` and `JsonRequestBody` are
+`readonly`.
+
+`HttpResponseContent` is a `final readonly` class with a public constructor (`new HttpResponseContent(content:)`);
+`HttpErrorResponseContent` and `HttpSuccessResponseContent` no longer extend it, they only provide the static factories
+that return it (so code that type-hints `HttpResponseContent` keeps working).
+
+The type constants of `ContentType` (`HTML`, `JSON`, …) and `MimeType` stay constants: `ContentType::$type` is any file
+extension (`pdf`, `zip`, …) and `MimeType::$value` any of about 600 MIME types, so they are no fixed sets.
+
+### ⚠️ Changed exceptions and signatures
+
+| Before | After |
+|:-------|:------|
+| `RouteCollection::getFirstRoute()` on an empty collection: `TypeError` (`false`) | `LogicException` |
+| `LanguageCollection::getFirstLanguage()` on an empty collection: `TypeError` | `LogicException` |
+| `LocaleHandler::getText()` for a missing key: `Exception` | `OutOfBoundsException` (message unchanged) |
+| language file with a text that is no string | `UnexpectedValueException` when the file is loaded |
+| `LocaleHandler::getText(replacements:)` untyped | `array<string, string>` |
+| `ContentHandler::setContentType()` for a type without charset: `Exception` | `InvalidArgumentException` |
+| `JsonRequestBody::fromString()` for JSON that is no object (`[1]`, `"x"`, `null`): `TypeError` | `InvalidArgumentException` |
+| `JsonRequestBody::getOptionalArray()`, `getRequiredArray()` | documented as `list<mixed>` |
+| `HttpResponse::createHtmlResponse()` with a policy and `nonce: null`: `TypeError` | `LogicException` |
+| `RequestHandler::$language` public, writable | `public private(set)` |
+| `RequestHandler::$defaultRoutesByLanguage` `?RouteCollection` | `RouteCollection` (never `null`): `?->` becomes `->` |
+| request of "/" without any default route: `Error` | `LogicException` ("set `isDefaultForLanguage: true` on a route…") |
+| `BaseView::setContentByXmlObject()` with an XML object that cannot be converted: `TypeError` | `LogicException` |
+| `HttpResponse::createResponseFromFilePath()` for a file whose time or size cannot be read | `RuntimeException` |
+
+New: `FileLogger`, `EnvironmentSettings`, `RequestHandler::findRouteForRootRequest()` (the route that "/" is redirected
+to), `HttpResponse::getHeader()`, `listHeaders()` and the public property `httpStatusCode`, an optional `clock:`
+(`Clock`) of the three `HttpResponse::create…()` factories (Last-Modified and Expires).
+
+### ⚠️ `HttpResponse`: a 304 is sent by `sendAndExit()`
+
+Before, the factories (`createHtmlResponse()`, `createResponseFromString()`, `createResponseFromFilePath()`) sent a 304
+response and ended the script from inside the constructor when the request had the current version
+(`If-None-Match`, `If-Modified-Since`). Now the response has the status 304 (and no content headers) and
+`sendAndExit()` sends it without a body (before: the body was sent, too). Code that creates a response and does more work
+before `sendAndExit()` now runs that work for a 304, too.
+
+### Bug fixes (no code change needed)
+
+- `HttpResponse::createResponseFromFilePath()` answers a missing file with 404 (was 403).
+- The ETag of the responses is a SHA-256 hash instead of MD5 (clients load the content once more).
+- `Route::loadLocalizedText()` of a route without language does nothing (was a PHP error).
+- HTML responses send `Content-Language` of the request language (`RequestHandler::$language`), or no such header
+  without a language. `ContentType::createHtml()` hard-coded `de` before; it has an optional `languageCode:` now (default
+  `null`), and `HttpResponse::createHtmlResponse()` an optional `languageCode:`.
+- `FileLogger` rotates a ticket file of the maximum size to the next free `<file>.<number>` without errors for
+  unreadable directories (`RuntimeException`) and no longer compares numbers as strings.
+- `LocaleHandler::loadLanguageFile()` of an unreadable file throws a `RuntimeException`.
+
 ## [v4.30.0] – 2026-10-08
 
 The session is an object now: `Core` creates one `Session` per request and passes it explicitly to everything that needs

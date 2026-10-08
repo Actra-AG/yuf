@@ -26,6 +26,10 @@ use LogicException;
 use stdClass;
 use Throwable;
 
+/**
+ * Extension point: every view of a project extends it (abstract; the constructor is protected, a view passes its
+ * view group, IP whitelist, access rights and input parameters).
+ */
 abstract class BaseView
 {
     /**
@@ -217,7 +221,11 @@ abstract class BaseView
 
     protected function setContentByXmlObject(SimpleXmlExtended $xmlObject): void
     {
-        $this->setContent(contentString: $xmlObject->asXML());
+        $xml = $xmlObject->asXML();
+        if ($xml === false) {
+            throw new LogicException(message: 'The XML object cannot be converted to a string');
+        }
+        $this->setContent(contentString: $xml);
     }
 
     protected function setContentByJsonObject(stdClass $jsonObject): void

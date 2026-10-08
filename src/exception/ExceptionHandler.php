@@ -245,6 +245,7 @@ class ExceptionHandler
             cspPolicySettings: $this->getContext()->cspPolicySettings,
             nonce: $this->getContext()->cspNonce->value,
             httpRequest: $this->getContext()->httpRequest,
+            languageCode: $this->requestHandler?->language?->code,
         );
         $httpResponse->sendAndExit();
     }
@@ -328,7 +329,7 @@ class ExceptionHandler
         }
         $localeHandler = new LocaleHandler(language: $language, availableLanguages: $core->availableLanguages);
         $localeHandler->applySystemLocale();
-        $defaultRouteForLanguage = $requestHandler->defaultRoutesByLanguage?->getRouteForLanguage(
+        $defaultRouteForLanguage = $requestHandler->defaultRoutesByLanguage->getRouteForLanguage(
             languageCode: $language->code,
         );
         $defaultRouteForLanguage?->loadLocalizedText(fileTitle: '', localeHandler: $localeHandler);

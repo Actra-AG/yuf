@@ -27,7 +27,8 @@ use PHPUnit\Framework\TestCase;
  * language and kept in the data of the session handler (`yuf.handler.preferredLanguage`), so it survives
  * `Session::clearUserData()`.
  *
- * Not covered: the redirect of "/" to the route of the preferred language (`HttpResponse::redirectAndExit()` exits).
+ * The redirect of "/" itself (`HttpResponse::redirectAndExit()` exits) is not covered; the route it redirects to is
+ * decided by `RequestHandler::findRouteForRootRequest()` (see `RequestHandlerRootRequestTest`).
  */
 final class RequestHandlerPreferredLanguageTest extends TestCase
 {

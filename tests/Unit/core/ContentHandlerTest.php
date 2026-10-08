@@ -13,7 +13,7 @@ use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\security\CspNonce;
-use Exception;
+use InvalidArgumentException;
 use LogicException;
 use PHPUnit\Framework\TestCase;
 
@@ -87,7 +87,11 @@ final class ContentHandlerTest extends TestCase
     {
         $handler = new ContentHandler(contentType: ContentType::createHtml(), cspNonce: CspNonce::create());
 
-        $this->expectException(Exception::class);
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageIs(
+            'The content type "zzz" has no charset and cannot be set as content type of the response; use a content'
+            . ' type with a charset, e.g. ContentType::createJson().',
+        );
         $handler->setContentType(contentType: ContentType::createFromFileExtension(extension: 'zzz'));
     }
 

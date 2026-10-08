@@ -9,13 +9,17 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
-use Exception;
 use LogicException;
+use OutOfBoundsException;
+use RuntimeException;
+use UnexpectedValueException;
 
-class LocaleHandler
+final class LocaleHandler
 {
     public readonly ?Language $language;
+    /** @var list<string> */
     public private(set) array $loadedLangFiles = [];
+    /** @var array<string, string> */
     private array $languageBlocks = [];
 
     /**
@@ -49,6 +53,12 @@ class LocaleHandler
         setlocale(category: LC_NUMERIC, locales: 'en_US');
     }
 
+    /**
+     * Loads the texts of a language file (`$txt['key'] = 'text';`) once; an empty file is ignored.
+     *
+     * @throws RuntimeException if the file size cannot be read
+     * @throws UnexpectedValueException if the file defines a text that is not a string
+     */
     public function loadLanguageFile(string $filePath): void
     {
         if (in_array(
@@ -58,8 +68,11 @@ class LocaleHandler
         )) {
             return;
         }
-
-        if ((int) filesize(filename: $filePath) === 0) {
+        $fileSize = filesize(filename: $filePath);
+        if ($fileSize === false) {
+            throw new RuntimeException(message: 'Cannot read the size of the language file ' . $filePath);
+        }
+        if ($fileSize === 0) {
             return;
         }
         $this->parseLanguageFile(filePath: $filePath);
@@ -68,33 +81,48 @@ class LocaleHandler
 
     private function parseLanguageFile(string $filePath): void
     {
+        /** @var array<array-key, mixed> $txt */
         $txt = [];
         require $filePath;
 
-        foreach ($txt as $key => $val) {
-            $this->languageBlocks[$key] = $val;
+        foreach ($txt as $key => $text) {
+            if (!is_string(value: $text)) {
+                throw new UnexpectedValueException(
+                    message: 'The text "' . $key . '" of the language file ' . $filePath . ' must be a string, '
+                        . get_debug_type(value: $text) . ' given.',
+                );
+            }
+            $this->languageBlocks[(string) $key] = $text;
         }
     }
 
+    /**
+     * @param array<string, string> $replacements Value by placeholder name: `[NAME]` in the text (case-insensitive)
+     *
+     * @throws OutOfBoundsException if the file groups loaded so far have no text for the key
+     */
     public function getText(string $key, array $replacements = []): string
     {
         if (!array_key_exists(key: $key, array: $this->languageBlocks)) {
-            throw new Exception(message: 'Missing language fragment for ' . $key);
+            throw new OutOfBoundsException(message: 'Missing language fragment for ' . $key);
         }
         $block = $this->languageBlocks[$key];
-        if (count(value: $replacements) > 0) {
-            $search = [];
-            $replace = [];
-            foreach ($replacements as $k => $v) {
-                $search[] = '[' . strtoupper(string: $k) . ']';
-                $replace[] = $v;
-            }
-            $block = str_ireplace(search: $search, replace: $replace, subject: $block);
+        if ($replacements === []) {
+            return $block;
+        }
+        $search = [];
+        $replace = [];
+        foreach ($replacements as $name => $value) {
+            $search[] = '[' . strtoupper(string: $name) . ']';
+            $replace[] = $value;
         }
 
-        return $block;
+        return str_ireplace(search: $search, replace: $replace, subject: $block);
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function getAllText(): array
     {
         return $this->languageBlocks;

@@ -11,13 +11,14 @@ namespace actra\yuf\core;
 
 use LogicException;
 
-class RouteCollection
+final class RouteCollection
 {
-    /**
-     * @var Route[]
-     */
+    /** @var list<Route> */
     public private(set) array $routes = [];
 
+    /**
+     * @param list<Route> $routes
+     */
     public function __construct(array $routes = [])
     {
         foreach ($routes as $item) {
@@ -38,16 +39,23 @@ class RouteCollection
 
     public function hasRoutes(): bool
     {
-        return (count(value: $this->routes) > 0);
+        return $this->routes !== [];
     }
 
     public function getRouteForLanguage(string $languageCode): ?Route
     {
-        return array_find($this->routes, fn($route) => $route->language->code === $languageCode);
+        return array_find(
+            array: $this->routes,
+            callback: fn(Route $route): bool => $route->language?->code === $languageCode,
+        );
     }
 
+    /**
+     * @throws LogicException if the collection has no routes (check `hasRoutes()` first)
+     */
     public function getFirstRoute(): Route
     {
-        return current(array: $this->routes);
+        return array_first(array: $this->routes)
+            ?? throw new LogicException(message: 'The route collection is empty, there is no first route');
     }
 }

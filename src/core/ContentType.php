@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
-class ContentType
+final readonly class ContentType
 {
     public const string HTML = 'html';
     public const string JSON = 'json';
@@ -23,12 +23,16 @@ class ContentType
     public const string PNG = 'png';
     public const string MOV = 'mov';
 
+    /**
+     * @param string $type The file extension of the content (`html`, `json`, `pdf`, …): not a fixed set, so no enum;
+     *                     the constants name the types yuf knows
+     */
     public function __construct(
-        public readonly string   $type,
-        public readonly MimeType $mimeType,
-        public readonly bool     $forceDownloadByDefault,
-        public readonly ?string  $charset,
-        public readonly ?string  $languageCode,
+        public string $type,
+        public MimeType $mimeType,
+        public bool $forceDownloadByDefault,
+        public ?string $charset,
+        public ?string $languageCode,
     ) {}
 
     public static function createFromFileExtension(string $extension): ContentType
@@ -46,14 +50,17 @@ class ContentType
         };
     }
 
-    public static function createHtml(): ContentType
+    /**
+     * @param ?string $languageCode Sent as `Content-Language`; none without a language
+     */
+    public static function createHtml(?string $languageCode = null): ContentType
     {
         return new ContentType(
             type: ContentType::HTML,
             mimeType: MimeType::createHtml(),
             forceDownloadByDefault: false,
             charset: 'utf-8',
-            languageCode: 'de',
+            languageCode: $languageCode,
         );
     }
 

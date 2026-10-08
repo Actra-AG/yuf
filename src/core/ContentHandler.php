@@ -15,10 +15,10 @@ use actra\yuf\exception\NotFoundException;
 use actra\yuf\html\HtmlDocument;
 use actra\yuf\security\CspNonce;
 use actra\yuf\template\TemplateEngine;
-use Exception;
+use InvalidArgumentException;
 use LogicException;
 
-class ContentHandler
+final class ContentHandler
 {
     public HttpStatusCodeEnum $httpStatusCode = HttpStatusCodeEnum::HTTP_OK;
     public private(set) bool $suppressCspHeader = false;
@@ -45,7 +45,9 @@ class ContentHandler
     {
         if ($this->htmlDocument === null) {
             if ($this->requestHandler === null || $this->core === null || $this->templateEngine === null) {
-                throw new LogicException(message: 'The HTML document is only available while the request is processed.');
+                throw new LogicException(
+                    message: 'The HTML document is only available while the request is processed.',
+                );
             }
             $this->htmlDocument = new HtmlDocument(
                 requestHandler: $this->requestHandler,
@@ -78,7 +80,7 @@ class ContentHandler
         $this->templateEngine = $templateEngine;
         $route = $requestHandler->route;
         if ($route->viewCallback !== null) {
-            $this->setContent(contentString: call_user_func(callback: $route->viewCallback));
+            $this->setContent(contentString: ($route->viewCallback)());
             return;
         }
         ob_start();
@@ -120,7 +122,11 @@ class ContentHandler
         ) {
             $this->setContent(contentString: $this->getHtmlDocument()->render());
         }
-        $outputBufferContents = trim(string: ob_get_clean());
+        $outputBuffer = ob_get_clean();
+        if ($outputBuffer === false) {
+            throw new LogicException(message: 'The output buffer of the view was closed by the view.');
+        }
+        $outputBufferContents = trim(string: $outputBuffer);
         if ($outputBufferContents !== '') {
             $this->setContent(contentString: $outputBufferContents);
         }
@@ -136,10 +142,17 @@ class ContentHandler
         return $this->contentType;
     }
 
+    /**
+     * @throws InvalidArgumentException if the content type has no charset (only text types can be the content type of
+     *                                  a response of a view)
+     */
     public function setContentType(ContentType $contentType): void
     {
         if ($contentType->charset === null) {
-            throw new Exception(message: 'Unknown contentType: ' . $contentType->type);
+            throw new InvalidArgumentException(
+                message: 'The content type "' . $contentType->type . '" has no charset and cannot be set as content'
+                    . ' type of the response; use a content type with a charset, e.g. ContentType::createJson().',
+            );
         }
         $this->contentType = $contentType;
     }

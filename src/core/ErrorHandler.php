@@ -10,22 +10,24 @@ declare(strict_types=1);
 namespace actra\yuf\core;
 
 use actra\yuf\exception\PhpException;
-use LogicException;
 
-class ErrorHandler
+/**
+ * Turns every PHP error (warning, notice, deprecation, …) into a `PhpException`. Registered once by `Core`, which
+ * guards against a second registration.
+ *
+ * @internal
+ */
+final class ErrorHandler
 {
-    private static ?ErrorHandler $registeredInstance = null;
-
-    public static function register(): void
+    public function register(): void
     {
-        if (ErrorHandler::$registeredInstance !== null) {
-            throw new LogicException(message: 'ErrorHandler is already registered.');
-        }
-        ErrorHandler::$registeredInstance = new ErrorHandler();
-        set_error_handler(callback: [ErrorHandler::$registeredInstance, 'handlePhpError']);
+        set_error_handler(callback: $this->handlePhpError(...));
     }
 
-    public function handlePhpError(int $errorCode, string $errorMessage, string $errorFile, int $errorLine): bool
+    /**
+     * @throws PhpException always
+     */
+    public function handlePhpError(int $errorCode, string $errorMessage, string $errorFile, int $errorLine): never
     {
         throw new PhpException(message: $errorMessage, code: $errorCode, file: $errorFile, line: $errorLine);
     }

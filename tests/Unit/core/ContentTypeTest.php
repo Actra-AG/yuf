@@ -43,4 +43,40 @@ final class ContentTypeTest extends TestCase
 
         $this->assertSame($expectedForceDownload, $contentType->forceDownloadByDefault);
     }
+
+    public function testHtmlHasCharsetAndNoLanguageByDefault(): void
+    {
+        $contentType = ContentType::createHtml();
+
+        $this->assertTrue($contentType->isHtml());
+        $this->assertSame('text/html; charset=utf-8', $contentType->getHttpHeaderString());
+        $this->assertNull($contentType->languageCode);
+    }
+
+    public function testHtmlKeepsTheGivenLanguage(): void
+    {
+        $this->assertSame('fr', ContentType::createHtml(languageCode: 'fr')->languageCode);
+    }
+
+    public function testJsonTxtAndCsvAreRecognized(): void
+    {
+        $this->assertTrue(ContentType::createJson()->isJson());
+        $this->assertTrue(ContentType::createTxt()->isTxt());
+        $this->assertTrue(ContentType::createCsv()->isCsv());
+        $this->assertFalse(ContentType::createJson()->isHtml());
+    }
+
+    public function testFileExtensionIsCaseInsensitiveAndTrimmed(): void
+    {
+        $this->assertSame(ContentType::JSON, ContentType::createFromFileExtension(extension: ' JSON ')->type);
+    }
+
+    public function testUnknownExtensionKeepsTheTypeAndHasNoCharset(): void
+    {
+        $contentType = ContentType::createFromFileExtension(extension: 'pdf');
+
+        $this->assertSame('pdf', $contentType->type);
+        $this->assertNull($contentType->charset);
+        $this->assertSame('application/pdf', $contentType->getHttpHeaderString());
+    }
 }

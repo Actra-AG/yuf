@@ -14,25 +14,24 @@ use Override;
 use Throwable;
 
 /**
- * A logger that records the logged exceptions instead of writing files or sending mails.
+ * A logger that records the logged exceptions and messages instead of writing files or sending mails.
  */
-final class RecordingLogger extends Logger
+final class RecordingLogger implements Logger
 {
     /** @var list<Throwable> */
     public array $loggedExceptions = [];
-
-    public function __construct()
-    {
-        parent::__construct(
-            logEmailRecipient: '',
-            logDirectory: sys_get_temp_dir(),
-            httpRequest: HttpRequestFactory::create(),
-        );
-    }
+    /** @var list<string> */
+    public array $loggedMessages = [];
 
     #[Override]
     public function logException(Throwable $throwable): void
     {
         $this->loggedExceptions[] = $throwable;
+    }
+
+    #[Override]
+    public function logMessage(string $message): void
+    {
+        $this->loggedMessages[] = $message;
     }
 }

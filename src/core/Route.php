@@ -12,30 +12,40 @@ namespace actra\yuf\core;
 use actra\yuf\Core;
 use Closure;
 
-class Route
+final readonly class Route
 {
-    public readonly ?string $viewDirectory;
+    public string $viewDirectory;
 
+    /**
+     * @param ?Closure(): string $viewCallback Returns the content of the response instead of a view class
+     */
     public function __construct(
-        public readonly string $path,
+        public string $path,
         string $viewDirectory,
-        public readonly ?Closure $viewCallback = null,
-        public readonly string $viewClassPrefix = Core::APP_CLASS_PREFIX,
-        public readonly string $viewGroup = '',
-        public readonly string $defaultFileName = '',
-        public readonly bool $isDefaultForLanguage = false,
-        public readonly ?ContentType $defaultContentType = null,
-        public readonly ?Language $language = null,
-        public readonly ?string $acceptedExtension = null,
-        public readonly ?string $forceFileGroup = null,
-        public readonly ?string $forceFileName = null,
-        public readonly ?ViewFactory $viewFactory = null,
+        public ?Closure $viewCallback = null,
+        public string $viewClassPrefix = Core::APP_CLASS_PREFIX,
+        public string $viewGroup = '',
+        public string $defaultFileName = '',
+        public bool $isDefaultForLanguage = false,
+        public ?ContentType $defaultContentType = null,
+        public ?Language $language = null,
+        public ?string $acceptedExtension = null,
+        public ?string $forceFileGroup = null,
+        public ?string $forceFileName = null,
+        public ?ViewFactory $viewFactory = null,
     ) {
         $this->viewDirectory = $viewDirectory . $viewGroup . '/';
     }
 
+    /**
+     * Loads the language files of the view directory for the language of the route (`global.lang.php` and the file of
+     * the requested file title). A route without language has no texts.
+     */
     public function loadLocalizedText(string $fileTitle, LocaleHandler $localeHandler): void
     {
+        if ($this->language === null) {
+            return;
+        }
         $dir = $this->viewDirectory . 'language' . DIRECTORY_SEPARATOR . $this->language->code . DIRECTORY_SEPARATOR;
         if (!is_dir(filename: $dir)) {
             return;

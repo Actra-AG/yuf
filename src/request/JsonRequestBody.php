@@ -12,16 +12,19 @@ namespace actra\yuf\request;
 use InvalidArgumentException;
 use stdClass;
 
-class JsonRequestBody
+/**
+ * The JSON object of a request body, read with typed getters (`getRequiredString()`, `getOptionalInteger()`, …).
+ */
+final readonly class JsonRequestBody
 {
     private function __construct(
-        public readonly stdClass $data,
+        public stdClass $data,
     ) {}
 
     /**
      * An empty string is an empty object.
      *
-     * @throws InvalidArgumentException if the string is not valid JSON
+     * @throws InvalidArgumentException if the string is not valid JSON or not a JSON object
      */
     public static function fromString(string $json): JsonRequestBody
     {
@@ -32,14 +35,29 @@ class JsonRequestBody
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new InvalidArgumentException(message: 'JSON error: ' . json_last_error_msg());
         }
+        if (!$data instanceof stdClass) {
+            throw new InvalidArgumentException(
+                message: 'JSON error: the request body must be a JSON object, ' . get_debug_type(value: $data)
+                    . ' given',
+            );
+        }
 
         return new JsonRequestBody(data: $data);
     }
 
-    private function getValue(string $keyName): int|float|string|array|null
+    /**
+     * @return string|int|float|bool|stdClass|list<mixed>|null
+     */
+    private function getValue(string $keyName): string|int|float|bool|stdClass|array|null
     {
         $data = $this->data;
-        return property_exists(object_or_class: $data, property: $keyName) ? $data->{$keyName} : null;
+        if (!property_exists(object_or_class: $data, property: $keyName)) {
+            return null;
+        }
+        /** @var string|int|float|bool|stdClass|list<mixed>|null $value */
+        $value = $data->{$keyName};
+
+        return $value;
     }
 
     public function getRequiredString(string $keyName): string
@@ -110,6 +128,9 @@ class JsonRequestBody
         throw new InvalidArgumentException(message: 'Invalid JSON property (float): ' . $keyName);
     }
 
+    /**
+     * @return ?list<mixed>
+     */
     public function getOptionalArray(string $keyName): ?array
     {
         $value = $this->getValue(keyName: $keyName);
@@ -122,6 +143,9 @@ class JsonRequestBody
         throw new InvalidArgumentException(message: 'Invalid JSON property (array): ' . $keyName);
     }
 
+    /**
+     * @return list<mixed>
+     */
     public function getRequiredArray(string $keyName): array
     {
         $value = $this->getOptionalArray(keyName: $keyName);
@@ -130,5 +154,4 @@ class JsonRequestBody
         }
         return $value;
     }
-
 }

@@ -13,7 +13,11 @@ use actra\autoloader\Autoloader;
 use actra\autoloader\AutoloaderPath;
 use actra\yuf\clock\SystemClock;
 use actra\yuf\core\ContentHandler;
+use actra\yuf\core\ContentResponseFactory;
+use actra\yuf\core\DirectoryPathResolver;
+use actra\yuf\core\EnvironmentSettings;
 use actra\yuf\core\ErrorHandler;
+use actra\yuf\core\FileLogger;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
@@ -26,7 +30,6 @@ use actra\yuf\core\RouteCollection;
 use actra\yuf\core\UnsupportedRequestMethodException;
 use actra\yuf\exception\ExceptionHandler;
 use actra\yuf\exception\ExceptionHandlerContext;
-use actra\yuf\exception\NotFoundException;
 use actra\yuf\form\FormContext;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CspPolicySettings;
@@ -42,15 +45,24 @@ use actra\yuf\template\tag\TemplateTagCollection;
 use actra\yuf\template\TemplateEngine;
 use InvalidArgumentException;
 use LogicException;
+use RuntimeException;
+use UnexpectedValueException;
 
-class Core
+/**
+ * The application of a request: reads the environment settings, creates the directories, registers the autoloader and
+ * the error handler, creates the request and prepares the response. One per process (the autoloader and the error
+ * handler are global); the guard `$isInitialized` is the only static state.
+ */
+final class Core
 {
     public const string APP_CLASS_PREFIX = 'app';
     private static bool $isInitialized = false;
-    private static ?HttpResponse $httpResponse = null;
-    private static array $config;
+    private ?HttpResponse $httpResponse = null;
+    private readonly string $logEmailRecipient;
 
     public readonly string $documentRoot;
+    /** The typed settings of Core and, through its getters, the own keys of the project in `.env.php`. */
+    public readonly EnvironmentSettings $environmentSettings;
     /** The request of this process: create other requests only in tests. */
     public readonly HttpRequest $httpRequest;
     /**
@@ -78,7 +90,7 @@ class Core
     public readonly array $allowedDomains;
     public readonly LanguageCollection $availableLanguages;
     public readonly bool $debug;
-    public readonly ?CspPolicySettings $cspPolicySettings;
+    public private(set) ?CspPolicySettings $cspPolicySettings = null;
     public readonly string $robots;
     /** @var list<TemplateTag> */
     private array $templateTags = [];
@@ -100,14 +112,20 @@ class Core
             throw new LogicException(message: 'Core is already initialized');
         }
         Core::$isInitialized = true;
-        Core::$config = require_once $envFilePath;
-        error_reporting(error_level: Core::$config['defaultErrorReporting']);
-        date_default_timezone_set(timezoneId: Core::$config['defaultTimeZone']);
-        $this->documentRoot = str_replace(
-            search: DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR,
-            replace: DIRECTORY_SEPARATOR,
-            subject: $_SERVER['DOCUMENT_ROOT'] . DIRECTORY_SEPARATOR,
+        // The classes of yuf are needed for the settings and the directories, so they are registered first
+        require_once $autoloaderPath;
+        $autoloader = Autoloader::register();
+        $autoloader->addPath(
+            autoloaderPath: new AutoloaderPath(
+                path: __DIR__ . DIRECTORY_SEPARATOR,
+                prefix: 'actra\\yuf\\',
+            ),
         );
+        $environment = EnvironmentSettings::fromArray(values: Core::loadEnvironmentFile(path: $envFilePath));
+        $this->environmentSettings = $environment;
+        error_reporting(error_level: $environment->errorReporting);
+        date_default_timezone_set(timezoneId: $environment->timeZone);
+        $this->documentRoot = Core::readDocumentRoot();
         $this->frameworkDirectory = __DIR__ . DIRECTORY_SEPARATOR;
         $this->baseDirectory = $this->createIfNotExists(path: $baseDirectory);
         $this->appDirectory = $this->createIfNotExists(path: $appDirectory);
@@ -117,21 +135,13 @@ class Core
         $this->settingsDirectory = $this->createIfNotExists(path: $settingsDirectory);
         $this->snippetsDirectory = $this->createIfNotExists(path: $snippetsDirectory);
         $this->viewDirectory = $this->createIfNotExists(path: $viewDirectory);
-        require_once $autoloaderPath;
-        $autoloader = Autoloader::register();
-        $autoloader->addPath(
-            autoloaderPath: new AutoloaderPath(
-                path: __DIR__ . DIRECTORY_SEPARATOR,
-                prefix: 'actra\\yuf\\',
-            ),
-        );
         $autoloader->addPath(
             autoloaderPath: new AutoloaderPath(
                 path: $this->appDirectory,
                 prefix: Core::APP_CLASS_PREFIX . '\\',
             ),
         );
-        ErrorHandler::register();
+        new ErrorHandler()->register();
         try {
             $this->httpRequest = HttpRequest::fromGlobals();
         } catch (UnsupportedRequestMethodException) {
@@ -145,70 +155,62 @@ class Core
                 httpRequest: $this->httpRequest,
             );
         }
-        /** @var list<string> $allowedDomains */
-        $allowedDomains = Core::$config['allowedDomains'];
-        $this->allowedDomains = $allowedDomains;
+        $this->allowedDomains = $environment->allowedDomains;
         $this->availableLanguages = new LanguageCollection();
-        $this->debug = Core::$config['debug'];
-        $this->robots = Core::$config['robots'];
+        $this->debug = $environment->debug;
+        $this->robots = $environment->robots;
+        $this->logEmailRecipient = $environment->logEmailRecipient;
     }
 
-    private function createIfNotExists(string $path): string
+    /**
+     * @return array<array-key, mixed>
+     *
+     * @throws UnexpectedValueException if the file does not return an array (or was included before)
+     */
+    private static function loadEnvironmentFile(string $path): array
     {
-        $path = str_replace(
-            search: [
-                '{DOCUMENT_ROOT}',
-                '{BASE_DIRECTORY}',
-                '{APP_DIRECTORY}',
-                DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR,
-            ],
-            replace: [
-                $this->documentRoot,
-                $this->baseDirectory,
-                $this->appDirectory,
-                DIRECTORY_SEPARATOR,
-            ],
-            subject: $path,
-        );
-        $path = $this->getAbsolutePath(path: $path);
-        if (!str_ends_with(
-            haystack: $path,
-            needle: DIRECTORY_SEPARATOR,
-        )) {
-            $path .= DIRECTORY_SEPARATOR;
-        }
-        if (!file_exists(filename: $path)) {
-            mkdir(
-                directory: $path,
-                recursive: true,
+        $values = require_once $path;
+        if (!is_array(value: $values)) {
+            throw new UnexpectedValueException(
+                message: 'The environment file ' . $path . ' must return an array of settings, and must not be'
+                    . ' included before Core.',
             );
         }
 
-        return $path;
+        return $values;
     }
 
-    private function getAbsolutePath(string $path): string
+    private static function readDocumentRoot(): string
     {
-        $safe = [];
-        foreach (
-            explode(
-                separator: '/',
-                string: $path,
-            ) as $part
-        ) {
-            if ($part === '.' || $part === '') {
-                continue;
-            }
-            if ($part === '..') {
-                array_pop(array: $safe);
-            } else {
-                $safe[] = $part;
-            }
+        if (!array_key_exists(key: 'DOCUMENT_ROOT', array: $_SERVER) || !is_string(value: $_SERVER['DOCUMENT_ROOT'])) {
+            throw new UnexpectedValueException(
+                message: 'The server variable DOCUMENT_ROOT is not set: Core runs in a web request only.',
+            );
         }
-        return '/' . implode(
-            separator: '/',
-            array: $safe,
+
+        return str_replace(
+            search: DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR,
+            replace: DIRECTORY_SEPARATOR,
+            subject: $_SERVER['DOCUMENT_ROOT'] . DIRECTORY_SEPARATOR,
         );
+    }
+
+    /**
+     * @throws RuntimeException if the directory cannot be created
+     */
+    private function createIfNotExists(string $path): string
+    {
+        $path = DirectoryPathResolver::resolve(
+            path: $path,
+            documentRoot: $this->documentRoot,
+            baseDirectory: $this->baseDirectory,
+            appDirectory: $this->appDirectory,
+        );
+        if (!is_dir(filename: $path) && !mkdir(directory: $path, recursive: true) && !is_dir(filename: $path)) {
+            throw new RuntimeException(message: 'Cannot create the directory ' . $path);
+        }
+
+        return $path;
     }
 
     /**
@@ -225,16 +227,14 @@ class Core
         false|AbstractSessionHandler|null $individualSessionHandler = null,
         array $templateTags = [],
     ): HttpResponse {
-        if (Core::$httpResponse !== null) {
+        if ($this->httpResponse !== null) {
             throw new LogicException(message: 'The HttpResponse is already prepared');
         }
-        if ($logger === null) {
-            $logger = new Logger(
-                logEmailRecipient: Core::$config['logEmailRecipient'],
-                logDirectory: $this->logDirectory,
-                httpRequest: $this->httpRequest,
-            );
-        }
+        $logger ??= new FileLogger(
+            logEmailRecipient: $this->logEmailRecipient,
+            logDirectory: $this->logDirectory,
+            httpRequest: $this->httpRequest,
+        );
         $this->cspPolicySettings = $cspPolicySettings;
         // Checked before the exception handler exists: it needs the tags for the error pages, too
         $this->templateTags = $templateTags;
@@ -299,32 +299,13 @@ class Core
             core: $this,
             templateEngine: $templateEngine,
         );
-        if (!$contentHandler->hasContent()) {
-            throw new NotFoundException();
-        }
-        $content = $contentHandler->getContent();
-        $httpStatusCode = $contentHandler->httpStatusCode;
-        $contentType = $contentHandler->getContentType();
-        if ($contentType->isHtml()) {
-            return Core::$httpResponse = HttpResponse::createHtmlResponse(
-                httpStatusCode: $httpStatusCode,
-                htmlContent: $content,
-                cspPolicySettings: $contentHandler->suppressCspHeader ? null : $this->cspPolicySettings,
-                nonce: $cspNonce->value,
-                httpRequest: $this->httpRequest,
-            );
-        }
-        return Core::$httpResponse = HttpResponse::createResponseFromString(
-            httpStatusCode: $httpStatusCode,
-            contentString: $content,
-            contentType: $contentType,
+        $this->httpResponse = new ContentResponseFactory(
             httpRequest: $this->httpRequest,
-        );
-    }
+            cspPolicySettings: $this->cspPolicySettings,
+            language: $requestHandler->language,
+        )->create(contentHandler: $contentHandler);
 
-    public static function config(string $key): mixed
-    {
-        return Core::$config[$key];
+        return $this->httpResponse;
     }
 
     /**
