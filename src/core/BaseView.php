@@ -258,7 +258,7 @@ abstract class BaseView
             contentString: $httpSuccessResponseContent->content,
             contentType: $contentType,
             httpRequest: $this->context->httpRequest,
-        )->sendAndExit();
+        )->sendAndExit(responseSender: $this->context->responseSender);
     }
 
     protected function setErrorResponseContent(
@@ -294,7 +294,7 @@ abstract class BaseView
             contentString: $httpErrorResponseContent->content,
             contentType: $contentType,
             httpRequest: $this->context->httpRequest,
-        )->sendAndExit();
+        )->sendAndExit(responseSender: $this->context->responseSender);
     }
 
     protected function getJsonRequestBody(): JsonRequestBody

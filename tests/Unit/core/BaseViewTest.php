@@ -17,10 +17,12 @@ use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\InputParameter;
 use actra\yuf\core\InputParameterCollection;
 use actra\yuf\core\InputSourceEnum;
+use actra\yuf\core\ResponseSender;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\tests\Double\auth\TestAuthUser;
 use actra\yuf\tests\Double\core\ConfigurableTestView;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\core\RecordingResponseSender;
 use actra\yuf\tests\Double\core\ViewContextFactory;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -435,5 +437,50 @@ final class BaseViewTest extends TestCase
         $view = $this->createViewWithInput(source: InputSourceEnum::QUERY);
 
         $this->assertNull($view->callGetJsonRequestBody()->getOptionalString(keyName: 'id'));
+    }
+
+    public function testSuccessResponseIsSentThroughTheSenderOfTheContext(): void
+    {
+        $response = RecordingResponseSender::capture(
+            action: static fn(ResponseSender $sender) => new ConfigurableTestView(
+                context: ViewContextFactory::create(contentType: ContentType::createJson(), responseSender: $sender),
+            )->callSetSuccessResponseContent(sendAndExit: true),
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $response->httpStatusCode);
+        $this->assertStringContainsString('"success"', $response->getContentString() ?? '');
+    }
+
+    public function testErrorResponseIsSentThroughTheSenderOfTheContext(): void
+    {
+        $response = RecordingResponseSender::capture(
+            action: static fn(ResponseSender $sender) => new ConfigurableTestView(
+                context: ViewContextFactory::create(contentType: ContentType::createJson(), responseSender: $sender),
+            )->callSetErrorResponseContent(
+                errorMessage: 'Not good',
+                httpStatusCode: HttpStatusCodeEnum::HTTP_CONFLICT,
+                sendAndExit: true,
+            ),
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_CONFLICT, $response->httpStatusCode);
+        $this->assertStringContainsString('Not good', $response->getContentString() ?? '');
+    }
+
+    public function testInvalidJsonRequestBodyIsAnsweredThroughTheSender(): void
+    {
+        $response = RecordingResponseSender::capture(
+            action: static function (ResponseSender $sender): void {
+                new ConfigurableTestView(
+                    context: ViewContextFactory::create(
+                        httpRequest: HttpRequestFactory::create(body: '{not json'),
+                        contentType: ContentType::createJson(),
+                        responseSender: $sender,
+                    ),
+                )->callGetJsonRequestBody();
+            },
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_BAD_REQUEST, $response->httpStatusCode);
     }
 }

@@ -16,6 +16,7 @@ use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\Language;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\RequestHandler;
+use actra\yuf\core\ResponseSender;
 use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
 use actra\yuf\exception\ExceptionHandler;
@@ -31,6 +32,7 @@ use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\core\RecordingLogger;
+use actra\yuf\tests\Double\core\RecordingResponseSender;
 use actra\yuf\tests\Double\exception\ContextExposingExceptionHandler;
 use actra\yuf\tests\Double\exception\ExceptionHandlerContextFactory;
 use actra\yuf\tests\Double\exception\TeapotExceptionHandler;
@@ -43,10 +45,9 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 /**
- * `register()` sets the global exception handler of PHP, which each test restores. `handleException()` itself is not
- * covered, because it only sends the response of `createResponse()` and ends the script
- * (`HttpResponse::sendAndExit()`).
- * What is sent is covered through `createResponse()`.
+ * `register()` sets the global exception handler of PHP, which each test restores. `handleException()` sends the
+ * response of `createResponse()` through the sender of the context (a recording double); what is sent is covered
+ * through `createResponse()`.
  */
 final class ExceptionHandlerTest extends TestCase
 {
@@ -80,6 +81,7 @@ final class ExceptionHandlerTest extends TestCase
         ?CspPolicySettings $cspPolicySettings = new CspPolicySettings(),
         ?string $errorDocsDirectory = null,
         LanguageCollection $availableLanguages = new LanguageCollection(),
+        ?ResponseSender $responseSender = null,
     ): ExceptionHandlerContext {
         return ExceptionHandlerContextFactory::create(
             logger: $this->logger,
@@ -92,6 +94,7 @@ final class ExceptionHandlerTest extends TestCase
             ),
             errorDocsDirectory: $errorDocsDirectory,
             availableLanguages: $availableLanguages,
+            responseSender: $responseSender,
         );
     }
 
@@ -325,6 +328,20 @@ final class ExceptionHandlerTest extends TestCase
             allowedDomains: ['example.com'],
             session: null,
         );
+    }
+
+    public function testHandleExceptionSendsTheResponseThroughTheSenderOfTheContext(): void
+    {
+        $sentResponse = RecordingResponseSender::capture(
+            action: function (ResponseSender $sender): void {
+                $this->register(context: $this->createContext(responseSender: $sender))->handleException(
+                    throwable: new NotFoundException(message: 'Invoice 42 is missing'),
+                );
+            },
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $sentResponse->httpStatusCode);
+        $this->assertStringContainsString('<h1>Not found page</h1>', self::content(response: $sentResponse));
     }
 
     // Production: HTML

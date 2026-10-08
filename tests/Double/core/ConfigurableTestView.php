@@ -89,18 +89,20 @@ final class ConfigurableTestView extends BaseView
         HttpStatusCodeEnum $httpStatusCode = HttpStatusCodeEnum::HTTP_BAD_REQUEST,
         int|string|null $errorCode = null,
         ?stdClass $data = null,
+        bool $sendAndExit = false,
     ): void {
         $this->setErrorResponseContent(
             errorMessage: $errorMessage,
             httpStatusCode: $httpStatusCode,
             errorCode: $errorCode,
             data: $data,
+            sendAndExit: $sendAndExit,
         );
     }
 
-    public function callSetSuccessResponseContent(stdClass $data = new stdClass()): void
+    public function callSetSuccessResponseContent(stdClass $data = new stdClass(), bool $sendAndExit = false): void
     {
-        $this->setSuccessResponseContent(data: $data);
+        $this->setSuccessResponseContent(data: $data, sendAndExit: $sendAndExit);
     }
 
     public function callGetHtmlDocument(): HtmlDocument

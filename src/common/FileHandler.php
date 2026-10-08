@@ -11,6 +11,8 @@ namespace actra\yuf\common;
 
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
+use actra\yuf\core\NativeResponseSender;
+use actra\yuf\core\ResponseSender;
 use InvalidArgumentException;
 
 /**
@@ -75,14 +77,17 @@ final readonly class FileHandler
     /**
      * Sends the file and ends the script.
      */
-    public function output(HttpRequest $httpRequest, bool $forceDownload = false): void
-    {
+    public function output(
+        HttpRequest $httpRequest,
+        bool $forceDownload = false,
+        ResponseSender $responseSender = new NativeResponseSender(),
+    ): never {
         HttpResponse::createResponseFromFilePath(
             absolutePathToFile: $this->path,
             forceDownload: $forceDownload,
             individualFileName: $this->individualFileName,
             maxAge: $this->maxAge,
             httpRequest: $httpRequest,
-        )->sendAndExit();
+        )->sendAndExit(responseSender: $responseSender);
     }
 }

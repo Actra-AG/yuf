@@ -4,6 +4,48 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.44.0] – 2026-10-08
+
+Responses are sent through the new interface `ResponseSender`, so sending, redirects and the exception handler can be
+tested. Search your project for `sendAndExit(`, `redirectAndExit(`, `createResponseFromFilePath(`,
+`pushDownloadAndExit(`, `->output(`, `redirectToMicrosoftLogin(`, `new ViewContext(`, `new ExceptionHandlerContext(`,
+`new RequestHandler(`, `new ContentHandler(` and `processRequest(`.
+
+### ⚠️ Sending ends with `never`, a `ResponseSender` can be passed
+
+| Before | After |
+|:--|:--|
+| `HttpResponse::sendAndExit(): void` | `sendAndExit(ResponseSender $responseSender = new NativeResponseSender()): never` |
+| `HttpResponse::redirectAndExit(…, ?AbstractSessionHandler $sameSiteLaxSessionHandler = null): void` | `…, ResponseSender $responseSender = new NativeResponseSender()): never` |
+| `CsvFile::pushDownloadAndExit(HttpRequest $httpRequest): void`, `FileHandler::output(HttpRequest $httpRequest, bool $forceDownload = false): void` | the same plus an optional last argument `ResponseSender $responseSender = new NativeResponseSender()`; return type `never` |
+| `MicrosoftAuthenticator::redirectToMicrosoftLogin(…): void` (protected) | optional last argument `ResponseSender $responseSender = new NativeResponseSender()`; return type `never` |
+| `ExceptionHandler::handleException(Throwable): void` | `never`; it sends through `ExceptionHandlerContext::$responseSender` |
+| `new ExceptionHandlerContext(…)`, `new ViewContext(…)`, `new RequestHandler(…)`, `ContentHandler::processRequest(…)` | each has a new optional last argument `ResponseSender $responseSender = new NativeResponseSender()`; `ViewContext::$responseSender` is what `BaseView` sends with |
+
+Nothing changes for code that calls these methods without the new argument, except that a method that returns `never`
+makes the code after it unreachable (PHPStan reports it, remove such code). Own implementations of `ResponseSender`
+(tests: record the response and throw) are new; the native sender prints exactly what `sendAndExit()` printed before
+(status line, headers, the string or the file in chunks, nothing for a 304).
+
+### ⚠️ `HttpResponse::createResponseFromFilePath()` no longer ends the script
+
+| Before | After |
+|:--|:--|
+| A missing file (or a directory) sent `404` with `header()` and ended the script, an unreadable file sent `403` the same way | The method returns a response with the status `404` or `403` (no headers, no content, so only the status line is sent, as before) |
+
+Migration: nothing, if you send the result with `sendAndExit()` (as `FileHandler::output()` and
+`CsvFile::pushDownloadAndExit()` do). If you used `createResponseFromFilePath()` only to read headers, check
+`$httpResponse->httpStatusCode` first.
+
+### New: `HttpResponse::createRedirectResponse()`, read access for senders
+
+`HttpResponse::createRedirectResponse(string $relativeOrAbsoluteUri, HttpRequest $httpRequest, HttpStatusCodeEnum
+$httpStatusCode = HTTP_SEE_OTHER)` returns the redirect as a response (status and the absolute `Location` header, no
+other header, no content); `redirectAndExit()` is the Lax change of the session handler plus this response sent.
+`HttpResponse::getContentFilePath()` returns the path of a file response (for `ResponseSender` implementations).
+
+---
+
 ## [v4.43.0] – 2026-10-08
 
 `FileField` checks type and size of every upload before it is stored. Search your project for `new FileField(`,

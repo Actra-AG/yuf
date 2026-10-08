@@ -12,6 +12,8 @@ namespace actra\yuf\auth;
 use actra\yuf\common\LogFile;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
+use actra\yuf\core\NativeResponseSender;
+use actra\yuf\core\ResponseSender;
 use actra\yuf\exception\UnauthorizedException;
 use actra\yuf\session\AbstractSessionHandler;
 use InvalidArgumentException;
@@ -59,7 +61,8 @@ abstract class MicrosoftAuthenticator extends Authenticator
         string $redirectUri,
         #[SensitiveParameter]
         string $ssoNonce,
-    ): void {
+        ResponseSender $responseSender = new NativeResponseSender(),
+    ): never {
         if ($this->authSession->isLoggedIn()) {
             throw new LogicException(message: 'User is already logged in');
         }
@@ -72,6 +75,7 @@ abstract class MicrosoftAuthenticator extends Authenticator
                 ssoNonce: $ssoNonce,
             ),
             httpRequest: $this->httpRequest,
+            responseSender: $responseSender,
         );
     }
 

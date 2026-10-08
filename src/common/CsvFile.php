@@ -11,6 +11,8 @@ namespace actra\yuf\common;
 
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
+use actra\yuf\core\NativeResponseSender;
+use actra\yuf\core\ResponseSender;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -133,8 +135,10 @@ final class CsvFile
     /**
      * Sends the file as download and ends the script. The temporary file is removed at the end of the script.
      */
-    public function pushDownloadAndExit(HttpRequest $httpRequest): void
-    {
+    public function pushDownloadAndExit(
+        HttpRequest $httpRequest,
+        ResponseSender $responseSender = new NativeResponseSender(),
+    ): never {
         $path = $this->createTemporaryFile();
         register_shutdown_function(static function () use ($path): void {
             if (is_file(filename: $path)) {
@@ -147,7 +151,7 @@ final class CsvFile
             individualFileName: $this->fileName,
             maxAge: 0,
             httpRequest: $httpRequest,
-        )->sendAndExit();
+        )->sendAndExit(responseSender: $responseSender);
     }
 
     /**

@@ -16,9 +16,11 @@ use actra\yuf\core\HttpRequest;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\PathVars;
+use actra\yuf\core\ResponseSender;
 use actra\yuf\core\Route;
 use actra\yuf\core\ViewContext;
 use actra\yuf\security\CspNonce;
+use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\session\Session;
 use actra\yuf\tests\Double\form\FormContextFactory;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
@@ -40,6 +42,8 @@ final class ViewContextFactory
         array $pathVars = [],
         ?HttpRequest $httpRequest = null,
         ?Session $session = null,
+        ?ResponseSender $responseSender = null,
+        ?AbstractSessionHandler $sessionHandler = null,
     ): ViewContext {
         $httpRequest ??= HttpRequestFactory::create();
         $localeHandler = new LocaleHandler(language: null, availableLanguages: new LanguageCollection());
@@ -47,7 +51,7 @@ final class ViewContextFactory
         return new ViewContext(
             httpRequest: $httpRequest,
             session: $session,
-            sessionHandler: null,
+            sessionHandler: $sessionHandler,
             authSession: $session === null ? null : new AuthSession(session: $session),
             formContext: FormContextFactory::create(httpRequest: $httpRequest),
             route: new Route(
@@ -69,6 +73,7 @@ final class ViewContextFactory
                 templateBaseDirectory: sys_get_temp_dir() . '/',
                 localeHandler: $localeHandler,
             ),
+            responseSender: $responseSender ?? new RecordingResponseSender(),
         );
     }
 }

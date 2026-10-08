@@ -31,15 +31,52 @@ final class HttpResponse
     private array $headers = [];
 
     private function __construct(
+        public private(set) HttpStatusCodeEnum $httpStatusCode,
+        private readonly ?string $contentString = null,
+        private readonly ?string $contentFilePath = null,
+    ) {}
+
+    private static function createContentResponse(
         HttpRequest $httpRequest,
         string $eTag,
         int $lastModifiedTimeStamp,
-        public private(set) HttpStatusCodeEnum $httpStatusCode,
+        HttpStatusCodeEnum $httpStatusCode,
         ?string $downloadFileName,
         ContentType $contentType,
-        private readonly ?string $contentString = null,
-        private readonly ?string $contentFilePath = null,
-    ) {
+        ?string $contentString = null,
+        ?string $contentFilePath = null,
+    ): HttpResponse {
+        $httpResponse = new HttpResponse(
+            httpStatusCode: $httpStatusCode,
+            contentString: $contentString,
+            contentFilePath: $contentFilePath,
+        );
+        $httpResponse->setContentHeaders(
+            httpRequest: $httpRequest,
+            eTag: $eTag,
+            lastModifiedTimeStamp: $lastModifiedTimeStamp,
+            downloadFileName: $downloadFileName,
+            contentType: $contentType,
+        );
+
+        return $httpResponse;
+    }
+
+    /**
+     * A response with a status and no headers and no content (a 404 or 403 for a file).
+     */
+    private static function createStatusResponse(HttpStatusCodeEnum $httpStatusCode): HttpResponse
+    {
+        return new HttpResponse(httpStatusCode: $httpStatusCode);
+    }
+
+    private function setContentHeaders(
+        HttpRequest $httpRequest,
+        string $eTag,
+        int $lastModifiedTimeStamp,
+        ?string $downloadFileName,
+        ContentType $contentType,
+    ): void {
         $this->setHeader(
             key: 'Etag',
             val: $eTag,
@@ -141,64 +178,59 @@ final class HttpResponse
     }
 
     /**
+     * The path of the file of a response created from a file; `null` for a response from a string or without content.
+     */
+    public function getContentFilePath(): ?string
+    {
+        return $this->contentFilePath;
+    }
+
+    /**
      * Sends the status, the headers and the content (none for a 304), then ends the script.
      */
-    public function sendAndExit(): void
+    public function sendAndExit(ResponseSender $responseSender = new NativeResponseSender()): never
     {
-        header(header: $this->httpStatusCode->getStatusHeader());
-        foreach ($this->headers as $key => $val) {
-            header(header: $key . ': ' . $val);
-        }
-        if ($this->httpStatusCode === HttpStatusCodeEnum::HTTP_NOT_MODIFIED) {
-            exit;
-        }
-        if ($this->contentString !== null) {
-            echo $this->contentString;
-            exit;
-        }
-        if ($this->contentFilePath !== null) {
-            $this->sendFileAndExit(filePath: $this->contentFilePath);
-        }
-        exit;
+        $responseSender->send(httpResponse: $this);
     }
 
-    private function sendFileAndExit(string $filePath): never
-    {
-        if (ob_get_level() > 0) {
-            ob_end_clean();
-        }
-        $file = fopen(
-            filename: $filePath,
-            mode: 'rb',
+    /**
+     * A response with the status and a `Location` header (absolute URI) and no content, so that nothing else than
+     * these is sent.
+     */
+    public static function createRedirectResponse(
+        string $relativeOrAbsoluteUri,
+        HttpRequest $httpRequest,
+        HttpStatusCodeEnum $httpStatusCode = HttpStatusCodeEnum::HTTP_SEE_OTHER,
+    ): HttpResponse {
+        $httpResponse = HttpResponse::createStatusResponse(httpStatusCode: $httpStatusCode);
+        $httpResponse->setHeader(
+            key: 'Location',
+            val: UrlHelper::generateAbsoluteUri(
+                relativeOrAbsoluteUri: $relativeOrAbsoluteUri,
+                httpRequest: $httpRequest,
+            ),
         );
-        if ($file === false) {
-            exit;
-        }
-        while (!feof(stream: $file)) {
-            echo fread(
-                stream: $file,
-                length: 8192,
-            );
-            flush();
-        }
-        fclose(stream: $file);
-        exit;
+
+        return $httpResponse;
     }
 
+    /**
+     * Sends a redirect and ends the script. The session cookie of the given handler is sent with the redirect, so it
+     * is changed to SameSite=Lax temporarily and comes back from other sites.
+     */
     public static function redirectAndExit(
         string $relativeOrAbsoluteUri,
         HttpRequest $httpRequest,
         HttpStatusCodeEnum $httpStatusCode = HttpStatusCodeEnum::HTTP_SEE_OTHER,
         ?AbstractSessionHandler $sameSiteLaxSessionHandler = null,
-    ): void {
-        // The session cookie is sent with the redirect: temporarily Lax, so it comes back from other sites
+        ResponseSender $responseSender = new NativeResponseSender(),
+    ): never {
         $sameSiteLaxSessionHandler?->changeCookieSameSiteToLax();
-        header(header: $httpStatusCode->getStatusHeader());
-        header(header: 'Location: ' . UrlHelper::generateAbsoluteUri(
+        HttpResponse::createRedirectResponse(
             relativeOrAbsoluteUri: $relativeOrAbsoluteUri,
             httpRequest: $httpRequest,
-        ));
-        exit;
+            httpStatusCode: $httpStatusCode,
+        )->sendAndExit(responseSender: $responseSender);
     }
 
     /**
@@ -215,7 +247,7 @@ final class HttpResponse
         Clock $clock = new SystemClock(),
         ?string $languageCode = null,
     ): HttpResponse {
-        $httpResponse = new HttpResponse(
+        $httpResponse = HttpResponse::createContentResponse(
             httpRequest: $httpRequest,
             eTag: HttpResponse::createETag(content: $htmlContent),
             lastModifiedTimeStamp: $clock->now()->getTimestamp(),
@@ -253,7 +285,7 @@ final class HttpResponse
             throw new LogicException(message: 'Use HttpResponse::createHtmlResponse() instead');
         }
 
-        return new HttpResponse(
+        return HttpResponse::createContentResponse(
             httpRequest: $httpRequest,
             eTag: HttpResponse::createETag(content: $contentString),
             lastModifiedTimeStamp: $clock->now()->getTimestamp(),
@@ -266,7 +298,7 @@ final class HttpResponse
     }
 
     /**
-     * Sends status 404 or 403 and ends the script if the path is no readable file.
+     * A 404 response (only the status) if the path is no file, a 403 response if it is not readable.
      *
      * @throws RuntimeException if the modification time or the size of the readable file cannot be read
      */
@@ -280,12 +312,10 @@ final class HttpResponse
     ): HttpResponse {
         $realPath = realpath(path: $absolutePathToFile);
         if ($realPath === false || !is_file(filename: $realPath)) {
-            header(header: HttpStatusCodeEnum::HTTP_NOT_FOUND->getStatusHeader());
-            exit;
+            return HttpResponse::createStatusResponse(httpStatusCode: HttpStatusCodeEnum::HTTP_NOT_FOUND);
         }
         if (!is_readable(filename: $realPath)) {
-            header(header: HttpStatusCodeEnum::HTTP_FORBIDDEN->getStatusHeader());
-            exit;
+            return HttpResponse::createStatusResponse(httpStatusCode: HttpStatusCodeEnum::HTTP_FORBIDDEN);
         }
         $lastModifiedTimeStamp = filemtime(filename: $realPath);
         $fileSize = filesize(filename: $realPath);
@@ -296,7 +326,7 @@ final class HttpResponse
         $extension = FileHandler::getExtension(filename: $fileName);
         $contentType = ContentType::createFromFileExtension(extension: $extension);
         $forceDownload ??= $contentType->forceDownloadByDefault;
-        $httpResponse = new HttpResponse(
+        $httpResponse = HttpResponse::createContentResponse(
             httpRequest: $httpRequest,
             eTag: HttpResponse::createETag(content: $lastModifiedTimeStamp . $realPath),
             lastModifiedTimeStamp: $lastModifiedTimeStamp,

@@ -13,6 +13,8 @@ use actra\yuf\core\HttpRequest;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\Logger;
+use actra\yuf\core\NativeResponseSender;
+use actra\yuf\core\ResponseSender;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CspPolicySettings;
 use actra\yuf\template\TemplateEngine;
@@ -28,6 +30,7 @@ final readonly class ExceptionHandlerContext
      * @param string $copyright The copyright text of the error pages (`2026`, `2020-2026`)
      * @param Closure(LocaleHandler): TemplateEngine $createTemplateEngine Creates the template engine of the error
      *     pages (`Core::createTemplateEngine()`)
+     * @param ResponseSender $responseSender Sends the response of `ExceptionHandler::handleException()`
      */
     public function __construct(
         public Logger $logger,
@@ -39,5 +42,6 @@ final readonly class ExceptionHandlerContext
         public string $copyright,
         public LanguageCollection $availableLanguages,
         public Closure $createTemplateEngine,
+        public ResponseSender $responseSender = new NativeResponseSender(),
     ) {}
 }

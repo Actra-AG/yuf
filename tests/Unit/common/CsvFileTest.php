@@ -10,6 +10,10 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\common;
 
 use actra\yuf\common\CsvFile;
+use actra\yuf\core\HttpStatusCodeEnum;
+use actra\yuf\core\ResponseSender;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\core\RecordingResponseSender;
 use InvalidArgumentException;
 use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -240,5 +244,26 @@ final class CsvFileTest extends TestCase
         $this->assertIsString($content);
 
         return $content;
+    }
+
+    public function testPushDownloadSendsTheFileAsDownloadThroughTheSender(): void
+    {
+        $csvFile = new CsvFile(fileName: 'export.csv', headersList: ['a'], addByteOrderMark: false);
+        $csvFile->addRow(data: ['b']);
+
+        $sentResponse = RecordingResponseSender::capture(
+            action: static fn(ResponseSender $sender) => $csvFile->pushDownloadAndExit(
+                httpRequest: HttpRequestFactory::create(),
+                responseSender: $sender,
+            ),
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $sentResponse->httpStatusCode);
+        $this->assertSame('attachment; filename="export.csv"', $sentResponse->getHeader(key: 'Content-Disposition'));
+        $path = $sentResponse->getContentFilePath();
+        $this->assertNotNull($path);
+        $this->assertSame("a\nb\n", file_get_contents(filename: $path));
+        // The temporary file is removed at the end of the script
+        unlink(filename: $path);
     }
 }

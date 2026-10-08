@@ -24,8 +24,10 @@ use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\Logger;
+use actra\yuf\core\NativeResponseSender;
 use actra\yuf\core\ProtocolEnum;
 use actra\yuf\core\RequestHandler;
+use actra\yuf\core\ResponseSender;
 use actra\yuf\core\RouteCollection;
 use actra\yuf\core\UnsupportedRequestMethodException;
 use actra\yuf\exception\ExceptionHandler;
@@ -58,6 +60,8 @@ final class Core
     public const string APP_CLASS_PREFIX = 'app';
     private static bool $isInitialized = false;
     private ?HttpResponse $httpResponse = null;
+    // Becomes a constructor argument with the explicit constructor of Core
+    private ResponseSender $responseSender;
     private readonly string $logEmailRecipient;
 
     public readonly string $documentRoot;
@@ -141,6 +145,7 @@ final class Core
                 prefix: Core::APP_CLASS_PREFIX . '\\',
             ),
         );
+        $this->responseSender = new NativeResponseSender();
         new ErrorHandler()->register();
         try {
             $this->httpRequest = HttpRequest::fromGlobals();
@@ -254,6 +259,7 @@ final class Core
                 copyright: $this->renderCopyrightYear(),
                 availableLanguages: $this->availableLanguages,
                 createTemplateEngine: $this->createTemplateEngine(...),
+                responseSender: $this->responseSender,
             ),
         );
         if ($individualSessionHandler === null) {
@@ -279,6 +285,7 @@ final class Core
             availableLanguages: $this->availableLanguages,
             allowedDomains: $this->allowedDomains,
             session: $this->session,
+            responseSender: $this->responseSender,
         );
         $exceptionHandler->setRequestHandler(requestHandler: $requestHandler);
         $requestHandler->resolveRoute();
@@ -301,6 +308,7 @@ final class Core
             localeHandler: $localeHandler,
             core: $this,
             templateEngine: $templateEngine,
+            responseSender: $this->responseSender,
         );
         $this->httpResponse = new ContentResponseFactory(
             httpRequest: $this->httpRequest,

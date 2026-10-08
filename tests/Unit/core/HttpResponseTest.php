@@ -13,16 +13,19 @@ use actra\yuf\clock\FixedClock;
 use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
+use actra\yuf\core\ResponseSender;
 use actra\yuf\security\CspPolicySettings;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\core\RecordingResponseSender;
+use actra\yuf\tests\Double\session\NonStartingSessionHandler;
 use DateTimeImmutable;
 use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Not covered: `sendAndExit()` and the 404 / 403 answers for a missing or unreadable file (they send headers and
- * exit), `redirectAndExit()`.
+ * Sending goes through the recording double; `NativeResponseSender::send()` (it calls `header()` and `exit`) is not
+ * covered, its output is (`NativeResponseSenderTest`).
  */
 final class HttpResponseTest extends TestCase
 {
@@ -197,5 +200,140 @@ final class HttpResponseTest extends TestCase
         $this->assertTrue($httpResponse->removeHeader(key: 'X-Own'));
         $this->assertFalse($httpResponse->removeHeader(key: 'X-Own'));
         $this->assertArrayNotHasKey('X-Own', $httpResponse->listHeaders());
+    }
+
+    public function testSendAndExitHandsTheResponseToTheSender(): void
+    {
+        $httpResponse = HttpResponse::createResponseFromString(
+            httpStatusCode: HttpStatusCodeEnum::HTTP_OK,
+            contentString: 'x',
+            contentType: ContentType::createTxt(),
+            httpRequest: HttpRequestFactory::create(),
+        );
+
+        $sentResponse = RecordingResponseSender::capture(
+            action: static fn(ResponseSender $sender) => $httpResponse->sendAndExit(responseSender: $sender),
+        );
+
+        $this->assertSame($httpResponse, $sentResponse);
+    }
+
+    public function testRedirectResponseHasTheStatusAndTheAbsoluteLocationOnly(): void
+    {
+        $httpResponse = HttpResponse::createRedirectResponse(
+            relativeOrAbsoluteUri: '/login',
+            httpRequest: HttpRequestFactory::create(),
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_SEE_OTHER, $httpResponse->httpStatusCode);
+        $this->assertSame(['Location' => 'https://example.com/login'], $httpResponse->listHeaders());
+        $this->assertNull($httpResponse->getContentString());
+        $this->assertNull($httpResponse->getContentFilePath());
+    }
+
+    public function testRedirectResponseKeepsAnAbsoluteUriAndTheGivenStatus(): void
+    {
+        $httpResponse = HttpResponse::createRedirectResponse(
+            relativeOrAbsoluteUri: 'https://other.example/path',
+            httpRequest: HttpRequestFactory::create(),
+            httpStatusCode: HttpStatusCodeEnum::HTTP_MOVED_PERMANENTLY,
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_MOVED_PERMANENTLY, $httpResponse->httpStatusCode);
+        $this->assertSame('https://other.example/path', $httpResponse->getHeader(key: 'Location'));
+    }
+
+    public function testRedirectAndExitSendsTheRedirectResponse(): void
+    {
+        $sentResponse = RecordingResponseSender::capture(
+            action: static fn(ResponseSender $sender) => HttpResponse::redirectAndExit(
+                relativeOrAbsoluteUri: '/login',
+                httpRequest: HttpRequestFactory::create(),
+                responseSender: $sender,
+            ),
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_SEE_OTHER, $sentResponse->httpStatusCode);
+        $this->assertSame('https://example.com/login', $sentResponse->getHeader(key: 'Location'));
+    }
+
+    public function testRedirectAndExitChangesTheSessionCookieToLax(): void
+    {
+        $sessionHandler = new NonStartingSessionHandler();
+
+        RecordingResponseSender::capture(
+            action: static fn(ResponseSender $sender) => HttpResponse::redirectAndExit(
+                relativeOrAbsoluteUri: '/login',
+                httpRequest: HttpRequestFactory::create(),
+                sameSiteLaxSessionHandler: $sessionHandler,
+                responseSender: $sender,
+            ),
+        );
+
+        $this->assertSame(1, $sessionHandler->sameSiteLaxChanges);
+    }
+
+    public function testFileResponseOfAMissingFileIsA404WithoutHeadersAndContent(): void
+    {
+        $httpResponse = HttpResponse::createResponseFromFilePath(
+            absolutePathToFile: $this->file . '.missing',
+            forceDownload: null,
+            individualFileName: null,
+            maxAge: 0,
+            httpRequest: HttpRequestFactory::create(),
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $httpResponse->httpStatusCode);
+        $this->assertSame([], $httpResponse->listHeaders());
+        $this->assertNull($httpResponse->getContentString());
+        $this->assertNull($httpResponse->getContentFilePath());
+    }
+
+    public function testFileResponseOfADirectoryIsA404(): void
+    {
+        $httpResponse = HttpResponse::createResponseFromFilePath(
+            absolutePathToFile: sys_get_temp_dir(),
+            forceDownload: null,
+            individualFileName: null,
+            maxAge: 0,
+            httpRequest: HttpRequestFactory::create(),
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $httpResponse->httpStatusCode);
+    }
+
+    public function testFileResponseOfAnUnreadableFileIsA403WithoutHeadersAndContent(): void
+    {
+        if (function_exists(function: 'posix_geteuid') && posix_geteuid() === 0) {
+            self::markTestSkipped('The root user can read every file.');
+        }
+        chmod(filename: $this->file, permissions: 0o000);
+
+        $httpResponse = HttpResponse::createResponseFromFilePath(
+            absolutePathToFile: $this->file,
+            forceDownload: null,
+            individualFileName: null,
+            maxAge: 0,
+            httpRequest: HttpRequestFactory::create(),
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_FORBIDDEN, $httpResponse->httpStatusCode);
+        $this->assertSame([], $httpResponse->listHeaders());
+        $this->assertNull($httpResponse->getContentFilePath());
+    }
+
+    public function testFileResponseOfAReadableFileIsA200WithThePathOfTheFile(): void
+    {
+        $httpResponse = HttpResponse::createResponseFromFilePath(
+            absolutePathToFile: $this->file,
+            forceDownload: null,
+            individualFileName: null,
+            maxAge: 0,
+            httpRequest: HttpRequestFactory::create(),
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $httpResponse->httpStatusCode);
+        $this->assertSame(realpath(path: $this->file), $httpResponse->getContentFilePath());
+        $this->assertNull($httpResponse->getContentString());
     }
 }

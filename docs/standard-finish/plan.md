@@ -153,3 +153,33 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   tests got `allowedFileTypes` and the `accept` attribute in the expected markup).
 - `ddev composer check` green, baseline empty.
 - Open: none.
+
+### Step 3 (v4.44.0) – done
+
+- New in `src/core/`: `ResponseSender` (`send(HttpResponse): never`) and `NativeResponseSender` (final; `send()` =
+  status, headers, `ob_end_clean()` for a file, then `writeContent()`, `exit`). `writeContent()` is public and prints
+  the string, or the file in 8192-byte chunks with `flush()`, nothing for a 304 or a response without content; it is
+  tested through output buffering, `send()` is documented as not unit tested (calls `header()` and `exit`).
+- `HttpResponse`: the private constructor only takes status, string and file path; the default headers moved to the
+  private `createContentResponse()` (used by the three content factories, behaviour and headers unchanged) and
+  `createStatusResponse()` (status only: no ETag, no cache headers; used for 404 / 403). New `getContentFilePath()`,
+  `createRedirectResponse()` (status and `Location` only, as sent today), `sendAndExit(ResponseSender)` /
+  `redirectAndExit(…, ResponseSender)` return `never`. `createResponseFromFilePath()` returns the 404 / 403 response.
+- Senders passed: `ExceptionHandlerContext::$responseSender` (default native; `handleException()` returns `never`),
+  `ViewContext::$responseSender` (used by `BaseView`), optional argument `ResponseSender $responseSender = new
+  NativeResponseSender()` on `RequestHandler::__construct()`, `ContentHandler::processRequest()`,
+  `CsvFile::pushDownloadAndExit()`, `FileHandler::output()`, `MicrosoftAuthenticator::redirectToMicrosoftLogin()`
+  (instead of the constructor, to keep the subclasses untouched). `Core` has a private `$responseSender` (native) and
+  passes it to the exception context, `RequestHandler` and `ContentHandler`; its HTTPS redirect and 405 are unchanged.
+- Doubles: `RecordingResponseSender` (records, throws `ResponseSentException`; `capture(Closure(ResponseSender):
+  void)` runs an action and returns the sent response, so tests need no try / catch because PHPStan treats `never`
+  calls as terminating), `NonStartingSessionHandler` counts `changeCookieSameSiteToLax()`; the `ViewContextFactory`
+  and `ExceptionHandlerContextFactory` use a `RecordingResponseSender` by default.
+- Tests: 12134 -> 12155 (`HttpResponseTest`: `sendAndExit()`, redirect response, `redirectAndExit()` with Lax change,
+  404 / 403 / 200 for a file; `NativeResponseSenderTest`; `ExceptionHandlerTest`; `BaseViewTest` (success, error,
+  invalid JSON body); `CsvFileTest`; `FileHandlerTest`; `RequestHandlerRootRequestTest` redirect of "/").
+- `ddev composer check` green, baseline empty, `example/` answers 200 (404 page for an unknown path, HTTP redirects to
+  HTTPS).
+- Open for step 4: `Core` takes the `ResponseSender` as constructor argument (remove the private native one), the
+  HTTPS redirect and the 405 become responses sent through it; `ContentHandler::processRequest()` gets the sender from
+  there (its default argument can go); the `new NativeResponseSender()` defaults on the other classes stay.

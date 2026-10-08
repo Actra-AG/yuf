@@ -80,6 +80,7 @@ final class ContentHandler
         LocaleHandler $localeHandler,
         Core $core,
         TemplateEngine $templateEngine,
+        ResponseSender $responseSender = new NativeResponseSender(),
     ): void {
         if ($this->requestHandler !== null) {
             throw new LogicException(message: 'The request is already processed.');
@@ -111,6 +112,7 @@ final class ContentHandler
             content: $this,
             locale: $localeHandler,
             templateEngine: $templateEngine,
+            responseSender: $responseSender,
         );
         $view = ($route->viewFactory ?? new ClassNameViewFactory())->createView(context: $context);
         if ($view === null) {

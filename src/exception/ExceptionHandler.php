@@ -135,9 +135,11 @@ class ExceptionHandler
         return $this->contentHandler === null ? ContentType::createHtml() : $this->contentHandler->getContentType();
     }
 
-    final public function handleException(Throwable $throwable): void
+    final public function handleException(Throwable $throwable): never
     {
-        $this->createResponse(throwable: $throwable)->sendAndExit();
+        $this->createResponse(throwable: $throwable)->sendAndExit(
+            responseSender: $this->getContext()->responseSender,
+        );
     }
 
     /**

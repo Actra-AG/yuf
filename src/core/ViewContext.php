@@ -22,7 +22,7 @@ use InvalidArgumentException;
  * The request data of a view and what a view factory needs to choose and create it. One instance per request.
  * `session`, `sessionHandler` (for the SameSite change of a login redirect) and `authSession` are `null` without
  * sessions (`individualSessionHandler: false`); `formContext` is what every form needs (the request and, with a
- * session, the CSRF token source).
+ * session, the CSRF token source). `responseSender` sends the responses a view ends the script with.
  */
 final class ViewContext
 {
@@ -41,6 +41,7 @@ final class ViewContext
         public readonly ContentHandler $content,
         public readonly LocaleHandler $locale,
         public readonly TemplateEngine $templateEngine,
+        public readonly ResponseSender $responseSender = new NativeResponseSender(),
     ) {}
 
     public function getHtmlDocument(): HtmlDocument

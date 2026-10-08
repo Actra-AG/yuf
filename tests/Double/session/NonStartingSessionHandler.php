@@ -19,6 +19,7 @@ use Override;
 final class NonStartingSessionHandler extends AbstractSessionHandler
 {
     public int $regenerations = 0;
+    public int $sameSiteLaxChanges = 0;
 
     /**
      * Does not start a session.
@@ -32,6 +33,12 @@ final class NonStartingSessionHandler extends AbstractSessionHandler
     protected function sessionExists(string $id): bool
     {
         return false;
+    }
+
+    #[Override]
+    public function changeCookieSameSiteToLax(): void
+    {
+        $this->sameSiteLaxChanges++;
     }
 
     #[Override]

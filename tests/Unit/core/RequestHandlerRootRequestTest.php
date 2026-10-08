@@ -9,14 +9,17 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\core;
 
+use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\Language;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\RequestHandler;
+use actra\yuf\core\ResponseSender;
 use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\core\RecordingResponseSender;
 use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
@@ -61,6 +64,7 @@ final class RequestHandlerRootRequestTest extends TestCase
         array $browserLanguages = [],
         ?string $preferredLanguage = null,
         ?RouteCollection $routeCollection = null,
+        ?ResponseSender $responseSender = null,
     ): RequestHandler {
         $storage = new ArraySessionStorage();
         if ($preferredLanguage !== null) {
@@ -77,6 +81,7 @@ final class RequestHandlerRootRequestTest extends TestCase
             availableLanguages: new LanguageCollection(languages: [$this->german, $this->english, $this->french]),
             allowedDomains: ['example.com'],
             session: new Session(storage: $storage),
+            responseSender: $responseSender ?? new RecordingResponseSender(),
         );
     }
 
@@ -147,5 +152,17 @@ final class RequestHandlerRootRequestTest extends TestCase
             . ' available language.',
         );
         $handler->findRouteForRootRequest();
+    }
+
+    public function testRequestOfRootIsRedirectedToTheRouteOfTheBrowserLanguage(): void
+    {
+        $sentResponse = RecordingResponseSender::capture(
+            action: function (ResponseSender $sender): void {
+                $this->createHandler(browserLanguages: ['en'], responseSender: $sender)->resolveRoute();
+            },
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_SEE_OTHER, $sentResponse->httpStatusCode);
+        $this->assertSame('https://example.com/en/', $sentResponse->getHeader(key: 'Location'));
     }
 }

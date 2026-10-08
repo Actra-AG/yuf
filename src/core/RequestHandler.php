@@ -43,6 +43,7 @@ final class RequestHandler
      * @param list<string> $allowedDomains
      * @param ?Session $session Remembers the language of the last route that has one (`Core::$session`, `null`
      *                          without sessions)
+     * @param ResponseSender $responseSender Sends the redirect of "/"
      */
     public function __construct(
         private readonly HttpRequest $httpRequest,
@@ -50,6 +51,7 @@ final class RequestHandler
         private readonly LanguageCollection $availableLanguages,
         private readonly array $allowedDomains,
         private readonly ?Session $session,
+        private readonly ResponseSender $responseSender = new NativeResponseSender(),
     ) {
         if (!$availableLanguages->isEmpty()) {
             $this->language = $availableLanguages->getFirstLanguage();
@@ -191,6 +193,7 @@ final class RequestHandler
             HttpResponse::redirectAndExit(
                 relativeOrAbsoluteUri: $this->findRouteForRootRequest()->path,
                 httpRequest: $this->httpRequest,
+                responseSender: $this->responseSender,
             );
         }
 
