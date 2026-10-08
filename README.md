@@ -65,6 +65,36 @@ the environment file, sets `error_reporting()` and the time zone, creates the di
 globals. Tests build `Core` directly with `new Core(settings: new CoreSettings(…), httpRequest: …, responseSender: …)`,
 which touches no globals. A request without HTTPS gets the redirect to HTTPS as response of `prepareHttpResponse()`.
 
+## Static analysis and tests
+
+yuf has no Composer autoload configuration: its classes are loaded by `actra/autoloader`, in production and in tests.
+A project or library that uses yuf therefore tells PHPStan where the classes are (`phpstan.neon`):
+
+```neon
+parameters:
+    scanDirectories:
+        # yuf has no Composer autoload configuration (its classes are loaded by actra/autoloader)
+        - vendor/actra/yuf/src
+```
+
+The PHPUnit bootstrap (e.g. `tests/bootstrap.php`) loads the Composer autoloader for PHPUnit and the development tools
+and registers `actra/autoloader` for yuf (and for the own classes, if they are not loaded by Composer). The cache file
+of the autoloader is deleted first, so no stale class paths remain after files have been moved:
+
+```php
+require __DIR__ . '/../vendor/autoload.php';
+
+$autoloaderCacheFilePath = __DIR__ . '/../.phpunit.cache/autoloader.php';
+if (file_exists(filename: $autoloaderCacheFilePath)) {
+    unlink(filename: $autoloaderCacheFilePath);
+}
+$autoloader = Autoloader::register(cacheFilePath: $autoloaderCacheFilePath);
+$autoloader->addPath(
+    autoloaderPath: new AutoloaderPath(path: __DIR__ . '/../vendor/actra/yuf/src/', prefix: 'actra\\yuf\\'),
+);
+$autoloader->addPath(autoloaderPath: new AutoloaderPath(path: __DIR__ . '/../app/', prefix: 'app\\'));
+```
+
 ## Environment settings
 
 `.env.php` returns an array; `Core` checks it once when it starts and throws an `UnexpectedValueException` that names

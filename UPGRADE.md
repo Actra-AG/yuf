@@ -4,6 +4,13 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.57.4] – 2026-10-08
+
+Documentation only, no code change: the README has a section "Static analysis and tests" (`scanDirectories` for
+PHPStan and the PHPUnit bootstrap with `actra/autoloader`, because yuf has no Composer autoload configuration).
+
+---
+
 ## [v4.57.3] – 2026-10-08
 
 Documentation only, no code change: the README, section "Views", says that the view classes of `ClassNameViewFactory`
