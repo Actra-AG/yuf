@@ -63,9 +63,10 @@ final class HttpResponse
     }
 
     /**
-     * A response with a status and no headers and no content (a 404 or 403 for a file).
+     * A response with a status and no headers and no content, so that only the status line is sent (a 404 or 403 for
+     * a file, a 405 for an unsupported request method).
      */
-    private static function createStatusResponse(HttpStatusCodeEnum $httpStatusCode): HttpResponse
+    public static function createStatusResponse(HttpStatusCodeEnum $httpStatusCode): HttpResponse
     {
         return new HttpResponse(httpStatusCode: $httpStatusCode);
     }

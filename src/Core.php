@@ -14,6 +14,7 @@ use actra\autoloader\AutoloaderPath;
 use actra\yuf\clock\SystemClock;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentResponseFactory;
+use actra\yuf\core\CoreSettings;
 use actra\yuf\core\DirectoryPathResolver;
 use actra\yuf\core\EnvironmentSettings;
 use actra\yuf\core\ErrorHandler;
@@ -51,19 +52,23 @@ use RuntimeException;
 use UnexpectedValueException;
 
 /**
- * The application of a request: reads the environment settings, creates the directories, registers the autoloader and
- * the error handler, creates the request and prepares the response. One per process (the autoloader and the error
- * handler are global); the guard `$isInitialized` is the only static state.
+ * The application of a request: its settings, the request and the response that is prepared from them.
+ *
+ * Production code creates it with `Core::fromEnvironment()`, which does everything that is global and happens once per
+ * process: it registers the autoloader and the error handler, reads the environment file, sets `error_reporting()`
+ * and the time zone, creates the directories and the request from the PHP globals. The constructor takes explicit
+ * settings and a request and touches no globals, so tests build `Core` directly. `fromEnvironment()` is not unit
+ * tested for the same reason (global state that can only be set once per process); the guard `$isInitialized` is the
+ * only static state.
  */
 final class Core
 {
     public const string APP_CLASS_PREFIX = 'app';
     private static bool $isInitialized = false;
     private ?HttpResponse $httpResponse = null;
-    // Becomes a constructor argument with the explicit constructor of Core
-    private ResponseSender $responseSender;
     private readonly string $logEmailRecipient;
 
+    public readonly int $copyrightYear;
     public readonly string $documentRoot;
     /** The typed settings of Core and, through its getters, the own keys of the project in `.env.php`. */
     public readonly EnvironmentSettings $environmentSettings;
@@ -82,8 +87,8 @@ final class Core
      */
     public private(set) FormContext $formContext;
     public readonly string $frameworkDirectory;
-    public private(set) string $baseDirectory = '';
-    public private(set) string $appDirectory = '';
+    public readonly string $baseDirectory;
+    public readonly string $appDirectory;
     public readonly string $cacheDirectory;
     public readonly string $errorDocsDirectory;
     public readonly string $logDirectory;
@@ -99,9 +104,56 @@ final class Core
     /** @var list<TemplateTag> */
     private array $templateTags = [];
 
+    /**
+     * Touches no globals and no files: the settings and the request are given, so this is the constructor for tests.
+     * Production code uses `fromEnvironment()`.
+     *
+     * @param ResponseSender $responseSender Sends the responses of the exception handler, the route "/" and the views
+     */
     public function __construct(
+        CoreSettings $settings,
+        HttpRequest $httpRequest,
+        private readonly ResponseSender $responseSender = new NativeResponseSender(),
+    ) {
+        $environment = $settings->environmentSettings;
+        $this->environmentSettings = $environment;
+        $this->copyrightYear = $settings->copyrightYear;
+        $this->documentRoot = $settings->documentRoot;
+        $this->frameworkDirectory = $settings->frameworkDirectory;
+        $this->baseDirectory = $settings->baseDirectory;
+        $this->appDirectory = $settings->appDirectory;
+        $this->cacheDirectory = $settings->cacheDirectory;
+        $this->errorDocsDirectory = $settings->errorDocsDirectory;
+        $this->logDirectory = $settings->logDirectory;
+        $this->settingsDirectory = $settings->settingsDirectory;
+        $this->snippetsDirectory = $settings->snippetsDirectory;
+        $this->viewDirectory = $settings->viewDirectory;
+        $this->httpRequest = $httpRequest;
+        $this->formContext = new FormContext(httpRequest: $httpRequest, csrfTokenSource: null);
+        $this->allowedDomains = $environment->allowedDomains;
+        $this->availableLanguages = new LanguageCollection();
+        $this->debug = $environment->debug;
+        $this->robots = $environment->robots;
+        $this->logEmailRecipient = $environment->logEmailRecipient;
+    }
+
+    /**
+     * Creates the application of the request of this process: registers the autoloader (own and `app` classes), reads
+     * the environment file, sets `error_reporting()` and the time zone, resolves and creates the directories,
+     * registers the error handler and creates the request from the PHP globals. A request with an unsupported method
+     * is answered with a 405 response and ends the script. Call it once, as the first statement of the front
+     * controller; it is not unit tested (global, once per process).
+     *
+     * The directory arguments may contain the placeholders `{DOCUMENT_ROOT}`, `{BASE_DIRECTORY}` and
+     * `{APP_DIRECTORY}`.
+     *
+     * @throws LogicException if called twice
+     * @throws UnexpectedValueException if the environment file is invalid or `DOCUMENT_ROOT` is not set
+     * @throws RuntimeException if a directory cannot be created
+     */
+    public static function fromEnvironment(
         string $envFilePath,
-        public readonly int $copyrightYear,
+        int $copyrightYear,
         string $autoloaderPath = __DIR__ . '/../../autoloader/src/Autoloader.php',
         string $baseDirectory = '{DOCUMENT_ROOT}../',
         string $appDirectory = '{BASE_DIRECTORY}/app/',
@@ -111,7 +163,7 @@ final class Core
         string $settingsDirectory = '{APP_DIRECTORY}settings/',
         string $snippetsDirectory = '{APP_DIRECTORY}snippets/',
         string $viewDirectory = '{APP_DIRECTORY}view/',
-    ) {
+    ): Core {
         if (Core::$isInitialized) {
             throw new LogicException(message: 'Core is already initialized');
         }
@@ -126,45 +178,56 @@ final class Core
             ),
         );
         $environment = EnvironmentSettings::fromArray(values: Core::loadEnvironmentFile(path: $envFilePath));
-        $this->environmentSettings = $environment;
         error_reporting(error_level: $environment->errorReporting);
         date_default_timezone_set(timezoneId: $environment->timeZone);
-        $this->documentRoot = Core::readDocumentRoot();
-        $this->frameworkDirectory = __DIR__ . DIRECTORY_SEPARATOR;
-        $this->baseDirectory = $this->createIfNotExists(path: $baseDirectory);
-        $this->appDirectory = $this->createIfNotExists(path: $appDirectory);
-        $this->cacheDirectory = $this->createIfNotExists(path: $cacheDirectory);
-        $this->errorDocsDirectory = $this->createIfNotExists(path: $errorDocsDirectory);
-        $this->logDirectory = $this->createIfNotExists(path: $logsDirectory);
-        $this->settingsDirectory = $this->createIfNotExists(path: $settingsDirectory);
-        $this->snippetsDirectory = $this->createIfNotExists(path: $snippetsDirectory);
-        $this->viewDirectory = $this->createIfNotExists(path: $viewDirectory);
+        $documentRoot = Core::readDocumentRoot();
+        $resolvedBaseDirectory = Core::createIfNotExists(
+            path: $baseDirectory,
+            documentRoot: $documentRoot,
+            baseDirectory: '',
+            appDirectory: '',
+        );
+        $resolvedAppDirectory = Core::createIfNotExists(
+            path: $appDirectory,
+            documentRoot: $documentRoot,
+            baseDirectory: $resolvedBaseDirectory,
+            appDirectory: '',
+        );
+        $resolve = static fn(string $path): string => Core::createIfNotExists(
+            path: $path,
+            documentRoot: $documentRoot,
+            baseDirectory: $resolvedBaseDirectory,
+            appDirectory: $resolvedAppDirectory,
+        );
+        $settings = new CoreSettings(
+            environmentSettings: $environment,
+            copyrightYear: $copyrightYear,
+            documentRoot: $documentRoot,
+            frameworkDirectory: __DIR__ . DIRECTORY_SEPARATOR,
+            baseDirectory: $resolvedBaseDirectory,
+            appDirectory: $resolvedAppDirectory,
+            cacheDirectory: $resolve(path: $cacheDirectory),
+            errorDocsDirectory: $resolve(path: $errorDocsDirectory),
+            logDirectory: $resolve(path: $logsDirectory),
+            settingsDirectory: $resolve(path: $settingsDirectory),
+            snippetsDirectory: $resolve(path: $snippetsDirectory),
+            viewDirectory: $resolve(path: $viewDirectory),
+        );
         $autoloader->addPath(
             autoloaderPath: new AutoloaderPath(
-                path: $this->appDirectory,
+                path: $settings->appDirectory,
                 prefix: Core::APP_CLASS_PREFIX . '\\',
             ),
         );
-        $this->responseSender = new NativeResponseSender();
         new ErrorHandler()->register();
         try {
-            $this->httpRequest = HttpRequest::fromGlobals();
+            $httpRequest = HttpRequest::fromGlobals();
         } catch (UnsupportedRequestMethodException) {
-            header(header: HttpStatusCodeEnum::HTTP_METHOD_NOT_ALLOWED->getStatusHeader());
-            exit;
+            HttpResponse::createStatusResponse(httpStatusCode: HttpStatusCodeEnum::HTTP_METHOD_NOT_ALLOWED)
+                ->sendAndExit();
         }
-        $this->formContext = new FormContext(httpRequest: $this->httpRequest, csrfTokenSource: null);
-        if (!$this->httpRequest->isSsl()) {
-            HttpResponse::redirectAndExit(
-                relativeOrAbsoluteUri: $this->httpRequest->getUrl(protocol: ProtocolEnum::HTTPS),
-                httpRequest: $this->httpRequest,
-            );
-        }
-        $this->allowedDomains = $environment->allowedDomains;
-        $this->availableLanguages = new LanguageCollection();
-        $this->debug = $environment->debug;
-        $this->robots = $environment->robots;
-        $this->logEmailRecipient = $environment->logEmailRecipient;
+
+        return new Core(settings: $settings, httpRequest: $httpRequest);
     }
 
     /**
@@ -203,13 +266,17 @@ final class Core
     /**
      * @throws RuntimeException if the directory cannot be created
      */
-    private function createIfNotExists(string $path): string
-    {
+    private static function createIfNotExists(
+        string $path,
+        string $documentRoot,
+        string $baseDirectory,
+        string $appDirectory,
+    ): string {
         $path = DirectoryPathResolver::resolve(
             path: $path,
-            documentRoot: $this->documentRoot,
-            baseDirectory: $this->baseDirectory,
-            appDirectory: $this->appDirectory,
+            documentRoot: $documentRoot,
+            baseDirectory: $baseDirectory,
+            appDirectory: $appDirectory,
         );
         if (!is_dir(filename: $path) && !mkdir(directory: $path, recursive: true) && !is_dir(filename: $path)) {
             throw new RuntimeException(message: 'Cannot create the directory ' . $path);
@@ -219,10 +286,15 @@ final class Core
     }
 
     /**
+     * Prepares the response of the request: a redirect to HTTPS for a request without SSL (303, nothing else is set
+     * up for it), else the response of the matching route. Registers the exception handler, so call it once, as the
+     * last statement of the front controller before sending the response.
+     *
      * @param list<TemplateTag> $templateTags The own tags of the project, known to views, snippets, tables and error
      *                                        pages; a name of a built-in or another own tag throws
      *
      * @throws InvalidArgumentException for an invalid template tag name
+     * @throws LogicException if called twice, without a route or for a route without default content type
      */
     public function prepareHttpResponse(
         ?Logger $logger = null,
@@ -234,6 +306,15 @@ final class Core
     ): HttpResponse {
         if ($this->httpResponse !== null) {
             throw new LogicException(message: 'The HttpResponse is already prepared');
+        }
+        if (!$this->httpRequest->isSsl()) {
+            // Nothing else is needed for the redirect: no session, no exception handler
+            $this->httpResponse = HttpResponse::createRedirectResponse(
+                relativeOrAbsoluteUri: $this->httpRequest->getUrl(protocol: ProtocolEnum::HTTPS),
+                httpRequest: $this->httpRequest,
+            );
+
+            return $this->httpResponse;
         }
         $logger ??= new FileLogger(
             logEmailRecipient: $this->logEmailRecipient,
@@ -306,8 +387,13 @@ final class Core
         $contentHandler->processRequest(
             requestHandler: $requestHandler,
             localeHandler: $localeHandler,
-            core: $this,
             templateEngine: $templateEngine,
+            httpRequest: $this->httpRequest,
+            session: $this->session,
+            sessionHandler: $this->sessionHandler,
+            formContext: $this->formContext,
+            copyright: $this->renderCopyrightYear(),
+            robots: $this->robots,
             responseSender: $this->responseSender,
         );
         $this->httpResponse = new ContentResponseFactory(

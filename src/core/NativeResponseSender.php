@@ -12,8 +12,9 @@ namespace actra\yuf\core;
 use Override;
 
 /**
- * Sends the response with `header()` and `echo` and ends the script with `exit`. `send()` itself is not unit tested
- * (it calls `header()` and `exit`); the output of the content is `writeContent()`.
+ * Sends the response with `header()` and `echo` and ends the script with `exit`. With PHP-FPM, the request is finished
+ * with `fastcgi_finish_request()` before. `send()` itself is not unit tested (it calls `header()`,
+ * `fastcgi_finish_request()` and `exit`); the output of the content is `writeContent()`.
  */
 final class NativeResponseSender implements ResponseSender
 {
@@ -36,6 +37,11 @@ final class NativeResponseSender implements ResponseSender
             ob_end_clean();
         }
         $this->writeContent(httpResponse: $httpResponse);
+        if (function_exists(function: 'fastcgi_finish_request')) {
+            // The client has the complete response now (PHP-FPM): writing the session, destructors and the shutdown
+            // functions run after that, so they do not delay the response. Nothing can be output after this call.
+            fastcgi_finish_request();
+        }
         exit;
     }
 

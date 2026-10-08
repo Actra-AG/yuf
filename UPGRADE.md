@@ -4,6 +4,58 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.45.0] – 2026-10-08
+
+`Core` is created from explicit settings, so it can be tested; the global part moved to `Core::fromEnvironment()`.
+Search your project for `new Core(`, `processRequest(`, `register_shutdown_function(` and `__destruct(`.
+
+### ⚠️ `new Core(` becomes `Core::fromEnvironment(`
+
+| Before | After |
+|:--|:--|
+| `new Core(envFilePath: …, copyrightYear: …, autoloaderPath: …, baseDirectory: …, …)` | `Core::fromEnvironment(envFilePath: …, copyrightYear: …, autoloaderPath: …, baseDirectory: …, …)`: the same arguments with the same defaults |
+| `new Core(…)` registered the autoloader and the error handler, read the environment file and created the request | the same, in `fromEnvironment()`; it can be called once per process (a second call throws `LogicException`) |
+| `new Core(…)` for tests: not possible | `new Core(CoreSettings $settings, HttpRequest $httpRequest, ResponseSender $responseSender = new NativeResponseSender())`: touches no globals and no files, so tests build it from a temporary directory and a request double |
+
+Migration: change the `new Core(` line of your front controller (`public/index.php`); everything else stays
+(`$core->viewDirectory`, `$core->environmentSettings`, `$core->availableLanguages`, `prepareHttpResponse()`, …).
+`$core->baseDirectory` and `$core->appDirectory` are `readonly` (they were `private(set)`). New class `CoreSettings`
+(the environment settings, the resolved directories and the copyright year), which `fromEnvironment()` creates. The
+directories are only checked and created in `fromEnvironment()`.
+
+### ⚠️ The HTTPS redirect and the 405 response are responses
+
+| Before | After |
+|:--|:--|
+| `new Core(…)` redirected a request without HTTPS (303) and ended the script | `prepareHttpResponse()` returns the redirect response (303, `Location` is the HTTPS URL) before it does anything else (no exception handler, no session, no route needed); send it as usual with `sendAndExit()` |
+| A request method that yuf does not support ended the script with `header()` and `exit` | `Core::fromEnvironment()` sends a response with the status 405 and no content through the `NativeResponseSender` |
+
+New: `HttpResponse::createStatusResponse(HttpStatusCodeEnum)` is public (a response with only a status).
+Code between `new Core(` and `prepareHttpResponse()` now also runs for a request without HTTPS.
+
+### ⚠️ `ContentHandler::processRequest()` no longer takes `Core`
+
+| Before | After |
+|:--|:--|
+| `processRequest(RequestHandler, LocaleHandler, Core $core, TemplateEngine, ResponseSender $responseSender = new NativeResponseSender())` | `processRequest(RequestHandler, LocaleHandler, TemplateEngine, HttpRequest $httpRequest, ?Session $session, ?AbstractSessionHandler $sessionHandler, FormContext $formContext, string $copyright, string $robots, ResponseSender $responseSender)`: all arguments are required, there is no default sender |
+
+`Core::prepareHttpResponse()` calls it; call it yourself only in tests.
+
+### Performance: `fastcgi_finish_request()`
+
+`NativeResponseSender::send()` calls `fastcgi_finish_request()` (if PHP-FPM provides it) after the output and before
+`exit`: the client has the whole response before the session is written and the destructors and shutdown functions
+run. Nothing can be output after sending a response. Check your `register_shutdown_function()` callbacks and
+destructors: what they print is not sent anymore. See "Production settings" in the README (`opcache`).
+
+### Bug fix: output of a failed view
+
+When a view threw (e.g. a `NotFoundException` for a missing content file), `ContentHandler::processRequest()` left the
+output buffer of the view open, so partial output of the view could be sent before the error page. The buffer is
+discarded now.
+
+---
+
 ## [v4.44.0] – 2026-10-08
 
 Responses are sent through the new interface `ResponseSender`, so sending, redirects and the exception handler can be

@@ -50,7 +50,20 @@ To set up a project manually:
 
 1. Create a `.env.php` file based on `.env.example.php` (see "Environment settings" below).
 2. Create an `index.php` in your document root based on `index.example.php`.
-3. Initialize the Framework Core and provide the path to `Autoloader.php` if not using the default.
+3. Create the application with `Core::fromEnvironment()` (the arguments `envFilePath:` and `copyrightYear:` are
+   required; `autoloaderPath:` and the directories have defaults) and send the response of
+   `prepareHttpResponse()`:
+
+```php
+require __DIR__ . '/../vendor/actra/yuf/src/Core.php';
+$core = Core::fromEnvironment(envFilePath: __DIR__ . '/../.env.php', copyrightYear: 2026);
+$core->prepareHttpResponse(routeCollection: $routes)->sendAndExit();
+```
+
+`fromEnvironment()` does everything global, once per process: it registers the autoloader and the error handler, reads
+the environment file, sets `error_reporting()` and the time zone, creates the directories and the request from the PHP
+globals. Tests build `Core` directly with `new Core(settings: new CoreSettings(…), httpRequest: …, responseSender: …)`,
+which touches no globals. A request without HTTPS gets the redirect to HTTPS as response of `prepareHttpResponse()`.
 
 ## Environment settings
 
@@ -70,6 +83,16 @@ Own keys of a project (flat, used as given, e.g. `'mailer.hostname'`) are read f
 `getString()`, `getInt()`, `getBool()` and `getStringList()` (`has()` tells if a key exists); a missing key or a wrong
 type throws an `UnexpectedValueException` naming the key and the expected type. Pass the settings to your own settings
 class instead of reading them statically.
+
+## Production settings
+
+- `opcache.validate_timestamps=0`: PHP does not check the files for changes on every request. Reset the opcache on every
+  deployment (restart PHP-FPM or call `opcache_reset()`), else the old code keeps running. This includes the compiled
+  templates in `app/cache/`: a changed template is compiled again, but PHP keeps running the old compiled file until
+  the reset.
+- Optional: `opcache.preload` with a script that loads the classes of yuf and your application.
+- With PHP-FPM, yuf calls `fastcgi_finish_request()` after the response is sent: the client has the response before
+  the session is written and the shutdown functions run. Nothing can be output after the response.
 
 ## Error log
 

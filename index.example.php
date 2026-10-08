@@ -8,7 +8,7 @@ use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
 
 require __DIR__ . '/../vendor/actra/yuf/src/Core.php';
-$core = new Core(
+$core = Core::fromEnvironment(
     envFilePath: __DIR__ . '/../.env.php',
     copyrightYear: 2026
 );

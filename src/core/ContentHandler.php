@@ -10,14 +10,17 @@ declare(strict_types=1);
 namespace actra\yuf\core;
 
 use actra\yuf\auth\AuthSession;
-use actra\yuf\Core;
 use actra\yuf\exception\NotFoundException;
+use actra\yuf\form\FormContext;
 use actra\yuf\html\HtmlDocument;
 use actra\yuf\html\HtmlDocumentSettings;
 use actra\yuf\security\CspNonce;
+use actra\yuf\session\AbstractSessionHandler;
+use actra\yuf\session\Session;
 use actra\yuf\template\TemplateEngine;
 use InvalidArgumentException;
 use LogicException;
+use Throwable;
 
 final class ContentHandler
 {
@@ -26,9 +29,11 @@ final class ContentHandler
     private string $content = '';
     private ContentType $contentType;
     private ?HtmlDocument $htmlDocument = null;
-    private ?RequestHandler $requestHandler = null;
-    private ?Core $core = null;
+    private bool $isProcessed = false;
+    // Set by processRequest()
+    private ?HtmlDocumentSettings $htmlDocumentSettings = null;
     private ?TemplateEngine $templateEngine = null;
+    private ?FormContext $formContext = null;
 
     public function __construct(
         ContentType $contentType,
@@ -45,25 +50,20 @@ final class ContentHandler
     public function getHtmlDocument(): HtmlDocument
     {
         if ($this->htmlDocument === null) {
-            if ($this->requestHandler === null || $this->core === null || $this->templateEngine === null) {
+            if (
+                $this->htmlDocumentSettings === null
+                || $this->templateEngine === null
+                || $this->formContext === null
+            ) {
                 throw new LogicException(
                     message: 'The HTML document is only available while the request is processed.',
                 );
             }
-            $language = $this->requestHandler->language;
             $this->htmlDocument = new HtmlDocument(
-                settings: new HtmlDocumentSettings(
-                    viewDirectory: $this->requestHandler->route->viewDirectory,
-                    fileGroup: $this->requestHandler->fileGroup,
-                    fileTitle: $this->requestHandler->fileTitle,
-                    fileName: $this->requestHandler->fileName,
-                    languageCode: $language === null ? '' : $language->code,
-                    copyright: $this->core->renderCopyrightYear(),
-                    robots: $this->core->robots,
-                ),
+                settings: $this->htmlDocumentSettings,
                 cspNonce: $this->cspNonce,
                 templateEngine: $this->templateEngine,
-                csrfTokenSource: $this->core->formContext->csrfTokenSource,
+                csrfTokenSource: $this->formContext->csrfTokenSource,
             );
         }
 
@@ -73,65 +73,95 @@ final class ContentHandler
     /**
      * Runs the view of the resolved route and sets the content of the response.
      *
+     * @param ?Session $session `null` without sessions
+     * @param ?AbstractSessionHandler $sessionHandler `null` without sessions
+     * @param string $copyright Years of the copyright notice of the HTML document
+     * @param string $robots Content of the robots meta tag of the HTML document
+     *
      * @throws LogicException if called twice
      */
     public function processRequest(
         RequestHandler $requestHandler,
         LocaleHandler $localeHandler,
-        Core $core,
         TemplateEngine $templateEngine,
-        ResponseSender $responseSender = new NativeResponseSender(),
+        HttpRequest $httpRequest,
+        ?Session $session,
+        ?AbstractSessionHandler $sessionHandler,
+        FormContext $formContext,
+        string $copyright,
+        string $robots,
+        ResponseSender $responseSender,
     ): void {
-        if ($this->requestHandler !== null) {
+        if ($this->isProcessed) {
             throw new LogicException(message: 'The request is already processed.');
         }
-        $this->requestHandler = $requestHandler;
-        $this->core = $core;
+        $this->isProcessed = true;
+        $language = $requestHandler->language;
+        $this->htmlDocumentSettings = new HtmlDocumentSettings(
+            viewDirectory: $requestHandler->route->viewDirectory,
+            fileGroup: $requestHandler->fileGroup,
+            fileTitle: $requestHandler->fileTitle,
+            fileName: $requestHandler->fileName,
+            languageCode: $language === null ? '' : $language->code,
+            copyright: $copyright,
+            robots: $robots,
+        );
         $this->templateEngine = $templateEngine;
+        $this->formContext = $formContext;
         $route = $requestHandler->route;
         if ($route->viewCallback !== null) {
             $this->setContent(contentString: ($route->viewCallback)());
             return;
         }
+        $outputBufferLevel = ob_get_level();
         ob_start();
         ob_implicit_flush(enable: false);
-        $route->loadLocalizedText(
-            fileTitle: $requestHandler->fileTitle,
-            localeHandler: $localeHandler,
-        );
-        $context = new ViewContext(
-            httpRequest: $core->httpRequest,
-            session: $core->session,
-            sessionHandler: $core->sessionHandler,
-            authSession: $core->session === null ? null : new AuthSession(session: $core->session),
-            formContext: $core->formContext,
-            route: $route,
-            fileGroup: $requestHandler->fileGroup,
-            fileTitle: $requestHandler->fileTitle,
-            pathVars: new PathVars(values: $requestHandler->pathVars),
-            content: $this,
-            locale: $localeHandler,
-            templateEngine: $templateEngine,
-            responseSender: $responseSender,
-        );
-        $view = ($route->viewFactory ?? new ClassNameViewFactory())->createView(context: $context);
-        if ($view === null) {
-            if ($context->pathVars->get(nr: 1) !== null) {
-                throw new NotFoundException();
+        try {
+            $route->loadLocalizedText(
+                fileTitle: $requestHandler->fileTitle,
+                localeHandler: $localeHandler,
+            );
+            $context = new ViewContext(
+                httpRequest: $httpRequest,
+                session: $session,
+                sessionHandler: $sessionHandler,
+                authSession: $session === null ? null : new AuthSession(session: $session),
+                formContext: $formContext,
+                route: $route,
+                fileGroup: $requestHandler->fileGroup,
+                fileTitle: $requestHandler->fileTitle,
+                pathVars: new PathVars(values: $requestHandler->pathVars),
+                content: $this,
+                locale: $localeHandler,
+                templateEngine: $templateEngine,
+                responseSender: $responseSender,
+            );
+            $view = ($route->viewFactory ?? new ClassNameViewFactory())->createView(context: $context);
+            if ($view === null) {
+                if ($context->pathVars->get(nr: 1) !== null) {
+                    throw new NotFoundException();
+                }
+            } else {
+                if ($context->pathVars->get(nr: ($view->maxAllowedPathVars + 1)) !== null) {
+                    throw new NotFoundException();
+                }
+                if (!$this->hasContent()) {
+                    $view->execute();
+                }
             }
-        } else {
-            if ($context->pathVars->get(nr: ($view->maxAllowedPathVars + 1)) !== null) {
-                throw new NotFoundException();
+            if (
+                !$this->hasContent()
+                && $this->contentType->isHtml()
+            ) {
+                $this->setContent(contentString: $this->getHtmlDocument()->render());
             }
-            if (!$this->hasContent()) {
-                $view->execute();
+        } catch (Throwable $throwable) {
+            // Partial output of the failed view must not be sent with the error page
+            while (ob_get_level() > $outputBufferLevel) {
+                ob_end_clean();
             }
-        }
-        if (
-            !$this->hasContent()
-            && $this->contentType->isHtml()
-        ) {
-            $this->setContent(contentString: $this->getHtmlDocument()->render());
+
+            throw $throwable;
         }
         $outputBuffer = ob_get_clean();
         if ($outputBuffer === false) {

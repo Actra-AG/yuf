@@ -20,7 +20,7 @@ use app\view\frontend\IndexView;
 // Uses the yuf sources of this repository (in a real project: vendor/actra/yuf/src/Core.php)
 require __DIR__ . '/../../src/Core.php';
 
-$core = new Core(
+$core = Core::fromEnvironment(
     envFilePath: __DIR__ . '/../.env.php',
     copyrightYear: 2026,
     autoloaderPath: __DIR__ . '/../../vendor/actra/autoloader/src/Autoloader.php',

@@ -273,6 +273,18 @@ final class HttpResponseTest extends TestCase
         $this->assertSame(1, $sessionHandler->sameSiteLaxChanges);
     }
 
+    public function testStatusResponseHasOnlyTheStatus(): void
+    {
+        $httpResponse = HttpResponse::createStatusResponse(
+            httpStatusCode: HttpStatusCodeEnum::HTTP_METHOD_NOT_ALLOWED,
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_METHOD_NOT_ALLOWED, $httpResponse->httpStatusCode);
+        $this->assertSame([], $httpResponse->listHeaders());
+        $this->assertNull($httpResponse->getContentString());
+        $this->assertNull($httpResponse->getContentFilePath());
+    }
+
     public function testFileResponseOfAMissingFileIsA404WithoutHeadersAndContent(): void
     {
         $httpResponse = HttpResponse::createResponseFromFilePath(

@@ -21,7 +21,13 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   `ResponseSender`) and touches no globals, so tests build `Core` directly. `HttpResponse` sends through a small
   `ResponseSender` interface (`sendAndExit()` / `redirectAndExit()` keep their names; tests pass a double). The HTTPS
   redirect and the 405 response leave the constructor and become responses.
-- **New features:** all three are planned (steps 11 to 13); their scope is asked at the start of each step.
+- **Performance (user, after step 3):** responses go out as fast as possible. `NativeResponseSender` ends the
+  request with `fastcgi_finish_request()` (if available) before `exit`, so session write, destructors and shutdown run
+  after the client has the response; the session starts lazily and its lock is released early (step 5); the template
+  tags are built once per request; the directories are only checked/created in `Core::fromEnvironment()`; README:
+  production settings (`opcache.validate_timestamps=0`, optional preloading). No early flush or streaming of HTML
+  (ETag, 304 and `Content-Length` need the whole content).
+- **New features:** all three are planned (steps 12 to 14); their scope is asked at the start of each step.
 - No backwards compatibility: renames and removals without aliases, every breaking change ⚠️ with before/after in
   `UPGRADE.md`, as before.
 
@@ -68,22 +74,32 @@ each small enough to release on its own. `actra/backend` follows when the plan i
    `ContentHandler::processRequest()` gets what it needs instead of `Core` (`HtmlDocumentSettings` parts, session,
    form context). Tests: `Core` constructor and `prepareHttpResponse()` with a temp directory, routes and views of
    `tests/Double/`; `processRequest()`. The guard `$isInitialized` moves to `fromEnvironment()`. `example/public/index.php`
-   and README updated.
+   and README updated. Performance: `NativeResponseSender` calls `fastcgi_finish_request()` (if the function exists)
+   after the output and before `exit`; `prepareHttpResponse()` builds the template tags once (today twice: check +
+   engine); the explicit constructor takes resolved directories without file system checks (only `fromEnvironment()`
+   checks and creates them); README section on production settings (opcache `validate_timestamps=0`, preloading).
+5. **v4.46.0 – lazy session, short lock (⚠️ behaviour):** the session handler does not call `session_start()` in its
+   constructor; the session starts on the first access of `Session` (read or write), so requests that never touch it
+   take no lock and send no cookie. Early release of the lock: after the response is created (before sending) the
+   session is written and closed (`session_write_close()`), and/or an explicit `Session::close()` for long views
+   (decided in the step, ask the user if it changes the API). Keep the security behaviour (strict mode, ID
+   regeneration, trusted client check, cookie SameSite/Lax change for redirects) and its tests; measure parallel
+   requests of one session before/after in `example/`.
 
 ### Design points
 
-5. **v4.46.0 – split `SearchHelper` (⚠️):** pure static SQL builders (`createSqlFilters()`, `createBooleanQuery()`,
+6. **v4.47.0 – split `SearchHelper` (⚠️):** pure static SQL builders (`createSqlFilters()`, `createBooleanQuery()`,
    `createSqlSearch()`) into their own class (e.g. `SearchQueryBuilder`), the stored search state (`create()`,
    `check…()`) stays or becomes `SearchState`; names decided in the step per `naming.md`. `UPGRADE.md` for
    `actra/backend` (`createBooleanQuery()` and the removed `getInstance()` -> `create()`).
-6. **v4.47.0 – resolved route of `RequestHandler` (⚠️):** `resolveRoute()` returns a readonly value object (route,
+7. **v4.48.0 – resolved route of `RequestHandler` (⚠️):** `resolveRoute()` returns a readonly value object (route,
    language, file title / extension / name / group, route variables, path vars) used by `Core`, `ContentHandler`,
    `ExceptionHandler`; the four `@phpstan-ignore property.uninitialized` go away.
-7. **v4.48.0 – `HtmlDataObject` and `CsvFile`:** `HtmlDataObject` stores an array instead of a shared `stdClass`
+8. **v4.49.0 – `HtmlDataObject` and `CsvFile`:** `HtmlDataObject` stores an array instead of a shared `stdClass`
    (a child added with `addDataObject()` is copied, later changes of the child do not leak); the template engine
    reads the same selectors. `CsvFile`: decided in the step (builder with `addRow()` is fine; immutable result or
    documented builder). Extension point `HtmlDataObject` stays (`actra/backend` uses it).
-8. **v4.49.0 – `FormRenderer` and toggle fields (⚠️ for own renderers):** one-phase renderer API (`render(): HtmlTag`
+9. **v4.50.0 – `FormRenderer` and toggle fields (⚠️ for own renderers):** one-phase renderer API (`render(): HtmlTag`
    without stored tag, so a component can be rendered more than once; `prepare()` / `getHtmlTag()` / `setHtmlTag()`
    removed or adapted); `ToggleField` / `MultiToggleField` share the child methods (trait or delegation via
    `ToggleChildren`). HTML output byte-identical (form and `example/` tests). `UPGRADE.md` with before/after for own
@@ -91,7 +107,7 @@ each small enough to release on its own. `actra/backend` follows when the plan i
 
 ### Small functional gaps
 
-9. **v4.50.0 – validation gaps (⚠️ behaviour):** IBAN length per country (table in `IbanValidator`); IPv4-mapped IPv6
+10. **v4.51.0 – validation gaps (⚠️ behaviour):** IBAN length per country (table in `IbanValidator`); IPv4-mapped IPv6
    addresses (`::ffff:a.b.c.d`) match IPv4 whitelist entries (normalized before the comparison); `CountryCodeEnum`:
    remove the non-ISO `AA` and `UR` (`UY` exists); `TableFilter` throws for a second field with the same identifier,
    `NavigationItemCollection::addItem()` for a second item with the same `navKey`; `DateFilterField` accepts the
@@ -99,18 +115,18 @@ each small enough to release on its own. `actra/backend` follows when the plan i
 
 ### Style
 
-10. **v4.50.1 – lines ≤ 120 characters:** the 3 lines in `src/` (`HtmlTag`, `CurlFormEncoder`, `Form`) and the 63 in
+11. **v4.51.1 – lines ≤ 120 characters:** the 3 lines in `src/` (`HtmlTag`, `CurlFormEncoder`, `Form`) and the 63 in
     `tests/`. No behaviour change.
 
 ### New features (scope asked at the start of each step)
 
-11. **v4.51.0 – phone numbers:** validity per number type, E.164 and national format in `src/phone/`.
-12. **v4.52.0 – SMTP authentication:** more methods than `AUTH LOGIN` in `SmtpMailer` (e.g. `AUTH PLAIN`).
-13. **v4.53.0 – redirect codes:** `acceptRedirectionResponseCode()` also for 302, 307, 308.
+12. **v4.52.0 – phone numbers:** validity per number type, E.164 and national format in `src/phone/`.
+13. **v4.53.0 – SMTP authentication:** more methods than `AUTH LOGIN` in `SmtpMailer` (e.g. `AUTH PLAIN`).
+14. **v4.54.0 – redirect codes:** `acceptRedirectionResponseCode()` also for 302, 307, 308.
 
 ### End
 
-14. Update [docs/standard-migration/remaining.md](../standard-migration/remaining.md) to the final state, so that
+15. Update [docs/standard-migration/remaining.md](../standard-migration/remaining.md) to the final state, so that
     `actra/backend` can follow.
 
 ## Handover notes
@@ -183,3 +199,51 @@ each small enough to release on its own. `actra/backend` follows when the plan i
 - Open for step 4: `Core` takes the `ResponseSender` as constructor argument (remove the private native one), the
   HTTPS redirect and the 405 become responses sent through it; `ContentHandler::processRequest()` gets the sender from
   there (its default argument can go); the `new NativeResponseSender()` defaults on the other classes stay.
+
+### Step 4 (v4.45.0) – done
+
+- `Core::fromEnvironment()` (same arguments and defaults as the old constructor) does the global part once per
+  process: guard `$isInitialized` (the only static state), autoloader, env file, `error_reporting()`, time zone,
+  `DOCUMENT_ROOT`, directories (`is_dir` / `mkdir` only here, in the static `createIfNotExists()`), `app` autoloader
+  path, `ErrorHandler`, `HttpRequest::fromGlobals()`. An `UnsupportedRequestMethodException` is answered with
+  `HttpResponse::createStatusResponse(HTTP_METHOD_NOT_ALLOWED)->sendAndExit()` (native sender; no `header()` / `exit`
+  of its own). `createStatusResponse()` is public now (was private). `fromEnvironment()` is untested (global, once per
+  process); documented in the PHPDoc of `Core`.
+- `new Core(CoreSettings $settings, HttpRequest $httpRequest, ResponseSender $responseSender = new
+  NativeResponseSender())` touches no globals, no files, no static state. New `src/core/CoreSettings.php` (final
+  readonly: `EnvironmentSettings`, copyright year, document root, framework / base / app / cache / error docs / log /
+  settings / snippets / view directory). Core keeps its public properties with the same names and types; only
+  `baseDirectory` and `appDirectory` are `readonly` now (were `private(set)`). The private native sender is gone.
+- HTTPS redirect: first thing in `prepareHttpResponse()` after the "already prepared" guard (so a second call throws
+  for the redirect too): returns `HttpResponse::createRedirectResponse()` (303, same URL as before). No logger,
+  exception handler, session, tags or routes are needed for it, so a request without HTTPS never fails on a missing
+  route or an invalid tag name. The `ErrorHandler` is registered before (in `fromEnvironment()`), as before.
+- `ContentHandler::processRequest(requestHandler, localeHandler, templateEngine, httpRequest, session, sessionHandler,
+  formContext, copyright, robots, responseSender)`: explicit arguments (no extra value object); `responseSender` has no
+  default now. It builds the `HtmlDocumentSettings` once (instead of `getHtmlDocument()` reading `Core` lazily) and
+  keeps the template engine and form context; `getHtmlDocument()` works as before.
+- Performance: `NativeResponseSender::send()` calls `fastcgi_finish_request()` after `writeContent()` if the function
+  exists, then `exit` (documented in the class PHPDoc; not unit tested, like `send()`). Template tags: the early check
+  (before the exception handler exists) still builds one collection with a placeholder locale handler, because the
+  `lang` tag holds the locale handler of the request, which is only known after the route is resolved, and the
+  exception handler needs valid tags for its error pages. Per request that is still two builds (check + engine);
+  nothing real is saved, a build is 7 small objects. Saving it would need a collection whose `lang` tag gets the
+  locale handler later; not done (open point). Directory checks (`is_dir()` / `mkdir()` of the 8 directories) now only run in
+  `fromEnvironment()`, still once per request in production, so nothing is saved there either; the benefit is that
+  the constructor is free of them.
+- README: new section "Production settings" (`opcache.validate_timestamps=0` with reset on deploy, also for the
+  compiled templates in `app/cache/`; optional `opcache.preload`; `fastcgi_finish_request()` with PHP-FPM), Quick
+  Start with `Core::fromEnvironment(`. `example/public/index.php` and `index.example.php` use it.
+- Tests: 12155 -> 12178: `CoreTest` (constructor, `renderCopyrightYear()`, `prepareHttpResponse()`: HTML view, route
+  callback, no CSP, session handler double, HTTPS redirect, second call, no routes, invalid tag name before the handler
+  exists, unknown route -> `NotFoundException` and 404 through the registered handler, `createTemplateEngine()`),
+  `ContentHandlerTest` (`processRequest()`: callback, view, context arguments, no session, copyright / robots, twice,
+  missing content file), `HttpResponseTest::testStatusResponseHasOnlyTheStatus`; new double `CoreWorkDirectory`
+  (temporary app directory with `CoreSettings`, removed in tearDown). `CoreTest` removes the exception handler in
+  tearDown; `prepareHttpResponse()` sets no locale for routes without language, so no `setlocale()` is changed.
+- `ddev composer check` green, baseline empty. `example/`: `/` 200, `/nothing-here.html` 404, `http://` 303 to https,
+  unsupported methods (`TRACE`, `BREW`) 405.
+- Bug fixed in review: `ContentHandler::processRequest()` left its output buffer open when the view threw (the
+  exception handler then printed into the buffer of the failed view, which PHP flushed at the end: partial view output
+  could precede the error page). The buffer is discarded now (`try` / `catch`, rethrow); the test checks the level.
+- Open: template tags are still built twice per request (see above).
