@@ -42,6 +42,10 @@ final class ErrorCollection
 
     public function getFirstError(): HtmlText
     {
-        return $this->errors[0] ?? throw new LogicException(message: 'The error collection has no errors.');
+        if (!array_key_exists(key: 0, array: $this->errors)) {
+            throw new LogicException(message: 'The error collection has no errors.');
+        }
+
+        return $this->errors[0];
     }
 }

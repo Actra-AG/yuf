@@ -34,7 +34,11 @@ final readonly class TableSessionState
 
     public function get(string $identifier, string $index): ?string
     {
-        $value = $this->readEntries()[$identifier][$index] ?? null;
+        $entry = $this->readEntry(identifier: $identifier);
+        if (!array_key_exists(key: $index, array: $entry)) {
+            return null;
+        }
+        $value = $entry[$index];
 
         return is_string(value: $value) ? $value : null;
     }
@@ -55,7 +59,7 @@ final readonly class TableSessionState
             return;
         }
         $entries = $this->readEntries();
-        $entry = $entries[$identifier] ?? [];
+        $entry = $this->readEntry(identifier: $identifier);
         unset($entry[$index]);
         if ($entry === []) {
             unset($entries[$identifier]);
@@ -66,13 +70,23 @@ final readonly class TableSessionState
     }
 
     /**
+     * @return array<array-key, mixed>
+     */
+    private function readEntry(string $identifier): array
+    {
+        $entries = $this->readEntries();
+
+        return array_key_exists(key: $identifier, array: $entries) ? $entries[$identifier] : [];
+    }
+
+    /**
      * @return array<array-key, array<array-key, mixed>>
      */
     private function readEntries(): array
     {
         $data = $this->session->getSection(section: $this->section);
         if ($this->group !== null) {
-            $data = $data[$this->group] ?? [];
+            $data = array_key_exists(key: $this->group, array: $data) ? $data[$this->group] : [];
         }
         $entries = [];
         if (is_array(value: $data)) {

@@ -46,12 +46,11 @@ final readonly class AuthSession
 
     public function isLoggedIn(): bool
     {
-        $authData = $this->session->getSection(section: SessionSectionEnum::AUTH);
-        if (($authData[AuthSessionKeyEnum::IS_LOGGED_IN->value] ?? null) !== true) {
+        if (!$this->hasLoggedInFlag()) {
             return false;
         }
         // Incomplete login state: fail closed, the user has to log in again
-        if (!is_int(value: $authData[AuthSessionKeyEnum::AUTH_SESSION_ID->value] ?? null)) {
+        if ($this->readAuthSessionId() === null) {
             $this->resetSession();
 
             return false;
@@ -74,14 +73,32 @@ final readonly class AuthSession
     public function getAuthSessionId(): int
     {
         $isLoggedIn = $this->isLoggedIn();
-        $authSessionId = $this->session->getSection(
-            section: SessionSectionEnum::AUTH,
-        )[AuthSessionKeyEnum::AUTH_SESSION_ID->value] ?? null;
-        if (!$isLoggedIn || !is_int(value: $authSessionId)) {
+        $authSessionId = $this->readAuthSessionId();
+        if (!$isLoggedIn || $authSessionId === null) {
             throw new LogicException(message: 'No user is logged in: there is no auth session ID.');
         }
 
         return $authSessionId;
+    }
+
+    private function hasLoggedInFlag(): bool
+    {
+        $authData = $this->session->getSection(section: SessionSectionEnum::AUTH);
+        $key = AuthSessionKeyEnum::IS_LOGGED_IN->value;
+
+        return array_key_exists(key: $key, array: $authData) && $authData[$key] === true;
+    }
+
+    private function readAuthSessionId(): ?int
+    {
+        $authData = $this->session->getSection(section: SessionSectionEnum::AUTH);
+        $key = AuthSessionKeyEnum::AUTH_SESSION_ID->value;
+        if (!array_key_exists(key: $key, array: $authData)) {
+            return null;
+        }
+        $authSessionId = $authData[$key];
+
+        return is_int(value: $authSessionId) ? $authSessionId : null;
     }
 
     private function resetSession(): void

@@ -72,7 +72,8 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
     public function load(string $pointer): array
     {
         $this->assertValidPointer(pointer: $pointer);
-        $storedFiles = $this->session->getSection(section: SessionSectionEnum::UPLOADS)[$pointer] ?? null;
+        $section = $this->session->getSection(section: SessionSectionEnum::UPLOADS);
+        $storedFiles = array_key_exists(key: $pointer, array: $section) ? $section[$pointer] : null;
         if (!is_array(value: $storedFiles)) {
             return [];
         }
@@ -201,10 +202,10 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
         if (!is_array(value: $storedFile)) {
             return null;
         }
-        $name = $storedFile['name'] ?? null;
-        $type = $storedFile['type'] ?? null;
-        $size = $storedFile['size'] ?? null;
-        $path = $storedFile['path'] ?? null;
+        $name = array_key_exists(key: 'name', array: $storedFile) ? $storedFile['name'] : null;
+        $type = array_key_exists(key: 'type', array: $storedFile) ? $storedFile['type'] : null;
+        $size = array_key_exists(key: 'size', array: $storedFile) ? $storedFile['size'] : null;
+        $path = array_key_exists(key: 'path', array: $storedFile) ? $storedFile['path'] : null;
         if (!is_string(value: $name) || !is_string(value: $type) || !is_int(value: $size) || !is_string(value: $path)) {
             return null;
         }

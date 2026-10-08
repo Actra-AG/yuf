@@ -1,9 +1,21 @@
 includes:
     - vendor/actra/coding-standard/config/phpstan.neon
+    - vendor/actra/coding-standard/config/phpstan-no-superglobals.neon
     # Only for legacy code, may only shrink
     - phpstan-baseline.neon
 
 parameters:
+    actraSuperglobalsAllowIn:
+        - src/Core.php
+        - src/core/HttpRequest.php
+        - src/session/NativeSessionStorage.php
+        - src/session/AbstractSessionHandler.php
+        # Tests that prepare or inspect superglobals
+        - tests/Unit/common/SearchHelperRequestTest.php
+        - tests/Unit/core/HttpRequestFromGlobalsTest.php
+        - tests/Unit/core/HttpRequestGetallheadersTest.php
+        - tests/Unit/session/AbstractSessionHandlerTest.php
+        - tests/Unit/session/NativeSessionStorageTest.php
     phpVersion: 80500
     paths:
         - src

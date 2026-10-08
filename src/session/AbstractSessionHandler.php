@@ -336,19 +336,46 @@ abstract class AbstractSessionHandler extends SessionHandler
 
     private function readHandlerValue(string $key): string|int|null
     {
-        $yufData = $_SESSION[SessionSectionEnum::ROOT_KEY] ?? null;
-        $handlerData = is_array(value: $yufData) ? ($yufData[SessionSectionEnum::HANDLER->value] ?? null) : null;
-        $value = is_array(value: $handlerData) ? ($handlerData[$key] ?? null) : null;
+        $handlerData = $this->readHandlerData();
+        if (!array_key_exists(key: $key, array: $handlerData)) {
+            return null;
+        }
+        $value = $handlerData[$key];
 
         return is_string(value: $value) || is_int(value: $value) ? $value : null;
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
+    private function readYufData(): array
+    {
+        if (!array_key_exists(key: SessionSectionEnum::ROOT_KEY, array: $_SESSION)) {
+            return [];
+        }
+        $yufData = $_SESSION[SessionSectionEnum::ROOT_KEY];
+
+        return is_array(value: $yufData) ? $yufData : [];
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    private function readHandlerData(): array
+    {
+        $yufData = $this->readYufData();
+        if (!array_key_exists(key: SessionSectionEnum::HANDLER->value, array: $yufData)) {
+            return [];
+        }
+        $handlerData = $yufData[SessionSectionEnum::HANDLER->value];
+
+        return is_array(value: $handlerData) ? $handlerData : [];
+    }
+
     private function writeHandlerValue(string $key, string|int $value): void
     {
-        $yufData = $_SESSION[SessionSectionEnum::ROOT_KEY] ?? null;
-        $yufData = is_array(value: $yufData) ? $yufData : [];
-        $handlerData = $yufData[SessionSectionEnum::HANDLER->value] ?? null;
-        $handlerData = is_array(value: $handlerData) ? $handlerData : [];
+        $yufData = $this->readYufData();
+        $handlerData = $this->readHandlerData();
         $handlerData[$key] = $value;
         $yufData[SessionSectionEnum::HANDLER->value] = $handlerData;
         $_SESSION[SessionSectionEnum::ROOT_KEY] = $yufData;

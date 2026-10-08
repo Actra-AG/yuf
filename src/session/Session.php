@@ -136,7 +136,10 @@ final readonly class Session
     public function getSection(SessionSectionEnum $section): array
     {
         $yufData = $this->storage->get(key: SessionSectionEnum::ROOT_KEY);
-        $sectionData = is_array(value: $yufData) ? ($yufData[$section->value] ?? null) : null;
+        if (!is_array(value: $yufData) || !array_key_exists(key: $section->value, array: $yufData)) {
+            return [];
+        }
+        $sectionData = $yufData[$section->value];
 
         return is_array(value: $sectionData) ? $sectionData : [];
     }

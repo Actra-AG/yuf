@@ -82,7 +82,9 @@ final class ToggleChildren
      */
     public function getForMainOption(string $mainOption): array
     {
-        return $this->childrenByMainOption[$mainOption] ?? [];
+        return array_key_exists(key: $mainOption, array: $this->childrenByMainOption)
+            ? $this->childrenByMainOption[$mainOption]
+            : [];
     }
 
     /**
@@ -90,8 +92,12 @@ final class ToggleChildren
      */
     public function get(string $mainOption, string $componentName): FormComponent
     {
-        return $this->childrenByMainOption[$mainOption][$componentName]
-            ?? throw new LogicException(message: 'The mainOption ' . $mainOption . ' has no child ' . $componentName);
+        $children = $this->getForMainOption(mainOption: $mainOption);
+        if (!array_key_exists(key: $componentName, array: $children)) {
+            throw new LogicException(message: 'The mainOption ' . $mainOption . ' has no child ' . $componentName);
+        }
+
+        return $children[$componentName];
     }
 
     /**

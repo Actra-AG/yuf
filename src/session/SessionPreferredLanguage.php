@@ -23,7 +23,10 @@ final readonly class SessionPreferredLanguage
 
     public function getCode(): ?string
     {
-        $code = $this->session->getSection(section: SessionSectionEnum::HANDLER)[SessionPreferredLanguage::KEY] ?? null;
+        $handlerData = $this->session->getSection(section: SessionSectionEnum::HANDLER);
+        $code = array_key_exists(key: SessionPreferredLanguage::KEY, array: $handlerData)
+            ? $handlerData[SessionPreferredLanguage::KEY]
+            : null;
 
         return is_string(value: $code) ? $code : null;
     }

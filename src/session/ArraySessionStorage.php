@@ -35,7 +35,7 @@ final class ArraySessionStorage implements SessionStorage
     #[Override]
     public function get(string $key): string|int|float|bool|array|null
     {
-        return $this->data[$key] ?? null;
+        return array_key_exists(key: $key, array: $this->data) ? $this->data[$key] : null;
     }
 
     #[Override]

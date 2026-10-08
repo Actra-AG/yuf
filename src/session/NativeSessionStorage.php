@@ -32,7 +32,9 @@ final readonly class NativeSessionStorage implements SessionStorage
     #[Override]
     public function get(string $key): string|int|float|bool|array|null
     {
-        return NativeSessionStorage::narrow(value: $this->readAll()[$key] ?? null);
+        $all = $this->readAll();
+
+        return NativeSessionStorage::narrow(value: array_key_exists(key: $key, array: $all) ? $all[$key] : null);
     }
 
     #[Override]

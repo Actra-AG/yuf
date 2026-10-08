@@ -136,22 +136,22 @@ final readonly class FormInput
         if (!is_array(value: $value)) {
             return null;
         }
-        $names = $value['name'] ?? null;
+        $names = FormInput::entry(value: $value, key: 'name');
         if (!is_array(value: $names)) {
             $upload = FormInput::toUpload(
                 name: $names,
-                tmpName: $value['tmp_name'] ?? null,
-                type: $value['type'] ?? null,
-                error: $value['error'] ?? null,
-                size: $value['size'] ?? null,
+                tmpName: FormInput::entry(value: $value, key: 'tmp_name'),
+                type: FormInput::entry(value: $value, key: 'type'),
+                error: FormInput::entry(value: $value, key: 'error'),
+                size: FormInput::entry(value: $value, key: 'size'),
             );
 
             return $upload === null ? null : [$upload];
         }
-        $tmpNames = $value['tmp_name'] ?? null;
-        $types = $value['type'] ?? null;
-        $errors = $value['error'] ?? null;
-        $sizes = $value['size'] ?? null;
+        $tmpNames = FormInput::entry(value: $value, key: 'tmp_name');
+        $types = FormInput::entry(value: $value, key: 'type');
+        $errors = FormInput::entry(value: $value, key: 'error');
+        $sizes = FormInput::entry(value: $value, key: 'size');
         if (!is_array(value: $tmpNames) || !is_array(value: $types) || !is_array(value: $errors)
             || !is_array(value: $sizes)) {
             return null;
@@ -182,6 +182,14 @@ final readonly class FormInput
         }
 
         return $uploads;
+    }
+
+    /**
+     * @param array<mixed> $value
+     */
+    private static function entry(array $value, string $key): mixed
+    {
+        return array_key_exists(key: $key, array: $value) ? $value[$key] : null;
     }
 
     private static function toUpload(mixed $name, mixed $tmpName, mixed $type, mixed $error, mixed $size): ?UploadInput
@@ -236,7 +244,7 @@ final readonly class FormInput
      */
     public function getText(string $name): ?string
     {
-        return $this->texts[$name] ?? null;
+        return array_key_exists(key: $name, array: $this->texts) ? $this->texts[$name] : null;
     }
 
     /**
@@ -246,9 +254,11 @@ final readonly class FormInput
      */
     public function getList(string $name): ?array
     {
-        $map = $this->maps[$name] ?? null;
+        if (!array_key_exists(key: $name, array: $this->maps)) {
+            return null;
+        }
 
-        return $map === null ? null : array_values(array: $map);
+        return array_values(array: $this->maps[$name]);
     }
 
     /**
@@ -258,7 +268,7 @@ final readonly class FormInput
      */
     public function getMap(string $name): ?array
     {
-        return $this->maps[$name] ?? null;
+        return array_key_exists(key: $name, array: $this->maps) ? $this->maps[$name] : null;
     }
 
     /**
@@ -270,7 +280,7 @@ final readonly class FormInput
      */
     public function getUploads(string $name): array
     {
-        return $this->uploads[$name] ?? [];
+        return array_key_exists(key: $name, array: $this->uploads) ? $this->uploads[$name] : [];
     }
 
     /**
@@ -289,6 +299,6 @@ final readonly class FormInput
 
     public function getQueryText(string $key): ?string
     {
-        return $this->queryTexts[$key] ?? null;
+        return array_key_exists(key: $key, array: $this->queryTexts) ? $this->queryTexts[$key] : null;
     }
 }

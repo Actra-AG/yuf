@@ -103,3 +103,11 @@ The order of 4–16 may change when a redesign already cleaned an area.
   are gone; all data of yuf is below `$_SESSION['yuf']`. Details, layout and what is not covered in
   [docs/session/plan.md](../session/plan.md). Baseline: 469 -> 447 entries.
 
+
+### Superglobals rule – done
+
+- `actra/coding-standard` raised to v1.3.0; `phpstan.neon` includes `phpstan-no-superglobals.neon`.
+- `actraSuperglobalsAllowIn`: `src/Core.php` (`DOCUMENT_ROOT`), `src/core/HttpRequest.php` (`fromGlobals()`),
+  `src/session/NativeSessionStorage.php`, `src/session/AbstractSessionHandler.php`, plus the tests that prepare
+  superglobals: `SearchHelperRequestTest`, `HttpRequestFromGlobalsTest`, `HttpRequestGetallheadersTest`,
+  `AbstractSessionHandlerTest`, `NativeSessionStorageTest`. No baseline entries; `example/` needs no exception.
