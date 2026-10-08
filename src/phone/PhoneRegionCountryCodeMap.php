@@ -952,6 +952,23 @@ final class PhoneRegionCountryCodeMap
     }
 
     /**
+     * Every region of a country calling code, the main region first; empty for an unknown country calling code.
+     *
+     * @return list<string>
+     */
+    public static function getRegionCodesForCountryCode(int $countryCallingCode): array
+    {
+        if (!array_key_exists(
+            key: $countryCallingCode,
+            array: PhoneRegionCountryCodeMap::COUNTRY_CODE_TO_REGION_CODE_MAP,
+        )) {
+            return [];
+        }
+
+        return PhoneRegionCountryCodeMap::COUNTRY_CODE_TO_REGION_CODE_MAP[$countryCallingCode];
+    }
+
+    /**
      * The main region of a country calling code; `001` for a non-geographical one, `ZZ` for an unknown one.
      */
     public static function getRegionCodeForCountryCode(int $countryCallingCode): string

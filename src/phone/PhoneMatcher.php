@@ -55,6 +55,15 @@ final class PhoneMatcher
         return $this->match(flags: 'uAi') && $this->group(group: 0) === $this->subject;
     }
 
+    /**
+     * The pattern matches the whole subject, also if an alternative that matches only the start of the subject comes
+     * first (`\d|\d\d` matches `12`; `matches()` takes the first alternative that matches at the start and fails).
+     */
+    public function matchesCompletely(): bool
+    {
+        return $this->match(flags: 'uAi', patternPrefix: '(?:', patternSuffix: ')\\z');
+    }
+
     public function start(): ?int
     {
         return $this->groups === [] ? null : $this->groups[0][1];
@@ -85,12 +94,12 @@ final class PhoneMatcher
         return $this->replace(replacement: $replacement, limit: -1);
     }
 
-    private function match(string $flags): bool
+    private function match(string $flags, string $patternPrefix = '', string $patternSuffix = ''): bool
     {
         $this->groups = [];
         $groups = [];
         $result = preg_match(
-            pattern: '/' . $this->pattern . '/' . $flags,
+            pattern: '/' . $patternPrefix . $this->pattern . $patternSuffix . '/' . $flags,
             subject: $this->subject,
             matches: $groups,
             flags: PREG_OFFSET_CAPTURE,

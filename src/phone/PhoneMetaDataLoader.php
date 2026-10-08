@@ -36,6 +36,18 @@ final readonly class PhoneMetaDataLoader
             countryCode: $this->requireInt(data: $data, key: 'countryCode'),
             internationalPrefix: $this->requireString(data: $data, key: 'internationalPrefix'),
             generalDesc: $this->loadDesc(data: $this->requireArray(data: $data, key: 'generalDesc')),
+            leadingDigits: $this->findString(data: $data, key: 'leadingDigits'),
+            sameMobileAndFixedLinePattern: $this->requireBool(data: $data, key: 'sameMobileAndFixedLinePattern'),
+            fixedLine: $this->loadDesc(data: $this->requireArray(data: $data, key: 'fixedLine')),
+            mobile: $this->loadDesc(data: $this->requireArray(data: $data, key: 'mobile')),
+            tollFree: $this->loadDesc(data: $this->requireArray(data: $data, key: 'tollFree')),
+            premiumRate: $this->loadDesc(data: $this->requireArray(data: $data, key: 'premiumRate')),
+            sharedCost: $this->loadDesc(data: $this->requireArray(data: $data, key: 'sharedCost')),
+            voip: $this->loadDesc(data: $this->requireArray(data: $data, key: 'voip')),
+            personalNumber: $this->loadDesc(data: $this->requireArray(data: $data, key: 'personalNumber')),
+            pager: $this->loadDesc(data: $this->requireArray(data: $data, key: 'pager')),
+            uan: $this->loadDesc(data: $this->requireArray(data: $data, key: 'uan')),
+            voicemail: $this->loadDesc(data: $this->requireArray(data: $data, key: 'voicemail')),
             nationalPrefixForParsing: $this->findString(data: $data, key: 'nationalPrefixForParsing'),
             nationalPrefixTransformRule: $this->findString(data: $data, key: 'nationalPrefixTransformRule'),
             preferredExtnPrefix: $this->findString(data: $data, key: 'preferredExtnPrefix'),
@@ -74,6 +86,10 @@ final readonly class PhoneMetaDataLoader
                 pattern: $this->requireString(data: $formatData, key: 'pattern'),
                 format: $this->requireString(data: $formatData, key: 'format'),
                 leadingDigitsPatterns: $this->requireStringList(data: $formatData, key: 'leadingDigitsPatterns'),
+                nationalPrefixFormattingRule: $this->findString(
+                    data: $formatData,
+                    key: 'nationalPrefixFormattingRule',
+                ) ?? '',
             );
         }
 
@@ -88,6 +104,19 @@ final readonly class PhoneMetaDataLoader
         $value = $this->requireValue(data: $data, key: $key);
         if (!is_int(value: $value)) {
             throw $this->createException(key: $key, expected: 'an integer');
+        }
+
+        return $value;
+    }
+
+    /**
+     * @param array<array-key, mixed> $data
+     */
+    private function requireBool(array $data, string $key): bool
+    {
+        $value = $this->requireValue(data: $data, key: $key);
+        if (!is_bool(value: $value)) {
+            throw $this->createException(key: $key, expected: 'a boolean');
         }
 
         return $value;

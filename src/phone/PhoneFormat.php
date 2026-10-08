@@ -21,10 +21,13 @@ final readonly class PhoneFormat
 {
     /**
      * @param list<string> $leadingDigitsPatterns the last one is the most detailed
+     * @param string $nationalPrefixFormattingRule how the national format places the national prefix around the first
+     *      group (`0$1`, `($1)`), empty if the format has no rule
      */
     public function __construct(
         public string $pattern,
         public string $format,
         public array $leadingDigitsPatterns,
+        public string $nationalPrefixFormattingRule,
     ) {}
 }

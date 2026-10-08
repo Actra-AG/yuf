@@ -39,6 +39,8 @@ final class PhonePatterns
     public const string PLUS_CHARS_PATTERN = '[' . PhoneConstants::PLUS_CHARS . ']+';
     public const string VALID_ALPHA_PHONE_PATTERN = '(?:.*?[A-Za-z]){3}.*';
     public const string CAPTURING_DIGIT_PATTERN = '(' . PhoneConstants::DIGITS . ')';
+    // The first group of a format (`$1`), where the national prefix formatting rule is inserted
+    public const string FIRST_GROUP_PATTERN = '/(\\$\\d)/';
     public const string EXTN_PATTERN = '/' . PhonePatterns::EXTN_PATTERNS_FOR_PARSING . '$/'
         . PhoneConstants::REGEX_FLAGS;
 }

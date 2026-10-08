@@ -10,7 +10,8 @@ declare(strict_types=1);
 namespace actra\yuf\phone;
 
 /**
- * The national number pattern and the possible lengths of a group of numbers of a region.
+ * The national number pattern and the possible lengths of a group of numbers of a region. An empty pattern matches no
+ * number; empty possible lengths mean no restriction.
  *
  * Adapted work based on https://github.com/giggsey/libphonenumber-for-php , which was published
  * with "Apache License Version 2.0, January 2004" ( http://www.apache.org/licenses/ )

@@ -56,6 +56,38 @@ final readonly class PhoneNumber
     }
 
     /**
+     * Whether the number is a valid number of its region (not only of a possible length).
+     */
+    public function isValid(): bool
+    {
+        return new PhoneValidator(metaDataRepository: new PhoneMetaDataRepository())->isValidNumber(
+            phoneNumber: $this,
+        );
+    }
+
+    /**
+     * The type of the number, null if it is not valid. `FIXED_LINE_OR_MOBILE` if the number matches the fixed line and
+     * the mobile numbers of its region.
+     */
+    public function getType(): ?PhoneNumberTypeEnum
+    {
+        return new PhoneValidator(metaDataRepository: new PhoneMetaDataRepository())->getNumberType(
+            phoneNumber: $this,
+        );
+    }
+
+    /**
+     * Whether the number is valid and of the given type (a `FIXED_LINE_OR_MOBILE` number is of both types).
+     */
+    public function isValidForType(PhoneNumberTypeEnum $numberType): bool
+    {
+        return new PhoneValidator(metaDataRepository: new PhoneMetaDataRepository())->isValidNumberOfType(
+            phoneNumber: $this,
+            numberType: $numberType,
+        );
+    }
+
+    /**
      * The national number with its leading zeros (the Italian ones), without national prefix.
      */
     public function getNationalSignificantNumber(): string

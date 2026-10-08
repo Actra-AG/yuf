@@ -18,7 +18,7 @@ final class RandomMimeIdGeneratorTest extends TestCase
     {
         $id = new RandomMimeIdGenerator()->generate();
 
-        $this->assertMatchesRegularExpression('/^[A-Za-z0-9]{40,44}$/D', $id);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{42}$/D', $id);
     }
 
     public function testEveryIdIsNew(): void

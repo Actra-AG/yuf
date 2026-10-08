@@ -21,6 +21,8 @@ namespace actra\yuf\phone;
 final readonly class PhoneMetaData
 {
     /**
+     * @param ?string $leadingDigits pattern that tells the numbers of this region from the ones of the other regions
+     *      with the same country calling code
      * @param list<PhoneFormat> $intlNumberFormats formats for the international notation, if they differ
      * @param list<PhoneFormat> $numberFormats
      */
@@ -28,6 +30,18 @@ final readonly class PhoneMetaData
         public int $countryCode,
         public string $internationalPrefix,
         public PhoneDesc $generalDesc,
+        public ?string $leadingDigits,
+        public bool $sameMobileAndFixedLinePattern,
+        public PhoneDesc $fixedLine,
+        public PhoneDesc $mobile,
+        public PhoneDesc $tollFree,
+        public PhoneDesc $premiumRate,
+        public PhoneDesc $sharedCost,
+        public PhoneDesc $voip,
+        public PhoneDesc $personalNumber,
+        public PhoneDesc $pager,
+        public PhoneDesc $uan,
+        public PhoneDesc $voicemail,
         public ?string $nationalPrefixForParsing,
         public ?string $nationalPrefixTransformRule,
         public ?string $preferredExtnPrefix,

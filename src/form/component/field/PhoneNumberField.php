@@ -15,6 +15,7 @@ use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
 use actra\yuf\phone\PhoneNumber;
+use actra\yuf\phone\PhoneNumberTypeEnum;
 use actra\yuf\phone\PhoneParseException;
 use actra\yuf\phone\PhoneRenderer;
 use Override;
@@ -24,12 +25,18 @@ use Override;
  * set by the constructor or `setValue()`; it is rendered in the international format (`+41 44 668 18 00`) or, with
  * `renderInternalFormat`, in the internal format. A number without country code is read with the country code of the
  * field, which can be posted with the field (named `countryCodeFieldName`; manipulated input is ignored). An invalid
- * number stays as typed (trimmed) and adds `invalidErrorMessage` when the field is validated.
+ * number stays as typed (trimmed) and adds `invalidErrorMessage` when the field is validated (a number is accepted
+ * if its length is possible for its country). With `allowedNumberTypes`, the number must be valid and of one of the
+ * types (a number that fits fixed line and mobile numbers fits both types), otherwise `numberTypeErrorMessage`
+ * (default: `invalidErrorMessage`) is added.
  */
 final class PhoneNumberField extends SettableStringInputField
 {
     public private(set) string $countryCode;
 
+    /**
+     * @param list<PhoneNumberTypeEnum> $allowedNumberTypes empty: every number of a possible length is accepted
+     */
     public function __construct(
         string $name,
         HtmlText $label,
@@ -41,6 +48,8 @@ final class PhoneNumberField extends SettableStringInputField
         public readonly bool $renderInternalFormat = false,
         ?string $placeholder = null,
         ?AutoCompleteEnum $autoComplete = null,
+        public readonly array $allowedNumberTypes = [],
+        private readonly ?HtmlText $numberTypeErrorMessage = null,
     ) {
         // The value is normalized in the parent constructor, which needs the country code.
         $this->countryCode = $countryCode;
@@ -83,8 +92,13 @@ final class PhoneNumberField extends SettableStringInputField
     #[Override]
     public function validateCurrentValue(): bool
     {
-        if (!$this->isValueEmpty() && $this->parsePhoneNumber(text: $this->getValueAsString()) === null) {
-            $this->addError(errorMessage: $this->invalidErrorMessage);
+        if (!$this->isValueEmpty()) {
+            $phoneNumber = $this->parsePhoneNumber(text: $this->getValueAsString());
+            if ($phoneNumber === null) {
+                $this->addError(errorMessage: $this->invalidErrorMessage);
+            } elseif (!$this->isNumberTypeAllowed(phoneNumber: $phoneNumber)) {
+                $this->addError(errorMessage: $this->numberTypeErrorMessage ?? $this->invalidErrorMessage);
+            }
         }
 
         return parent::validateCurrentValue();
@@ -106,6 +120,20 @@ final class PhoneNumberField extends SettableStringInputField
         }
 
         return PhoneRenderer::renderInternationalFormat(phoneNumber: $phoneNumber);
+    }
+
+    private function isNumberTypeAllowed(PhoneNumber $phoneNumber): bool
+    {
+        if ($this->allowedNumberTypes === []) {
+            return true;
+        }
+        foreach ($this->allowedNumberTypes as $numberType) {
+            if ($phoneNumber->isValidForType(numberType: $numberType)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function parsePhoneNumber(string $text): ?PhoneNumber

@@ -19,13 +19,7 @@ final readonly class RandomMimeIdGenerator implements MimeIdGenerator
     #[Override]
     public function generate(): string
     {
-        // Base64 of a hash, without the characters that are not valid in a boundary or in a message id
-        return str_replace(
-            search: ['=', '+', '/'],
-            replace: '',
-            subject: base64_encode(
-                string: hash(algo: 'sha256', data: random_bytes(length: 32), binary: true),
-            ),
-        );
+        // 42 hexadecimal characters (168 random bits): valid in a boundary and in a message id, always the same length
+        return bin2hex(string: random_bytes(length: 21));
     }
 }

@@ -68,6 +68,15 @@ final class PhoneMatcherTest extends TestCase
         $this->assertFalse(new PhoneMatcher(pattern: '\d|\d\d', subject: '12')->matches());
     }
 
+    public function testMatchesCompletelyTriesTheAlternativesUntilTheWholeSubjectMatches(): void
+    {
+        $this->assertTrue(new PhoneMatcher(pattern: '\d|\d\d', subject: '12')->matchesCompletely());
+        $this->assertTrue(new PhoneMatcher(pattern: '(\d+)', subject: '12')->matchesCompletely());
+        $this->assertFalse(new PhoneMatcher(pattern: '\d|\d\d', subject: '123')->matchesCompletely());
+        $this->assertFalse(new PhoneMatcher(pattern: '(\d+)', subject: 'ab12')->matchesCompletely());
+        $this->assertFalse(new PhoneMatcher(pattern: '(\d+)', subject: "12\n")->matchesCompletely());
+    }
+
     public function testPatternMatchesCaseInsensitively(): void
     {
         $this->assertTrue(new PhoneMatcher(pattern: 'abc', subject: 'ABC')->matches());

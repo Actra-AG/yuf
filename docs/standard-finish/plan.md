@@ -496,3 +496,39 @@ each small enough to release on its own. `actra/backend` follows when the plan i
 - Tests: 12596 -> 12596, assertions 23873 -> 23873.
 - `UPGRADE.md`: `## [v4.52.1]`. `ddev composer check` green, baseline empty.
 - Open: none.
+
+### Step 13 (v4.53.0) – done
+
+- Scope (user): validity per number type, E.164 / national format, allow-list of number types in `PhoneNumberField`.
+- **Types:** `PhoneNumberTypeEnum` (string-backed with the metadata group names; `FIXED_LINE_OR_MOBILE` added as result
+  value). `PhoneValidator` (still `@internal`) got `isValidNumber()`, `getNumberType()` (null = invalid) and
+  `isValidNumberOfType()`, ported from libphonenumber (`getNumberTypeHelper`, region of a shared calling code by
+  `leadingDigits` or first matching type, general desc first, type order premium rate, toll free, shared cost, VoIP,
+  personal, pager, UAN, voicemail, fixed line / mobile). `isValidNumberOfType()` accepts `FIXED_LINE_OR_MOBILE` as
+  `FIXED_LINE` and as `MOBILE`. Decision: `PhoneNumber::isValid()`, `getType()`, `isValidForType()` as public entry points
+  (the validator is internal and needs the repository).
+- **Metadata:** `PhoneMetaDataLoader` / `PhoneMetaData` load the ten type descriptions, `leadingDigits` and
+  `sameMobileAndFixedLinePattern`; `PhoneFormat` has `nationalPrefixFormattingRule`. `PhoneRegionCountryCodeMap::
+  getRegionCodesForCountryCode()`. `src/phone/data/` untouched.
+- **Matcher:** `PhoneMatcher::matches()` takes the first alternative that matches at the start, so a pattern like
+  `A|B` fails if `B` is the whole number (pinned by `testMatchesTakesTheLongestAlternativeOfThePatternAtTheStart`; Java
+  backtracks). Not changed (used by the parser and the format choice); new `matchesCompletely()` (`(?:p)\z`) is used for
+  the number types. Open: decide whether `matches()` should be fixed (a possible behaviour change in the parser).
+- **Formats:** `renderE164Format()`, `renderNationalFormat()`; `renderInternationalFormat()` reuses the shared code. The
+  national format replaces the first `$n` of the format by the rule (`0$1`) as libphonenumber does and takes the national
+  formats; formats come from the main region of the calling code (as in libphonenumber). Not implemented: carrier codes,
+  `nationalPrefixOptionalWhenFormatting`.
+- **Field:** `allowedNumberTypes:` (empty = possible number as before, not tightened) and `numberTypeErrorMessage:`
+  (default `invalidErrorMessage`). A render option for the format was left out (`renderInternalFormat` is a bool).
+- **Tests:** every example number of the metadata (1096, as in the metadata, built without the parser) is valid and of its
+  type (fixed line / mobile also as `FIXED_LINE_OR_MOBILE`); known numbers CH, DE, US, GB, FR, IT; formats CH, DE, US,
+  GB, FR, IT, RU, JP, BR with extension and national prefix; field with and without allow-list.
+- **Parser quirk (not changed):** the example number of GA fixed line (`01441234`) is parsed with the leading `0` stripped
+  (7 digits) and so is no valid number; libphonenumber keeps it because the original matches the general description.
+- `UPGRADE.md`: `## [v4.53.0]`, README section "Phone numbers". `ddev composer check` green, baseline empty.
+- Tests: 12596 -> 16009.
+- Open: the `matches()` question above.
+- Found in review: the intermittent failure of `composer check` (also seen in step 3) was
+  `RandomMimeIdGeneratorTest`: the generator removed `=`, `+`, `/` from Base64, so the length varied and was below
+  the tested 40 in about one run of 20. The generator returns `bin2hex(random_bytes(21))` now (42 characters), the
+  test checks exactly that.

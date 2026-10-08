@@ -4,9 +4,40 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.53.0] – 2026-10-08
+
+New features for phone numbers; nothing existing changes. Search your project for `PhoneNumberField`, `PhoneRenderer` and
+`PhoneNumber` if you want to use them.
+
+### New: validity and type of a phone number
+
+- `PhoneNumberTypeEnum`: `FIXED_LINE`, `MOBILE`, `FIXED_LINE_OR_MOBILE` (only as result, where both cannot be told
+  apart), `TOLL_FREE`, `PREMIUM_RATE`, `SHARED_COST`, `VOIP`, `PERSONAL_NUMBER`, `PAGER`, `UAN`, `VOICEMAIL`.
+- `PhoneNumber::isValid()`, `getType()` (`null` for an invalid number) and `isValidForType(numberType:)`, with the
+  semantics of libphonenumber. `createFromString()` still checks the possible length only.
+
+### New: E.164 and national format
+
+- `PhoneRenderer::renderE164Format()` (`+41441234567`, without extension) and `PhoneRenderer::renderNationalFormat()`
+  (`044 123 45 67`, with the national prefix of the country and the extension).
+
+### New: `PhoneNumberField` with an allow-list of number types
+
+- `allowedNumberTypes:` (list of `PhoneNumberTypeEnum`, default empty: every possible number as before) and
+  `numberTypeErrorMessage:` (default: `invalidErrorMessage:`).
+
+### Bug fix: MIME ids have a fixed length
+
+`RandomMimeIdGenerator` (MIME boundaries and message ids) returned a Base64 string with `=`, `+` and `/` removed, so
+its length varied (about 37 to 43 characters). It returns 42 hexadecimal characters now. Nothing to do.
+
+---
+
 ## [v4.52.1] – 2026-10-08
 
 Style only: lines wrapped to 120 characters; no API or behaviour change.
+
+---
 
 ## [v4.52.0] – 2026-10-08
 

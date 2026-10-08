@@ -29,9 +29,29 @@ final class PhoneMetaDataLoaderTest extends TestCase
                 'PossibleLength' => [9],
                 'PossibleLengthLocalOnly' => [7],
             ],
+            'sameMobileAndFixedLinePattern' => false,
+            'fixedLine' => [
+                'NationalNumberPattern' => '[2-6]\d{8}',
+                'PossibleLength' => [9],
+                'PossibleLengthLocalOnly' => [],
+            ],
+            'mobile' => ['PossibleLength' => [-1], 'PossibleLengthLocalOnly' => []],
+            'tollFree' => ['PossibleLength' => [-1], 'PossibleLengthLocalOnly' => []],
+            'premiumRate' => ['PossibleLength' => [-1], 'PossibleLengthLocalOnly' => []],
+            'sharedCost' => ['PossibleLength' => [-1], 'PossibleLengthLocalOnly' => []],
+            'voip' => ['PossibleLength' => [-1], 'PossibleLengthLocalOnly' => []],
+            'personalNumber' => ['PossibleLength' => [-1], 'PossibleLengthLocalOnly' => []],
+            'pager' => ['PossibleLength' => [-1], 'PossibleLengthLocalOnly' => []],
+            'uan' => ['PossibleLength' => [-1], 'PossibleLengthLocalOnly' => []],
+            'voicemail' => ['PossibleLength' => [-1], 'PossibleLengthLocalOnly' => []],
             'nationalPrefixForParsing' => '0',
             'numberFormat' => [
-                ['pattern' => '(\d{2})(\d{7})', 'format' => '$1 $2', 'leadingDigitsPatterns' => ['[2-9]']],
+                [
+                    'pattern' => '(\d{2})(\d{7})',
+                    'format' => '$1 $2',
+                    'leadingDigitsPatterns' => ['[2-9]'],
+                    'nationalPrefixFormattingRule' => '0$1',
+                ],
             ],
             'intlNumberFormat' => [],
         ];
@@ -52,6 +72,23 @@ final class PhoneMetaDataLoaderTest extends TestCase
         $this->assertCount(1, $phoneMetaData->numberFormats);
         $this->assertSame(['[2-9]'], $phoneMetaData->numberFormats[0]->leadingDigitsPatterns);
         $this->assertSame([], $phoneMetaData->intlNumberFormats);
+        $this->assertSame('0$1', $phoneMetaData->numberFormats[0]->nationalPrefixFormattingRule);
+        $this->assertNull($phoneMetaData->leadingDigits);
+        $this->assertFalse($phoneMetaData->sameMobileAndFixedLinePattern);
+        $this->assertSame('[2-6]\d{8}', $phoneMetaData->fixedLine->nationalNumberPattern);
+        $this->assertSame('', $phoneMetaData->mobile->nationalNumberPattern);
+    }
+
+    public function testMissingNationalPrefixFormattingRuleIsEmpty(): void
+    {
+        $data = PhoneMetaDataLoaderTest::createValidData();
+        $data['numberFormat'] = [['pattern' => 'x', 'format' => '$1', 'leadingDigitsPatterns' => []]];
+
+        $phoneMetaData = new PhoneMetaDataLoader(source: 'XX')->load(data: $data);
+
+        $format = array_first(array: $phoneMetaData->numberFormats);
+        $this->assertNotNull($format);
+        $this->assertSame('', $format->nationalPrefixFormattingRule);
     }
 
     public function testLoadReindexesLists(): void
@@ -93,11 +130,13 @@ final class PhoneMetaDataLoaderTest extends TestCase
         $data = PhoneMetaDataLoaderTest::createValidData();
         $data['nationalPrefixTransformRule'] = '$2';
         $data['preferredExtnPrefix'] = ' x';
+        $data['leadingDigits'] = '1[2-9]';
 
         $phoneMetaData = new PhoneMetaDataLoader(source: 'XX')->load(data: $data);
 
         $this->assertSame('$2', $phoneMetaData->nationalPrefixTransformRule);
         $this->assertSame(' x', $phoneMetaData->preferredExtnPrefix);
+        $this->assertSame('1[2-9]', $phoneMetaData->leadingDigits);
     }
 
     /**
@@ -126,6 +165,14 @@ final class PhoneMetaDataLoaderTest extends TestCase
         yield 'optional value is an array' => [
             ['preferredExtnPrefix' => []] + $valid,
             'Invalid phone number metadata of XX: "preferredExtnPrefix" must be a string or null.',
+        ];
+        yield 'same pattern flag is a string' => [
+            ['sameMobileAndFixedLinePattern' => 'false'] + $valid,
+            'Invalid phone number metadata of XX: "sameMobileAndFixedLinePattern" must be a boolean.',
+        ];
+        yield 'missing number type' => [
+            array_diff_key($valid, ['mobile' => true]),
+            'Invalid phone number metadata of XX: "mobile" must be present.',
         ];
         yield 'possible lengths are strings' => [
             ['generalDesc' => ['PossibleLength' => ['9'], 'PossibleLengthLocalOnly' => []]] + $valid,
