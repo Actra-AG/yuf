@@ -24,12 +24,12 @@ final class SelectOptionsFieldValueTest extends TestCase
     private function createField(?string $initialValue = null, ?HtmlText $requiredError = null): SelectOptionsField
     {
         $formOptions = new FormOptions();
-        $formOptions->addItem(key: 'a', htmlText: HtmlText::encoded(textContent: 'A'));
-        $formOptions->addItem(key: 'b', htmlText: HtmlText::encoded(textContent: 'B'));
+        $formOptions->addItem(key: 'a', htmlText: HtmlText::fromHtml(html: 'A'));
+        $formOptions->addItem(key: 'b', htmlText: HtmlText::fromHtml(html: 'B'));
 
         return new SelectOptionsField(
             name: 'select',
-            label: HtmlText::encoded(textContent: 'Select'),
+            label: HtmlText::fromHtml(html: 'Select'),
             formOptions: $formOptions,
             initialValue: $initialValue,
             requiredError: $requiredError,
@@ -77,7 +77,7 @@ final class SelectOptionsFieldValueTest extends TestCase
 
     public function testEmptyStringFailsTheRequiredRule(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['select' => ''])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
@@ -97,7 +97,7 @@ final class SelectOptionsFieldValueTest extends TestCase
 
     public function testUnknownOptionGivesNoSecondRequiredError(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $field->validate(input: FormInput::fromArray(data: ['select' => 'x']));
 
@@ -164,7 +164,7 @@ final class SelectOptionsFieldValueTest extends TestCase
     public function testEmptyValueLabelOfARequiredFieldComesFromTheMessagesOfTheForm(): void
     {
         $form = new Form(name: 'selectEmptyLabelForm', messages: new FormMessages(selectEmptyOption: 'Choose'));
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
         $this->assertSame('-- Please select --', $field->emptyValueLabel->render());
 
         $form->addField(formField: $field);
@@ -176,10 +176,10 @@ final class SelectOptionsFieldValueTest extends TestCase
     {
         $field = new SelectOptionsField(
             name: 'select',
-            label: HtmlText::encoded(textContent: 'Select'),
+            label: HtmlText::fromHtml(html: 'Select'),
             formOptions: new FormOptions(),
             initialValue: null,
-            individualEmptyValueLabel: HtmlText::encoded(textContent: 'None'),
+            individualEmptyValueLabel: HtmlText::fromHtml(html: 'None'),
         );
 
         $this->assertSame('None', $field->emptyValueLabel->render());
@@ -189,7 +189,7 @@ final class SelectOptionsFieldValueTest extends TestCase
     {
         $field = new SelectOptionsField(
             name: 'select',
-            label: HtmlText::encoded(textContent: 'Select'),
+            label: HtmlText::fromHtml(html: 'Select'),
             formOptions: new FormOptions(),
             initialValue: null,
             cssClasses: ['wide'],

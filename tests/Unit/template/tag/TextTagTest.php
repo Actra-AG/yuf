@@ -63,7 +63,7 @@ final class TextTagTest extends NewEngineTestCase
     public function testHtmlTextCreatedFromHtmlIsNotEscapedAgain(): void
     {
         $replacements = new HtmlReplacementCollection();
-        $replacements->addHtmlText(identifier: 'x', htmlText: HtmlText::encoded(textContent: '<b>a</b> &amp; b'));
+        $replacements->addHtmlText(identifier: 'x', htmlText: HtmlText::fromHtml(html: '<b>a</b> &amp; b'));
 
         $this->assertSame('<b>a</b> &amp; b', $this->render(source: "{tst:text value='x'}", data: $replacements));
     }
@@ -71,7 +71,7 @@ final class TextTagTest extends NewEngineTestCase
     public function testHtmlTextCreatedFromTextIsEscapedOnlyOnce(): void
     {
         $replacements = new HtmlReplacementCollection();
-        $replacements->addHtmlText(identifier: 'x', htmlText: HtmlText::unencoded(textContent: '<b> & "q"'));
+        $replacements->addHtmlText(identifier: 'x', htmlText: HtmlText::fromText(text: '<b> & "q"'));
 
         $this->assertSame('&lt;b&gt; &amp; &quot;q&quot;', $this->render(source: "{tst:text value='x'}", data: $replacements));
     }

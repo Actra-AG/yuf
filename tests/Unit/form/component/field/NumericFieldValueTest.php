@@ -25,7 +25,7 @@ final class NumericFieldValueTest extends TestCase
     {
         return new NumericField(
             name: 'number',
-            label: HtmlText::encoded(textContent: 'Number'),
+            label: HtmlText::fromHtml(html: 'Number'),
             initialValue: $initialValue,
         );
     }
@@ -78,7 +78,7 @@ final class NumericFieldValueTest extends TestCase
     {
         $field = new NumericField(
             name: 'number',
-            label: HtmlText::encoded(textContent: 'Number'),
+            label: HtmlText::fromHtml(html: 'Number'),
             minLength: 2,
             maxLength: 4,
         );

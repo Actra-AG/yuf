@@ -14,18 +14,14 @@ class DetailDataObject extends HtmlDataObject
     public function __construct(
         string $name,
         string $value,
-        bool $isEncodedForRendering,
+        bool $isHtml,
     ) {
         parent::__construct();
-        $this->addTextElement(
-            propertyName: 'name',
-            content: $name,
-            isEncodedForRendering: true,
-        );
-        $this->addTextElement(
-            propertyName: 'value',
-            content: $value,
-            isEncodedForRendering: $isEncodedForRendering,
-        );
+        $this->addHtml(propertyName: 'name', html: $name);
+        if ($isHtml) {
+            $this->addHtml(propertyName: 'value', html: $value);
+        } else {
+            $this->addText(propertyName: 'value', text: $value);
+        }
     }
 }

@@ -35,8 +35,8 @@ final class FormFieldListenerTest extends TestCase
         $form = new Form(name: 'listenerForm', csrfTokenSource: new InMemoryCsrfTokenSource(token: 'tok'));
         $field = new TextField(
             name: 'field',
-            label: HtmlText::encoded(textContent: 'Field'),
-            requiredError: $required ? HtmlText::encoded(textContent: 'Required') : null,
+            label: HtmlText::fromHtml(html: 'Field'),
+            requiredError: $required ? HtmlText::fromHtml(html: 'Required') : null,
         );
         $form->addField(formField: $field);
         $field->addListener(formFieldListener: $listener);

@@ -27,7 +27,7 @@ final class FormFieldTopFormComponentTest extends TestCase
 
     private function createField(): TextField
     {
-        return new TextField(name: 'name', label: HtmlText::encoded(textContent: 'Name'));
+        return new TextField(name: 'name', label: HtmlText::fromHtml(html: 'Name'));
     }
 
     public function testFieldWithoutFormHasNoTopFormComponent(): void

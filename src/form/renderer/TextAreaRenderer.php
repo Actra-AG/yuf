@@ -88,7 +88,7 @@ class TextAreaRenderer extends FormRenderer
             formField: $textAreaField,
             parentHtmlTag: $textareaTag,
         );
-        $textareaTag->addText(htmlText: HtmlText::encoded(textContent: $textAreaField->renderValue()));
+        $textareaTag->addText(htmlText: HtmlText::fromHtml(html: $textAreaField->renderValue()));
         $this->setHtmlTag(htmlTag: $textareaTag);
     }
 }

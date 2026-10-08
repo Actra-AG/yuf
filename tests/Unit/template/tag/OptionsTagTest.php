@@ -100,10 +100,10 @@ final class OptionsTagTest extends NewEngineTestCase
         $replacements->addHtmlTextCollection(
             identifier: 'o',
             htmlTextCollection: new HtmlTextCollection(
-                items: [HtmlText::encoded(textContent: '<b>One</b>'), HtmlText::unencoded(textContent: '<Two>')],
+                items: [HtmlText::fromHtml(html: '<b>One</b>'), HtmlText::fromText(text: '<Two>')],
             ),
         );
-        $replacements->addEncodedText(identifier: 's', content: '1');
+        $replacements->addHtml(identifier: 's', html: '1');
 
         $html = $this->render(source: OptionsTagTest::SOURCE, data: $replacements);
 

@@ -24,7 +24,7 @@ final class StringRulesTest extends TestCase
 {
     private function message(): HtmlText
     {
-        return HtmlText::encoded(textContent: 'Error');
+        return HtmlText::fromHtml(html: 'Error');
     }
 
     /**
@@ -32,7 +32,7 @@ final class StringRulesTest extends TestCase
      */
     public static function ruleProvider(): iterable
     {
-        $message = HtmlText::encoded(textContent: 'Error');
+        $message = HtmlText::fromHtml(html: 'Error');
         yield 'min length reached' => [new MinLengthRule(minLength: 3, errorMessage: $message), 'abc', true];
         yield 'min length not reached' => [new MinLengthRule(minLength: 3, errorMessage: $message), 'ab', false];
         yield 'min length counts characters' => [new MinLengthRule(minLength: 3, errorMessage: $message), 'äöü', true];
@@ -77,7 +77,7 @@ final class StringRulesTest extends TestCase
     {
         $rule = new MinLengthRule(minLength: 3, errorMessage: $this->message());
 
-        $rule->setErrorMessage(errorMessage: HtmlText::encoded(textContent: 'Other'));
+        $rule->setErrorMessage(errorMessage: HtmlText::fromHtml(html: 'Other'));
 
         $this->assertSame('Other', $rule->getErrorMessage()->render());
     }

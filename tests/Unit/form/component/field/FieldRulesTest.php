@@ -43,7 +43,7 @@ final class FieldRulesTest extends TestCase
 {
     private function text(string $text): HtmlText
     {
-        return HtmlText::encoded(textContent: $text);
+        return HtmlText::fromHtml(html: $text);
     }
 
     private function options(): FormOptions

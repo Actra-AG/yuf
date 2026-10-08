@@ -21,9 +21,9 @@ final class EmailFieldValueTest extends TestCase
     {
         return new EmailField(
             name: 'email',
-            label: HtmlText::encoded(textContent: 'Email'),
+            label: HtmlText::fromHtml(html: 'Email'),
             value: $value,
-            invalidError: HtmlText::encoded(textContent: 'Invalid'),
+            invalidError: HtmlText::fromHtml(html: 'Invalid'),
             dnsCheck: false,
         );
     }

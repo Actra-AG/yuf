@@ -22,8 +22,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 /**
  * Characterization of the template engine before the rewrite (docs/template-engine/plan.md, step 1).
  *
- * Today the engine never escapes: a plain string is output as it is, an HtmlText created with encoded() is output as
- * it is, and only HtmlText::unencoded() (and addUnencodedText()) is escaped by the replacement API, not by the engine.
+ * Today the engine never escapes: a plain string is output as it is, an HtmlText created with fromHtml() is output as
+ * it is, and only HtmlText::fromText() (and addText()) is escaped by the replacement API, not by the engine.
  */
 abstract class AbstractTemplateTextTagTestCase extends TemplateCharacterizationTestCase
 {
@@ -49,24 +49,24 @@ abstract class AbstractTemplateTextTagTestCase extends TemplateCharacterizationT
         yield 'null' => [['x' => null], ''];
 
         $encoded = new HtmlReplacementCollection();
-        $encoded->addHtmlText(identifier: 'x', htmlText: HtmlText::encoded(textContent: '<b>a</b>'));
-        yield 'HtmlText::encoded is output raw' => [$encoded, '<b>a</b>'];
+        $encoded->addHtmlText(identifier: 'x', htmlText: HtmlText::fromHtml(html: '<b>a</b>'));
+        yield 'HtmlText::fromHtml is output raw' => [$encoded, '<b>a</b>'];
 
         $unencoded = new HtmlReplacementCollection();
-        $unencoded->addHtmlText(identifier: 'x', htmlText: HtmlText::unencoded(textContent: '<b>a</b>'));
-        yield 'HtmlText::unencoded is escaped' => [$unencoded, '&lt;b&gt;a&lt;/b&gt;'];
+        $unencoded->addHtmlText(identifier: 'x', htmlText: HtmlText::fromText(text: '<b>a</b>'));
+        yield 'HtmlText::fromText is escaped' => [$unencoded, '&lt;b&gt;a&lt;/b&gt;'];
 
         $unencodedQuotes = new HtmlReplacementCollection();
-        $unencodedQuotes->addUnencodedText(identifier: 'x', content: 'a & "b" \'c\'');
-        yield 'unencoded text escapes quotes and ampersand' => [$unencodedQuotes, 'a &amp; &quot;b&quot; &#039;c&#039;'];
+        $unencodedQuotes->addText(identifier: 'x', text: 'a & "b" \'c\'');
+        yield 'addText escapes quotes and ampersand' => [$unencodedQuotes, 'a &amp; &quot;b&quot; &#039;c&#039;'];
 
-        $encodedText = new HtmlReplacementCollection();
-        $encodedText->addEncodedText(identifier: 'x', content: '<i>x</i>');
-        yield 'addEncodedText is output raw' => [$encodedText, '<i>x</i>'];
+        $htmlData = new HtmlReplacementCollection();
+        $htmlData->addHtml(identifier: 'x', html: '<i>x</i>');
+        yield 'addHtml is output raw' => [$htmlData, '<i>x</i>'];
 
         $nullText = new HtmlReplacementCollection();
-        $nullText->addEncodedText(identifier: 'x', content: null);
-        yield 'addEncodedText with null' => [$nullText, ''];
+        $nullText->addHtml(identifier: 'x', html: null);
+        yield 'addHtml with null' => [$nullText, ''];
 
         $int = new HtmlReplacementCollection();
         $int->addInt(identifier: 'x', int: 7);
@@ -161,9 +161,9 @@ abstract class AbstractTemplateTextTagTestCase extends TemplateCharacterizationT
     public function testSelector(string $selector, string $expected): void
     {
         $htmlDataObject = new HtmlDataObject();
-        $htmlDataObject->addTextElement(propertyName: 'name', content: 'std name', isEncodedForRendering: true);
+        $htmlDataObject->addHtml(propertyName: 'name', html: 'std name');
         $child = new HtmlDataObject();
-        $child->addTextElement(propertyName: 'name', content: 'child name', isEncodedForRendering: true);
+        $child->addHtml(propertyName: 'name', html: 'child name');
         $htmlDataObject->addDataObject(propertyName: 'child', htmlDataObject: $child);
         $htmlDataObject->data->list = ['first' => 'first'];
         $replacements = new HtmlReplacementCollection();
@@ -278,9 +278,9 @@ abstract class AbstractTemplateTextTagTestCase extends TemplateCharacterizationT
     public function testHtmlDataObjectCollectionItemsAreStdClassList(): void
     {
         $first = new HtmlDataObject();
-        $first->addTextElement(propertyName: 'name', content: '<a>', isEncodedForRendering: false);
+        $first->addText(propertyName: 'name', text: '<a>');
         $second = new HtmlDataObject();
-        $second->addTextElement(propertyName: 'name', content: 'b', isEncodedForRendering: true);
+        $second->addHtml(propertyName: 'name', html: 'b');
         $collection = new HtmlDataObjectCollection();
         $collection->add(htmlDataObject: $first);
         $collection->add(htmlDataObject: $second);

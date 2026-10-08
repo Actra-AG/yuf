@@ -21,9 +21,9 @@ final class IbanNumberFieldValueTest extends TestCase
     {
         return new IbanNumberField(
             name: 'iban',
-            label: HtmlText::encoded(textContent: 'IBAN'),
+            label: HtmlText::fromHtml(html: 'IBAN'),
             value: $value,
-            invalidError: HtmlText::encoded(textContent: 'Invalid'),
+            invalidError: HtmlText::fromHtml(html: 'Invalid'),
             requiredError: $requiredError,
         );
     }
@@ -87,7 +87,7 @@ final class IbanNumberFieldValueTest extends TestCase
 
     public function testEmptyIbanGivesOnlyTheRequiredError(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $isValid = $field->validate(input: FormInput::fromArray(data: ['iban' => '']));
 

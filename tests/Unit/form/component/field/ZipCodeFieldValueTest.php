@@ -32,7 +32,7 @@ final class ZipCodeFieldValueTest extends TestCase
     {
         return new ZipCodeField(
             name: 'zip',
-            label: HtmlText::encoded(textContent: 'Zip'),
+            label: HtmlText::fromHtml(html: 'Zip'),
             value: $value,
             individualInvalidError: $individualInvalidError,
         );
@@ -95,7 +95,7 @@ final class ZipCodeFieldValueTest extends TestCase
 
     public function testIndividualInvalidErrorWinsOverTheMessages(): void
     {
-        $field = $this->createField(individualInvalidError: HtmlText::encoded(textContent: 'Own text'));
+        $field = $this->createField(individualInvalidError: HtmlText::fromHtml(html: 'Own text'));
 
         $field->validate(input: FormInput::fromArray(data: ['zip' => 'x']));
 
@@ -107,8 +107,8 @@ final class ZipCodeFieldValueTest extends TestCase
     {
         $field = new ZipCodeField(
             name: 'zip',
-            label: HtmlText::encoded(textContent: 'Zip'),
-            requiredError: HtmlText::encoded(textContent: 'Required'),
+            label: HtmlText::fromHtml(html: 'Zip'),
+            requiredError: HtmlText::fromHtml(html: 'Required'),
         );
 
         $isValid = $field->validate(input: FormInput::fromArray(data: ['zip' => ' ']));
@@ -144,7 +144,7 @@ final class ZipCodeFieldValueTest extends TestCase
 
     public function testCountryCodeOfTheConstructorIsUsed(): void
     {
-        $field = new ZipCodeField(name: 'zip', label: HtmlText::encoded(textContent: 'Zip'), countryCode: 'AT');
+        $field = new ZipCodeField(name: 'zip', label: HtmlText::fromHtml(html: 'Zip'), countryCode: 'AT');
 
         $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['zip' => '1010'])));
         $this->assertSame('AT', $field->countryCode);
@@ -154,7 +154,7 @@ final class ZipCodeFieldValueTest extends TestCase
     {
         $field = new ZipCodeField(
             name: 'zip',
-            label: HtmlText::encoded(textContent: 'Zip'),
+            label: HtmlText::fromHtml(html: 'Zip'),
             countryCodeFieldName: 'country',
         );
 

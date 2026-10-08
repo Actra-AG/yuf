@@ -82,7 +82,7 @@ final class FormEndToEndTest extends TestCase
 
     private function text(string $text): HtmlText
     {
-        return HtmlText::encoded(textContent: $text);
+        return HtmlText::fromHtml(html: $text);
     }
 
     private function addFields(): void

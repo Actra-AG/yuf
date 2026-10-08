@@ -42,7 +42,7 @@ readonly class HtmlSnippet
             $this->cspNonce !== null
             && !$replacements->has(identifier: 'cspNonce')
         ) {
-            $replacements->addEncodedText(identifier: 'cspNonce', content: $this->cspNonce->value);
+            $replacements->addHtml(identifier: 'cspNonce', html: $this->cspNonce->value);
         }
         $core = Core::get();
         return new TemplateEngine(

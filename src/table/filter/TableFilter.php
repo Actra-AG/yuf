@@ -150,11 +150,11 @@ class TableFilter
     {
         $replacements = new HtmlReplacementCollection();
         $replacements->addBool(identifier: 'showLegend', booleanValue: $this->showLegend);
-        $replacements->addEncodedText(
+        $replacements->addHtml(
             identifier: 'formAction',
-            content: '?' . $this->identifier . '&' . DbResultTable::PARAM_FIND,
+            html: '?' . $this->identifier . '&' . DbResultTable::PARAM_FIND,
         );
-        $replacements->addEncodedText(identifier: 'csrfField', content: CsrfToken::renderAsHiddenPostField());
+        $replacements->addHtml(identifier: 'csrfField', html: CsrfToken::renderAsHiddenPostField());
         $primaryFields = new HtmlDataObjectCollection();
         foreach ($this->primaryFields as $abstractTableFilterField) {
             $primaryFields->add(htmlDataObject: $abstractTableFilterField->render());
@@ -181,9 +181,9 @@ class TableFilter
         } else {
             $replacements->addBool(identifier: 'hasSecondaryFilters', booleanValue: false);
         }
-        $replacements->addEncodedText(identifier: 'resetHref', content: '?' . $this->resetParameter);
-        $replacements->addEncodedText(identifier: 'submitButtonLabel', content: $this->submitButtonLabel);
-        $replacements->addEncodedText(identifier: 'resetLinkLabel', content: $this->resetLinkLabel);
+        $replacements->addHtml(identifier: 'resetHref', html: '?' . $this->resetParameter);
+        $replacements->addHtml(identifier: 'submitButtonLabel', html: $this->submitButtonLabel);
+        $replacements->addHtml(identifier: 'resetLinkLabel', html: $this->resetLinkLabel);
 
         $individualHtmlSnippetPath = $this->individualHtmlSnippetPath;
 

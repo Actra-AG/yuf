@@ -70,7 +70,7 @@ final class ZipCodeField extends TextField
     private function addInvalidZipCodeError(): void
     {
         if ($this->individualInvalidError === null) {
-            $this->addError(errorMessage: HtmlText::unencoded(textContent: $this->messages->invalidZipCode));
+            $this->addError(errorMessage: HtmlText::fromText(text: $this->messages->invalidZipCode));
 
             return;
         }

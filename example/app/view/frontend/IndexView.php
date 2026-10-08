@@ -33,9 +33,10 @@ final class IndexView extends BaseView
     #[Override]
     public function execute(): void
     {
-        // Rendered with templates/default.html and html/index.html; all values are HTML-escaped
+        // Rendered with templates/default.html and html/index.html. addText() escapes plain texts, addHtml() outputs
+        // trusted HTML as it is.
         $replacements = $this->getHtmlDocument()->replacements;
-        $replacements->addEncodedText(identifier: 'title', content: 'Hello World');
-        $replacements->addEncodedText(identifier: 'greeting', content: 'Hello World!');
+        $replacements->addText(identifier: 'title', text: 'Hello World');
+        $replacements->addText(identifier: 'greeting', text: 'Hello World!');
     }
 }

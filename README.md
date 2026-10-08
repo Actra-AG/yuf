@@ -228,8 +228,8 @@ level 10 friendly). The form texts it creates itself (e.g. "The invalid input wa
 
 ```php
 $form = new Form(name: 'order', messages: FormMessages::german());
-$name = new TextField(name: 'customer', label: HtmlText::encoded(textContent: 'Name'), requiredError: $requiredError);
-$quantity = new IntegerField(name: 'quantity', label: HtmlText::encoded(textContent: 'Quantity'));
+$name = new TextField(name: 'customer', label: HtmlText::fromHtml(html: 'Name'), requiredError: $requiredError);
+$quantity = new IntegerField(name: 'quantity', label: HtmlText::fromHtml(html: 'Quantity'));
 $form->addField(formField: $name);
 $form->addField(formField: $quantity);
 
@@ -297,12 +297,12 @@ rules. `PasswordField` is never rendered back and `CsrfTokenField` has no getter
 ```php
 $password = new PasswordField(
     name: 'password',
-    label: HtmlText::encoded(textContent: 'Password'),
+    label: HtmlText::fromHtml(html: 'Password'),
     requiredError: $requiredError,
     purpose: PasswordPurposeEnum::NEW // CURRENT for a login: sets autocomplete="new-password" / "current-password"
 );
-$price = new DecimalField(name: 'price', label: HtmlText::encoded(textContent: 'Price'), scale: 2, initialValue: '12.50');
-$agree = new BooleanField(name: 'agree', label: HtmlText::encoded(textContent: 'I agree'), isCheckedByDefault: false);
+$price = new DecimalField(name: 'price', label: HtmlText::fromHtml(html: 'Price'), scale: 2, initialValue: '12.50');
+$agree = new BooleanField(name: 'agree', label: HtmlText::fromHtml(html: 'I agree'), isCheckedByDefault: false);
 $tags = new MultiSelectOptionsField(name: 'tags', label: $label, formOptions: $options, initialValues: ['a']);
 ```
 

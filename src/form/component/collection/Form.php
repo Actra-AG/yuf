@@ -169,7 +169,7 @@ class Form extends FormCollection
             return;
         }
         if (!$csrfTokenField->validate(input: $input)) {
-            $this->addError(errorMessage: HtmlText::unencoded(textContent: $this->messages->invalidCsrfToken));
+            $this->addError(errorMessage: HtmlText::fromText(text: $this->messages->invalidCsrfToken));
         }
     }
 

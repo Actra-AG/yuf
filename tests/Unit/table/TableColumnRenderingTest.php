@@ -50,7 +50,7 @@ final class TableColumnRenderingTest extends TestCase
     public static function columnProvider(): array
     {
         $dateColumnWithEmptyText = new DateColumn(identifier: 'emptyDate', label: 'Date');
-        $dateColumnWithEmptyText->setEmptyValueText(htmlText: HtmlText::encoded(textContent: '-'));
+        $dateColumnWithEmptyText->setEmptyValueText(htmlText: HtmlText::fromHtml(html: '-'));
         $dateFormatColumn = new DateColumn(identifier: 'created', label: 'Date');
         $dateFormatColumn->format = 'd.m.Y';
         $defaultColumnWithoutNewLines = new DefaultColumn(identifier: 'name', label: 'Name');

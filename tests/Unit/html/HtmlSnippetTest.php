@@ -54,7 +54,7 @@ final class HtmlSnippetTest extends TestCase
     public function testNonceReplacementSetByTheCallerIsKept(): void
     {
         $replacements = new HtmlReplacementCollection();
-        $replacements->addEncodedText(identifier: 'cspNonce', content: 'own');
+        $replacements->addHtml(identifier: 'cspNonce', html: 'own');
 
         $html = new HtmlSnippet(
             htmlSnippetFilePath: self::snippetPath(),
@@ -70,7 +70,7 @@ final class HtmlSnippetTest extends TestCase
         $snippet = new HtmlSnippet(
             htmlSnippetFilePath: dirname(path: __DIR__, levels: 3) . '/tests/Fixture/plainSnippet.html',
         );
-        $snippet->replacements->addEncodedText(identifier: 'other', content: 'x');
+        $snippet->replacements->addHtml(identifier: 'other', html: 'x');
 
         $html = $snippet->render();
 

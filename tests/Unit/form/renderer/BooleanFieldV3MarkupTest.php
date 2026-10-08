@@ -87,12 +87,12 @@ final class BooleanFieldV3MarkupTest extends TestCase
         $form = new Form(name: $formName);
         $field = new BooleanField(
             name: 'bo',
-            label: HtmlText::encoded(textContent: 'L'),
+            label: HtmlText::fromHtml(html: 'L'),
             isCheckedByDefault: $checked,
-            requiredError: HtmlText::encoded(textContent: 'Req'),
+            requiredError: HtmlText::fromHtml(html: 'Req'),
             layout: $layout,
         );
-        $field->fieldInfo = HtmlText::encoded(textContent: 'Info');
+        $field->fieldInfo = HtmlText::fromHtml(html: 'Info');
         $form->addField(formField: $field);
         if (!$checked) {
             $field->validate(input: FormInput::fromArray(data: []));

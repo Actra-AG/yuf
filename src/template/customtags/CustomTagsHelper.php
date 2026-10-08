@@ -83,7 +83,7 @@ class CustomTagsHelper
             }
             // Create inner "span-label":
             $spanLabelTag = new HtmlTag('span', false, [new HtmlTagAttribute('class', 'label-text', true)]);
-            $spanLabelTag->addText(HtmlText::encoded($val));
+            $spanLabelTag->addText(HtmlText::fromHtml($val));
             $html .= '<li><label><' . implode(separator: ' ', array: $inputAttributes) . '> ' . $spanLabelTag->render(
             ) . '</label></li>' . PHP_EOL;
         }

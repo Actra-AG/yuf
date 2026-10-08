@@ -64,8 +64,8 @@ final class FormValidateTest extends TestCase
         $form->addField(
             formField: new TextField(
                 name: 'name',
-                label: HtmlText::encoded(textContent: 'Name'),
-                requiredError: HtmlText::encoded(textContent: 'Required'),
+                label: HtmlText::fromHtml(html: 'Name'),
+                requiredError: HtmlText::fromHtml(html: 'Required'),
             ),
         );
 

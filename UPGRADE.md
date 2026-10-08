@@ -4,6 +4,72 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.25.0] – 2026-10-08
+
+### ⚠️ The replacement API says what it does: `fromHtml()` / `fromText()`, `addHtml()` / `addText()`
+
+"Encoded" meant "already HTML, output as it is"; "unencoded" meant "plain text, escaped when rendered". The new names
+say what the caller passes. Behaviour and rendered HTML are unchanged. The old names are removed (no aliases).
+
+| Before | After |
+|:--|:--|
+| `HtmlText::encoded(textContent: …)` | `HtmlText::fromHtml(html: …)` |
+| `HtmlText::unencoded(textContent: …)` | `HtmlText::fromText(text: …)` |
+| `HtmlReplacementCollection::addEncodedText(identifier:, content:)` | `addHtml(identifier:, html:)` |
+| `HtmlReplacementCollection::addUnencodedText(identifier:, content:)` | `addText(identifier:, text:)` |
+| `HtmlReplacement::encodedText(content: …)` | `HtmlReplacement::html(html: …)` |
+| `HtmlReplacement::unencodedText(content: …)` | `HtmlReplacement::text(text: …)` |
+| `HtmlDataObject::addTextElement(propertyName:, content:, isEncodedForRendering: true)` | `addHtml(propertyName:, html:)` |
+| `HtmlDataObject::addTextElement(propertyName:, content:, isEncodedForRendering: false)` | `addText(propertyName:, text:)` |
+| `new DetailDataObject(name:, value:, isEncodedForRendering:)` | `new DetailDataObject(name:, value:, isHtml:)` |
+
+`HtmlReplacement::html()` and `text()` accept `null` now (the replacement is then `null`, like `addHtml()` /
+`addText()` of the collection); before, `null` was a `TypeError`.
+
+Before:
+
+```php
+$replacements->addEncodedText(identifier: 'intro', content: '<b>Welcome</b>');
+$replacements->addUnencodedText(identifier: 'name', content: $customer->name);
+$label = HtmlText::unencoded(textContent: $customer->name);
+$object->addTextElement(propertyName: 'city', content: $city, isEncodedForRendering: false);
+```
+
+After:
+
+```php
+$replacements->addHtml(identifier: 'intro', html: '<b>Welcome</b>');
+$replacements->addText(identifier: 'name', text: $customer->name);
+$label = HtmlText::fromText(text: $customer->name);
+$object->addText(propertyName: 'city', text: $city);
+```
+
+Migration (mechanical, in this order):
+
+1. `addEncodedText(` → `addHtml(` and its argument `content:` → `html:`.
+2. `addUnencodedText(` → `addText(` and `content:` → `text:`.
+3. `HtmlText::encoded(textContent:` → `HtmlText::fromHtml(html:`; `HtmlText::unencoded(textContent:` →
+   `HtmlText::fromText(text:`.
+4. `addTextElement(…, content: X, isEncodedForRendering: true)` → `addHtml(…, html: X)`;
+   `…, isEncodedForRendering: false)` → `addText(…, text: X)`.
+5. `HtmlReplacement::encodedText(content:` → `HtmlReplacement::html(html:`; `unencodedText(content:` →
+   `HtmlReplacement::text(text:`.
+6. `DetailDataObject`: argument `isEncodedForRendering:` → `isHtml:`.
+
+Afterwards review every `addHtml()` and `fromHtml()`: they output the string as it is. User data (names, free text,
+anything from a request or a database) must use `addText()` / `fromText()`. Only HTML built by your own code belongs in
+`addHtml()` / `fromHtml()`. The planned new template engine (v4.26.0) escapes everything else.
+
+### ⚠️ `HtmlReplacement::object()` replaced by `HtmlReplacement::dataObject()`
+
+`HtmlReplacement::object(?stdClass $object)` is now `HtmlReplacement::dataObject(?HtmlDataObject $htmlDataObject)`, so
+all object data passes through `HtmlDataObject` (`addText()` escapes, `addHtml()` is explicit) and nothing reaches the
+templates unescaped by accident. `HtmlReplacementCollection::addDataObject()` is unchanged for callers.
+
+Before: `HtmlReplacement::object(object: $htmlDataObject->data)`. After:
+`HtmlReplacement::dataObject(htmlDataObject: $htmlDataObject)`. Code that built a plain `stdClass` must use
+`HtmlDataObject` instead.
+
 ## [v4.24.0] – 2026-10-08
 
 ### New template engine (not used yet)

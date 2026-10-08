@@ -30,7 +30,7 @@ final class HiddenIntegerField extends ParsedInputField
         parent::__construct(
             inputType: InputTypeEnum::HIDDEN,
             name: $name,
-            label: HtmlText::encoded(textContent: ''),
+            label: HtmlText::fromHtml(html: ''),
             invalidError: null,
             requiredError: null,
             placeholder: null,

@@ -29,8 +29,8 @@ class LegendAndListRenderer extends FormRenderer
         $listDescription = $optionsField->listDescription;
         if ($listDescription !== null) {
             $fieldsetTag->addText(
-                htmlText: HtmlText::encoded(
-                    textContent: '<div class="fieldset-info">' . $listDescription->render() . '</div>',
+                htmlText: HtmlText::fromHtml(
+                    html: '<div class="fieldset-info">' . $listDescription->render() . '</div>',
                 ),
             );
         }
@@ -81,7 +81,7 @@ class LegendAndListRenderer extends FormRenderer
         $labelInfoText = $optionsField->labelInfoText;
         if ($labelInfoText !== null) {
             // Add a space to separate it from the following labelInfo-Tag
-            $labelText = HtmlText::encoded(textContent: ' ' . $labelText->render());
+            $labelText = HtmlText::fromHtml(html: ' ' . $labelText->render());
         }
         $legendTag = new HtmlTag(
             name: 'legend',
@@ -115,7 +115,7 @@ class LegendAndListRenderer extends FormRenderer
                     ),
                 ],
             );
-            $spanTag->addText(htmlText: HtmlText::encoded(textContent: '*'));
+            $spanTag->addText(htmlText: HtmlText::fromHtml(html: '*'));
             $legendTag->addTag(htmlTag: $spanTag);
         }
         return $legendTag;

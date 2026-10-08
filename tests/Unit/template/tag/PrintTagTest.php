@@ -67,7 +67,7 @@ final class PrintTagTest extends NewEngineTestCase
     public function testHtmlOfTheHtmlClassesIsNotEscapedAgain(): void
     {
         $replacements = new HtmlReplacementCollection();
-        $replacements->addHtmlText(identifier: 'x', htmlText: HtmlText::encoded(textContent: '<b>a</b>'));
+        $replacements->addHtmlText(identifier: 'x', htmlText: HtmlText::fromHtml(html: '<b>a</b>'));
 
         $this->assertSame('<b>a</b>', $this->render(source: "{tst:print var='x'}", data: $replacements));
     }

@@ -43,7 +43,7 @@ final class SpecialFieldRenderersTest extends TestCase
 
     private function text(string $text): HtmlText
     {
-        return HtmlText::encoded(textContent: $text);
+        return HtmlText::fromHtml(html: $text);
     }
 
     private function phone(?string $value = null, bool $internalFormat = false): PhoneNumberField

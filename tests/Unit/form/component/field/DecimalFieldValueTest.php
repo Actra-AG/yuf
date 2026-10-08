@@ -30,7 +30,7 @@ final class DecimalFieldValueTest extends TestCase
     ): DecimalField {
         return new DecimalField(
             name: 'price',
-            label: HtmlText::encoded(textContent: 'Price'),
+            label: HtmlText::fromHtml(html: 'Price'),
             scale: $scale,
             initialValue: $initialValue,
             requiredError: $requiredError,
@@ -152,9 +152,9 @@ final class DecimalFieldValueTest extends TestCase
     {
         $field = new DecimalField(
             name: 'price',
-            label: HtmlText::encoded(textContent: 'Price'),
+            label: HtmlText::fromHtml(html: 'Price'),
             scale: 2,
-            individualInvalidError: HtmlText::encoded(textContent: 'At most 2 decimals'),
+            individualInvalidError: HtmlText::fromHtml(html: 'At most 2 decimals'),
         );
 
         $field->validate(input: FormInput::fromArray(data: ['price' => '1.234']));
@@ -164,7 +164,7 @@ final class DecimalFieldValueTest extends TestCase
 
     public function testRequiredErrorForEmptyInput(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['price' => ' '])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());

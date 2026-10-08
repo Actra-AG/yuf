@@ -33,8 +33,8 @@ final class InputFieldGetValueAsStringTest extends TestCase
      */
     public static function fieldProvider(): iterable
     {
-        $label = HtmlText::encoded(textContent: 'Label');
-        $error = HtmlText::encoded(textContent: 'Invalid');
+        $label = HtmlText::fromHtml(html: 'Label');
+        $error = HtmlText::fromHtml(html: 'Invalid');
 
         yield 'text' => [new TextField(name: 'field', label: $label), 'field'];
         yield 'email' => [
@@ -68,7 +68,7 @@ final class InputFieldGetValueAsStringTest extends TestCase
 
     public function testPostedStringIsReturnedTrimmedAndUnencoded(): void
     {
-        $field = new TextField(name: 'field', label: HtmlText::encoded(textContent: 'Label'));
+        $field = new TextField(name: 'field', label: HtmlText::fromHtml(html: 'Label'));
 
         $field->validate(input: FormInput::fromArray(data: ['field' => ' <a> ']));
 
@@ -77,14 +77,14 @@ final class InputFieldGetValueAsStringTest extends TestCase
 
     public function testConstructorStringIsReturned(): void
     {
-        $field = new TextField(name: 'field', label: HtmlText::encoded(textContent: 'Label'), value: 'x');
+        $field = new TextField(name: 'field', label: HtmlText::fromHtml(html: 'Label'), value: 'x');
 
         $this->assertSame('x', $field->getValueAsString());
     }
 
     public function testRejectedArrayInputResetsValue(): void
     {
-        $field = new TextField(name: 'field', label: HtmlText::encoded(textContent: 'Label'), value: 'x');
+        $field = new TextField(name: 'field', label: HtmlText::fromHtml(html: 'Label'), value: 'x');
 
         $field->validate(input: FormInput::fromArray(data: ['field' => ['y']]));
 
@@ -95,8 +95,8 @@ final class InputFieldGetValueAsStringTest extends TestCase
     {
         $field = new PasswordField(
             name: 'password',
-            label: HtmlText::encoded(textContent: 'Password'),
-            requiredError: HtmlText::encoded(textContent: 'Required'),
+            label: HtmlText::fromHtml(html: 'Password'),
+            requiredError: HtmlText::fromHtml(html: 'Required'),
             purpose: PasswordPurposeEnum::CURRENT,
         );
 
@@ -107,9 +107,9 @@ final class InputFieldGetValueAsStringTest extends TestCase
     {
         $field = new PhoneNumberField(
             name: 'phone',
-            label: HtmlText::encoded(textContent: 'Phone'),
+            label: HtmlText::fromHtml(html: 'Phone'),
             value: null,
-            invalidErrorMessage: HtmlText::encoded(textContent: 'Invalid'),
+            invalidErrorMessage: HtmlText::fromHtml(html: 'Invalid'),
         );
 
         $field->validate(input: FormInput::fromArray(data: ['phone' => ' 044 668 18 00 ']));

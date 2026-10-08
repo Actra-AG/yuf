@@ -30,12 +30,12 @@ final class NumberAndDateFieldRenderersTest extends TestCase
 {
     private function label(): HtmlText
     {
-        return HtmlText::encoded(textContent: 'Label');
+        return HtmlText::fromHtml(html: 'Label');
     }
 
     private function error(): HtmlText
     {
-        return HtmlText::encoded(textContent: 'Invalid');
+        return HtmlText::fromHtml(html: 'Invalid');
     }
 
     public function testEmptyIntegerField(): void
@@ -219,7 +219,7 @@ final class NumberAndDateFieldRenderersTest extends TestCase
             label: $this->label(),
             value: null,
             invalidError: $this->error(),
-            requiredError: HtmlText::encoded(textContent: 'Req'),
+            requiredError: HtmlText::fromHtml(html: 'Req'),
         );
         $field->validate(input: FormInput::fromArray(data: ['t' => '']));
 

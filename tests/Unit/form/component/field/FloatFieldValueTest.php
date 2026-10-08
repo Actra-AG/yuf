@@ -27,7 +27,7 @@ final class FloatFieldValueTest extends TestCase
     {
         return new FloatField(
             name: 'amount',
-            label: HtmlText::encoded(textContent: 'Amount'),
+            label: HtmlText::fromHtml(html: 'Amount'),
             initialValue: $initialValue,
             requiredError: $requiredError,
         );
@@ -127,7 +127,7 @@ final class FloatFieldValueTest extends TestCase
 
     public function testRequiredErrorForEmptyInput(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['amount' => '  '])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());

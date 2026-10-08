@@ -36,8 +36,8 @@ trait HasSelectOptionsPresentation
      * required field, else empty. Resolved when it is read, so the messages of the form are used.
      */
     public HtmlText $emptyValueLabel {
-        get => $this->individualEmptyValueLabel ?? HtmlText::unencoded(
-            textContent: $this->hasDefaultEmptyValueText ? $this->messages->selectEmptyOption : '',
+        get => $this->individualEmptyValueLabel ?? HtmlText::fromText(
+            text: $this->hasDefaultEmptyValueText ? $this->messages->selectEmptyOption : '',
         );
     }
 

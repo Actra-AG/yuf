@@ -24,12 +24,12 @@ final class InitialValueTest extends TestCase
 {
     private function createTextField(): InitialValueTextField
     {
-        return new InitialValueTextField(name: 'field', label: HtmlText::encoded(textContent: 'Label'));
+        return new InitialValueTextField(name: 'field', label: HtmlText::fromHtml(html: 'Label'));
     }
 
     private function createTextAreaField(): InitialValueTextAreaField
     {
-        return new InitialValueTextAreaField(name: 'field', label: HtmlText::encoded(textContent: 'Label'));
+        return new InitialValueTextAreaField(name: 'field', label: HtmlText::fromHtml(html: 'Label'));
     }
 
     public function testSetInitialValueSetsCurrentAndInitialValue(): void

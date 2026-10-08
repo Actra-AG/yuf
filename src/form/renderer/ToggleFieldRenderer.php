@@ -74,7 +74,7 @@ class ToggleFieldRenderer extends FormRenderer
         $spanLabelTag->addText(htmlText: $htmlText);
         $labelTag = new HtmlTag(name: 'label', selfClosing: false);
         $labelTag->addTag(htmlTag: $this->createInputTag(key: $key, combinedSpecifier: $combinedSpecifier));
-        $labelTag->addText(htmlText: HtmlText::encoded(textContent: ' ' . $spanLabelTag->render()));
+        $labelTag->addText(htmlText: HtmlText::fromHtml(html: ' ' . $spanLabelTag->render()));
         $liTag = new HtmlTag(name: 'li', selfClosing: false);
         $liTag->addTag(htmlTag: $labelTag);
         if ($this->toggleChildren->has(mainOption: $key)) {
@@ -170,8 +170,8 @@ class ToggleFieldRenderer extends FormRenderer
         $listDescription = $this->toggleField->listDescription;
         if ($listDescription !== null) {
             $fieldsetTag->addText(
-                htmlText: HtmlText::encoded(
-                    textContent: '<div class="fieldset-info">' . $listDescription->render() . '</div>',
+                htmlText: HtmlText::fromHtml(
+                    html: '<div class="fieldset-info">' . $listDescription->render() . '</div>',
                 ),
             );
         }
@@ -206,7 +206,7 @@ class ToggleFieldRenderer extends FormRenderer
                     new HtmlTagAttribute(name: 'class', value: 'required', valueIsEncodedForRendering: true),
                 ],
             );
-            $requiredTag->addText(htmlText: HtmlText::encoded(textContent: '*'));
+            $requiredTag->addText(htmlText: HtmlText::fromHtml(html: '*'));
             $legendTag->addTag(htmlTag: $requiredTag);
         }
         $labelInfoText = $this->toggleField->labelInfoText;

@@ -33,7 +33,7 @@ final class CsrfTokenField extends InputField
         parent::__construct(
             inputType: InputTypeEnum::HIDDEN,
             name: CsrfToken::getFieldName(),
-            label: HtmlText::encoded(textContent: ''),
+            label: HtmlText::fromHtml(html: ''),
             placeholder: null,
             autoComplete: null,
         );
@@ -64,7 +64,7 @@ final class CsrfTokenField extends InputField
     public function validateCurrentValue(): bool
     {
         if (!$this->postedTokenIsValid && !$this->hasErrors(withChildElements: false)) {
-            $this->addError(errorMessage: HtmlText::unencoded(textContent: $this->messages->invalidCsrfToken));
+            $this->addError(errorMessage: HtmlText::fromText(text: $this->messages->invalidCsrfToken));
         }
 
         return parent::validateCurrentValue();

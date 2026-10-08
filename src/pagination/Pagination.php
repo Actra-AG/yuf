@@ -58,19 +58,17 @@ class Pagination
                     propertyName: 'isCurrentPage',
                     booleanValue: ($page === $currentPage),
                 );
-                $pageObject->addTextElement(
+                $pageObject->addHtml(
                     propertyName: 'number',
-                    content: (string) $page,
-                    isEncodedForRendering: true,
+                    html: (string) $page,
                 );
-                $pageObject->addTextElement(
+                $pageObject->addHtml(
                     propertyName: 'href',
-                    content: Pagination::getLinkTarget(
+                    html: Pagination::getLinkTarget(
                         listIdentifier: $listIdentifier,
                         pageNumber: $page,
                         additionalLinkParameters: $additionalLinkParameters,
                     ),
-                    isEncodedForRendering: true,
                 );
                 $pageObject->addBooleanValue(
                     propertyName: 'groupNextPages',
@@ -80,20 +78,20 @@ class Pagination
             }
         }
         $replacements = new HtmlReplacementCollection();
-        $replacements->addUnencodedText(identifier: 'previousTitle', content: $previousTitle);
-        $replacements->addEncodedText(
+        $replacements->addText(identifier: 'previousTitle', text: $previousTitle);
+        $replacements->addHtml(
             identifier: 'previousPageHref',
-            content: ($currentPage === $firstPage) ? '' : Pagination::getLinkTarget(
+            html: ($currentPage === $firstPage) ? '' : Pagination::getLinkTarget(
                 listIdentifier: $listIdentifier,
                 pageNumber: $currentPage - 1,
                 additionalLinkParameters: $additionalLinkParameters,
             ),
         );
         $replacements->addHtmlDataObjectCollection(identifier: 'pages', htmlDataObjectCollection: $pages);
-        $replacements->addUnencodedText(identifier: 'nextTitle', content: $nextTitle);
-        $replacements->addEncodedText(
+        $replacements->addText(identifier: 'nextTitle', text: $nextTitle);
+        $replacements->addHtml(
             identifier: 'nextPageHref',
-            content: ($currentPage === $maxPage) ? '' : Pagination::getLinkTarget(
+            html: ($currentPage === $maxPage) ? '' : Pagination::getLinkTarget(
                 listIdentifier: $listIdentifier,
                 pageNumber: $currentPage + 1,
                 additionalLinkParameters: $additionalLinkParameters,

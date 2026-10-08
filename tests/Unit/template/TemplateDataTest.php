@@ -57,9 +57,9 @@ final class TemplateDataTest extends TestCase
     public function testTextOfTheReplacementsIsTrustedHtml(): void
     {
         $replacements = new HtmlReplacementCollection();
-        $replacements->addEncodedText(identifier: 'html', content: '<b>a</b>');
-        $replacements->addUnencodedText(identifier: 'text', content: '<b>a</b>');
-        $replacements->addEncodedText(identifier: 'null', content: null);
+        $replacements->addHtml(identifier: 'html', html: '<b>a</b>');
+        $replacements->addText(identifier: 'text', text: '<b>a</b>');
+        $replacements->addHtml(identifier: 'null', html: null);
 
         $data = TemplateData::fromReplacements(replacements: $replacements);
 
@@ -87,7 +87,7 @@ final class TemplateDataTest extends TestCase
         $replacements->addHtmlTextCollection(
             identifier: 'texts',
             htmlTextCollection: new HtmlTextCollection(
-                items: [HtmlText::encoded(textContent: '<i>'), HtmlText::unencoded(textContent: '<i>')],
+                items: [HtmlText::fromHtml(html: '<i>'), HtmlText::fromText(text: '<i>')],
             ),
         );
 
@@ -99,9 +99,9 @@ final class TemplateDataTest extends TestCase
     public function testStringsOfADataObjectAreTrustedHtmlAlsoWhenNested(): void
     {
         $child = new HtmlDataObject();
-        $child->addTextElement(propertyName: 'name', content: '<c>', isEncodedForRendering: false);
+        $child->addText(propertyName: 'name', text: '<c>');
         $object = new HtmlDataObject();
-        $object->addTextElement(propertyName: 'name', content: '<b>', isEncodedForRendering: true);
+        $object->addHtml(propertyName: 'name', html: '<b>');
         $object->addBooleanValue(propertyName: 'flag', booleanValue: true);
         $object->addNullValue(propertyName: 'nothing');
         $object->addDataObject(propertyName: 'child', htmlDataObject: $child);
@@ -122,7 +122,7 @@ final class TemplateDataTest extends TestCase
     public function testItemsOfADataObjectCollectionAreCopiedWithTrustedHtml(): void
     {
         $first = new HtmlDataObject();
-        $first->addTextElement(propertyName: 'name', content: 'a', isEncodedForRendering: true);
+        $first->addHtml(propertyName: 'name', html: 'a');
         $collection = new HtmlDataObjectCollection();
         $collection->add(htmlDataObject: $first);
         $replacements = new HtmlReplacementCollection();

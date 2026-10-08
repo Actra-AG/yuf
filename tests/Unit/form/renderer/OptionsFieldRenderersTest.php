@@ -30,16 +30,16 @@ final class OptionsFieldRenderersTest extends TestCase
     private function createOptions(): FormOptions
     {
         $formOptions = new FormOptions();
-        $formOptions->addItem(key: 'a', htmlText: HtmlText::encoded(textContent: 'A'));
-        $formOptions->addItem(key: 'b', htmlText: HtmlText::encoded(textContent: 'B'));
-        $formOptions->addItem(key: '0', htmlText: HtmlText::encoded(textContent: 'Zero'));
+        $formOptions->addItem(key: 'a', htmlText: HtmlText::fromHtml(html: 'A'));
+        $formOptions->addItem(key: 'b', htmlText: HtmlText::fromHtml(html: 'B'));
+        $formOptions->addItem(key: '0', htmlText: HtmlText::fromHtml(html: 'Zero'));
 
         return $formOptions;
     }
 
     private function label(): HtmlText
     {
-        return HtmlText::encoded(textContent: 'Label');
+        return HtmlText::fromHtml(html: 'Label');
     }
 
     public function testRadioMarksOnlyTheSelectedOption(): void
@@ -117,7 +117,7 @@ final class OptionsFieldRenderersTest extends TestCase
     public function testCheckboxItemLayoutMarksTheFirstOptionWhenSelected(): void
     {
         $formOptions = new FormOptions();
-        $formOptions->addItem(key: 'yes', htmlText: HtmlText::encoded(textContent: 'Yes'));
+        $formOptions->addItem(key: 'yes', htmlText: HtmlText::fromHtml(html: 'Yes'));
         $field = new CheckboxOptionsField(
             name: 'c',
             label: $this->label(),
@@ -135,7 +135,7 @@ final class OptionsFieldRenderersTest extends TestCase
     public function testCheckboxItemLayoutIsNotCheckedWithoutValue(): void
     {
         $formOptions = new FormOptions();
-        $formOptions->addItem(key: 'yes', htmlText: HtmlText::encoded(textContent: 'Yes'));
+        $formOptions->addItem(key: 'yes', htmlText: HtmlText::fromHtml(html: 'Yes'));
         $field = new CheckboxOptionsField(
             name: 'c',
             label: $this->label(),
@@ -182,7 +182,7 @@ final class OptionsFieldRenderersTest extends TestCase
             name: 'bo',
             label: $this->label(),
             isCheckedByDefault: false,
-            requiredError: HtmlText::encoded(textContent: 'Accept'),
+            requiredError: HtmlText::fromHtml(html: 'Accept'),
         );
         $field->validate(input: FormInput::fromArray(data: []));
 
@@ -322,7 +322,7 @@ final class OptionsFieldRenderersTest extends TestCase
             label: $this->label(),
             formOptions: $this->createOptions(),
             initialValue: null,
-            requiredError: HtmlText::encoded(textContent: 'Required'),
+            requiredError: HtmlText::fromHtml(html: 'Required'),
         );
 
         $this->assertStringStartsWith(
@@ -362,7 +362,7 @@ final class OptionsFieldRenderersTest extends TestCase
             label: $this->label(),
             formOptions: $this->createOptions(),
             initialValue: null,
-            requiredError: HtmlText::encoded(textContent: 'Required'),
+            requiredError: HtmlText::fromHtml(html: 'Required'),
             displayLegend: false,
         );
         $field->validate(input: FormInput::fromArray(data: []));

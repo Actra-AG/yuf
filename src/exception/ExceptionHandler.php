@@ -121,53 +121,53 @@ class ExceptionHandler
             $httpStatusCode = HttpStatusCodeEnum::HTTP_INTERNAL_SERVER_ERROR;
             $title = 'Internal Server Error';
         }
-        $this->htmlReplacementCollection->addEncodedText(
+        $this->htmlReplacementCollection->addHtml(
             identifier: 'title',
-            content: $title,
+            html: $title,
         );
-        $this->htmlReplacementCollection->addEncodedText(
+        $this->htmlReplacementCollection->addHtml(
             identifier: 'errorType',
-            content: get_class(object: $throwable),
+            html: get_class(object: $throwable),
         );
-        $this->htmlReplacementCollection->addEncodedText(
+        $this->htmlReplacementCollection->addHtml(
             identifier: 'errorMessage',
-            content: $errorMessage,
+            html: $errorMessage,
         );
-        $this->htmlReplacementCollection->addEncodedText(
+        $this->htmlReplacementCollection->addHtml(
             identifier: 'errorFile',
-            content: $realException->getFile(),
+            html: $realException->getFile(),
         );
-        $this->htmlReplacementCollection->addEncodedText(
+        $this->htmlReplacementCollection->addHtml(
             identifier: 'errorLine',
-            content: (string) $realException->getLine(),
+            html: (string) $realException->getLine(),
         );
-        $this->htmlReplacementCollection->addEncodedText(
+        $this->htmlReplacementCollection->addHtml(
             identifier: 'errorCode',
-            content: (string) $realException->getCode(),
+            html: (string) $realException->getCode(),
         );
-        $this->htmlReplacementCollection->addEncodedText(
+        $this->htmlReplacementCollection->addHtml(
             identifier: 'backtrace',
-            content: $realException->getTraceAsString(),
+            html: $realException->getTraceAsString(),
         );
-        $this->htmlReplacementCollection->addEncodedText(
+        $this->htmlReplacementCollection->addHtml(
             identifier: 'vardump_get',
-            content: isset($_GET) ? htmlentities(string: var_export(value: $_GET, return: true)) : '',
+            html: isset($_GET) ? htmlentities(string: var_export(value: $_GET, return: true)) : '',
         );
-        $this->htmlReplacementCollection->addEncodedText(
+        $this->htmlReplacementCollection->addHtml(
             identifier: 'vardump_post',
-            content: isset($_POST) ? htmlentities(
+            html: isset($_POST) ? htmlentities(
                 string: var_export(value: $_POST, return: true),
             ) : '',
         );
-        $this->htmlReplacementCollection->addEncodedText(
+        $this->htmlReplacementCollection->addHtml(
             identifier: 'vardump_file',
-            content: isset($_FILE) ? htmlentities(
+            html: isset($_FILE) ? htmlentities(
                 string: var_export(value: $_FILE, return: true),
             ) : '',
         );
-        $this->htmlReplacementCollection->addEncodedText(
+        $this->htmlReplacementCollection->addHtml(
             identifier: 'vardump_sess',
-            content: isset($_SESSION) ? htmlentities(
+            html: isset($_SESSION) ? htmlentities(
                 string: var_export(
                     value: $_SESSION,
                     return: true,
@@ -236,48 +236,48 @@ class ExceptionHandler
         }
         $htmlReplacementCollection = $this->htmlReplacementCollection;
         $requestHandler = $this->requestHandler;
-        $htmlReplacementCollection->addEncodedText(
+        $htmlReplacementCollection->addHtml(
             identifier: 'copyright',
-            content: $core->renderCopyrightYear(),
+            html: $core->renderCopyrightYear(),
         );
         $language = $requestHandler?->language;
-        $htmlReplacementCollection->addEncodedText(
+        $htmlReplacementCollection->addHtml(
             identifier: 'language',
-            content: $language === null ? 'en' : $language->code,
+            html: $language === null ? 'en' : $language->code,
         );
-        $htmlReplacementCollection->addEncodedText(
+        $htmlReplacementCollection->addHtml(
             identifier: 'langRoot',
-            content: $requestHandler === null ? '/' : $requestHandler->getLanguageRoot(),
+            html: $requestHandler === null ? '/' : $requestHandler->getLanguageRoot(),
         );
-        $htmlReplacementCollection->addEncodedText(
+        $htmlReplacementCollection->addHtml(
             identifier: 'charset',
-            content: 'UTF-8',
+            html: 'UTF-8',
         );
-        $htmlReplacementCollection->addEncodedText(
+        $htmlReplacementCollection->addHtml(
             identifier: 'cspNonce',
-            content: $this->getContext()->cspNonce->value,
+            html: $this->getContext()->cspNonce->value,
         );
-        $htmlReplacementCollection->addEncodedText(
+        $htmlReplacementCollection->addHtml(
             identifier: 'csrfField',
-            content: CsrfToken::renderAsHiddenPostField(),
+            html: CsrfToken::renderAsHiddenPostField(),
         );
-        $htmlReplacementCollection->addEncodedText(
+        $htmlReplacementCollection->addHtml(
             identifier: 'robots',
-            content: 'noindex,nofollow',
+            html: 'noindex,nofollow',
         );
         $htmlReplacementCollection->set(
             identifier: 'pageTitle',
             htmlReplacement: $htmlReplacementCollection->has(identifier: 'title') ? $htmlReplacementCollection->get(
                 identifier: 'title',
-            ) : HtmlReplacement::encodedText(content: 'Error'),
+            ) : HtmlReplacement::html(html: 'Error'),
         );
-        $htmlReplacementCollection->addEncodedText(
+        $htmlReplacementCollection->addHtml(
             identifier: 'bodyClassName',
-            content: 'body-' . pathinfo(path: $htmlFileName)['filename'],
+            html: 'body-' . pathinfo(path: $htmlFileName)['filename'],
         );
-        $htmlReplacementCollection->addEncodedText(
+        $htmlReplacementCollection->addHtml(
             identifier: 'requestedFileName',
-            content: $requestHandler?->fileName,
+            html: $requestHandler?->fileName,
         );
         if (
             $requestHandler !== null

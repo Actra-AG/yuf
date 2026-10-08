@@ -92,7 +92,7 @@ abstract class ParsedInputField extends InputField
     {
         if ($this->holdsUnparsableText()) {
             if ($this->invalidError === null) {
-                $this->addError(errorMessage: HtmlText::unencoded(textContent: $this->messages->invalidValue));
+                $this->addError(errorMessage: HtmlText::fromText(text: $this->messages->invalidValue));
             } else {
                 $this->addError(errorMessage: $this->invalidError);
             }

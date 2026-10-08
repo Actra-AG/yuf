@@ -28,8 +28,8 @@ final class OptionsInitialValueTest extends TestCase
     private function createOptions(): FormOptions
     {
         $formOptions = new FormOptions();
-        $formOptions->addItem(key: 'a', htmlText: HtmlText::encoded(textContent: 'A'));
-        $formOptions->addItem(key: 'b', htmlText: HtmlText::encoded(textContent: 'B'));
+        $formOptions->addItem(key: 'a', htmlText: HtmlText::fromHtml(html: 'A'));
+        $formOptions->addItem(key: 'b', htmlText: HtmlText::fromHtml(html: 'B'));
 
         return $formOptions;
     }
@@ -38,7 +38,7 @@ final class OptionsInitialValueTest extends TestCase
     {
         return new InitialValueRadioOptionsField(
             name: 'radio',
-            label: HtmlText::encoded(textContent: 'Radio'),
+            label: HtmlText::fromHtml(html: 'Radio'),
             formOptions: $this->createOptions(),
             initialValue: null,
         );
@@ -48,7 +48,7 @@ final class OptionsInitialValueTest extends TestCase
     {
         return new InitialValueCheckboxOptionsField(
             name: 'checkbox',
-            label: HtmlText::encoded(textContent: 'Checkbox'),
+            label: HtmlText::fromHtml(html: 'Checkbox'),
             formOptions: $this->createOptions(),
             initialValues: [],
         );
@@ -58,7 +58,7 @@ final class OptionsInitialValueTest extends TestCase
     {
         return new InitialValueBooleanField(
             name: 'boolean',
-            label: HtmlText::encoded(textContent: 'Boolean'),
+            label: HtmlText::fromHtml(html: 'Boolean'),
             isCheckedByDefault: false,
         );
     }

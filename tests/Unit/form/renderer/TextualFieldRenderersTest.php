@@ -23,14 +23,14 @@ final class TextualFieldRenderersTest extends TestCase
 {
     public function testInputFieldRendersEncodedValue(): void
     {
-        $field = new TextField(name: 'field', label: HtmlText::encoded(textContent: 'Label'), value: 'a"<b');
+        $field = new TextField(name: 'field', label: HtmlText::fromHtml(html: 'Label'), value: 'a"<b');
 
         $this->assertStringContainsString('value="a&quot;&lt;b"', $field->render());
     }
 
     public function testInputFieldRendersPostedValueTrimmed(): void
     {
-        $field = new TextField(name: 'field', label: HtmlText::encoded(textContent: 'Label'));
+        $field = new TextField(name: 'field', label: HtmlText::fromHtml(html: 'Label'));
         $field->validate(input: FormInput::fromArray(data: ['field' => ' posted ']));
 
         $this->assertStringContainsString('value="posted"', $field->render());
@@ -48,14 +48,14 @@ final class TextualFieldRenderersTest extends TestCase
 
     public function testTextAreaRendersEncodedTextWithoutTrimming(): void
     {
-        $field = new TextAreaField(name: 'text', label: HtmlText::encoded(textContent: 'Label'), value: " a<\n b ");
+        $field = new TextAreaField(name: 'text', label: HtmlText::fromHtml(html: 'Label'), value: " a<\n b ");
 
         $this->assertStringContainsString('>' . " a&lt;\n b " . '</textarea>', $field->render());
     }
 
     public function testTextAreaRendersPostedText(): void
     {
-        $field = new TextAreaField(name: 'text', label: HtmlText::encoded(textContent: 'Label'));
+        $field = new TextAreaField(name: 'text', label: HtmlText::fromHtml(html: 'Label'));
         $field->validate(input: FormInput::fromArray(data: ['text' => "x\ny"]));
 
         $this->assertStringContainsString(">x\ny</textarea>", $field->render());

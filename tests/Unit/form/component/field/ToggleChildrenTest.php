@@ -35,8 +35,8 @@ final class ToggleChildrenTest extends TestCase
     private function createOptions(): FormOptions
     {
         $formOptions = new FormOptions();
-        $formOptions->addItem(key: 'a', htmlText: HtmlText::encoded(textContent: 'A'));
-        $formOptions->addItem(key: 'b', htmlText: HtmlText::encoded(textContent: 'B'));
+        $formOptions->addItem(key: 'a', htmlText: HtmlText::fromHtml(html: 'A'));
+        $formOptions->addItem(key: 'b', htmlText: HtmlText::fromHtml(html: 'B'));
 
         return $formOptions;
     }
@@ -51,7 +51,7 @@ final class ToggleChildrenTest extends TestCase
     {
         return new ToggleField(
             name: 'toggle',
-            label: HtmlText::encoded(textContent: 'Toggle'),
+            label: HtmlText::fromHtml(html: 'Toggle'),
             formOptions: $this->createOptions(),
             initialValue: $initialValue,
         );
@@ -64,7 +64,7 @@ final class ToggleChildrenTest extends TestCase
     {
         return new MultiToggleField(
             name: 'toggle',
-            label: HtmlText::encoded(textContent: 'Toggle'),
+            label: HtmlText::fromHtml(html: 'Toggle'),
             formOptions: $this->createOptions(),
             initialValues: $initialValues,
         );
@@ -72,9 +72,9 @@ final class ToggleChildrenTest extends TestCase
 
     private function createChild(string $name, bool $required = true): TextField
     {
-        $field = new TextField(name: $name, label: HtmlText::encoded(textContent: $name));
+        $field = new TextField(name: $name, label: HtmlText::fromHtml(html: $name));
         if ($required) {
-            $field->addRequiredRule(errorMessage: HtmlText::encoded(textContent: 'Required'));
+            $field->addRequiredRule(errorMessage: HtmlText::fromHtml(html: 'Required'));
         }
 
         return $field;

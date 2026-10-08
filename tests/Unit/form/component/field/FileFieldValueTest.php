@@ -42,7 +42,7 @@ final class FileFieldValueTest extends TestCase
     ): FileField {
         $field = new FileField(
             name: 'file',
-            label: HtmlText::encoded(textContent: 'File'),
+            label: HtmlText::fromHtml(html: 'File'),
             requiredError: $requiredError,
             maxFileUploadCount: $maxFileUploadCount,
             storage: $this->storage,
@@ -132,7 +132,7 @@ final class FileFieldValueTest extends TestCase
     {
         $field = new FileField(
             name: 'my[file]-x',
-            label: HtmlText::encoded(textContent: 'File'),
+            label: HtmlText::fromHtml(html: 'File'),
             storage: $this->storage,
         );
 
@@ -354,9 +354,9 @@ final class FileFieldValueTest extends TestCase
     {
         $field = new FileField(
             name: 'file',
-            label: HtmlText::encoded(textContent: 'File'),
+            label: HtmlText::fromHtml(html: 'File'),
             maxFileUploadCount: 1,
-            tooManyFilesErrMsg: HtmlText::encoded(textContent: 'At most <b>[max]</b>'),
+            tooManyFilesErrMsg: HtmlText::fromHtml(html: 'At most <b>[max]</b>'),
             storage: $this->storage,
         );
 
@@ -393,9 +393,9 @@ final class FileFieldValueTest extends TestCase
     {
         $field = new FileField(
             name: 'file',
-            label: HtmlText::encoded(textContent: 'File'),
+            label: HtmlText::fromHtml(html: 'File'),
             maxFileUploadCount: 3,
-            alreadyExistsErrorMessage: HtmlText::encoded(textContent: 'Twice <i>[fileName]</i>'),
+            alreadyExistsErrorMessage: HtmlText::fromHtml(html: 'Twice <i>[fileName]</i>'),
             storage: $this->storage,
         );
         $this->storage->preload($field->uniqueSessFileStorePointer, $this->storedFile(name: '<x>.txt'));
@@ -412,7 +412,7 @@ final class FileFieldValueTest extends TestCase
         $pointer = $firstRequest->uniqueSessFileStorePointer;
 
         // The next request builds a new field; the form carries the pointer of the field as a hidden input
-        $secondRequest = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $secondRequest = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
         $valid = $secondRequest->validate(input: $this->request(['file_UID' => $pointer]));
 
         $this->assertTrue($valid);
@@ -541,21 +541,21 @@ final class FileFieldValueTest extends TestCase
 
     public function testRequiredErrorIsAddedWithoutFiles(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $this->assertSame(['Required'], $this->errorsOf(field: $field, inputData: []));
     }
 
     public function testRequiredIsFulfilledByAnUploadedFile(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $this->assertTrue($field->validate(input: $this->request($this->uploads(names: ['a.txt']))));
     }
 
     public function testRemovingTheLastFileBringsBackTheRequiredError(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
         $file = $this->storedFile();
         $this->storage->preload('ptr', $file);
 
@@ -602,7 +602,7 @@ final class FileFieldValueTest extends TestCase
     #[DataProvider('manipulatedStructureProvider')]
     public function testManipulatedUploadStructureIsInvalidInput(array $structure): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
         $file = $this->storedFile();
         $this->storage->preload('ptr', $file);
 
@@ -660,7 +660,7 @@ final class FileFieldValueTest extends TestCase
 
     public function testValidatingTheCurrentValueDoesNotTouchTheStorage(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $valid = $field->validateCurrentValue();
 

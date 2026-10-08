@@ -20,15 +20,20 @@ class HtmlDataObject
         $this->data = new stdClass();
     }
 
-    public function addTextElement(string $propertyName, ?string $content, bool $isEncodedForRendering): void
+    /**
+     * @param string|null $text Plain text, escaped here
+     */
+    public function addText(string $propertyName, ?string $text): void
     {
-        if ($content === null) {
-            $this->data->{$propertyName} = null;
+        $this->data->{$propertyName} = $text === null ? null : HtmlEncoder::encode(value: $text);
+    }
 
-            return;
-        }
-
-        $this->data->{$propertyName} = $isEncodedForRendering ? $content : HtmlEncoder::encode(value: $content);
+    /**
+     * @param string|null $html Trusted HTML, stored as it is
+     */
+    public function addHtml(string $propertyName, ?string $html): void
+    {
+        $this->data->{$propertyName} = $html;
     }
 
     public function addDataObject(string $propertyName, ?HtmlDataObject $htmlDataObject): void

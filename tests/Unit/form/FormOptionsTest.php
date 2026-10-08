@@ -24,7 +24,7 @@ final class FormOptionsTest extends TestCase
     public function testExistsFindsAddedKeysOnly(): void
     {
         $formOptions = new FormOptions();
-        $formOptions->addItem(key: 'a', htmlText: HtmlText::encoded(textContent: 'A'));
+        $formOptions->addItem(key: 'a', htmlText: HtmlText::fromHtml(html: 'A'));
 
         $this->assertTrue($formOptions->exists(key: 'a'));
         $this->assertFalse($formOptions->exists(key: 'b'));
@@ -34,8 +34,8 @@ final class FormOptionsTest extends TestCase
     public function testNumericAndEmptyKeys(): void
     {
         $formOptions = new FormOptions();
-        $formOptions->addItem(key: '0', htmlText: HtmlText::encoded(textContent: 'Zero'));
-        $formOptions->addItem(key: '', htmlText: HtmlText::encoded(textContent: 'Empty'));
+        $formOptions->addItem(key: '0', htmlText: HtmlText::fromHtml(html: 'Zero'));
+        $formOptions->addItem(key: '', htmlText: HtmlText::fromHtml(html: 'Empty'));
 
         $this->assertTrue($formOptions->exists(key: '0'));
         $this->assertTrue($formOptions->exists(key: ''));
@@ -45,8 +45,8 @@ final class FormOptionsTest extends TestCase
     public function testDataKeepsTheOrderOfTheItems(): void
     {
         $formOptions = new FormOptions();
-        $formOptions->addItem(key: 'b', htmlText: HtmlText::encoded(textContent: 'B'));
-        $formOptions->addItem(key: 'a', htmlText: HtmlText::encoded(textContent: 'A'));
+        $formOptions->addItem(key: 'b', htmlText: HtmlText::fromHtml(html: 'B'));
+        $formOptions->addItem(key: 'a', htmlText: HtmlText::fromHtml(html: 'A'));
 
         $this->assertSame(['b', 'a'], array_map(callback: 'strval', array: array_keys(array: $formOptions->data)));
     }

@@ -52,41 +52,41 @@ class HtmlDocument
         $this->replacements = new HtmlReplacementCollection();
         $replacements = $this->replacements;
         $core = $this->core;
-        $replacements->addEncodedText(
+        $replacements->addHtml(
             identifier: 'bodyClassName',
-            content: 'body-' . $fileTitle,
+            html: 'body-' . $fileTitle,
         );
-        $replacements->addEncodedText(
+        $replacements->addHtml(
             identifier: 'language',
-            content: $requestHandler->language->code,
+            html: $requestHandler->language->code,
         );
-        $replacements->addEncodedText(
+        $replacements->addHtml(
             identifier: 'charset',
-            content: 'UTF-8',
+            html: 'UTF-8',
         );
-        $replacements->addEncodedText(
+        $replacements->addHtml(
             identifier: 'copyright',
-            content: $core->renderCopyrightYear(),
+            html: $core->renderCopyrightYear(),
         );
-        $replacements->addEncodedText(
+        $replacements->addHtml(
             identifier: 'robots',
-            content: $core->robots,
+            html: $core->robots,
         );
-        $replacements->addEncodedText(
+        $replacements->addHtml(
             identifier: 'scripts',
-            content: '',
+            html: '',
         );
-        $replacements->addEncodedText(
+        $replacements->addHtml(
             identifier: 'cspNonce',
-            content: $cspNonce->value,
+            html: $cspNonce->value,
         );
-        $replacements->addEncodedText(
+        $replacements->addHtml(
             identifier: 'csrfField',
-            content: CsrfToken::renderAsHiddenPostField(),
+            html: CsrfToken::renderAsHiddenPostField(),
         );
-        $replacements->addEncodedText(
+        $replacements->addHtml(
             identifier: 'requestedFileName',
-            content: $requestHandler->fileName,
+            html: $requestHandler->fileName,
         );
     }
 
@@ -129,9 +129,9 @@ class HtmlDocument
         if (!is_file(filename: $fullContentFilePath)) {
             throw new NotFoundException();
         }
-        $this->replacements->addEncodedText(
+        $this->replacements->addHtml(
             identifier: 'this',
-            content: $fullContentFilePath,
+            html: $fullContentFilePath,
         );
         $templateName = $this->templateName;
         $templateFilePath = $this->templateDirectory . $templateName . '.html';

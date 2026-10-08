@@ -43,7 +43,7 @@ class DefinitionListRenderer extends FormRenderer
             $abbrTag = new HtmlTag('span', false, [
                 new HtmlTagAttribute('class', 'required', true),
             ]);
-            $abbrTag->addText(HtmlText::encoded('*'));
+            $abbrTag->addText(HtmlText::fromHtml('*'));
             $labelTag->addTag($abbrTag);
         }
 

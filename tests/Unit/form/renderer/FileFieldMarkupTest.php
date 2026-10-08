@@ -88,8 +88,8 @@ final class FileFieldMarkupTest extends TestCase
         $form->removeCsrfProtection();
         $field = new FileField(
             name: 'file',
-            label: HtmlText::encoded(textContent: 'File'),
-            requiredError: HtmlText::encoded(textContent: 'Req'),
+            label: HtmlText::fromHtml(html: 'File'),
+            requiredError: HtmlText::fromHtml(html: 'Req'),
             maxFileUploadCount: $maxFileUploadCount,
             tooManyFilesErrMsg: $tooManyFilesErrMsg,
             alreadyExistsErrorMessage: $alreadyExistsErrorMessage,
@@ -295,7 +295,7 @@ final class FileFieldMarkupTest extends TestCase
             3,
             true,
             null,
-            HtmlText::encoded(textContent: 'Dup <i>[fileName]</i>'),
+            HtmlText::fromHtml(html: 'Dup <i>[fileName]</i>'),
             '<form method="post" action="?{form}" enctype="multipart/form-data"><dl><dt>'
               . '<label for="file">File<span class="required">*</span><i class="label-info">(max. 3)</i></label>'
               . '</dt><dd class="has-error"><div class="fileupload-enhanced" data-max-files="2">'
@@ -334,7 +334,7 @@ final class FileFieldMarkupTest extends TestCase
             FileFieldMarkupTest::upload(names: ['1.txt', '2.txt', '3.txt'], errors: [0, 0, 0], sizes: [5, 5, 5]),
             3,
             true,
-            HtmlText::encoded(textContent: 'Max <b>[max]</b>'),
+            HtmlText::fromHtml(html: 'Max <b>[max]</b>'),
             null,
             '<form method="post" action="?{form}" enctype="multipart/form-data"><dl><dt>'
               . '<label for="file">File<span class="required">*</span><i class="label-info">(max. 3)</i></label>'
@@ -420,8 +420,8 @@ final class FileFieldMarkupTest extends TestCase
         );
         $field = new FileField(
             name: 'file',
-            label: HtmlText::encoded(textContent: 'File'),
-            requiredError: HtmlText::encoded(textContent: 'Req'),
+            label: HtmlText::fromHtml(html: 'File'),
+            requiredError: HtmlText::fromHtml(html: 'Req'),
             maxFileUploadCount: $maxFileUploadCount,
             storage: $storage,
         );
@@ -464,7 +464,7 @@ final class FileFieldMarkupTest extends TestCase
     public function testFieldWithFilesAndErrorEqualsV332(): void
     {
         $field = $this->createFieldWithTwoFiles(maxFileUploadCount: 3);
-        $field->addError(errorMessage: HtmlText::unencoded(textContent: 'Boom'));
+        $field->addError(errorMessage: HtmlText::fromText(text: 'Boom'));
 
         $this->assertSame(
             '<div class="fileupload" data-max-files="1"><ul class="fileupload-list"><li>'
@@ -484,7 +484,7 @@ final class FileFieldMarkupTest extends TestCase
     {
         return new FileField(
             name: 'file',
-            label: HtmlText::encoded(textContent: 'File'),
+            label: HtmlText::fromHtml(html: 'File'),
             maxFileUploadCount: $maxFileUploadCount,
             storage: new InMemoryFileUploadStorage(),
         );

@@ -42,13 +42,13 @@ abstract class AbstractTableFilterField
     public function render(): HtmlDataObject
     {
         $field = new HtmlDataObject();
-        $field->addTextElement(propertyName: 'identifier', content: $this->identifier, isEncodedForRendering: true);
+        $field->addHtml(propertyName: 'identifier', html: $this->identifier);
         $field->addBooleanValue(
             propertyName: 'highlight',
             booleanValue: $this->isSelected() && !$this->highlightFieldIfSelected,
         );
-        $field->addTextElement(propertyName: 'label', content: $this->label->render(), isEncodedForRendering: true);
-        $field->addTextElement(propertyName: 'html', content: $this->renderField(), isEncodedForRendering: true);
+        $field->addHtml(propertyName: 'label', html: $this->label->render());
+        $field->addHtml(propertyName: 'html', html: $this->renderField());
 
         return $field;
     }

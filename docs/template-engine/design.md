@@ -29,8 +29,10 @@ their own tags (extension point).
   (calls a missing method), `checkboxOptions` / `radioOptions` (call a missing method), `for` with `classfirst` /
   `classlast` but without `class` (invalid nested ternary), `checkbox` / `radio` with non-numeric values, `options`
   without `selected`, `formAddRemove` without `pool`.
-- Escaping: the engine never escapes. `HtmlText::encoded()` / `addEncodedText()` mean "already encoded" and are output
-  raw; only `HtmlText::unencoded()` / `addUnencodedText()` are escaped. `tst:for` rewrites every `{word}` in its body
+- Escaping: by design, data is encoded when it enters the replacements (`addUnencodedText()` encodes,
+  `addEncodedText()` takes data that is already HTML), so the engine stores only safe values and never escapes. The
+  names describe the stored state instead of what the caller passes, and `HtmlReplacement::object()` lets a plain
+  `stdClass` bypass the encoding. `tst:for` rewrites every `{word}` in its body
   (also in inline JavaScript or CSS) into a raw `echo`.
 
 ## 2. Supported syntax

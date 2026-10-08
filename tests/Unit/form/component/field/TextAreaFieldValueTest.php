@@ -24,7 +24,7 @@ final class TextAreaFieldValueTest extends TestCase
     {
         return new TextAreaField(
             name: 'text',
-            label: HtmlText::encoded(textContent: 'Text'),
+            label: HtmlText::fromHtml(html: 'Text'),
             value: $value,
         );
     }

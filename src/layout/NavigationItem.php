@@ -38,25 +38,21 @@ readonly class NavigationItem
             accessRightCollection: $accessRightCollection,
         );
         $htmlDataObject = new HtmlDataObject();
-        $htmlDataObject->addTextElement(
+        $htmlDataObject->addHtml(
             propertyName: 'href',
-            content: $this->href,
-            isEncodedForRendering: true,
+            html: $this->href,
         );
-        $htmlDataObject->addTextElement(
+        $htmlDataObject->addHtml(
             propertyName: 'navKey',
-            content: $this->navKey,
-            isEncodedForRendering: true,
+            html: $this->navKey,
         );
-        $htmlDataObject->addTextElement(
+        $htmlDataObject->addHtml(
             propertyName: 'svgPath',
-            content: $this->svgPath,
-            isEncodedForRendering: true,
+            html: $this->svgPath,
         );
-        $htmlDataObject->addTextElement(
+        $htmlDataObject->addHtml(
             propertyName: 'title',
-            content: $this->title,
-            isEncodedForRendering: true,
+            html: $this->title,
         );
         $htmlDataObject->addHtmlDataObjectsArray(
             propertyName: 'subNavigation',
@@ -66,16 +62,14 @@ readonly class NavigationItem
             $childNavigationItemCollection === null
             || $childNavigationItemCollection->isEmpty(accessRightCollection: $accessRightCollection)
         ) {
-            $htmlDataObject->addTextElement(
+            $htmlDataObject->addHtml(
                 propertyName: 'cssClass',
-                content: '',
-                isEncodedForRendering: true,
+                html: '',
             );
         } else {
-            $htmlDataObject->addTextElement(
+            $htmlDataObject->addHtml(
                 propertyName: 'cssClass',
-                content: $childNavigationItemCollection->isActive ? $this->activeSubToggleClass : $this->inactiveSubToggleClass,
-                isEncodedForRendering: true,
+                html: $childNavigationItemCollection->isActive ? $this->activeSubToggleClass : $this->inactiveSubToggleClass,
             );
         }
 

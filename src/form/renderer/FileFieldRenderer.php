@@ -71,7 +71,7 @@ class FileFieldRenderer extends FormRenderer
                     . '<button type="submit" name="' . $removeButtonName . '" value="'
                     . HtmlEncoder::encode(value: $hash) . '">' . $removeButtonText . '</button></li>';
             }
-            $ulFileUploadList->addText(htmlText: HtmlText::encoded(textContent: $htmlContent));
+            $ulFileUploadList->addText(htmlText: HtmlText::fromHtml(html: $htmlContent));
             $divFileUpload->addTag(htmlTag: $ulFileUploadList);
         }
         $inputTag = new HtmlTag(

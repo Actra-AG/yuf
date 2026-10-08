@@ -59,7 +59,7 @@ class BooleanFieldListRenderer extends FormRenderer
             $optionsField->setRenderLabelFalse();
         }
         if ($field->isRequired()) {
-            $optionsField->addRequiredRule(errorMessage: HtmlText::encoded(textContent: ''));
+            $optionsField->addRequiredRule(errorMessage: HtmlText::fromHtml(html: ''));
         }
         foreach ($field->errorCollection->listErrors() as $error) {
             $optionsField->addError(errorMessage: $error);

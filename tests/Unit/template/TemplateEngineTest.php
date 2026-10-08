@@ -123,8 +123,8 @@ final class TemplateEngineTest extends NewEngineTestCase
     public function testItemsOfTheHtmlClassesAreNotEscapedAgain(): void
     {
         $item = new HtmlDataObject();
-        $item->addTextElement(propertyName: 'name', content: 'Tom & Jerry <3', isEncodedForRendering: false);
-        $item->addTextElement(propertyName: 'link', content: '<a href="/">x</a>', isEncodedForRendering: true);
+        $item->addText(propertyName: 'name', text: 'Tom & Jerry <3');
+        $item->addHtml(propertyName: 'link', html: '<a href="/">x</a>');
         $collection = new HtmlDataObjectCollection();
         $collection->add(htmlDataObject: $item);
         $replacements = new HtmlReplacementCollection();
@@ -141,7 +141,7 @@ final class TemplateEngineTest extends NewEngineTestCase
     public function testStringsOfAStdClassInThePlainDataAreEscaped(): void
     {
         $item = new HtmlDataObject();
-        $item->addTextElement(propertyName: 'name', content: '<b>', isEncodedForRendering: true);
+        $item->addHtml(propertyName: 'name', html: '<b>');
 
         $html = $this->render(source: "{tst:text value='o.name'}", data: ['o' => $item->data]);
 
@@ -163,8 +163,8 @@ final class TemplateEngineTest extends NewEngineTestCase
     public function testIfComparesValuesOfTheHtmlClassesAsText(): void
     {
         $replacements = new HtmlReplacementCollection();
-        $replacements->addEncodedText(identifier: 'empty', content: '');
-        $replacements->addEncodedText(identifier: 'text', content: 'abc');
+        $replacements->addHtml(identifier: 'empty', html: '');
+        $replacements->addHtml(identifier: 'text', html: 'abc');
         $source = '<tst:if compare="empty" against="">E</tst:if><tst:if compare="text" operator="in" against="x abc">I</tst:if><tst:if compare="text" against="true">T</tst:if>';
 
         $this->assertSame('EIT', $this->render(source: $source, data: $replacements));

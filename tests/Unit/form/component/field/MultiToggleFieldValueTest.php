@@ -23,12 +23,12 @@ final class MultiToggleFieldValueTest extends TestCase
     private function createField(array $initialValues = [], ?HtmlText $requiredError = null): MultiToggleField
     {
         $formOptions = new FormOptions();
-        $formOptions->addItem(key: 'a', htmlText: HtmlText::encoded(textContent: 'A'));
-        $formOptions->addItem(key: 'b', htmlText: HtmlText::encoded(textContent: 'B'));
+        $formOptions->addItem(key: 'a', htmlText: HtmlText::fromHtml(html: 'A'));
+        $formOptions->addItem(key: 'b', htmlText: HtmlText::fromHtml(html: 'B'));
 
         return new MultiToggleField(
             name: 'toggle',
-            label: HtmlText::encoded(textContent: 'Toggle'),
+            label: HtmlText::fromHtml(html: 'Toggle'),
             formOptions: $formOptions,
             initialValues: $initialValues,
             requiredError: $requiredError,
@@ -100,7 +100,7 @@ final class MultiToggleFieldValueTest extends TestCase
 
     public function testRequiredRuleFailsForEmptyList(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $this->assertFalse($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());

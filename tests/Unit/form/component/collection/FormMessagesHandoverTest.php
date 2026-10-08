@@ -25,7 +25,7 @@ final class FormMessagesHandoverTest extends TestCase
 {
     private function createField(): TextField
     {
-        return new TextField(name: 'field', label: HtmlText::encoded(textContent: 'Label'));
+        return new TextField(name: 'field', label: HtmlText::fromHtml(html: 'Label'));
     }
 
     #[Override]

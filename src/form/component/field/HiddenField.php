@@ -21,7 +21,7 @@ final class HiddenField extends SettableStringInputField
         parent::__construct(
             inputType: InputTypeEnum::HIDDEN,
             name: $name,
-            label: HtmlText::encoded(textContent: ''),
+            label: HtmlText::fromHtml(html: ''),
             value: $value,
             placeholder: null,
             autoComplete: null,

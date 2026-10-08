@@ -35,21 +35,20 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
             $page = new HtmlDataObject();
             $page->addBooleanValue(propertyName: 'groupPreviousPages', booleanValue: $groupPreviousPages);
             $page->addBooleanValue(propertyName: 'isCurrentPage', booleanValue: $isCurrentPage);
-            $page->addTextElement(propertyName: 'number', content: (string) $number, isEncodedForRendering: true);
-            $page->addTextElement(
+            $page->addHtml(propertyName: 'number', html: (string) $number);
+            $page->addHtml(
                 propertyName: 'href',
-                content: '?page=' . $number . '|list&amp;x=1',
-                isEncodedForRendering: true,
+                html: '?page=' . $number . '|list&amp;x=1',
             );
             $page->addBooleanValue(propertyName: 'groupNextPages', booleanValue: $groupNextPages);
             $collection->add(htmlDataObject: $page);
         }
         $replacements = new HtmlReplacementCollection();
-        $replacements->addUnencodedText(identifier: 'previousTitle', content: 'Back <&>');
-        $replacements->addEncodedText(identifier: 'previousPageHref', content: $previousPageHref);
+        $replacements->addText(identifier: 'previousTitle', text: 'Back <&>');
+        $replacements->addHtml(identifier: 'previousPageHref', html: $previousPageHref);
         $replacements->addHtmlDataObjectCollection(identifier: 'pages', htmlDataObjectCollection: $collection);
-        $replacements->addUnencodedText(identifier: 'nextTitle', content: 'Next');
-        $replacements->addEncodedText(identifier: 'nextPageHref', content: $nextPageHref);
+        $replacements->addText(identifier: 'nextTitle', text: 'Next');
+        $replacements->addHtml(identifier: 'nextPageHref', html: $nextPageHref);
 
         return $replacements;
     }
@@ -61,10 +60,10 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
         string $html,
     ): HtmlDataObject {
         $field = new HtmlDataObject();
-        $field->addTextElement(propertyName: 'identifier', content: $identifier, isEncodedForRendering: true);
+        $field->addHtml(propertyName: 'identifier', html: $identifier);
         $field->addBooleanValue(propertyName: 'highlight', booleanValue: $highlight);
-        $field->addTextElement(propertyName: 'label', content: $label, isEncodedForRendering: true);
-        $field->addTextElement(propertyName: 'html', content: $html, isEncodedForRendering: true);
+        $field->addHtml(propertyName: 'label', html: $label);
+        $field->addHtml(propertyName: 'html', html: $html);
 
         return $field;
     }
@@ -76,10 +75,10 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
     ): HtmlReplacementCollection {
         $replacements = new HtmlReplacementCollection();
         $replacements->addBool(identifier: 'showLegend', booleanValue: $showLegend);
-        $replacements->addEncodedText(identifier: 'formAction', content: '?table&amp;find');
-        $replacements->addEncodedText(
+        $replacements->addHtml(identifier: 'formAction', html: '?table&amp;find');
+        $replacements->addHtml(
             identifier: 'csrfField',
-            content: '<input type="hidden" name="csrf" value="token">',
+            html: '<input type="hidden" name="csrf" value="token">',
         );
         $primaryFields = new HtmlDataObjectCollection();
         $primaryFields->add(
@@ -122,9 +121,9 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
                 htmlDataObjectCollection: $secondaryFields,
             );
         }
-        $replacements->addEncodedText(identifier: 'resetHref', content: '?table&amp;reset');
-        $replacements->addEncodedText(identifier: 'submitButtonLabel', content: 'Search');
-        $replacements->addEncodedText(identifier: 'resetLinkLabel', content: 'Reset');
+        $replacements->addHtml(identifier: 'resetHref', html: '?table&amp;reset');
+        $replacements->addHtml(identifier: 'submitButtonLabel', html: 'Search');
+        $replacements->addHtml(identifier: 'resetLinkLabel', html: 'Reset');
 
         return $replacements;
     }
@@ -484,7 +483,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
                 'this' => AbstractTemplateFilesTestCase::projectDirectory() . 'example/app/view/frontend/html/index.html',
             ] as $identifier => $content
         ) {
-            $replacements->addEncodedText(identifier: $identifier, content: $content);
+            $replacements->addHtml(identifier: $identifier, html: $content);
         }
         $html = $this->renderProjectFile(
             relativePath: 'example/app/view/frontend/templates/default.html',
@@ -525,7 +524,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
                 'robots' => 'noindex,nofollow',
             ] as $identifier => $content
         ) {
-            $replacements->addEncodedText(identifier: $identifier, content: $content);
+            $replacements->addHtml(identifier: $identifier, html: $content);
         }
         $html = $this->renderProjectFile(relativePath: 'example/app/error_docs/notFound.html', replacements: $replacements);
 
@@ -559,7 +558,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
                 'robots' => 'noindex,nofollow',
             ] as $identifier => $content
         ) {
-            $replacements->addEncodedText(identifier: $identifier, content: $content);
+            $replacements->addHtml(identifier: $identifier, html: $content);
         }
         $html = $this->renderProjectFile(relativePath: 'example/app/error_docs/default.html', replacements: $replacements);
 

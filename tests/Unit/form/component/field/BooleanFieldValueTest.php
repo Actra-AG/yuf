@@ -24,7 +24,7 @@ final class BooleanFieldValueTest extends TestCase
     {
         return new BooleanField(
             name: 'boolean',
-            label: HtmlText::encoded(textContent: 'Boolean'),
+            label: HtmlText::fromHtml(html: 'Boolean'),
             isCheckedByDefault: $isCheckedByDefault,
             requiredError: $requiredError,
         );
@@ -92,7 +92,7 @@ final class BooleanFieldValueTest extends TestCase
     #[DataProvider('invalidInputProvider')]
     public function testInvalidInputResetsTheValueWithOneError(array $inputData): void
     {
-        $field = $this->createField(isCheckedByDefault: true, requiredError: HtmlText::encoded(textContent: 'R'));
+        $field = $this->createField(isCheckedByDefault: true, requiredError: HtmlText::fromHtml(html: 'R'));
 
         $isValid = $field->validate(input: FormInput::fromArray(data: $inputData));
 
@@ -104,7 +104,7 @@ final class BooleanFieldValueTest extends TestCase
 
     public function testRequiredRuleMeansMustBeChecked(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Accept the terms'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Accept the terms'));
 
         $this->assertFalse($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertSame('Accept the terms', $field->errorCollection->getFirstError()->render());
@@ -113,7 +113,7 @@ final class BooleanFieldValueTest extends TestCase
 
     public function testRequiredRuleIsFulfilledWhenChecked(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Accept the terms'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Accept the terms'));
 
         $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['boolean' => ['checked']])));
     }
@@ -161,7 +161,7 @@ final class BooleanFieldValueTest extends TestCase
         foreach (CheckboxOptionsLayoutEnum::cases() as $layout) {
             $field = new BooleanField(
                 name: 'boolean',
-                label: HtmlText::encoded(textContent: 'Boolean'),
+                label: HtmlText::fromHtml(html: 'Boolean'),
                 isCheckedByDefault: false,
                 layout: $layout,
             );

@@ -134,8 +134,8 @@ final class FormCsrfTest extends TestCase
         $form->addField(
             formField: new TextField(
                 name: 'name',
-                label: HtmlText::encoded(textContent: 'Name'),
-                requiredError: HtmlText::encoded(textContent: 'Required'),
+                label: HtmlText::fromHtml(html: 'Name'),
+                requiredError: HtmlText::fromHtml(html: 'Required'),
             ),
         );
 
@@ -149,7 +149,7 @@ final class FormCsrfTest extends TestCase
 
     public function testGlobalErrorMessageIsNotAddedForAnInvalidToken(): void
     {
-        $form = $this->createForm(globalErrorMessage: HtmlText::encoded(textContent: 'Global'));
+        $form = $this->createForm(globalErrorMessage: HtmlText::fromHtml(html: 'Global'));
 
         $this->send(form: $form, post: ['csrftoken' => 'wrong']);
 

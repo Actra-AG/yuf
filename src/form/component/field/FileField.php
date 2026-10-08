@@ -66,8 +66,8 @@ final class FileField extends FormField
         parent::__construct(
             name: $name,
             label: $label,
-            labelInfoText: $this->maxFileUploadCount === 1 ? null : HtmlText::encoded(
-                textContent: '(max. ' . $this->maxFileUploadCount . ')',
+            labelInfoText: $this->maxFileUploadCount === 1 ? null : HtmlText::fromHtml(
+                html: '(max. ' . $this->maxFileUploadCount . ')',
             ),
         );
         if ($requiredError !== null) {
@@ -250,8 +250,8 @@ final class FileField extends FormField
     private function addFileError(string $message, string $fileName): void
     {
         $this->addError(
-            errorMessage: HtmlText::encoded(
-                textContent: HtmlEncoder::encodeKeepQuotes(value: $message) . ' ' . HtmlEncoder::encode(
+            errorMessage: HtmlText::fromHtml(
+                html: HtmlEncoder::encodeKeepQuotes(value: $message) . ' ' . HtmlEncoder::encode(
                     value: $fileName,
                 ),
             ),
@@ -270,8 +270,8 @@ final class FileField extends FormField
     ): HtmlText {
         $template = $individualMessage?->render() ?? HtmlEncoder::encodeKeepQuotes(value: $defaultMessage);
 
-        return HtmlText::encoded(
-            textContent: str_replace(search: $placeholder, replace: $replacement, subject: $template),
+        return HtmlText::fromHtml(
+            html: str_replace(search: $placeholder, replace: $replacement, subject: $template),
         );
     }
 

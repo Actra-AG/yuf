@@ -2137,18 +2137,6 @@ parameters:
 			path: src/html/HtmlReplacement.php
 
 		-
-			rawMessage: 'Parameter $textContent of static method actra\yuf\html\HtmlText::encoded() expects string, string|null given.'
-			identifier: argument.type
-			count: 1
-			path: src/html/HtmlReplacement.php
-
-		-
-			rawMessage: 'Parameter $textContent of static method actra\yuf\html\HtmlText::unencoded() expects string, string|null given.'
-			identifier: argument.type
-			count: 1
-			path: src/html/HtmlReplacement.php
-
-		-
 			rawMessage: 'Method actra\yuf\html\HtmlReplacementCollection::getArrayObject() return type with generic class ArrayObject does not specify its types: TKey, TValue'
 			identifier: missingType.generics
 			count: 1
@@ -3301,7 +3289,7 @@ parameters:
 			path: src/template/customtags/CustomTagsHelper.php
 
 		-
-			rawMessage: 'Parameter #1 $textContent of static method actra\yuf\html\HtmlText::encoded() expects string, mixed given.'
+			rawMessage: 'Parameter #1 $html of static method actra\yuf\html\HtmlText::fromHtml() expects string, mixed given.'
 			identifier: argument.type
 			count: 1
 			path: src/template/customtags/CustomTagsHelper.php

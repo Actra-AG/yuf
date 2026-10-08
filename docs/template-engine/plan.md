@@ -263,3 +263,18 @@ error pages), 159 differ on purpose (below).
 - The README does not describe the new engine yet (it is not used); step 5 adds the section.
 - Step 4 must replace `tests/Double/template/OldTemplateRenderer`, the `Old…Test` subclasses and `CoreTestInstance`, and keep the
   `NewEngine…` classes as the only run of the characterization tests (then the `isNewEngine()` branches can be removed).
+
+### Step 3 (v4.25.0) – done
+
+Renames only; rendered HTML is unchanged (characterization tests of both engines pass with renamed setup calls).
+
+- `HtmlText::fromHtml()` / `fromText()`, `HtmlReplacementCollection::addHtml()` / `addText()`,
+  `HtmlReplacement::html()` / `text()` (now accept `null`), `HtmlDataObject::addHtml()` / `addText()` (replaces
+  `addTextElement()`), `DetailDataObject` argument `isHtml`. No aliases; table and migration in `UPGRADE.md`.
+- `HtmlReplacement::object(?stdClass)` is now `dataObject(?HtmlDataObject)` (decision: all object data passes through
+  `HtmlDataObject`); `getDataForRenderer()` unwraps `->data`.
+- `HtmlTextCollection`, `HtmlDataObjectCollection`, `HtmlEncoder` have no "encoded" names and are unchanged.
+- The comment and values in `example/app/view/frontend/IndexView.php` use `addText()` and say so.
+- Follow-up in `actra/backend`: rename the calls as in the follow-up list above (migration steps in `UPGRADE.md`), then
+  review every `addHtml()` / `fromHtml()` for user data.
+

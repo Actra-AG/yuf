@@ -25,13 +25,13 @@ final class MultiSelectOptionsFieldValueTest extends TestCase
     private function createField(array $initialValues = [], ?HtmlText $requiredError = null): MultiSelectOptionsField
     {
         $formOptions = new FormOptions();
-        $formOptions->addItem(key: 'a', htmlText: HtmlText::encoded(textContent: 'A'));
-        $formOptions->addItem(key: 'b', htmlText: HtmlText::encoded(textContent: 'B'));
-        $formOptions->addItem(key: '0', htmlText: HtmlText::encoded(textContent: 'Zero'));
+        $formOptions->addItem(key: 'a', htmlText: HtmlText::fromHtml(html: 'A'));
+        $formOptions->addItem(key: 'b', htmlText: HtmlText::fromHtml(html: 'B'));
+        $formOptions->addItem(key: '0', htmlText: HtmlText::fromHtml(html: 'Zero'));
 
         return new MultiSelectOptionsField(
             name: 'select',
-            label: HtmlText::encoded(textContent: 'Select'),
+            label: HtmlText::fromHtml(html: 'Select'),
             formOptions: $formOptions,
             initialValues: $initialValues,
             requiredError: $requiredError,
@@ -145,7 +145,7 @@ final class MultiSelectOptionsFieldValueTest extends TestCase
 
     public function testRequiredRuleFailsForEmptyList(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $this->assertFalse($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
@@ -153,7 +153,7 @@ final class MultiSelectOptionsFieldValueTest extends TestCase
 
     public function testRequiredRuleDoesNotRunForRejectedInput(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $field->validate(input: FormInput::fromArray(data: ['select' => 'a']));
 
@@ -243,7 +243,7 @@ final class MultiSelectOptionsFieldValueTest extends TestCase
     {
         $field = new MultiSelectOptionsField(
             name: 'select',
-            label: HtmlText::encoded(textContent: 'Select'),
+            label: HtmlText::fromHtml(html: 'Select'),
             formOptions: new FormOptions(),
             initialValues: [],
             renderAsChosenEnhancedField: true,

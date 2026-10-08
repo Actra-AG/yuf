@@ -24,12 +24,12 @@ final class CheckboxOptionsFieldValueTest extends TestCase
     private function createField(array $initialValues = [], ?HtmlText $requiredError = null): CheckboxOptionsField
     {
         $formOptions = new FormOptions();
-        $formOptions->addItem(key: 'a', htmlText: HtmlText::encoded(textContent: 'A'));
-        $formOptions->addItem(key: 'b', htmlText: HtmlText::encoded(textContent: 'B'));
+        $formOptions->addItem(key: 'a', htmlText: HtmlText::fromHtml(html: 'A'));
+        $formOptions->addItem(key: 'b', htmlText: HtmlText::fromHtml(html: 'B'));
 
         return new CheckboxOptionsField(
             name: 'checkbox',
-            label: HtmlText::encoded(textContent: 'Checkbox'),
+            label: HtmlText::fromHtml(html: 'Checkbox'),
             formOptions: $formOptions,
             initialValues: $initialValues,
             requiredError: $requiredError,
@@ -111,7 +111,7 @@ final class CheckboxOptionsFieldValueTest extends TestCase
 
     public function testRequiredRuleFailsForEmptyValues(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $this->assertFalse($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());

@@ -24,12 +24,12 @@ final class RadioOptionsFieldValueTest extends TestCase
     private function createField(?string $initialValue = null, ?HtmlText $requiredError = null): RadioOptionsField
     {
         $formOptions = new FormOptions();
-        $formOptions->addItem(key: 'a', htmlText: HtmlText::encoded(textContent: 'A'));
-        $formOptions->addItem(key: 'b', htmlText: HtmlText::encoded(textContent: 'B'));
+        $formOptions->addItem(key: 'a', htmlText: HtmlText::fromHtml(html: 'A'));
+        $formOptions->addItem(key: 'b', htmlText: HtmlText::fromHtml(html: 'B'));
 
         return new RadioOptionsField(
             name: 'radio',
-            label: HtmlText::encoded(textContent: 'Radio'),
+            label: HtmlText::fromHtml(html: 'Radio'),
             formOptions: $formOptions,
             initialValue: $initialValue,
             requiredError: $requiredError,
@@ -145,7 +145,7 @@ final class RadioOptionsFieldValueTest extends TestCase
 
     public function testIndividualRequiredErrorWins(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Choose!'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Choose!'));
 
         $field->validate(input: FormInput::fromArray(data: []));
 

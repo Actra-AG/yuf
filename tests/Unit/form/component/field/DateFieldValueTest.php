@@ -27,9 +27,9 @@ final class DateFieldValueTest extends TestCase
     {
         return new DateField(
             name: 'date',
-            label: HtmlText::encoded(textContent: 'Date'),
+            label: HtmlText::fromHtml(html: 'Date'),
             value: $value,
-            invalidError: HtmlText::encoded(textContent: 'Invalid'),
+            invalidError: HtmlText::fromHtml(html: 'Invalid'),
             requiredError: $requiredError,
         );
     }
@@ -129,7 +129,7 @@ final class DateFieldValueTest extends TestCase
 
     public function testRequiredErrorForEmptyInput(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['date' => ' '])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());

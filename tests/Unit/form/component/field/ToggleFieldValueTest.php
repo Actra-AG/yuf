@@ -20,12 +20,12 @@ final class ToggleFieldValueTest extends TestCase
     private function createField(?string $initialValue = null, ?HtmlText $requiredError = null): ToggleField
     {
         $formOptions = new FormOptions();
-        $formOptions->addItem(key: 'a', htmlText: HtmlText::encoded(textContent: 'A'));
-        $formOptions->addItem(key: 'b', htmlText: HtmlText::encoded(textContent: 'B'));
+        $formOptions->addItem(key: 'a', htmlText: HtmlText::fromHtml(html: 'A'));
+        $formOptions->addItem(key: 'b', htmlText: HtmlText::fromHtml(html: 'B'));
 
         return new ToggleField(
             name: 'toggle',
-            label: HtmlText::encoded(textContent: 'Toggle'),
+            label: HtmlText::fromHtml(html: 'Toggle'),
             formOptions: $formOptions,
             initialValue: $initialValue,
             requiredError: $requiredError,
@@ -73,7 +73,7 @@ final class ToggleFieldValueTest extends TestCase
 
     public function testRequiredRuleFailsForEmptyValue(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $this->assertFalse($field->validate(input: FormInput::fromArray(data: [])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
@@ -123,7 +123,7 @@ final class ToggleFieldValueTest extends TestCase
 
     public function testRequiredFieldIsRequired(): void
     {
-        $this->assertTrue($this->createField(requiredError: HtmlText::encoded(textContent: 'R'))->isRequired());
+        $this->assertTrue($this->createField(requiredError: HtmlText::fromHtml(html: 'R'))->isRequired());
         $this->assertFalse($this->createField()->isRequired());
     }
 }

@@ -28,7 +28,7 @@ final class RecordingTableFilterField extends AbstractTableFilterField
         parent::__construct(
             parentFilter: $parentFilter,
             filterFieldIdentifier: 'recording',
-            label: HtmlText::encoded(textContent: 'Recording'),
+            label: HtmlText::fromHtml(html: 'Recording'),
             highlightFieldIfSelected: false,
         );
     }

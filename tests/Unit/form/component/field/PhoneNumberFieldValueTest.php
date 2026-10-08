@@ -24,9 +24,9 @@ final class PhoneNumberFieldValueTest extends TestCase
     ): PhoneNumberField {
         return new PhoneNumberField(
             name: 'phone',
-            label: HtmlText::encoded(textContent: 'Phone'),
+            label: HtmlText::fromHtml(html: 'Phone'),
             value: $value,
-            invalidErrorMessage: HtmlText::encoded(textContent: 'Invalid'),
+            invalidErrorMessage: HtmlText::fromHtml(html: 'Invalid'),
             requiredErrorMessage: $requiredErrorMessage,
             countryCode: $countryCode,
         );
@@ -119,7 +119,7 @@ final class PhoneNumberFieldValueTest extends TestCase
 
     public function testEmptyInputGivesOnlyTheRequiredError(): void
     {
-        $field = $this->createField(requiredErrorMessage: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredErrorMessage: HtmlText::fromHtml(html: 'Required'));
 
         $isValid = $field->validate(input: FormInput::fromArray(data: ['phone' => '']));
 
@@ -173,9 +173,9 @@ final class PhoneNumberFieldValueTest extends TestCase
     {
         $field = new PhoneNumberField(
             name: 'phone',
-            label: HtmlText::encoded(textContent: 'Phone'),
+            label: HtmlText::fromHtml(html: 'Phone'),
             value: null,
-            invalidErrorMessage: HtmlText::encoded(textContent: 'Invalid'),
+            invalidErrorMessage: HtmlText::fromHtml(html: 'Invalid'),
             countryCodeFieldName: 'country',
         );
 
@@ -221,9 +221,9 @@ final class PhoneNumberFieldValueTest extends TestCase
     {
         $field = new PhoneNumberField(
             name: 'phone',
-            label: HtmlText::encoded(textContent: 'Phone'),
+            label: HtmlText::fromHtml(html: 'Phone'),
             value: '044 668 18 00',
-            invalidErrorMessage: HtmlText::encoded(textContent: 'Invalid'),
+            invalidErrorMessage: HtmlText::fromHtml(html: 'Invalid'),
             renderInternalFormat: true,
         );
 

@@ -25,7 +25,7 @@ final class TextFieldValueTest extends TestCase
     {
         return new TextField(
             name: 'field',
-            label: HtmlText::encoded(textContent: 'Label'),
+            label: HtmlText::fromHtml(html: 'Label'),
             value: $value,
         );
     }
@@ -103,8 +103,8 @@ final class TextFieldValueTest extends TestCase
     {
         $field = new TextField(
             name: 'field',
-            label: HtmlText::encoded(textContent: 'Label'),
-            requiredError: HtmlText::encoded(textContent: 'Required'),
+            label: HtmlText::fromHtml(html: 'Label'),
+            requiredError: HtmlText::fromHtml(html: 'Required'),
         );
 
         $field->validate(input: FormInput::fromArray(data: ['field' => ['x']]));
@@ -116,8 +116,8 @@ final class TextFieldValueTest extends TestCase
     {
         $field = new TextField(
             name: 'field',
-            label: HtmlText::encoded(textContent: 'Label'),
-            requiredError: HtmlText::encoded(textContent: 'Required'),
+            label: HtmlText::fromHtml(html: 'Label'),
+            requiredError: HtmlText::fromHtml(html: 'Required'),
         );
 
         $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['field' => '  '])));
@@ -128,8 +128,8 @@ final class TextFieldValueTest extends TestCase
     {
         $field = new TextField(
             name: 'field',
-            label: HtmlText::encoded(textContent: 'Label'),
-            requiredError: HtmlText::encoded(textContent: 'Required'),
+            label: HtmlText::fromHtml(html: 'Label'),
+            requiredError: HtmlText::fromHtml(html: 'Required'),
         );
         $field->validate(input: FormInput::fromArray(data: ['field' => ['x']]));
 

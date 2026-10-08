@@ -41,7 +41,7 @@ class RadioOptionsField extends SingleOptionsField
         if ($requiredError === null) {
             $this->hasDefaultRequiredMessage = true;
             $this->addRequiredRule(
-                errorMessage: HtmlText::unencoded(textContent: $this->messages->selectOneOption),
+                errorMessage: HtmlText::fromText(text: $this->messages->selectOneOption),
             );
         } else {
             $this->addRequiredRule(errorMessage: $requiredError);
@@ -65,7 +65,7 @@ class RadioOptionsField extends SingleOptionsField
     {
         if ($this->hasDefaultRequiredMessage) {
             $this->addRequiredRule(
-                errorMessage: HtmlText::unencoded(textContent: $this->messages->selectOneOption),
+                errorMessage: HtmlText::fromText(text: $this->messages->selectOneOption),
             );
         }
 

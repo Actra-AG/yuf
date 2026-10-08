@@ -24,8 +24,8 @@ final class PasswordFieldValueTest extends TestCase
     {
         return new PasswordField(
             name: 'password',
-            label: HtmlText::encoded(textContent: 'Password'),
-            requiredError: HtmlText::encoded(textContent: 'Required'),
+            label: HtmlText::fromHtml(html: 'Password'),
+            requiredError: HtmlText::fromHtml(html: 'Required'),
             purpose: $purpose,
         );
     }

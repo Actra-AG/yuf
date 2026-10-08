@@ -25,7 +25,7 @@ class FormControl extends FormComponent
     private readonly ?HtmlText $individualCancelLabel;
 
     public HtmlText $cancelLabel {
-        get => $this->individualCancelLabel ?? HtmlText::encoded(textContent: $this->resolveMessages()->cancel);
+        get => $this->individualCancelLabel ?? HtmlText::fromHtml(html: $this->resolveMessages()->cancel);
     }
 
     public function __construct(

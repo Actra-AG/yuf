@@ -29,14 +29,14 @@ class HtmlReplacementCollection
         return $this->has(identifier: $identifier) ? $this->replacements[$identifier] : null;
     }
 
-    public function addEncodedText(
+    public function addHtml(
         string  $identifier,
-        ?string $content,
+        ?string $html,
     ): void {
         $this->addHtmlText(
             identifier: $identifier,
-            htmlText: $content === null ? null : HtmlText::encoded(
-                textContent: $content,
+            htmlText: $html === null ? null : HtmlText::fromHtml(
+                html: $html,
             ),
         );
     }
@@ -55,14 +55,14 @@ class HtmlReplacementCollection
         $this->replacements[$identifier] = $htmlReplacement;
     }
 
-    public function addUnencodedText(
+    public function addText(
         string  $identifier,
-        ?string $content,
+        ?string $text,
     ): void {
         $this->addHtmlText(
             identifier: $identifier,
-            htmlText: $content === null ? null : HtmlText::unencoded(
-                textContent: $content,
+            htmlText: $text === null ? null : HtmlText::fromText(
+                text: $text,
             ),
         );
     }
@@ -103,7 +103,7 @@ class HtmlReplacementCollection
     ): void {
         $this->set(
             identifier: $identifier,
-            htmlReplacement: $htmlDataObject === null ? null : HtmlReplacement::object(object: $htmlDataObject->data),
+            htmlReplacement: $htmlDataObject === null ? null : HtmlReplacement::dataObject(htmlDataObject: $htmlDataObject),
         );
     }
 

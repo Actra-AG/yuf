@@ -14,7 +14,7 @@ use stdClass;
 readonly class HtmlReplacement
 {
     private function __construct(
-        public HtmlText|bool|stdClass|HtmlTextCollection|HtmlDataObjectCollection|int|float|null $content,
+        public HtmlText|bool|HtmlDataObject|HtmlTextCollection|HtmlDataObjectCollection|int|float|null $content,
     ) {}
 
     public static function htmlText(?HtmlText $htmlText): HtmlReplacement
@@ -22,14 +22,14 @@ readonly class HtmlReplacement
         return new HtmlReplacement(content: $htmlText);
     }
 
-    public static function encodedText(?string $content): HtmlReplacement
+    public static function html(?string $html): HtmlReplacement
     {
-        return new HtmlReplacement(content: HtmlText::encoded(textContent: $content));
+        return new HtmlReplacement(content: $html === null ? null : HtmlText::fromHtml(html: $html));
     }
 
-    public static function unencodedText(?string $content): HtmlReplacement
+    public static function text(?string $text): HtmlReplacement
     {
-        return new HtmlReplacement(content: HtmlText::unencoded(textContent: $content));
+        return new HtmlReplacement(content: $text === null ? null : HtmlText::fromText(text: $text));
     }
 
     public static function bool(?bool $bool): HtmlReplacement
@@ -47,9 +47,9 @@ readonly class HtmlReplacement
         return new HtmlReplacement(content: $float);
     }
 
-    public static function object(?stdClass $object): HtmlReplacement
+    public static function dataObject(?HtmlDataObject $htmlDataObject): HtmlReplacement
     {
-        return new HtmlReplacement(content: $object);
+        return new HtmlReplacement(content: $htmlDataObject);
     }
 
     public static function textCollection(?HtmlTextCollection $collection): HtmlReplacement
@@ -82,6 +82,10 @@ readonly class HtmlReplacement
             }
 
             return $array;
+        }
+
+        if ($this->content instanceof HtmlDataObject) {
+            return $this->content->data;
         }
 
         return $this->content;

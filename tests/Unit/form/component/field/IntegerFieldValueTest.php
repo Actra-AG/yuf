@@ -29,7 +29,7 @@ final class IntegerFieldValueTest extends TestCase
     {
         return new IntegerField(
             name: 'amount',
-            label: HtmlText::encoded(textContent: 'Amount'),
+            label: HtmlText::fromHtml(html: 'Amount'),
             initialValue: $initialValue,
             requiredError: $requiredError,
         );
@@ -142,7 +142,7 @@ final class IntegerFieldValueTest extends TestCase
 
     public function testInvalidInputGivesExactlyOneError(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $field->validate(input: FormInput::fromArray(data: ['amount' => 'abc']));
 
@@ -153,8 +153,8 @@ final class IntegerFieldValueTest extends TestCase
     {
         $field = new IntegerField(
             name: 'amount',
-            label: HtmlText::encoded(textContent: 'Amount'),
-            individualInvalidError: HtmlText::encoded(textContent: 'Not a whole number'),
+            label: HtmlText::fromHtml(html: 'Amount'),
+            individualInvalidError: HtmlText::fromHtml(html: 'Not a whole number'),
         );
 
         $field->validate(input: FormInput::fromArray(data: ['amount' => '1.5']));
@@ -175,7 +175,7 @@ final class IntegerFieldValueTest extends TestCase
     public function testRequiredErrorForEmptyAndWhitespaceInput(): void
     {
         foreach (['', '   '] as $input) {
-            $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+            $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
             $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['amount' => $input])));
             $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
@@ -275,7 +275,7 @@ final class IntegerFieldValueTest extends TestCase
 
     public function testSetInitialValueSetsCurrentAndInitialValue(): void
     {
-        $field = new InitialValueIntegerField(name: 'amount', label: HtmlText::encoded(textContent: 'Amount'));
+        $field = new InitialValueIntegerField(name: 'amount', label: HtmlText::fromHtml(html: 'Amount'));
 
         $field->fill(value: 42);
 
@@ -285,7 +285,7 @@ final class IntegerFieldValueTest extends TestCase
 
     public function testSetInitialValueAfterValidationThrows(): void
     {
-        $field = new InitialValueIntegerField(name: 'amount', label: HtmlText::encoded(textContent: 'Amount'));
+        $field = new InitialValueIntegerField(name: 'amount', label: HtmlText::fromHtml(html: 'Amount'));
         $field->validate(input: FormInput::fromArray(data: []));
 
         $this->expectException(LogicException::class);

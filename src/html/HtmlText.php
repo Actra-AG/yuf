@@ -13,24 +13,30 @@ use Override;
 
 class HtmlText extends HtmlElement
 {
-    private string $textContent;
-    private bool $isEncodedForRendering;
+    private string $content;
+    private bool $isHtml;
 
-    private function __construct(string $textContent, bool $isEncodedForRendering)
+    private function __construct(string $content, bool $isHtml)
     {
-        $this->textContent = $textContent;
-        $this->isEncodedForRendering = $isEncodedForRendering;
+        $this->content = $content;
+        $this->isHtml = $isHtml;
         parent::__construct('htmlText');
     }
 
-    public static function encoded(string $textContent): HtmlText
+    /**
+     * @param string $html Trusted HTML, output as it is
+     */
+    public static function fromHtml(string $html): HtmlText
     {
-        return new HtmlText(textContent: $textContent, isEncodedForRendering: true);
+        return new HtmlText(content: $html, isHtml: true);
     }
 
-    public static function unencoded(string $textContent): HtmlText
+    /**
+     * @param string $text Plain text, escaped when rendered
+     */
+    public static function fromText(string $text): HtmlText
     {
-        return new HtmlText(textContent: $textContent, isEncodedForRendering: false);
+        return new HtmlText(content: $text, isHtml: false);
     }
 
     /**
@@ -41,6 +47,6 @@ class HtmlText extends HtmlElement
     #[Override]
     public function render(): string
     {
-        return $this->isEncodedForRendering ? $this->textContent : HtmlEncoder::encode(value: $this->textContent);
+        return $this->isHtml ? $this->content : HtmlEncoder::encode(value: $this->content);
     }
 }

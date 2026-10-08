@@ -33,7 +33,7 @@ final class RequiredValueGetterTest extends TestCase
 {
     private static function label(): HtmlText
     {
-        return HtmlText::encoded(textContent: 'Label');
+        return HtmlText::fromHtml(html: 'Label');
     }
 
     /**
@@ -98,8 +98,8 @@ final class RequiredValueGetterTest extends TestCase
      */
     private function createField(string $class, bool $required, ?string $initial = null): ParsedInputField
     {
-        $requiredError = $required ? HtmlText::encoded(textContent: 'Required') : null;
-        $invalid = HtmlText::encoded(textContent: 'Invalid');
+        $requiredError = $required ? HtmlText::fromHtml(html: 'Required') : null;
+        $invalid = HtmlText::fromHtml(html: 'Invalid');
         $field = match ($class) {
             IntegerField::class => new IntegerField(
                 name: 'field',
@@ -141,7 +141,7 @@ final class RequiredValueGetterTest extends TestCase
             default => throw new LogicException(message: 'Unknown field class ' . $class),
         };
         if ($required && $field instanceof HiddenIntegerField) {
-            $field->addRequiredRule(errorMessage: HtmlText::encoded(textContent: 'Required'));
+            $field->addRequiredRule(errorMessage: HtmlText::fromHtml(html: 'Required'));
         }
 
         return $field;

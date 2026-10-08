@@ -34,7 +34,7 @@ final class StringListRulesTest extends TestCase
     #[DataProvider('countProvider')]
     public function testMaxCountRule(int $maxCount, array $values, bool $expected): void
     {
-        $rule = new MaxCountRule(maxCount: $maxCount, errorMessage: HtmlText::encoded(textContent: 'Error'));
+        $rule = new MaxCountRule(maxCount: $maxCount, errorMessage: HtmlText::fromHtml(html: 'Error'));
 
         $this->assertSame($expected, $rule->validate(values: $values));
     }
@@ -55,7 +55,7 @@ final class StringListRulesTest extends TestCase
     #[DataProvider('minCountProvider')]
     public function testMinCountRule(int $minCount, array $values, bool $expected): void
     {
-        $rule = new MinCountRule(minCount: $minCount, errorMessage: HtmlText::encoded(textContent: 'Error'));
+        $rule = new MinCountRule(minCount: $minCount, errorMessage: HtmlText::fromHtml(html: 'Error'));
 
         $this->assertSame($expected, $rule->validate(values: $values));
     }

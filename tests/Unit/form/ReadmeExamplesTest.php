@@ -43,7 +43,7 @@ final class ReadmeExamplesTest extends TestCase
 
     public function testFormExample(): void
     {
-        $requiredError = HtmlText::encoded(textContent: 'Required');
+        $requiredError = HtmlText::fromHtml(html: 'Required');
         $form = new Form(
             name: 'order',
             messages: FormMessages::german(),
@@ -51,10 +51,10 @@ final class ReadmeExamplesTest extends TestCase
         );
         $name = new TextField(
             name: 'customer',
-            label: HtmlText::encoded(textContent: 'Name'),
+            label: HtmlText::fromHtml(html: 'Name'),
             requiredError: $requiredError,
         );
-        $quantity = new IntegerField(name: 'quantity', label: HtmlText::encoded(textContent: 'Quantity'));
+        $quantity = new IntegerField(name: 'quantity', label: HtmlText::fromHtml(html: 'Quantity'));
         $form->addField(formField: $name);
         $form->addField(formField: $quantity);
 
@@ -73,26 +73,26 @@ final class ReadmeExamplesTest extends TestCase
 
     public function testFieldConstructorExamples(): void
     {
-        $requiredError = HtmlText::encoded(textContent: 'Required');
-        $label = HtmlText::encoded(textContent: 'Label');
+        $requiredError = HtmlText::fromHtml(html: 'Required');
+        $label = HtmlText::fromHtml(html: 'Label');
         $options = new FormOptions();
-        $options->addItem(key: 'a', htmlText: HtmlText::encoded(textContent: 'A'));
+        $options->addItem(key: 'a', htmlText: HtmlText::fromHtml(html: 'A'));
 
         $password = new PasswordField(
             name: 'password',
-            label: HtmlText::encoded(textContent: 'Password'),
+            label: HtmlText::fromHtml(html: 'Password'),
             requiredError: $requiredError,
             purpose: PasswordPurposeEnum::NEW,
         );
         $price = new DecimalField(
             name: 'price',
-            label: HtmlText::encoded(textContent: 'Price'),
+            label: HtmlText::fromHtml(html: 'Price'),
             scale: 2,
             initialValue: '12.50',
         );
         $agree = new BooleanField(
             name: 'agree',
-            label: HtmlText::encoded(textContent: 'I agree'),
+            label: HtmlText::fromHtml(html: 'I agree'),
             isCheckedByDefault: false,
         );
         $tags = new MultiSelectOptionsField(name: 'tags', label: $label, formOptions: $options, initialValues: ['a']);
@@ -105,11 +105,11 @@ final class ReadmeExamplesTest extends TestCase
 
     public function testRulesExample(): void
     {
-        $tooShort = HtmlText::encoded(textContent: 'Too short');
-        $noSpaces = HtmlText::encoded(textContent: 'No spaces');
-        $atLeastOne = HtmlText::encoded(textContent: 'At least one');
-        $name = new TextField(name: 'customer', label: HtmlText::encoded(textContent: 'Name'));
-        $quantity = new IntegerField(name: 'quantity', label: HtmlText::encoded(textContent: 'Quantity'));
+        $tooShort = HtmlText::fromHtml(html: 'Too short');
+        $noSpaces = HtmlText::fromHtml(html: 'No spaces');
+        $atLeastOne = HtmlText::fromHtml(html: 'At least one');
+        $name = new TextField(name: 'customer', label: HtmlText::fromHtml(html: 'Name'));
+        $quantity = new IntegerField(name: 'quantity', label: HtmlText::fromHtml(html: 'Quantity'));
 
         $name->addRule(formRule: new MinLengthRule(minLength: 3, errorMessage: $tooShort));
         $name->addRule(formRule: new NoSpacesRule(defaultErrorMessage: $noSpaces));
@@ -117,7 +117,7 @@ final class ReadmeExamplesTest extends TestCase
 
         $this->assertFalse($name->validate(input: FormInput::fromArray(data: ['customer' => 'A b'])));
         $this->assertFalse($quantity->validate(input: FormInput::fromArray(data: ['quantity' => '0'])));
-        $validName = new TextField(name: 'customer', label: HtmlText::encoded(textContent: 'Name'));
+        $validName = new TextField(name: 'customer', label: HtmlText::fromHtml(html: 'Name'));
         $validName->addRule(formRule: new MinLengthRule(minLength: 3, errorMessage: $tooShort));
         $validName->addRule(formRule: new NoSpacesRule(defaultErrorMessage: $noSpaces));
         $this->assertTrue($validName->validate(input: FormInput::fromArray(data: ['customer' => 'Ann'])));
@@ -127,10 +127,10 @@ final class ReadmeExamplesTest extends TestCase
     {
         $form = new Form(name: 'order', csrfTokenSource: new InMemoryCsrfTokenSource(token: 'token'));
         $form->addField(
-            formField: new TextField(name: 'customer', label: HtmlText::encoded(textContent: 'Name')),
+            formField: new TextField(name: 'customer', label: HtmlText::fromHtml(html: 'Name')),
         );
         $form->addField(
-            formField: new IntegerField(name: 'quantity', label: HtmlText::encoded(textContent: 'Quantity')),
+            formField: new IntegerField(name: 'quantity', label: HtmlText::fromHtml(html: 'Quantity')),
         );
 
         $input = FormInput::fromArray(

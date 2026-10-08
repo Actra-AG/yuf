@@ -31,20 +31,20 @@ enum AuthResultEnum: int
     public function render(): string
     {
         return (match ($this) {
-            AuthResultEnum::UNDEFINED => HtmlText::encoded(textContent: 'Unbekannt'),
-            AuthResultEnum::SUCCESSFUL_PASSWORD_LOGIN => HtmlText::encoded(textContent: 'Passwort-Anmeldung'),
-            AuthResultEnum::ERROR_NO_EMAIL_ADDRESS => HtmlText::encoded(textContent: 'Keine E-Mail-Adresse'),
-            AuthResultEnum::ERROR_NO_PASSWORD => HtmlText::encoded(textContent: 'Kein Passwort'),
-            AuthResultEnum::ERROR_UNKNOWN_USER_NAME => HtmlText::encoded(textContent: 'Ungültige E-Mail-Adresse'),
-            AuthResultEnum::ERROR_INACTIVE => HtmlText::encoded(textContent: 'Zugang inaktiv'),
-            AuthResultEnum::ERROR_IP_NOT_ALLOWED => HtmlText::encoded(textContent: 'IP-Adresse nicht erlaubt'),
-            AuthResultEnum::ERROR_OUT_TRIED => HtmlText::encoded(textContent: 'Zu viele fehlerhafte Versuche'),
-            AuthResultEnum::ERROR_WRONG_PASSWORD => HtmlText::encoded(textContent: 'Falsches Passwort'),
-            AuthResultEnum::SUCCESSFUL_SSO_LOGIN => HtmlText::encoded(textContent: 'SSO-Anmeldung'),
-            AuthResultEnum::ERROR_NO_PASSWORD_LOGIN_ACTIVE => HtmlText::encoded(textContent: 'Passwort-Anmeldung inaktiv'),
-            AuthResultEnum::FAILED_SSO_LOGIN => HtmlText::encoded(textContent: 'SSO fehlgeschlagen'),
-            AuthResultEnum::SUCCESSFUL_OTP_LOGIN => HtmlText::encoded(textContent: 'OTP-Anmeldung'),
-            AuthResultEnum::SUCCESSFUL_MICROSOFT_LOGIN => HtmlText::encoded(textContent: 'Microsoft-Anmeldung'),
+            AuthResultEnum::UNDEFINED => HtmlText::fromHtml(html: 'Unbekannt'),
+            AuthResultEnum::SUCCESSFUL_PASSWORD_LOGIN => HtmlText::fromHtml(html: 'Passwort-Anmeldung'),
+            AuthResultEnum::ERROR_NO_EMAIL_ADDRESS => HtmlText::fromHtml(html: 'Keine E-Mail-Adresse'),
+            AuthResultEnum::ERROR_NO_PASSWORD => HtmlText::fromHtml(html: 'Kein Passwort'),
+            AuthResultEnum::ERROR_UNKNOWN_USER_NAME => HtmlText::fromHtml(html: 'Ungültige E-Mail-Adresse'),
+            AuthResultEnum::ERROR_INACTIVE => HtmlText::fromHtml(html: 'Zugang inaktiv'),
+            AuthResultEnum::ERROR_IP_NOT_ALLOWED => HtmlText::fromHtml(html: 'IP-Adresse nicht erlaubt'),
+            AuthResultEnum::ERROR_OUT_TRIED => HtmlText::fromHtml(html: 'Zu viele fehlerhafte Versuche'),
+            AuthResultEnum::ERROR_WRONG_PASSWORD => HtmlText::fromHtml(html: 'Falsches Passwort'),
+            AuthResultEnum::SUCCESSFUL_SSO_LOGIN => HtmlText::fromHtml(html: 'SSO-Anmeldung'),
+            AuthResultEnum::ERROR_NO_PASSWORD_LOGIN_ACTIVE => HtmlText::fromHtml(html: 'Passwort-Anmeldung inaktiv'),
+            AuthResultEnum::FAILED_SSO_LOGIN => HtmlText::fromHtml(html: 'SSO fehlgeschlagen'),
+            AuthResultEnum::SUCCESSFUL_OTP_LOGIN => HtmlText::fromHtml(html: 'OTP-Anmeldung'),
+            AuthResultEnum::SUCCESSFUL_MICROSOFT_LOGIN => HtmlText::fromHtml(html: 'Microsoft-Anmeldung'),
         })->render();
     }
 }

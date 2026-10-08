@@ -245,7 +245,7 @@ abstract class FormField extends FormComponent
     final protected function rejectInput(string $errorMessage): void
     {
         $this->inputRejected = true;
-        $this->addError(errorMessage: HtmlText::unencoded(textContent: $errorMessage));
+        $this->addError(errorMessage: HtmlText::fromText(text: $errorMessage));
     }
 
     /**

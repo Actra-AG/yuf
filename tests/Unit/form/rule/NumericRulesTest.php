@@ -26,7 +26,7 @@ final class NumericRulesTest extends TestCase
 {
     private static function message(): HtmlText
     {
-        return HtmlText::encoded(textContent: 'Error');
+        return HtmlText::fromHtml(html: 'Error');
     }
 
     /**

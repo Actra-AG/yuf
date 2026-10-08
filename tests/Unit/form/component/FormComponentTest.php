@@ -35,7 +35,7 @@ final class FormComponentTest extends TestCase
 
     private function text(string $text): HtmlText
     {
-        return HtmlText::encoded(textContent: $text);
+        return HtmlText::fromHtml(html: $text);
     }
 
     private function createControl(?HtmlText $cancelLabel = null): FormControl
@@ -54,7 +54,7 @@ final class FormComponentTest extends TestCase
         $control = $this->createControl();
         $form->addComponent(formComponent: $control);
 
-        $control->addError(errorMessage: HtmlText::unencoded(textContent: 'a < b'));
+        $control->addError(errorMessage: HtmlText::fromText(text: 'a < b'));
 
         $this->assertTrue($control->hasErrors(withChildElements: false));
         $this->assertTrue($form->hasErrors(withChildElements: true));

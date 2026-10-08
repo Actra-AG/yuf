@@ -27,9 +27,9 @@ final class TimeFieldValueTest extends TestCase
     {
         return new TimeField(
             name: 'time',
-            label: HtmlText::encoded(textContent: 'Time'),
+            label: HtmlText::fromHtml(html: 'Time'),
             value: $value,
-            invalidError: HtmlText::encoded(textContent: 'Invalid'),
+            invalidError: HtmlText::fromHtml(html: 'Invalid'),
             requiredError: $requiredError,
         );
     }
@@ -126,7 +126,7 @@ final class TimeFieldValueTest extends TestCase
 
     public function testRequiredErrorForEmptyInput(): void
     {
-        $field = $this->createField(requiredError: HtmlText::encoded(textContent: 'Required'));
+        $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
 
         $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['time' => '  '])));
         $this->assertSame('Required', $field->errorCollection->getFirstError()->render());
