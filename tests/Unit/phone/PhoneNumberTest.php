@@ -131,6 +131,24 @@ final class PhoneNumberTest extends TestCase
         $this->assertSame($expectedExtension, $phoneNumber->extension);
     }
 
+    public function testNumberWithLeadingZerosOfAnyCountryKeepsThemAsNotValid(): void
+    {
+        $phoneNumber = PhoneNumber::createFromString(input: '0 0 0 0 0 0 0 0 0', defaultCountryCode: 'CH');
+
+        $this->assertTrue($phoneNumber->italianLeadingZero);
+        $this->assertSame(8, $phoneNumber->numberOfLeadingZeros);
+        $this->assertSame('000000000', $phoneNumber->getNationalSignificantNumber());
+        $this->assertFalse($phoneNumber->isValid());
+    }
+
+    public function testNumberWithTwelveDigitsIsPossibleForSwitzerlandButNotValid(): void
+    {
+        $phoneNumber = PhoneNumber::createFromString(input: '044 668 18 00 / 12', defaultCountryCode: 'CH');
+
+        $this->assertSame('044668180012', $phoneNumber->getNationalSignificantNumber());
+        $this->assertFalse($phoneNumber->isValid());
+    }
+
     public function testNumberWithoutLeadingZerosHasOneAndNoItalianLeadingZero(): void
     {
         $phoneNumber = PhoneNumber::createFromString(input: '+41 44 668 18 00', defaultCountryCode: null);
@@ -225,9 +243,7 @@ final class PhoneNumberTest extends TestCase
         yield 'one digit too long for Switzerland' => ['+41 4466818001', 'CH', -1];
         yield 'long digits for Switzerland' => ['+4144668180012345678', 'CH', -1];
         yield 'country calling code and two digits' => ['004144', 'CH', -1];
-        yield 'short number with extension separator' => ['044 668 18 00 / 12', 'CH', -1];
         yield 'NANP number too short' => ['+1 23', 'CH', -1];
-        yield 'only zeros' => ['0 0 0 0 0 0 0 0 0', 'CH', -1];
         yield 'double zero prefix and zeros' => ['00000000', 'IT', 1];
         yield 'letters make the number too long' => ['1-800-FLOWERS', 'CH', -1];
         yield 'IDD of another country' => ['011 44 20 7946 0958', 'CH', -1];

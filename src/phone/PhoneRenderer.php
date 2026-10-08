@@ -125,10 +125,11 @@ final class PhoneRenderer
         }
         $format = $formattingPattern->format;
         if ($withNationalPrefix && $formattingPattern->nationalPrefixFormattingRule !== '') {
-            // The rule replaces the first group of the format (`$1` becomes `0$1`).
-            $format = preg_replace_callback(
+            // The rule replaces the first group of the format (`$1` becomes `0$1`). Its `$1` stands for the replaced
+            // group, as in libphonenumber (`$2 15-$3-$4` with the rule `0$1` becomes `0$2 15-$3-$4`).
+            $format = preg_replace(
                 pattern: PhonePatterns::FIRST_GROUP_PATTERN,
-                callback: static fn(array $match): string => $formattingPattern->nationalPrefixFormattingRule,
+                replacement: $formattingPattern->nationalPrefixFormattingRule,
                 subject: $format,
                 limit: 1,
             ) ?? $format;

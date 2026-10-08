@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\phone;
 
 use actra\yuf\phone\PhoneNumber;
-use actra\yuf\phone\PhoneParseException;
 use actra\yuf\phone\PhoneRenderer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -21,18 +20,9 @@ use PHPUnit\Framework\TestCase;
 final class PhoneRegionExampleNumbersTest extends TestCase
 {
     /**
-     * Example numbers of the metadata that are not possible numbers of their own region (the metadata has them with a
-     * trunk prefix or too short).
-     */
-    private const array NOT_POSSIBLE = [
-        'NO uan', 'SJ uan', 'CI mobile', 'NE tollFree', 'NE premiumRate', 'CG mobile', 'SZ tollFree', 'SM fixedLine',
-        'BZ tollFree', 'TO tollFree', 'FJ tollFree',
-    ];
-
-    /**
      * Example numbers that start with the trunk prefix of the region: the national number is without it.
      */
-    private const array WITH_TRUNK_PREFIX = ['MX mobile', 'GA fixedLine', 'GA mobile'];
+    private const array WITH_TRUNK_PREFIX = ['MX mobile'];
 
     /**
      * @return iterable<string, array{string, string, string}>
@@ -46,25 +36,13 @@ final class PhoneRegionExampleNumbersTest extends TestCase
         }
     }
 
-    /**
-     * @return iterable<string, array{string, string, string}>
-     */
-    public static function possibleExampleNumberProvider(): iterable
-    {
-        foreach (PhoneRegionExampleNumbersTest::exampleNumberProvider() as $name => $case) {
-            if (!in_array(needle: $name, haystack: PhoneRegionExampleNumbersTest::NOT_POSSIBLE, strict: true)) {
-                yield $name => $case;
-            }
-        }
-    }
-
     public function testTheMetadataHasExampleNumbersForEveryRegion(): void
     {
         $this->assertCount(245, PhoneExampleNumbers::regions());
         $this->assertSame(1096, iterator_count(PhoneRegionExampleNumbersTest::exampleNumberProvider()));
     }
 
-    #[DataProvider('possibleExampleNumberProvider')]
+    #[DataProvider('exampleNumberProvider')]
     public function testExampleNumberIsParsedWithTheCountryCodeOfItsRegion(
         string $region,
         string $type,
@@ -76,7 +54,7 @@ final class PhoneRegionExampleNumbersTest extends TestCase
         $this->assertSame('', $phoneNumber->extension);
     }
 
-    #[DataProvider('possibleExampleNumberProvider')]
+    #[DataProvider('exampleNumberProvider')]
     public function testExampleNumberKeepsItsDigits(string $region, string $type, string $example): void
     {
         $phoneNumber = PhoneNumber::createFromString(input: $example, defaultCountryCode: $region);
@@ -89,7 +67,7 @@ final class PhoneRegionExampleNumbersTest extends TestCase
         $this->assertSame($expected, $phoneNumber->getNationalSignificantNumber());
     }
 
-    #[DataProvider('possibleExampleNumberProvider')]
+    #[DataProvider('exampleNumberProvider')]
     public function testExampleNumberIsRenderedInTheInternationalFormat(
         string $region,
         string $type,
@@ -117,7 +95,7 @@ final class PhoneRegionExampleNumbersTest extends TestCase
         );
     }
 
-    #[DataProvider('possibleExampleNumberProvider')]
+    #[DataProvider('exampleNumberProvider')]
     public function testInternationalFormatIsParsedToTheSameNumber(string $region, string $type, string $example): void
     {
         $phoneNumber = PhoneNumber::createFromString(input: $example, defaultCountryCode: $region);
@@ -131,7 +109,7 @@ final class PhoneRegionExampleNumbersTest extends TestCase
         $this->assertSame($phoneNumber->getNationalSignificantNumber(), $parsedAgain->getNationalSignificantNumber());
     }
 
-    #[DataProvider('possibleExampleNumberProvider')]
+    #[DataProvider('exampleNumberProvider')]
     public function testInternalFormatIsParsedToTheSameNumber(string $region, string $type, string $example): void
     {
         $phoneNumber = PhoneNumber::createFromString(input: $example, defaultCountryCode: $region);
@@ -145,7 +123,7 @@ final class PhoneRegionExampleNumbersTest extends TestCase
         $this->assertSame($phoneNumber->getNationalSignificantNumber(), $parsedAgain->getNationalSignificantNumber());
     }
 
-    #[DataProvider('possibleExampleNumberProvider')]
+    #[DataProvider('exampleNumberProvider')]
     public function testExampleNumberWithCallingCodeIsParsedWithoutDefaultRegion(
         string $region,
         string $type,
@@ -161,29 +139,5 @@ final class PhoneRegionExampleNumbersTest extends TestCase
 
         $this->assertSame($callingCode, $parsedAgain->countryCode);
         $this->assertSame($phoneNumber->getNationalSignificantNumber(), $parsedAgain->getNationalSignificantNumber());
-    }
-
-    /**
-     * @return iterable<string, array{string, string, string}>
-     */
-    public static function impossibleExampleNumberProvider(): iterable
-    {
-        foreach (PhoneRegionExampleNumbersTest::exampleNumberProvider() as $name => $case) {
-            if (in_array(needle: $name, haystack: PhoneRegionExampleNumbersTest::NOT_POSSIBLE, strict: true)) {
-                yield $name => $case;
-            }
-        }
-    }
-
-    #[DataProvider('impossibleExampleNumberProvider')]
-    public function testExampleNumberThatIsNotPossibleForItsRegionThrows(
-        string $region,
-        string $type,
-        string $example,
-    ): void {
-        $this->expectException(PhoneParseException::class);
-        $this->expectExceptionMessageIs('The supplied phone number is not possible.');
-
-        PhoneNumber::createFromString(input: $example, defaultCountryCode: $region);
     }
 }

@@ -240,6 +240,6 @@ final readonly class PhoneValidator
         }
 
         return $desc->nationalNumberPattern !== ''
-            && new PhoneMatcher(pattern: $desc->nationalNumberPattern, subject: $number)->matchesCompletely();
+            && new PhoneMatcher(pattern: $desc->nationalNumberPattern, subject: $number)->matches();
     }
 }

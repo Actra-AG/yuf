@@ -63,18 +63,23 @@ final class PhoneMatcherTest extends TestCase
         $this->assertFalse(new PhoneMatcher(pattern: '(\d+)', subject: 'ab12')->matches());
     }
 
-    public function testMatchesTakesTheLongestAlternativeOfThePatternAtTheStart(): void
+    public function testMatchesTriesTheAlternativesUntilTheWholeSubjectMatches(): void
     {
-        $this->assertFalse(new PhoneMatcher(pattern: '\d|\d\d', subject: '12')->matches());
+        $this->assertTrue(new PhoneMatcher(pattern: '\d|\d\d', subject: '12')->matches());
+        $this->assertTrue(new PhoneMatcher(pattern: '(\d+)', subject: '12')->matches());
+        $this->assertFalse(new PhoneMatcher(pattern: '\d|\d\d', subject: '123')->matches());
+        $this->assertFalse(new PhoneMatcher(pattern: '(\d+)', subject: 'ab12')->matches());
+        $this->assertFalse(new PhoneMatcher(pattern: '(\d+)', subject: "12\n")->matches());
     }
 
-    public function testMatchesCompletelyTriesTheAlternativesUntilTheWholeSubjectMatches(): void
+    public function testMatchesKeepsTheGroupsOfTheAlternativeThatMatchesTheWholeSubject(): void
     {
-        $this->assertTrue(new PhoneMatcher(pattern: '\d|\d\d', subject: '12')->matchesCompletely());
-        $this->assertTrue(new PhoneMatcher(pattern: '(\d+)', subject: '12')->matchesCompletely());
-        $this->assertFalse(new PhoneMatcher(pattern: '\d|\d\d', subject: '123')->matchesCompletely());
-        $this->assertFalse(new PhoneMatcher(pattern: '(\d+)', subject: 'ab12')->matchesCompletely());
-        $this->assertFalse(new PhoneMatcher(pattern: '(\d+)', subject: "12\n")->matchesCompletely());
+        $matcher = new PhoneMatcher(pattern: '(\d)|(\d)(\d)', subject: '12');
+
+        $this->assertTrue($matcher->matches());
+        $this->assertSame('12', $matcher->group(group: 0));
+        $this->assertSame('1', $matcher->group(group: 2));
+        $this->assertSame('2', $matcher->group(group: 3));
     }
 
     public function testPatternMatchesCaseInsensitively(): void

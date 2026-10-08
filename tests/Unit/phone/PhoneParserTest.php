@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\phone;
 
+use actra\yuf\phone\PhoneDesc;
+use actra\yuf\phone\PhoneMetaData;
 use actra\yuf\phone\PhoneMetaDataRepository;
 use actra\yuf\phone\PhoneParseErrorEnum;
 use actra\yuf\phone\PhoneParseException;
@@ -71,6 +73,64 @@ final class PhoneParserTest extends TestCase
         $phoneNumber = $this->createParser()->parse(numberToParse: '+41 000', defaultCountryCode: null);
 
         $this->assertSame('0', $phoneNumber->nationalNumber);
+    }
+
+    public function testParseKeepsTheLeadingZeroOfACountryWithoutNationalPrefix(): void
+    {
+        $phoneNumber = $this->createParser()->parse(numberToParse: '01441234', defaultCountryCode: 'GA');
+
+        $this->assertSame(241, $phoneNumber->countryCode);
+        $this->assertSame('1441234', $phoneNumber->nationalNumber);
+        $this->assertTrue($phoneNumber->italianLeadingZero);
+        $this->assertSame('01441234', $phoneNumber->getNationalSignificantNumber());
+    }
+
+    public function testNationalPrefixIsKeptIfOnlyTheOriginalNumberMatchesTheGeneralDescription(): void
+    {
+        // The first alternative `0` matches the start of `01` only: the original is viable by the second one.
+        $phoneMetaData = $this->createMetaData(generalPattern: '0|01', nationalPrefixForParsing: '0');
+
+        $this->assertSame('01', PhoneParser::stripNationalPrefix(number: '01', phoneMetaData: $phoneMetaData));
+    }
+
+    public function testNationalPrefixIsStrippedIfTheNumberStaysViable(): void
+    {
+        $phoneMetaData = $this->createMetaData(generalPattern: '0|01|1', nationalPrefixForParsing: '0');
+
+        $this->assertSame('1', PhoneParser::stripNationalPrefix(number: '01', phoneMetaData: $phoneMetaData));
+    }
+
+    private function createMetaData(string $generalPattern, string $nationalPrefixForParsing): PhoneMetaData
+    {
+        $general = new PhoneDesc(
+            nationalNumberPattern: $generalPattern,
+            possibleLength: [],
+            possibleLengthLocalOnly: [],
+        );
+        $none = new PhoneDesc(nationalNumberPattern: '', possibleLength: [], possibleLengthLocalOnly: []);
+
+        return new PhoneMetaData(
+            countryCode: 999,
+            internationalPrefix: '00',
+            generalDesc: $general,
+            leadingDigits: null,
+            sameMobileAndFixedLinePattern: false,
+            fixedLine: $none,
+            mobile: $none,
+            tollFree: $none,
+            premiumRate: $none,
+            sharedCost: $none,
+            voip: $none,
+            personalNumber: $none,
+            pager: $none,
+            uan: $none,
+            voicemail: $none,
+            nationalPrefixForParsing: $nationalPrefixForParsing,
+            nationalPrefixTransformRule: null,
+            preferredExtnPrefix: null,
+            intlNumberFormats: [],
+            numberFormats: [],
+        );
     }
 
     private function createParser(): PhoneParser

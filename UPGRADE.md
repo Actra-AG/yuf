@@ -4,6 +4,25 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.53.1] – 2026-10-08
+
+Bug fixes of the phone number parsing and rendering, so they behave like libphonenumber. No API changes. Some inputs
+are parsed, validated or rendered differently now:
+
+- **Leading zeros are kept in every country** if the national prefix is not stripped. Before, only Italian numbers
+  kept them (`PhoneNumber::$italianLeadingZero`, `$numberOfLeadingZeros`, `getNationalSignificantNumber()`). Example:
+  the Gabon number `01441234` was parsed as `1441234` (not valid) and is now `01441234` (valid, rendered
+  `+241 01 44 12 34`). The same holds for example numbers of CI, CG, NE, SZ, BZ, TO, FJ, NO, SJ and SM that were
+  rejected as "not possible" and are possible now. Numbers that consist of zeros only or have a leading zero and a
+  length that is possible for the country (CH: 12 digits) are possible now; `isValid()` is still `false` for them.
+- `PhoneMatcher::matches()` (internal) tries all alternatives of a pattern until the whole text matches, as Java does.
+  `matchesCompletely()` (internal, added in v4.53.0) is removed. This corrects the choice of the format of a number and
+  the check "number is viable after stripping the national prefix".
+- `PhoneRenderer::renderNationalFormat()`: the national prefix rule is applied as libphonenumber does for formats whose
+  first group is not `$1` (Argentina: `011 15-2345-6789` instead of `09 15-2345-6789`).
+
+---
+
 ## [v4.53.0] – 2026-10-08
 
 New features for phone numbers; nothing existing changes. Search your project for `PhoneNumberField`, `PhoneRenderer` and

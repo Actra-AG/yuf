@@ -48,18 +48,10 @@ final class PhoneMatcher
     }
 
     /**
-     * The pattern matches the whole subject.
+     * The pattern matches the whole subject, also if an alternative that matches only the start of the subject comes
+     * first (`\d|\d\d` matches `12`): the alternatives are tried until the whole subject matches, as in Java.
      */
     public function matches(): bool
-    {
-        return $this->match(flags: 'uAi') && $this->group(group: 0) === $this->subject;
-    }
-
-    /**
-     * The pattern matches the whole subject, also if an alternative that matches only the start of the subject comes
-     * first (`\d|\d\d` matches `12`; `matches()` takes the first alternative that matches at the start and fails).
-     */
-    public function matchesCompletely(): bool
     {
         return $this->match(flags: 'uAi', patternPrefix: '(?:', patternSuffix: ')\\z');
     }

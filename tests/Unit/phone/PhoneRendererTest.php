@@ -57,8 +57,10 @@ final class PhoneRendererTest extends TestCase
         yield 'RU mobile' => ['RU', 'mobile', '+7.9123456789', '+7 912 345-67-89'];
         yield 'CN fixed line' => ['CN', 'fixedLine', '+86.1012345678', '+86 10 1234 5678'];
         yield 'CN mobile' => ['CN', 'mobile', '+86.13123456789', '+86 131 2345 6789'];
-        yield 'GA fixed line (no format)' => ['GA', 'fixedLine', '+241.1441234', '+241 1441234'];
-        yield 'GA mobile' => ['GA', 'mobile', '+241.6031234', '+241 6 03 12 34'];
+        yield 'GA fixed line (leading zero belongs to the number)' => [
+            'GA', 'fixedLine', '+241.01441234', '+241 01 44 12 34',
+        ];
+        yield 'GA mobile' => ['GA', 'mobile', '+241.06031234', '+241 06 03 12 34'];
     }
 
     #[DataProvider('regionExampleProvider')]

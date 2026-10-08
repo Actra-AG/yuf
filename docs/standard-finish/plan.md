@@ -127,6 +127,10 @@ each small enough to release on its own. `actra/backend` follows when the plan i
 ### New features (scope asked at the start of each step)
 
 13. **v4.53.0 – phone numbers:** validity per number type, E.164 and national format in `src/phone/`.
+13.1. **v4.53.1 – phone matcher (decision of the user after step 13):** `PhoneMatcher::matches()` matches the whole
+     number with every alternative of the pattern (as Java's `matches()`, which libphonenumber uses); the parser keeps
+     the national prefix when the number without it no longer matches (GA fixed line example). Tests over all example
+     numbers through the parser.
 14. **v4.54.0 – SMTP authentication:** more methods than `AUTH LOGIN` in `SmtpMailer` (e.g. `AUTH PLAIN`).
 15. **v4.55.0 – redirect codes:** `acceptRedirectionResponseCode()` also for 302, 307, 308.
 
@@ -532,3 +536,41 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   `RandomMimeIdGeneratorTest`: the generator removed `=`, `+`, `/` from Base64, so the length varied and was below
   the tested 40 in about one run of 20. The generator returns `bin2hex(random_bytes(21))` now (42 characters), the
   test checks exactly that.
+
+### Step 13.1 (v4.53.1) – done
+
+- **Matcher:** `PhoneMatcher::matches()` is the full match with backtracking (`(?:p)\z`, flags `uAi` as before).
+  `matchesCompletely()` is removed: the class is `@internal`, so a patch release may do that; `PhoneValidator` uses
+  `matches()`. Callers checked: parser (`matchNationalNumber()` for general description before/after the national
+  prefix and the country calling code of the default region), format selection in `PhoneRenderer`, validator. None
+  of the 1096 example numbers changed its result by this alone.
+- **National prefix (item 2):** the viability check of libphonenumber (`maybeStripNationalPrefixAndCarrierCode`: keep
+  the number if the original matches the general description and the stripped one does not) was already ported in
+  `stripNationalPrefix()`; it only worked after the `matches()` fix (the original was not recognised as viable if an
+  alternative matched a prefix first). The GA example was not caused by it: Gabon has no national prefix, the parser
+  dropped the leading zero because it kept leading zeros for Italy only. libphonenumber keeps them in every country
+  (`setItalianLeadingZero(true)` when the national number starts with `0`); `detectLeadingZeros()` does that now
+  (without leading zero: `false`, for Italy `null` as before). `PhoneConstants::ITALIAN_LEADING_ZERO_COUNTRY_CODES`
+  is still used for that `null`.
+- **Renderer (found by the new tests):** the national prefix rule (`0$1`) is applied with `preg_replace()`: its `$1`
+  stands for the replaced first group of the format, as with Java's `replaceFirst()` (AR mobile `$2 15-$3-$4` became
+  `09 15-...`, is `011 15-...` now).
+- **Tests:** `PhoneParsedExampleNumbersTest` (every example number through `createFromString()` with its region: valid,
+  type, national / international / E.164 rendering parsed back to the same number). Characterised before the fix:
+  failing were GA fixedLine (not valid) and AR mobile (national rendering), and NO uan, SJ uan, CI mobile, NE tollFree,
+  NE premiumRate, CG mobile, SZ tollFree, SM fixedLine, BZ tollFree, TO tollFree, FJ tollFree (not possible).
+  `PhoneMatcherTest`, `PhoneParserTest` (GA, strip viability with hand-built metadata), `PhoneNumberTest`,
+  `PhoneRendererFormatTest` (AR).
+- **Changed expectations:** `testMatchesTakesTheLongestAlternativeOfThePatternAtTheStart` replaced by
+  `testMatchesTriesTheAlternativesUntilTheWholeSubjectMatches`; `matchesCompletely` tests merged into it;
+  `PhoneRegionExampleNumbersTest`: the `NOT_POSSIBLE` list and its throw test removed, `WITH_TRUNK_PREFIX` only MX
+  mobile; `PhoneRendererTest` GA fixed line `+241.1441234` / `+241 1441234` -> `+241.01441234` / `+241 01 44 12 34`,
+  GA mobile `+241.6031234` / `+241 6 03 12 34` -> `+241.06031234` / `+241 06 03 12 34`; `PhoneNumberTest` invalid
+  numbers `044 668 18 00 / 12` and `0 0 0 0 0 0 0 0 0` (CH) are possible now (not valid).
+- Open: `PhoneMatcher::groupCount()` counts the groups up to the last matched one (PHP drops trailing unmatched
+  groups); `stripNationalPrefix()` uses `groupCount() - 1` for that reason. Fine for the metadata (one group), not
+  for patterns with several groups where the last one is unmatched.
+- `UPGRADE.md`: `## [v4.53.1]`. `ddev composer check` green, baseline empty. Tests: 16009 -> 20455.
+- Review: the two viability tests called the private `stripNationalPrefix()` through reflection (forbidden). It is
+  `public static` now (`PhoneParser` is `@internal`, the method has no state; `matchNationalNumber()` static too) and
+  the tests call it directly; no reflection in `tests/Unit/phone/`.

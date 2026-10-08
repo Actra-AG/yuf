@@ -167,7 +167,7 @@ final readonly class PhoneParser
             );
         }
         if ($regionMetaData !== null) {
-            $potentialNationalNumber = $this->stripNationalPrefix(
+            $potentialNationalNumber = PhoneParser::stripNationalPrefix(
                 number: $normalizedNationalNumber,
                 phoneMetaData: $regionMetaData,
             );
@@ -224,24 +224,25 @@ final readonly class PhoneParser
     }
 
     /**
-     * Only the countries with an Italian leading zero keep leading zeros of the national number. Note that if the
-     * national number is all zeros, the last zero is not counted as a leading zero.
+     * Leading zeros of the national number that were not stripped as national prefix belong to the number in every
+     * country, as in libphonenumber (the example number of Gabon `01441234`, the Italian numbers). A number without
+     * leading zero has no Italian leading zero (`null`, "not known", for Italy as before, `false` elsewhere). Note
+     * that if the national number is all zeros, the last zero is not counted as a leading zero.
      *
      * @return array{italianLeadingZero: ?bool, numberOfLeadingZeros: int}
      */
     private function detectLeadingZeros(int $countryCode, string $normalizedNationalNumber): array
     {
         $numberOfLeadingZeros = 1;
-        if (!in_array(
-            needle: $countryCode,
-            haystack: PhoneConstants::ITALIAN_LEADING_ZERO_COUNTRY_CODES,
-            strict: true,
-        )) {
-            return ['italianLeadingZero' => false, 'numberOfLeadingZeros' => $numberOfLeadingZeros];
-        }
         $length = strlen(string: $normalizedNationalNumber);
         if ($length <= 1 || !str_starts_with(haystack: $normalizedNationalNumber, needle: '0')) {
-            return ['italianLeadingZero' => null, 'numberOfLeadingZeros' => $numberOfLeadingZeros];
+            $isItalian = in_array(
+                needle: $countryCode,
+                haystack: PhoneConstants::ITALIAN_LEADING_ZERO_COUNTRY_CODES,
+                strict: true,
+            );
+
+            return ['italianLeadingZero' => $isItalian ? null : false, 'numberOfLeadingZeros' => $numberOfLeadingZeros];
         }
         while (
             $numberOfLeadingZeros < ($length - 1)
@@ -459,7 +460,7 @@ final readonly class PhoneParser
         $defaultCountryCode = $defaultRegionMetaData->countryCode;
         $defaultCountryCodeString = (string) $defaultCountryCode;
         if (str_starts_with(haystack: $fullNumber, needle: $defaultCountryCodeString)) {
-            $potentialNationalNumber = $this->stripNationalPrefix(
+            $potentialNationalNumber = PhoneParser::stripNationalPrefix(
                 number: substr(string: $fullNumber, offset: strlen(string: $defaultCountryCodeString)),
                 phoneMetaData: $defaultRegionMetaData,
             );
@@ -468,8 +469,8 @@ final readonly class PhoneParser
             // number with the country calling code stripped to be a better result and keep that instead.
             if (
                 (
-                    !$this->matchNationalNumber(number: $fullNumber, numberDesc: $generalDesc)
-                    && $this->matchNationalNumber(number: $potentialNationalNumber, numberDesc: $generalDesc)
+                    !PhoneParser::matchNationalNumber(number: $fullNumber, numberDesc: $generalDesc)
+                    && PhoneParser::matchNationalNumber(number: $potentialNationalNumber, numberDesc: $generalDesc)
                 )
                 || PhoneValidator::testNumberLength(
                     number: $fullNumber,
@@ -566,7 +567,7 @@ final readonly class PhoneParser
      * Strips the national prefix (and the carrier code) of the region, applying the transform rule of the region if it
      * has one. The number stays as it is if it would not be viable afterwards.
      */
-    private function stripNationalPrefix(string $number, PhoneMetaData $phoneMetaData): string
+    public static function stripNationalPrefix(string $number, PhoneMetaData $phoneMetaData): string
     {
         $possibleNationalPrefix = $phoneMetaData->nationalPrefixForParsing;
         if ($number === '' || $possibleNationalPrefix === null || $possibleNationalPrefix === '') {
@@ -578,7 +579,7 @@ final readonly class PhoneParser
             return $number;
         }
         $generalDesc = $phoneMetaData->generalDesc;
-        $isViableOriginalNumber = $this->matchNationalNumber(number: $number, numberDesc: $generalDesc);
+        $isViableOriginalNumber = PhoneParser::matchNationalNumber(number: $number, numberDesc: $generalDesc);
         // Nothing captured by the capturing groups of the prefix means that no transformation is necessary, and we
         // just remove the national prefix.
         $numOfGroups = (int) $prefixMatcher->groupCount();
@@ -592,7 +593,7 @@ final readonly class PhoneParser
             // If the original number was viable, and the resultant number is not, we keep the original.
             if (
                 $isViableOriginalNumber
-                && !$this->matchNationalNumber(number: $withoutPrefix, numberDesc: $generalDesc)
+                && !PhoneParser::matchNationalNumber(number: $withoutPrefix, numberDesc: $generalDesc)
             ) {
                 return $number;
             }
@@ -603,7 +604,7 @@ final readonly class PhoneParser
         $transformedNumber = $prefixMatcher->replaceFirst(replacement: $transformRule);
         if (
             $isViableOriginalNumber
-            && !$this->matchNationalNumber(number: $transformedNumber, numberDesc: $generalDesc)
+            && !PhoneParser::matchNationalNumber(number: $transformedNumber, numberDesc: $generalDesc)
         ) {
             return $number;
         }
@@ -611,7 +612,7 @@ final readonly class PhoneParser
         return $transformedNumber;
     }
 
-    private function matchNationalNumber(string $number, PhoneDesc $numberDesc): bool
+    private static function matchNationalNumber(string $number, PhoneDesc $numberDesc): bool
     {
         if ($numberDesc->nationalNumberPattern === '') {
             return false;
