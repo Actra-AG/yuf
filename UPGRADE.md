@@ -4,6 +4,28 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.27.0] – 2026-10-08
+
+### Own template tags
+
+Projects can register their own template tags: implement `actra\yuf\template\tag\TemplateTag` and pass the tags as the new
+last argument of `Core::prepareHttpResponse()`. The tags are known to views, snippets, tables and the error pages. The
+argument is optional, existing projects need no change.
+
+```php
+$core->prepareHttpResponse(
+    routeCollection: $routes,
+    templateTags: [new PriceTag()],
+);
+```
+
+`{tst:price value='article.price'}` and `<tst:price value="article.price">…</tst:price>` then call `PriceTag::render()`.
+The tag returns HTML and escapes values itself (`TemplateTagContext::escape()`). A tag name that is used by a built-in tag,
+by another own tag or is `if`, `else` or `for` throws an `InvalidArgumentException` in `prepareHttpResponse()`. See
+"Own template tags" in `README.md`.
+
+---
+
 ## [v4.26.0] – 2026-10-08
 
 yuf renders with the new template engine (`TemplateEngine`, see v4.24.0) and the old engine is deleted. The syntax of

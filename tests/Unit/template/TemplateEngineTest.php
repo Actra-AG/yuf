@@ -225,6 +225,19 @@ final class TemplateEngineTest extends TemplateEngineTestCase
         }
     }
 
+    public function testOwnTagIsRenderedInlineAndAsElementWithBody(): void
+    {
+        $this->useOwnTags(ownTags: [new ShoutTag()]);
+
+        $this->assertSame(
+            'AB|X AB Y|HI',
+            $this->render(
+                source: "{tst:shout value='v'}|<tst:shout>x {tst:text value='v'} y</tst:shout>|<tst:shout>hi</tst:shout>",
+                data: ['v' => 'ab'],
+            ),
+        );
+    }
+
     public function testRenderingTwiceWithOtherDataGivesIndependentResults(): void
     {
         $templateFile = $this->writeTemplate(source: "<tst:for value=\"l\" var=\"i\">{tst:text value='i'}</tst:for>{tst:text value='o'}");

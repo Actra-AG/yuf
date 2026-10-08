@@ -13,11 +13,16 @@ use actra\yuf\template\TemplateException;
 use Closure;
 
 /**
- * A tag of the template engine, the extension point of projects. The engine calls `render()` for every
- * `{tst:name attr='value'}` and `<tst:name attr="value"/>` of the tag's name and puts the returned HTML into the page.
- * The tag gets what it needs through its constructor and must not use static state.
+ * Extension point: an own tag of a project. Implement this interface (one `final` class per tag, dependencies through the
+ * constructor, no static state) and pass the tags to `Core::prepareHttpResponse(templateTags: [...])`; views, snippets,
+ * tables and error pages know them then. The engine calls `render()` for every `{tst:name attr='value'}` and
+ * `<tst:name attr="value"/>` of the tag's name and puts the returned HTML into the page.
  *
- * The returned HTML is not escaped again: escape every value that is not HTML yourself (`TemplateTagContext::escape()`).
+ * `render()` returns HTML and the tag is responsible for escaping: the returned HTML is not escaped again, so escape every
+ * value that is not HTML yourself (`TemplateTagContext::escape()` for output, `text()` for values that are not output).
+ * An element tag `<tst:name>…</tst:name>` gets its children as `$body` closure; call it to render them. The attributes
+ * are given as written in the template (values are strings, selectors are not resolved: use `$context->resolve()`).
+ * The name must not be one of a built-in tag, another own tag, `if`, `else` or `for`.
  */
 interface TemplateTag
 {

@@ -282,7 +282,50 @@ $html = $engine->render(
 ```
 
 `TemplateData::fromReplacements($replacements)` takes an `HtmlReplacementCollection`. Errors are `TemplateException`s with
-the template file and line. Own tags (`TemplateTag`, `TemplateTagCollection`) are planned for the next release.
+the template file and line.
+
+### Own template tags
+
+A project adds its own tags by implementing `TemplateTag` (the extension point of the engine) and passing them to
+`Core::prepareHttpResponse()`. Views, snippets, tables and the error pages know them.
+
+```php
+final readonly class PriceTag implements TemplateTag
+{
+    public function getName(): string
+    {
+        return 'price';
+    }
+
+    public function render(TemplateTagContext $context, array $attributes, ?Closure $body): string
+    {
+        $amount = $context->resolve(selector: $context->requireAttribute(attributes: $attributes, name: 'value'));
+        $text = number_format(num: (float) $context->text(value: $amount), decimals: 2, thousands_separator: "'");
+        $html = $context->escape(value: $text . ' CHF');
+
+        return $body === null ? $html : '<span class="price">' . $html . $body() . '</span>';
+    }
+}
+
+$core->prepareHttpResponse(
+    routeCollection: $routes,
+    templateTags: [new PriceTag()],
+);
+```
+
+```html
+{tst:price value='article.price'}
+<tst:price value="article.price">(incl. VAT)</tst:price>
+```
+
+- `render()` returns HTML which is output as it is: the tag is responsible for escaping. Use `$context->escape()` for
+  every value that is not HTML; `$context->text()` gives a value as plain text for calculations and paths.
+- `$attributes` are the strings as written in the template. A selector is resolved with `$context->resolve()`;
+  `$context->requireAttribute()` throws a `TemplateException` for a missing attribute.
+- `$body` renders the children of an element tag, `null` for inline tags and `<tst:price/>`.
+- Dependencies come through the constructor; a tag must not use static state.
+- A name of a built-in tag, of another own tag, `if`, `else` or `for` throws an `InvalidArgumentException` in
+  `prepareHttpResponse()`.
 
 ## Forms
 

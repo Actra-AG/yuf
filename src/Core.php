@@ -30,8 +30,10 @@ use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\session\FileSessionHandler;
 use actra\yuf\session\SessionSettings;
 use actra\yuf\template\cache\DirectoryTemplateCache;
+use actra\yuf\template\tag\TemplateTag;
 use actra\yuf\template\tag\TemplateTagCollection;
 use actra\yuf\template\TemplateEngine;
+use InvalidArgumentException;
 use LogicException;
 
 class Core
@@ -57,6 +59,8 @@ class Core
     public readonly bool $debug;
     public readonly ?CspPolicySettings $cspPolicySettings;
     public readonly string $robots;
+    /** @var list<TemplateTag> */
+    private array $templateTags = [];
 
     public function __construct(
         string $envFilePath,
@@ -180,12 +184,19 @@ class Core
         );
     }
 
+    /**
+     * @param list<TemplateTag> $templateTags The own tags of the project, known to views, snippets, tables and error
+     *                                        pages; a name of a built-in or another own tag throws
+     *
+     * @throws InvalidArgumentException for an invalid template tag name
+     */
     public function prepareHttpResponse(
         ?Logger $logger = null,
         RouteCollection $routeCollection = new RouteCollection(),
         ?ExceptionHandler $individualExceptionHandler = null,
         ?CspPolicySettings $cspPolicySettings = new CspPolicySettings(),
         false|AbstractSessionHandler|null $individualSessionHandler = null,
+        array $templateTags = [],
     ): HttpResponse {
         if (Core::$httpResponse !== null) {
             throw new LogicException(message: 'The HttpResponse is already prepared');
@@ -197,6 +208,11 @@ class Core
             );
         }
         $this->cspPolicySettings = $cspPolicySettings;
+        // Checked before the exception handler exists: it needs the tags for the error pages, too
+        $this->templateTags = $templateTags;
+        $this->createTemplateTags(
+            localeHandler: new LocaleHandler(language: null, availableLanguages: new LanguageCollection()),
+        );
         $cspNonce = CspNonce::create();
         $exceptionHandler = ExceptionHandler::register(
             individualExceptionHandler: $individualExceptionHandler,
@@ -274,7 +290,8 @@ class Core
     /**
      * Creates the template engine of a request: the compiled templates are cached in the cache directory, `snippet`
      * tags read from the snippets directory and `lang` tags from the given locale handler. Create one per request;
-     * the exception handler creates its own for the error pages.
+     * the exception handler creates its own for the error pages. The own tags given to `prepareHttpResponse()` are
+     * included.
      */
     public function createTemplateEngine(LocaleHandler $localeHandler): TemplateEngine
     {
@@ -283,11 +300,17 @@ class Core
                 cacheDirectory: $this->cacheDirectory,
                 templateBaseDirectory: $this->baseDirectory,
             ),
-            tags: TemplateTagCollection::createDefault(
-                localeHandler: $localeHandler,
-                snippetsDirectory: $this->snippetsDirectory,
-                clock: new SystemClock(),
-            ),
+            tags: $this->createTemplateTags(localeHandler: $localeHandler),
+        );
+    }
+
+    private function createTemplateTags(LocaleHandler $localeHandler): TemplateTagCollection
+    {
+        return TemplateTagCollection::createDefault(
+            localeHandler: $localeHandler,
+            snippetsDirectory: $this->snippetsDirectory,
+            clock: new SystemClock(),
+            ownTags: $this->templateTags,
         );
     }
 

@@ -33,10 +33,10 @@ final readonly class TemplateTagCollection
         foreach ($tags as $tag) {
             $name = $tag->getName();
             if (in_array(needle: $name, haystack: TemplateCompiler::NATIVE_TAGS, strict: true)) {
-                throw new InvalidArgumentException(message: 'The tag name "' . $name . '" is reserved for the template engine');
+                throw new InvalidArgumentException(message: 'The tag name "' . $name . '" is reserved for the template engine (`if`, `else` and `for` are compiled by the engine); choose another name');
             }
             if (array_key_exists(key: $name, array: $tagsByName)) {
-                throw new InvalidArgumentException(message: 'The template tag "' . $name . '" is already registered');
+                throw new InvalidArgumentException(message: 'The template tag "' . $name . '" is already registered (a built-in tag or another own tag has this name); choose another name');
             }
             $tagsByName[$name] = $tag;
         }
@@ -44,12 +44,17 @@ final readonly class TemplateTagCollection
     }
 
     /**
-     * The built-in tags: `text`, `loadSubTpl`, `lang`, `snippet`, `print`, `date` and `options`.
+     * The built-in tags (`text`, `loadSubTpl`, `lang`, `snippet`, `print`, `date`, `options`) plus the own tags of a project.
+     *
+     * @param list<TemplateTag> $ownTags
+     *
+     * @throws InvalidArgumentException if an own tag has the name of a built-in tag, of another own tag or a reserved name
      */
     public static function createDefault(
         LocaleHandler $localeHandler,
         string $snippetsDirectory,
         Clock $clock,
+        array $ownTags = [],
     ): TemplateTagCollection {
         return new TemplateTagCollection(
             new TextTag(),
@@ -59,6 +64,7 @@ final readonly class TemplateTagCollection
             new PrintTag(),
             new DateTag(clock: $clock),
             new OptionsTag(),
+            ...$ownTags,
         );
     }
 

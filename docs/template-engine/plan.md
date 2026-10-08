@@ -348,3 +348,26 @@ of this area is gone: `Core::$isInitialized` (guard only) and `LogFile::$openLog
 
 **For step 5.** Own tags: `Core::prepareHttpResponse(templateTags: …)` has to store them on the `Core` so that
 `createTemplateEngine()` (used by the request and the error pages) adds them with `TemplateTagCollection::with()`.
+
+### Step 5 (v4.27.0) – done
+
+Projects register their own template tags.
+
+- `Core::prepareHttpResponse(…, array $templateTags = [])` (`list<TemplateTag>`, new last argument). `Core` keeps them in the
+  private property `$templateTags`; the private `createTemplateTags()` builds the collection for `createTemplateEngine()` (request,
+  error pages). The tags are checked at the start of `prepareHttpResponse()`, before the exception handler is registered
+  (the error pages need the tags too, so an invalid tag must not reach it): `TemplateTagCollection::createDefault(…, ownTags:)`
+  throws an `InvalidArgumentException` for a name of a built-in tag, another own tag or `if` / `else` / `for`; the messages now say
+  "choose another name".
+- `TemplateTag` is documented as extension point (escaping responsibility, `$body`, attributes). `TemplateTagContext` was
+  reviewed: its public methods (`resolve`, `escape`, `text`, `renderTemplate`, `requireAttribute`) are the tag API, the constructor is
+  `@internal`; nothing else leaks.
+- README: section "Own template tags"; `UPGRADE.md` v4.27.0 (no breaking change). No own tag in `example/` (nothing useful to show).
+- Tests: `TemplateTagCollectionTest` (own tags via `createDefault`, built-in clash, duplicate), `TemplateEngineTest` (own tag inline and
+  as element with body). Not covered: `Core::prepareHttpResponse()` / `createTemplateEngine()` (`Core` is not constructible); the
+  merge logic they use is tested in `TemplateTagCollection`.
+
+### Closing note
+
+The template rewrite is complete (steps 1–5). Nothing of this plan remains; the other areas are listed in
+[../standard-migration/remaining.md](../standard-migration/remaining.md).

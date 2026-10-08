@@ -1,6 +1,6 @@
 # Remaining differences to the coding standard
 
-State after v4.26.0 (2026-10-08), `actra/coding-standard` v1.2.0. `composer check` is green; most of the remaining
+State after v4.27.0 (2026-10-08), `actra/coding-standard` v1.2.0. `composer check` is green; most of the remaining
 differences are held in the PHPStan baseline. Counts come from searches in `src/` without the generated phone metadata
 (`src/phone/data/`), so they are close, not exact.
 
@@ -10,7 +10,7 @@ postponed areas.
 
 ## Decisions for the remaining work
 
-- Order: the template engine first ([docs/template-engine/](../template-engine/plan.md), done with v4.26.0), then the other
+- Order: the template engine first ([docs/template-engine/](../template-engine/plan.md), done with v4.27.0, own tags included), then the other
   areas.
 - `final`: every class becomes `final` unless it is a documented extension point (abstract base class or PHPDoc
   "Extension point: …"); inventory first, including what `actra/backend` extends.
