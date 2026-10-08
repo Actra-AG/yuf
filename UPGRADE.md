@@ -4,6 +4,13 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.57.1] – 2026-10-08
+
+Documentation only, no code change: the README has a section "Rules for forms" (form messages of the route language,
+initial values, `PasswordPurposeEnum`, rules instead of overrides, `HtmlText::fromText()` for user input).
+
+---
+
 ## [v4.57.0] – 2026-10-08
 
 - ⚠️ Behaviour: with `acceptRedirectionResponseCode()` the status codes 302, 307 and 308 are no longer an error (before:

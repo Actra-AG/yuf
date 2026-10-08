@@ -642,6 +642,30 @@ taken from the client) and has to fit the extension of the file name. `UploadedF
 `FileFieldRenderer` renders an `accept` attribute with the allowed extensions. Code that upgrades from v3 finds the
 changes in [UPGRADE.md](UPGRADE.md).
 
+### Rules for forms
+
+- Every form gets the `FormMessages` of the route language; without `messages:` the texts of yuf are English.
+- Initial values go into the constructor (`value:`, `initialValue:`, `initialValues:`, `isCheckedByDefault:`) or, in a
+  field subclass, into the protected `setInitialValue()` (`setInitialValues()`, `setInitiallyChecked()`). The public
+  setters change the current value only; `valueHasChanged()` compares with the initial value.
+- `PasswordField` gets the purpose of the input: `CURRENT` for a login and for confirming the current password, `NEW`
+  for setting a password.
+- Checks of a field are rules (see [Rules](#rules)), never overrides of `checkRules()` or `validateCurrentValue()`.
+- An error message with user input is `HtmlText::fromText()` (escaped); `HtmlText::fromHtml()` is for trusted HTML only.
+
+```php
+$form = new Form(context: $this->context->formContext, name: 'login', messages: FormMessages::german());
+$quantity = new IntegerField(name: 'quantity', label: $label, initialValue: $order->quantity);
+$password = new PasswordField(
+    name: 'password',
+    label: $label,
+    requiredError: $required,
+    purpose: PasswordPurposeEnum::CURRENT,
+);
+$recipients->addEachRule(formRule: new ValidEmailAddressRule(errorMessage: $invalidAddress)); // TextAreaField
+$name->addError(errorMessage: HtmlText::fromText(text: 'The user "' . $userName . '" already exists.'));
+```
+
 ## Phone numbers
 
 `PhoneNumber::createFromString(input:, defaultCountryCode:)` parses a number in national (`044 123 45 67`, with the
