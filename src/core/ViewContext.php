@@ -12,6 +12,7 @@ namespace actra\yuf\core;
 use actra\yuf\html\HtmlDocument;
 use actra\yuf\request\JsonRequestBody;
 use actra\yuf\request\RequestBody;
+use actra\yuf\template\TemplateEngine;
 use InvalidArgumentException;
 
 /**
@@ -28,6 +29,7 @@ final class ViewContext
         public readonly PathVars $pathVars,
         public readonly ContentHandler $content,
         public readonly LocaleHandler $locale,
+        public readonly TemplateEngine $templateEngine,
     ) {}
 
     public function getHtmlDocument(): HtmlDocument

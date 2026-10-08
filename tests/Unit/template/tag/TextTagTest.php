@@ -12,11 +12,11 @@ namespace actra\yuf\tests\Unit\template\tag;
 use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\html\HtmlText;
 use actra\yuf\template\TemplateException;
-use actra\yuf\tests\Double\template\NewEngineTestCase;
 use actra\yuf\tests\Double\template\StringableValue;
+use actra\yuf\tests\Double\template\TemplateEngineTestCase;
 use ArrayObject;
 
-final class TextTagTest extends NewEngineTestCase
+final class TextTagTest extends TemplateEngineTestCase
 {
     public function testPlainStringIsEscaped(): void
     {

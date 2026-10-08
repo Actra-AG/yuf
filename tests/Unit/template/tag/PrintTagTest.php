@@ -11,14 +11,14 @@ namespace actra\yuf\tests\Unit\template\tag;
 
 use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\html\HtmlText;
-use actra\yuf\tests\Double\template\NewEngineTestCase;
 use actra\yuf\tests\Double\template\StringableValue;
+use actra\yuf\tests\Double\template\TemplateEngineTestCase;
 use DateTime;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
 use stdClass;
 
-final class PrintTagTest extends NewEngineTestCase
+final class PrintTagTest extends TemplateEngineTestCase
 {
     /**
      * @return iterable<string, array{mixed, string}>

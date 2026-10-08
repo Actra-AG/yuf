@@ -18,11 +18,11 @@ use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Base class of the tests of the new template engine: renders template sources with the built-in tags, a fixed clock
+ * Base class of the template tests: renders template sources with the built-in tags, a fixed clock
  * (2026-01-02 03:04:05), the snippets of tests/Fixture/template/snippets/ and the texts of
  * tests/Fixture/template/lang.lang.php.
  */
-abstract class NewEngineTestCase extends TestCase
+abstract class TemplateEngineTestCase extends TestCase
 {
     private TemplateRenderer $renderer;
 
@@ -41,6 +41,11 @@ abstract class NewEngineTestCase extends TestCase
     protected static function fixtureDirectory(): string
     {
         return dirname(path: __DIR__, levels: 2) . '/Fixture/template/';
+    }
+
+    protected static function projectDirectory(): string
+    {
+        return dirname(path: __DIR__, levels: 3) . '/';
     }
 
     /**
@@ -81,10 +86,10 @@ abstract class NewEngineTestCase extends TestCase
     private function createRenderer(array $ownTags): TemplateRenderer
     {
         $localeHandler = new LocaleHandler(language: null, availableLanguages: new LanguageCollection());
-        $localeHandler->loadLanguageFile(filePath: NewEngineTestCase::fixtureDirectory() . 'lang.lang.php');
+        $localeHandler->loadLanguageFile(filePath: TemplateEngineTestCase::fixtureDirectory() . 'lang.lang.php');
 
-        return new NewTemplateRenderer(
-            snippetsDirectory: NewEngineTestCase::fixtureDirectory() . 'snippets/',
+        return new TemplateRenderer(
+            snippetsDirectory: TemplateEngineTestCase::fixtureDirectory() . 'snippets/',
             localeHandler: $localeHandler,
             ownTags: $ownTags,
         );

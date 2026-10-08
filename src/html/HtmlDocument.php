@@ -14,8 +14,8 @@ use actra\yuf\core\RequestHandler;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CsrfToken;
-use actra\yuf\template\template\DirectoryTemplateCache;
-use actra\yuf\template\template\TemplateEngine;
+use actra\yuf\template\TemplateData;
+use actra\yuf\template\TemplateEngine;
 
 class HtmlDocument
 {
@@ -42,6 +42,7 @@ class HtmlDocument
         private readonly RequestHandler $requestHandler,
         CspNonce $cspNonce,
         private readonly Core $core,
+        private readonly TemplateEngine $templateEngine,
     ) {
         $requestHandler = $this->requestHandler;
         $viewDirectory = $requestHandler->route->viewDirectory;
@@ -141,14 +142,6 @@ class HtmlDocument
         ) {
             $templateFilePath = $fullContentFilePath;
         }
-        $core = $this->core;
-        $tplEngine = new TemplateEngine(
-            templateCacheInterface: new DirectoryTemplateCache(
-                cachePath: $core->cacheDirectory,
-                templateBaseDirectory: $core->baseDirectory,
-            ),
-            tplNsPrefix: 'tst',
-        );
         if ($this->activeHtmlIds === []) {
             $fileTitle = $requestHandler->fileTitle;
             $this->setActiveHtmlId(
@@ -156,9 +149,9 @@ class HtmlDocument
                 val: $fileGroup === null ? $fileTitle : $fileGroup . '-' . $fileTitle,
             );
         }
-        $htmlAfterReplacements = $tplEngine->getResultAsHtml(
-            tplFile: $templateFilePath,
-            dataPool: $this->replacements->getArrayObject(),
+        $htmlAfterReplacements = $this->templateEngine->render(
+            templateFile: $templateFilePath,
+            data: TemplateData::fromReplacements(replacements: $this->replacements),
         );
 
         return preg_replace_callback(

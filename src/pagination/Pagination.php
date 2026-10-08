@@ -13,6 +13,7 @@ use actra\yuf\html\HtmlDataObject;
 use actra\yuf\html\HtmlDataObjectCollection;
 use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\html\HtmlSnippet;
+use actra\yuf\template\TemplateEngine;
 
 /**
  * Provides a Pagination function for usage on the whole project
@@ -24,6 +25,7 @@ class Pagination
         string $listIdentifier,
         int $totalAmount,
         int $currentPage,
+        TemplateEngine $templateEngine,
         int $entriesPerPage = 25,
         int $beforeAfter = 2,
         int $startEnd = 1,
@@ -101,7 +103,7 @@ class Pagination
         return new HtmlSnippet(
             htmlSnippetFilePath: $individualHtmlSnippetPath === null ? __DIR__ . DIRECTORY_SEPARATOR . 'pagination.html' : $individualHtmlSnippetPath,
             replacements: $replacements,
-        )->render();
+        )->render(templateEngine: $templateEngine);
     }
 
     private static function getLinkTarget(

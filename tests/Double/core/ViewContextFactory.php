@@ -17,6 +17,7 @@ use actra\yuf\core\PathVars;
 use actra\yuf\core\Route;
 use actra\yuf\core\ViewContext;
 use actra\yuf\security\CspNonce;
+use actra\yuf\tests\Double\template\TemplateEngineFactory;
 
 /**
  * Builds a ViewContext without a request: RequestHandler cannot be created in tests.
@@ -34,6 +35,8 @@ final class ViewContextFactory
         ?ContentType $contentType = null,
         array $pathVars = [],
     ): ViewContext {
+        $localeHandler = new LocaleHandler(language: null, availableLanguages: new LanguageCollection());
+
         return new ViewContext(
             route: new Route(
                 path: '/',
@@ -48,7 +51,12 @@ final class ViewContextFactory
                 contentType: $contentType ?? ContentType::createHtml(),
                 cspNonce: CspNonce::create(),
             ),
-            locale: new LocaleHandler(language: null, availableLanguages: new LanguageCollection()),
+            locale: $localeHandler,
+            templateEngine: TemplateEngineFactory::create(
+                cacheDirectory: sys_get_temp_dir() . '/yuf-view-context-test/',
+                templateBaseDirectory: sys_get_temp_dir() . '/',
+                localeHandler: $localeHandler,
+            ),
         );
     }
 }

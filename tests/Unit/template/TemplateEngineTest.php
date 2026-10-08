@@ -18,8 +18,8 @@ use actra\yuf\template\tag\TextTag;
 use actra\yuf\template\TemplateData;
 use actra\yuf\template\TemplateEngine;
 use actra\yuf\template\TemplateException;
-use actra\yuf\tests\Double\template\NewEngineTestCase;
 use actra\yuf\tests\Double\template\ShoutTag;
+use actra\yuf\tests\Double\template\TemplateEngineTestCase;
 use actra\yuf\tests\Double\template\TemplateWorkDirectory;
 use actra\yuf\tests\Double\template\ThrowingTag;
 use ArrayObject;
@@ -28,10 +28,10 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 
 /**
- * The new template engine as a whole. The characterization tests (AbstractTemplate*TestCase) pin the output that must
+ * The new template engine as a whole. The characterization tests (Template*Test in this directory) pin the output that must
  * stay the same, the tests of the single classes pin the details; these tests pin what the new engine adds.
  */
-final class TemplateEngineTest extends NewEngineTestCase
+final class TemplateEngineTest extends TemplateEngineTestCase
 {
     public function testForVariableNeverOverwritesOrRemovesAnOuterValue(): void
     {

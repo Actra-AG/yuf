@@ -17,7 +17,7 @@ use LogicException;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Not covered: register() (it calls setlocale() for the whole process).
+ * Not covered: applySystemLocale() with a language (it calls setlocale() for the whole process).
  */
 final class LocaleHandlerTest extends TestCase
 {
@@ -27,6 +27,15 @@ final class LocaleHandlerTest extends TestCase
     private function createHandler(): LocaleHandler
     {
         return new LocaleHandler(language: null, availableLanguages: new LanguageCollection());
+    }
+
+    public function testApplySystemLocaleWithoutLanguageKeepsTheLocale(): void
+    {
+        $localeBefore = setlocale(LC_ALL, '0');
+
+        $this->createHandler()->applySystemLocale();
+
+        $this->assertSame($localeBefore, setlocale(LC_ALL, '0'));
     }
 
     public function testConstructorKeepsAvailableLanguage(): void

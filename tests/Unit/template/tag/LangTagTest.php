@@ -10,9 +10,9 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\template\tag;
 
 use actra\yuf\template\TemplateException;
-use actra\yuf\tests\Double\template\NewEngineTestCase;
+use actra\yuf\tests\Double\template\TemplateEngineTestCase;
 
-final class LangTagTest extends NewEngineTestCase
+final class LangTagTest extends TemplateEngineTestCase
 {
     public function testTextIsOutputAsItIs(): void
     {

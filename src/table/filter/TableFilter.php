@@ -16,6 +16,7 @@ use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\html\HtmlSnippet;
 use actra\yuf\security\CsrfToken;
 use actra\yuf\table\table\DbResultTable;
+use actra\yuf\template\TemplateEngine;
 use LogicException;
 
 class TableFilter
@@ -146,7 +147,7 @@ class TableFilter
         $this->allFilterFields[$abstractTableFilterField->identifier] = $abstractTableFilterField;
     }
 
-    public function render(): string
+    public function render(TemplateEngine $templateEngine): string
     {
         $replacements = new HtmlReplacementCollection();
         $replacements->addBool(identifier: 'showLegend', booleanValue: $this->showLegend);
@@ -190,7 +191,7 @@ class TableFilter
         return new HtmlSnippet(
             htmlSnippetFilePath: $individualHtmlSnippetPath === null ? __DIR__ . DIRECTORY_SEPARATOR . 'tableFilter.html' : $individualHtmlSnippetPath,
             replacements: $replacements,
-        )->render();
+        )->render(templateEngine: $templateEngine);
     }
 
     protected function getFromSession(string $index): ?string

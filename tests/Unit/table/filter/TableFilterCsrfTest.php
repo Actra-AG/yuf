@@ -16,6 +16,7 @@ use actra\yuf\security\CsrfToken;
 use actra\yuf\table\filter\TableFilter;
 use actra\yuf\tests\Double\table\FixedPageDbResultTable;
 use actra\yuf\tests\Double\table\RecordingTableFilterField;
+use actra\yuf\tests\Double\template\TemplateEngineFactory;
 use Override;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
@@ -71,6 +72,10 @@ final class TableFilterCsrfTest extends TestCase
                 identifier: $identifier . 'Table',
                 db: TableFilterCsrfTest::createStub(FrameworkDb::class),
                 dbQuery: TableFilterCsrfTest::createStub(DbQuery::class),
+                templateEngine: TemplateEngineFactory::create(
+                    cacheDirectory: sys_get_temp_dir() . '/yuf-table-filter-test/',
+                    templateBaseDirectory: sys_get_temp_dir() . '/',
+                ),
                 totalAmount: 0,
                 currentPage: 1,
             ),

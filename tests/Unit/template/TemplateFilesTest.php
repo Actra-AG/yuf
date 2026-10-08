@@ -12,15 +12,16 @@ namespace actra\yuf\tests\Unit\template;
 use actra\yuf\html\HtmlDataObject;
 use actra\yuf\html\HtmlDataObjectCollection;
 use actra\yuf\html\HtmlReplacementCollection;
-use actra\yuf\tests\Double\template\TemplateCharacterizationTestCase;
+use actra\yuf\tests\Double\template\TemplateEngineTestCase;
 
 /**
- * Characterization of the template engine before the rewrite (docs/template-engine/plan.md, step 1): the templates
- * that ship with yuf and the example. The whitespace of the expected output is the whitespace of today's engine:
- * every tag leaves the indentation of its line behind, and the whitespace between an if and its else is rendered
- * with the if branch. TablePaginationRendererTest checks the pagination titles through the real renderer.
+ * The templates that ship with yuf and the example, rendered through the engine (docs/template-engine/plan.md,
+ * characterization tests). The whitespace of the expected output is the whitespace the old engine produced and the
+ * new engine keeps: a line break after a tag is removed, the indentation of its line stays, and the whitespace between
+ * an if and its else is rendered with the if branch. TablePaginationRendererTest checks the pagination titles through
+ * the real renderer.
  */
-abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTestCase
+final class TemplateFilesTest extends TemplateEngineTestCase
 {
     /**
      * @param list<array{int, bool, bool, bool}> $pages number, is current page, group previous, group next
@@ -82,7 +83,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
         );
         $primaryFields = new HtmlDataObjectCollection();
         $primaryFields->add(
-            htmlDataObject: AbstractTemplateFilesTestCase::createFilterField(
+            htmlDataObject: TemplateFilesTest::createFilterField(
                 identifier: 'name',
                 highlight: false,
                 label: 'Name',
@@ -90,7 +91,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
             ),
         );
         $primaryFields->add(
-            htmlDataObject: AbstractTemplateFilesTestCase::createFilterField(
+            htmlDataObject: TemplateFilesTest::createFilterField(
                 identifier: 'city',
                 highlight: true,
                 label: 'City',
@@ -109,7 +110,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
             );
             $secondaryFields = new HtmlDataObjectCollection();
             $secondaryFields->add(
-                htmlDataObject: AbstractTemplateFilesTestCase::createFilterField(
+                htmlDataObject: TemplateFilesTest::createFilterField(
                     identifier: 'status',
                     highlight: false,
                     label: 'Status',
@@ -139,14 +140,14 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
     private function renderProjectFile(string $relativePath, HtmlReplacementCollection $replacements): string
     {
         return $this->renderFile(
-            templateFile: AbstractTemplateFilesTestCase::projectDirectory() . $relativePath,
+            templateFile: TemplateFilesTest::projectDirectory() . $relativePath,
             data: $replacements,
         );
     }
 
     public function testPaginationOnTheFirstPage(): void
     {
-        $replacements = AbstractTemplateFilesTestCase::createPaginationReplacements(
+        $replacements = TemplateFilesTest::createPaginationReplacements(
             pages: [[1, true, false, false], [2, false, false, false], [3, false, false, false]],
             previousPageHref: '',
             nextPageHref: '?page=2|list',
@@ -154,7 +155,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
         $html = $this->renderProjectFile(relativePath: 'src/pagination/pagination.html', replacements: $replacements);
 
         $this->assertSame(
-            AbstractTemplateFilesTestCase::lines([
+            TemplateFilesTest::lines([
                 '<div class="pagination">',
                 '    <ul>',
                 '                    <li class="backdisabled">',
@@ -187,7 +188,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
 
     public function testPaginationInTheMiddleWithGroupDots(): void
     {
-        $replacements = AbstractTemplateFilesTestCase::createPaginationReplacements(
+        $replacements = TemplateFilesTest::createPaginationReplacements(
             pages: [
                 [1, false, false, false],
                 [2, false, false, true],
@@ -201,7 +202,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
         $html = $this->renderProjectFile(relativePath: 'src/pagination/pagination.html', replacements: $replacements);
 
         $this->assertSame(
-            AbstractTemplateFilesTestCase::lines([
+            TemplateFilesTest::lines([
                 '<div class="pagination">',
                 '    <ul>',
                 '                    <li class="back">',
@@ -239,7 +240,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
 
     public function testPaginationOnTheLastPage(): void
     {
-        $replacements = AbstractTemplateFilesTestCase::createPaginationReplacements(
+        $replacements = TemplateFilesTest::createPaginationReplacements(
             pages: [[2, false, false, false], [3, true, false, false]],
             previousPageHref: '?page=2|list',
             nextPageHref: '',
@@ -247,7 +248,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
         $html = $this->renderProjectFile(relativePath: 'src/pagination/pagination.html', replacements: $replacements);
 
         $this->assertSame(
-            AbstractTemplateFilesTestCase::lines([
+            TemplateFilesTest::lines([
                 '<div class="pagination">',
                 '    <ul>',
                 '                    <li class="back">',
@@ -279,7 +280,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
 
     public function testTableFilterWithLegendAndTriggeredSecondaryFilters(): void
     {
-        $replacements = AbstractTemplateFilesTestCase::createTableFilterReplacements(
+        $replacements = TemplateFilesTest::createTableFilterReplacements(
             showLegend: true,
             hasSecondaryFilters: true,
             isSecondaryFilterTriggered: true,
@@ -290,7 +291,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
         );
 
         $this->assertSame(
-            AbstractTemplateFilesTestCase::lines([
+            TemplateFilesTest::lines([
                 '<div class="table-filter-wrapper">',
                 '            <div class="table-filter-legend-wrap">',
                 '            <button class="trigger-table-filter-legend">',
@@ -374,7 +375,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
 
     public function testTableFilterWithUntriggeredSecondaryFilters(): void
     {
-        $replacements = AbstractTemplateFilesTestCase::createTableFilterReplacements(
+        $replacements = TemplateFilesTest::createTableFilterReplacements(
             showLegend: false,
             hasSecondaryFilters: true,
             isSecondaryFilterTriggered: false,
@@ -385,7 +386,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
         );
 
         $this->assertSame(
-            AbstractTemplateFilesTestCase::lines([
+            TemplateFilesTest::lines([
                 '<div class="table-filter-wrapper">',
                 '        <form action="?table&amp;find" class="form-tablefilter" method="post">',
                 '        <input type="hidden" name="csrf" value="token">        <div class="table-filter-primary-wrap">',
@@ -429,7 +430,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
 
     public function testTableFilterWithoutSecondaryFilters(): void
     {
-        $replacements = AbstractTemplateFilesTestCase::createTableFilterReplacements(
+        $replacements = TemplateFilesTest::createTableFilterReplacements(
             showLegend: false,
             hasSecondaryFilters: false,
             isSecondaryFilterTriggered: false,
@@ -440,7 +441,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
         );
 
         $this->assertSame(
-            AbstractTemplateFilesTestCase::lines([
+            TemplateFilesTest::lines([
                 '<div class="table-filter-wrapper">',
                 '        <form action="?table&amp;find" class="form-tablefilter" method="post">',
                 '        <input type="hidden" name="csrf" value="token">        <div class="table-filter-primary-wrap">',
@@ -480,7 +481,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
                 'robots' => 'index,follow',
                 'title' => 'Hello World',
                 'greeting' => 'Hello World!',
-                'this' => AbstractTemplateFilesTestCase::projectDirectory() . 'example/app/view/frontend/html/index.html',
+                'this' => TemplateFilesTest::projectDirectory() . 'example/app/view/frontend/html/index.html',
             ] as $identifier => $content
         ) {
             $replacements->addHtml(identifier: $identifier, html: $content);
@@ -491,7 +492,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
         );
 
         $this->assertSame(
-            AbstractTemplateFilesTestCase::lines([
+            TemplateFilesTest::lines([
                 '<!DOCTYPE html>',
                 '<html lang="en">',
                 '<head>',
@@ -529,7 +530,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
         $html = $this->renderProjectFile(relativePath: 'example/app/error_docs/notFound.html', replacements: $replacements);
 
         $this->assertSame(
-            AbstractTemplateFilesTestCase::lines([
+            TemplateFilesTest::lines([
                 '<!DOCTYPE html>',
                 '<html lang="en">',
                 '<head>',
@@ -563,7 +564,7 @@ abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTes
         $html = $this->renderProjectFile(relativePath: 'example/app/error_docs/default.html', replacements: $replacements);
 
         $this->assertSame(
-            AbstractTemplateFilesTestCase::lines([
+            TemplateFilesTest::lines([
                 '<!DOCTYPE html>',
                 '<html lang="en">',
                 '<head>',

@@ -20,7 +20,7 @@ use stdClass;
 
 /**
  * The rules of docs/template-engine/design.md, section 3.1. The 320 cases of the characterization test
- * (`AbstractTemplateIfTagTestCase`) pin them through the engine; these tests pin the rules themselves.
+ * (`TemplateIfTagTest`) pin them through the engine; these tests pin the rules themselves.
  */
 final class ValueComparatorTest extends TestCase
 {

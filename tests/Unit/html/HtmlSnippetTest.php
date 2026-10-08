@@ -12,27 +12,24 @@ namespace actra\yuf\tests\Unit\html;
 use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\html\HtmlSnippet;
 use actra\yuf\security\CspNonce;
-use actra\yuf\tests\Double\CoreTestInstance;
+use actra\yuf\template\TemplateEngine;
+use actra\yuf\tests\Double\template\TemplateEngineFactory;
 use Override;
 use PHPUnit\Framework\TestCase;
 
 final class HtmlSnippetTest extends TestCase
 {
-    #[Override]
-    public static function setUpBeforeClass(): void
-    {
-        $cacheDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-snippet-test' . DIRECTORY_SEPARATOR;
-        if (!is_dir(filename: $cacheDirectory)) {
-            mkdir(directory: $cacheDirectory);
-        }
-        CoreTestInstance::register(cacheDirectory: $cacheDirectory);
-    }
+    private TemplateEngine $templateEngine;
 
     #[Override]
     protected function setUp(): void
     {
         // The template cache checks for its files via is_dir()/file_exists(), which would report stale results
         clearstatcache();
+        $this->templateEngine = TemplateEngineFactory::create(
+            cacheDirectory: sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-snippet-test' . DIRECTORY_SEPARATOR,
+            templateBaseDirectory: dirname(path: __DIR__, levels: 3) . '/',
+        );
     }
 
     private static function snippetPath(): string
@@ -46,7 +43,7 @@ final class HtmlSnippetTest extends TestCase
         $html = new HtmlSnippet(
             htmlSnippetFilePath: self::snippetPath(),
             cspNonce: new CspNonce(value: 'fixed+nonce=='),
-        )->render();
+        )->render(templateEngine: $this->templateEngine);
 
         $this->assertStringContainsString('nonce="fixed+nonce=="', $html);
     }
@@ -60,7 +57,7 @@ final class HtmlSnippetTest extends TestCase
             htmlSnippetFilePath: self::snippetPath(),
             replacements: $replacements,
             cspNonce: new CspNonce(value: 'fixed'),
-        )->render();
+        )->render(templateEngine: $this->templateEngine);
 
         $this->assertStringContainsString('nonce="own"', $html);
     }
@@ -72,9 +69,19 @@ final class HtmlSnippetTest extends TestCase
         );
         $snippet->replacements->addHtml(identifier: 'other', html: 'x');
 
-        $html = $snippet->render();
+        $html = $snippet->render(templateEngine: $this->templateEngine);
 
         $this->assertStringContainsString('<p>x</p>', $html);
         $this->assertFalse($snippet->replacements->has(identifier: 'cspNonce'));
+    }
+
+    public function testPlainTextReplacementIsEscaped(): void
+    {
+        $snippet = new HtmlSnippet(
+            htmlSnippetFilePath: dirname(path: __DIR__, levels: 3) . '/tests/Fixture/plainSnippet.html',
+        );
+        $snippet->replacements->addText(identifier: 'other', text: '<b>');
+
+        $this->assertStringContainsString('<p>&lt;b&gt;</p>', $snippet->render(templateEngine: $this->templateEngine));
     }
 }

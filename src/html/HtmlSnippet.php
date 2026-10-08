@@ -9,11 +9,10 @@ declare(strict_types=1);
 
 namespace actra\yuf\html;
 
-use actra\yuf\Core;
 use actra\yuf\core\Route;
 use actra\yuf\security\CspNonce;
-use actra\yuf\template\template\DirectoryTemplateCache;
-use actra\yuf\template\template\TemplateEngine;
+use actra\yuf\template\TemplateData;
+use actra\yuf\template\TemplateEngine;
 
 readonly class HtmlSnippet
 {
@@ -34,7 +33,7 @@ readonly class HtmlSnippet
         );
     }
 
-    public function render(): string
+    public function render(TemplateEngine $templateEngine): string
     {
         $htmlSnippetFilePath = $this->htmlSnippetFilePath;
         $replacements = $this->replacements;
@@ -44,16 +43,10 @@ readonly class HtmlSnippet
         ) {
             $replacements->addHtml(identifier: 'cspNonce', html: $this->cspNonce->value);
         }
-        $core = Core::get();
-        return new TemplateEngine(
-            templateCacheInterface: new DirectoryTemplateCache(
-                cachePath: $core->cacheDirectory,
-                templateBaseDirectory: $core->baseDirectory,
-            ),
-            tplNsPrefix: 'tst',
-        )->getResultAsHtml(
-            tplFile: $htmlSnippetFilePath,
-            dataPool: $this->replacements->getArrayObject(),
+
+        return $templateEngine->render(
+            templateFile: $htmlSnippetFilePath,
+            data: TemplateData::fromReplacements(replacements: $replacements),
         );
     }
 }

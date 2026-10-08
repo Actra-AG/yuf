@@ -10,14 +10,14 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\template\tag;
 
 use actra\yuf\template\TemplateException;
-use actra\yuf\tests\Double\template\NewEngineTestCase;
+use actra\yuf\tests\Double\template\TemplateEngineTestCase;
 
-final class LoadSubTplTagTest extends NewEngineTestCase
+final class LoadSubTplTagTest extends TemplateEngineTestCase
 {
     public function testLiteralPath(): void
     {
         $html = $this->render(
-            source: 'x<tst:loadSubTpl tplfile="' . NewEngineTestCase::fixtureDirectory() . 'sub.html"/>y',
+            source: 'x<tst:loadSubTpl tplfile="' . TemplateEngineTestCase::fixtureDirectory() . 'sub.html"/>y',
             data: ['name' => 'N'],
         );
 
@@ -27,7 +27,7 @@ final class LoadSubTplTagTest extends NewEngineTestCase
     public function testInlineForm(): void
     {
         $html = $this->render(
-            source: "{tst:loadSubTpl tplfile='" . NewEngineTestCase::fixtureDirectory() . "sub.html'}",
+            source: "{tst:loadSubTpl tplfile='" . TemplateEngineTestCase::fixtureDirectory() . "sub.html'}",
             data: ['name' => 'N'],
         );
 
@@ -38,7 +38,7 @@ final class LoadSubTplTagTest extends NewEngineTestCase
     {
         $html = $this->render(
             source: '[<tst:loadSubTpl tplfile="{file}"/>]',
-            data: ['file' => NewEngineTestCase::fixtureDirectory() . 'sub.html', 'name' => '<N>'],
+            data: ['file' => TemplateEngineTestCase::fixtureDirectory() . 'sub.html', 'name' => '<N>'],
         );
 
         $this->assertSame('[sub:&lt;N&gt;]', $html);
@@ -48,7 +48,7 @@ final class LoadSubTplTagTest extends NewEngineTestCase
     {
         $html = $this->render(
             source: '<tst:loadSubTpl tplfile="{page.file}"/>',
-            data: ['page' => ['file' => NewEngineTestCase::fixtureDirectory() . 'sub.html'], 'name' => 'N'],
+            data: ['page' => ['file' => TemplateEngineTestCase::fixtureDirectory() . 'sub.html'], 'name' => 'N'],
         );
 
         $this->assertSame('sub:N', $html);
@@ -64,7 +64,7 @@ final class LoadSubTplTagTest extends NewEngineTestCase
     public function testSubTemplateSeesTheLoopVariable(): void
     {
         $html = $this->render(
-            source: '<tst:for value="l" var="i"><tst:loadSubTpl tplfile="' . NewEngineTestCase::fixtureDirectory() . 'subLoop.html"/>;</tst:for>',
+            source: '<tst:for value="l" var="i"><tst:loadSubTpl tplfile="' . TemplateEngineTestCase::fixtureDirectory() . 'subLoop.html"/>;</tst:for>',
             data: ['l' => [1, 2]],
         );
 

@@ -9,51 +9,50 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\template;
 
-use actra\yuf\tests\Double\template\TemplateCharacterizationTestCase;
-use Exception;
+use actra\yuf\tests\Double\template\TemplateEngineTestCase;
 use stdClass;
 
 /**
- * Characterization of the template engine before the rewrite (docs/template-engine/plan.md, step 1).
+ * The `for` tag (docs/template-engine/design.md, section 3).
  */
-abstract class AbstractTemplateForTagTestCase extends TemplateCharacterizationTestCase
+final class TemplateForTagTest extends TemplateEngineTestCase
 {
     private const string LIST = '<tst:for value="l" var="i">[{tst:text value=\'i\'}]</tst:for>';
 
     public function testSimpleList(): void
     {
-        $html = $this->renderSource(source: AbstractTemplateForTagTestCase::LIST, data: ['l' => [1, 2, 3]]);
+        $html = $this->render(source: TemplateForTagTest::LIST, data: ['l' => [1, 2, 3]]);
 
         $this->assertSame('[1][2][3]', $html);
     }
 
     public function testSurroundingTextIsKept(): void
     {
-        $html = $this->renderSource(source: 'a' . AbstractTemplateForTagTestCase::LIST . 'b', data: ['l' => ['x']]);
+        $html = $this->render(source: 'a' . TemplateForTagTest::LIST . 'b', data: ['l' => ['x']]);
 
         $this->assertSame('a[x]b', $html);
     }
 
     public function testEmptyListRendersNothing(): void
     {
-        $this->assertSame('ab', $this->renderSource(source: 'a' . AbstractTemplateForTagTestCase::LIST . 'b', data: ['l' => []]));
+        $this->assertSame('ab', $this->render(source: 'a' . TemplateForTagTest::LIST . 'b', data: ['l' => []]));
     }
 
     public function testNullListRendersNothing(): void
     {
-        $this->assertSame('ab', $this->renderSource(source: 'a' . AbstractTemplateForTagTestCase::LIST . 'b', data: ['l' => null]));
+        $this->assertSame('ab', $this->render(source: 'a' . TemplateForTagTest::LIST . 'b', data: ['l' => null]));
     }
 
     public function testKeysOfAnAssociativeArrayAreIgnored(): void
     {
-        $html = $this->renderSource(source: AbstractTemplateForTagTestCase::LIST, data: ['l' => ['a' => 'x', 'b' => 'y']]);
+        $html = $this->render(source: TemplateForTagTest::LIST, data: ['l' => ['a' => 'x', 'b' => 'y']]);
 
         $this->assertSame('[x][y]', $html);
     }
 
     public function testObjectPropertiesAreIterated(): void
     {
-        $html = $this->renderSource(source: AbstractTemplateForTagTestCase::LIST, data: ['l' => (object) ['a' => 'x', 'b' => 'y']]);
+        $html = $this->render(source: TemplateForTagTest::LIST, data: ['l' => (object) ['a' => 'x', 'b' => 'y']]);
 
         $this->assertSame('[x][y]', $html);
     }
@@ -67,7 +66,7 @@ abstract class AbstractTemplateForTagTestCase extends TemplateCharacterizationTe
         $second->name = 'two';
         $second->count = 2;
 
-        $html = $this->renderSource(
+        $html = $this->render(
             source: '<tst:for value="l" var="item"><tst:text value="item.name"/>=<tst:text value="item.count"/>;</tst:for>',
             data: ['l' => [$first, $second]],
         );
@@ -77,7 +76,7 @@ abstract class AbstractTemplateForTagTestCase extends TemplateCharacterizationTe
 
     public function testListOfArrays(): void
     {
-        $html = $this->renderSource(
+        $html = $this->render(
             source: '<tst:for value="l" var="item">{tst:text value=\'item.name\'},</tst:for>',
             data: ['l' => [['name' => 'a'], ['name' => 'b']]],
         );
@@ -87,7 +86,7 @@ abstract class AbstractTemplateForTagTestCase extends TemplateCharacterizationTe
 
     public function testValueIsADottedSelector(): void
     {
-        $html = $this->renderSource(
+        $html = $this->render(
             source: '<tst:for value="o.list" var="i">{tst:text value=\'i\'}</tst:for>',
             data: ['o' => ['list' => [1, 2]]],
         );
@@ -97,7 +96,7 @@ abstract class AbstractTemplateForTagTestCase extends TemplateCharacterizationTe
 
     public function testDataOutsideTheLoopIsVisibleInside(): void
     {
-        $html = $this->renderSource(
+        $html = $this->render(
             source: '<tst:for value="l" var="i">{tst:text value=\'o\'}</tst:for>',
             data: ['l' => [1, 2], 'o' => 'O'],
         );
@@ -121,12 +120,12 @@ abstract class AbstractTemplateForTagTestCase extends TemplateCharacterizationTe
             ],
         ];
 
-        $this->assertSame('(A:a1,a2,)(B:)(C:c1,)', $this->renderSource(source: $source, data: $data));
+        $this->assertSame('(A:a1,a2,)(B:)(C:c1,)', $this->render(source: $source, data: $data));
     }
 
     public function testNestedLoopOverTheOuterItem(): void
     {
-        $html = $this->renderSource(
+        $html = $this->render(
             source: '<tst:for value="l" var="row"><tst:for value="row" var="cell">{tst:text value=\'cell\'}</tst:for>;</tst:for>',
             data: ['l' => [[1, 2], [3]]],
         );
@@ -136,7 +135,7 @@ abstract class AbstractTemplateForTagTestCase extends TemplateCharacterizationTe
 
     public function testNestedLoopMayReuseTheVariableName(): void
     {
-        $html = $this->renderSource(
+        $html = $this->render(
             source: '<tst:for value="l" var="i"><tst:for value="i" var="i">{tst:text value=\'i\'}</tst:for>;</tst:for>',
             data: ['l' => [[1, 2], [3]]],
         );
@@ -146,7 +145,7 @@ abstract class AbstractTemplateForTagTestCase extends TemplateCharacterizationTe
 
     public function testIfInsideLoop(): void
     {
-        $html = $this->renderSource(
+        $html = $this->render(
             source: '<tst:for value="l" var="i"><tst:if compare="i" operator="gt" against="1">big </tst:if><tst:else>small </tst:else></tst:for>',
             data: ['l' => [1, 2]],
         );
@@ -156,15 +155,7 @@ abstract class AbstractTemplateForTagTestCase extends TemplateCharacterizationTe
 
     public function testLoopVariableShadowingAnOuterValue(): void
     {
-        // Differs: the old engine removes the outer value after the loop, the new engine keeps it
-        $templateFile = $this->writeTemplate(source: AbstractTemplateForTagTestCase::LIST . '{tst:text value=\'i\'}');
-        if (!$this->isNewEngine()) {
-            $this->expectException(Exception::class);
-            $this->expectExceptionCode(1);
-            $this->expectExceptionMessageIs(
-                'The data with offset "i" does not exist for template file ' . $templateFile . '. Check, if the correct BaseView class has been found/executed and set the correct replacements.',
-            );
-        }
+        $templateFile = $this->writeTemplate(source: TemplateForTagTest::LIST . '{tst:text value=\'i\'}');
 
         $html = $this->renderFile(templateFile: $templateFile, data: ['l' => [1, 2], 'i' => 'outer']);
 
@@ -173,7 +164,7 @@ abstract class AbstractTemplateForTagTestCase extends TemplateCharacterizationTe
 
     public function testOuterValueIsShadowedInsideTheLoop(): void
     {
-        $html = $this->renderSource(
+        $html = $this->render(
             source: '<tst:for value="l" var="i">{tst:text value=\'i\'}</tst:for>',
             data: ['l' => [1, 2], 'i' => 'outer'],
         );
@@ -183,21 +174,20 @@ abstract class AbstractTemplateForTagTestCase extends TemplateCharacterizationTe
 
     public function testBracedWordsInsideTheLoop(): void
     {
-        // Differs: the old engine rewrites {var.prop} inside a for tag to an unescaped echo, the new engine keeps it as text
         $item = new stdClass();
         $item->html = '<b>raw</b>';
 
-        $html = $this->renderSource(
+        $html = $this->render(
             source: '<tst:for value="l" var="i">[{i.html}]</tst:for>',
             data: ['l' => [$item]],
         );
 
-        $this->assertSame($this->forEngine(old: '[<b>raw</b>]', new: '[{i.html}]'), $html);
+        $this->assertSame('[{i.html}]', $html);
     }
 
     public function testBracesWithoutWordInsideTheLoopAreKept(): void
     {
-        $html = $this->renderSource(
+        $html = $this->render(
             source: '<tst:for value="l" var="i">function(){return 1}</tst:for>',
             data: ['l' => [1]],
         );
@@ -211,6 +201,6 @@ abstract class AbstractTemplateForTagTestCase extends TemplateCharacterizationTe
 
         // The line break right after the opening and after the closing tag is swallowed by the PHP closing tag of the
         // compiled code
-        $this->assertSame("<ul>\n  <li>1</li>\n  <li>2</li>\n</ul>\n", $this->renderSource(source: $source, data: ['l' => [1, 2]]));
+        $this->assertSame("<ul>\n  <li>1</li>\n  <li>2</li>\n</ul>\n", $this->render(source: $source, data: ['l' => [1, 2]]));
     }
 }

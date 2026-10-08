@@ -263,6 +263,7 @@ error pages), 159 differ on purpose (below).
 - The README does not describe the new engine yet (it is not used); step 5 adds the section.
 - Step 4 must replace `tests/Double/template/OldTemplateRenderer`, the `Old…Test` subclasses and `CoreTestInstance`, and keep the
   `NewEngine…` classes as the only run of the characterization tests (then the `isNewEngine()` branches can be removed).
+  (Done in step 4.)
 
 ### Step 3 (v4.25.0) – done
 
@@ -278,3 +279,72 @@ Renames only; rendered HTML is unchanged (characterization tests of both engines
 - Follow-up in `actra/backend`: rename the calls as in the follow-up list above (migration steps in `UPGRADE.md`), then
   review every `addHtml()` / `fromHtml()` for user data.
 
+
+### Step 4 (v4.26.0) – done
+
+yuf renders with the new engine; the old engine and everything that depended on it is deleted. `composer check` is green,
+the baseline shrank from 758 to 532 entries (221 of the deleted `customtags/`, `htmlparser/`, `template/` code, 5 more that
+the changes fixed: `Core::get()`, `LocaleHandler::get()`, three in `ExceptionHandler`), with no new entry.
+
+**Wiring (decisions).**
+
+- `Core::createTemplateEngine(LocaleHandler): TemplateEngine` (new, public): `DirectoryTemplateCache(cacheDirectory,
+  templateBaseDirectory: baseDirectory)` + `TemplateTagCollection::createDefault(localeHandler, snippetsDirectory,
+  SystemClock)`. `prepareHttpResponse()` calls it once per request after the `LocaleHandler` exists and passes the engine to
+  `ContentHandler::processRequest(…, templateEngine:)`; the `ContentHandler` hands it to `HtmlDocument` and the `ViewContext`.
+  Decision: the factory lives on `Core` (not as a private method of `ExceptionHandler`) so the exception handler, which has the
+  `Core` in its context, builds its engine the same way without a copy of the wiring. Step 5 adds the project's own tags here
+  (`Core` must keep them for the error pages).
+- `ExceptionHandler::getHtmlContent()` creates a `LocaleHandler` per error page (private `createLocaleHandler()`): without
+  request / language / available language an empty one; otherwise one for the language of the request with the global texts of
+  the default route (`applySystemLocale()`, `loadLocalizedText(fileTitle: '')`). Before, the registered handler of the request
+  (with the texts of the view) was used when it existed, and only multi-language projects loaded texts when none was registered.
+  The method cannot throw for an unavailable language or a missing default route (error handler). Behaviour change listed in
+  `UPGRADE.md`.
+- `Core::$instance` became `private static bool $isInitialized` (guard "Core is already initialized" kept, no accessor).
+- `LocaleHandler::register()` is `$localeHandler->applySystemLocale()` (does nothing without language); static instance,
+  `get()`, `isRegistered()` removed.
+- `LogFile`: `$logDirectory` is the first argument of the constructor and of `info()`, `debug()`, `error()` (no caller in yuf or
+  `actra/backend`). Its static registry `$openLogFiles` stays (key `group-logFileName`, ignores the directory) for the later
+  `LogFile` plan.
+- `DbResultTable` takes `TemplateEngine $templateEngine` in the constructor (after `dbQuery`) and passes it to
+  `TablePaginationRenderer::render()` and `TableFilter::render()`; `DbResultTable::render()` is unchanged (the override must stay
+  compatible with `SmartTable::render()`). `TableHelper::createDbResultTable()` gets `templateEngine` after `selectQuery`.
+
+**Changed public signatures** (all in `UPGRADE.md`, ⚠️): `ContentHandler::processRequest(+ templateEngine)`,
+`ViewContext::__construct(+ templateEngine)` (`$context->templateEngine`), `HtmlDocument::__construct(+ templateEngine)`,
+`HtmlSnippet::render(TemplateEngine)`, `Pagination::render(+ templateEngine after currentPage)`,
+`TablePaginationRenderer::render(+ templateEngine after dbResultTable)`, `TableFilter::render(TemplateEngine)`,
+`DbResultTable::__construct(+ templateEngine)`, `TableHelper::createDbResultTable(+ templateEngine)`, `LogFile` (see above).
+Removed: `Core::get()`, `LocaleHandler::get()`, `register()`, `isRegistered()`, the old `actra\yuf\template\{customtags,
+htmlparser,template}` classes.
+
+**Tests.** 2622 tests in total (was 3114 with both engines). The characterization tests run only against the new engine:
+`AbstractTemplate…TestCase` became the concrete final classes `Template…Test` (`TemplateFilesTest`, `TemplateForTagTest`,
+`TemplateIfTagTest`, `TemplateIncludeTagsTest`, `TemplateLangTagTest`, `TemplateOutputTagsTest`, `TemplateSyntaxTest`,
+`TemplateTextTagTest`); all 485 cases are kept with the new-engine expectations (the old-engine columns, `isNewEngine()`
+branches, `forEngine()` and `expectEngineException()` are gone; the `date` tests assert the fixed clock exactly). Doubles in
+`tests/Double/template/`: `TemplateEngineTestCase` (the one base class, formerly `NewEngineTestCase`; it also has what
+`TemplateCharacterizationTestCase` had), `TemplateRenderer` (formerly `NewTemplateRenderer`), new `TemplateEngineFactory`
+(an engine like `Core::createTemplateEngine()` with a fixed clock; used by `ViewContextFactory`, `HtmlSnippetTest`,
+`TablePaginationRendererTest`, `TableFilterCsrfTest`). Removed: `OldTemplateRenderer`, the `Old/NewEngine…Test` subclasses,
+`CoreTestInstance`, the old `DirectoryTemplateCacheTest` and `OptionsSelectionTest`. `HtmlSnippetTest` and
+`TablePaginationRendererTest` pass the engine; new tests: plain text in a snippet is escaped, `applySystemLocale()` without
+language keeps the locale.
+
+**Not covered.** `HtmlDocument::render()` (needs a `RequestHandler`, which cannot be created without reflection; checked with
+the example), `ContentHandler::processRequest()` and `Core::createTemplateEngine()` / `prepareHttpResponse()` (`Core` is not
+constructible), the `ExceptionHandler` error page with the new engine (the handler ends with `exit`; the error page templates
+are in `TemplateFilesTest`, `/nope.html` checked in the browser/curl with debug on and off), `LocaleHandler::applySystemLocale()`
+with a language (changes the process locale), `LogFile`.
+
+**Example.** `/` and `/index.html` are byte-identical to before (200, 'Hello World!'); `/nope.html` (404, debug on) differs
+only in the line numbers of the stack trace; the debug-off page (`notFound.html`) renders. The generated cache of the example
+is deleted again.
+
+**Remaining `mixed` / static state.** `mixed` stays only where the engine reads untyped data (listed in step 2). Static state
+of this area is gone: `Core::$isInitialized` (guard only) and `LogFile::$openLogFiles` remain, see
+`docs/standard-migration/remaining.md`.
+
+**For step 5.** Own tags: `Core::prepareHttpResponse(templateTags: …)` has to store them on the `Core` so that
+`createTemplateEngine()` (used by the request and the error pages) adds them with `TemplateTagCollection::with()`.

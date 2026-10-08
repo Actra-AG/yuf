@@ -14,7 +14,6 @@ use LogicException;
 
 class LocaleHandler
 {
-    private static ?LocaleHandler $registeredInstance = null;
     public readonly ?Language $language;
     public private(set) array $loadedLangFiles = [];
     private array $languageBlocks = [];
@@ -38,30 +37,16 @@ class LocaleHandler
     }
 
     /**
-     * The compiled templates (LangTag) read the texts through this accessor until the template refactoring. Views get
-     * the instance through ViewContext::$locale.
+     * Sets the system locale of the process to the locale of the language (numbers always use `en_US`). Does nothing
+     * for a handler without language.
      */
-    public static function get(): LocaleHandler
+    public function applySystemLocale(): void
     {
-        return LocaleHandler::$registeredInstance;
-    }
-
-    public static function register(LocaleHandler $localeHandler): void
-    {
-        if (LocaleHandler::$registeredInstance !== null) {
-            throw new LogicException(message: 'LocaleHandler is already registered');
-        }
-        LocaleHandler::$registeredInstance = $localeHandler;
-        if ($localeHandler->language === null) {
+        if ($this->language === null) {
             return;
         }
-        setlocale(category: LC_ALL, locales: $localeHandler->language->locale);
+        setlocale(category: LC_ALL, locales: $this->language->locale);
         setlocale(category: LC_NUMERIC, locales: 'en_US');
-    }
-
-    public static function isRegistered(): bool
-    {
-        return LocaleHandler::$registeredInstance !== null;
     }
 
     public function loadLanguageFile(string $filePath): void

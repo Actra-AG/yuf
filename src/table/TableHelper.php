@@ -22,6 +22,7 @@ use actra\yuf\table\renderer\TableHeadRenderer;
 use actra\yuf\table\renderer\TablePaginationRenderer;
 use actra\yuf\table\table\DbResultTable;
 use actra\yuf\table\table\SmartTable;
+use actra\yuf\template\TemplateEngine;
 
 class TableHelper
 {
@@ -45,6 +46,7 @@ class TableHelper
         string $identifier,
         FrameworkDb $db,
         string $selectQuery,
+        TemplateEngine $templateEngine,
         array $params = [],
         ?TableFilter $tableFilter = null,
         ?TablePaginationRenderer $tablePaginationRenderer = null,
@@ -55,6 +57,7 @@ class TableHelper
             identifier: $identifier,
             db: $db,
             dbQuery: DbQuery::createFromSqlQuery(query: $selectQuery, parameters: $params),
+            templateEngine: $templateEngine,
             tableFilter: $tableFilter,
             tablePaginationRenderer: $tablePaginationRenderer,
             sortableTableHeadRenderer: $sortableTableHeadRenderer,

@@ -19,6 +19,7 @@ use actra\yuf\table\renderer\TablePaginationRenderer;
 use actra\yuf\table\TableHelper;
 use actra\yuf\table\TableItem;
 use actra\yuf\table\TableItemCollection;
+use actra\yuf\template\TemplateEngine;
 use Override;
 
 class DbResultTable extends SmartTable
@@ -42,15 +43,16 @@ class DbResultTable extends SmartTable
     private ?int $filledAmount = null;
 
     public function __construct(
-        string                        $identifier, // Can be the name of the main table but must be unique per site
-        public readonly FrameworkDb   $db,
-        public readonly DbQuery       $dbQuery,
-        private readonly ?TableFilter $tableFilter = null,
-        ?TablePaginationRenderer      $tablePaginationRenderer = null,
-        ?SortableTableHeadRenderer    $sortableTableHeadRenderer = null,
-        private readonly int          $itemsPerPage = 25,
+        string                          $identifier, // Can be the name of the main table but must be unique per site
+        public readonly FrameworkDb     $db,
+        public readonly DbQuery         $dbQuery,
+        private readonly TemplateEngine $templateEngine,
+        private readonly ?TableFilter   $tableFilter = null,
+        ?TablePaginationRenderer        $tablePaginationRenderer = null,
+        ?SortableTableHeadRenderer      $sortableTableHeadRenderer = null,
+        private readonly int            $itemsPerPage = 25,
         // Max rows in the table before pagination starts, if a result is not limited to one page
-        public bool                   $limitToOnePage = false,
+        public bool                     $limitToOnePage = false,
     ) {
         if ($sortableTableHeadRenderer === null) {
             $sortableTableHeadRenderer = new SortableTableHeadRenderer();
@@ -81,10 +83,11 @@ class DbResultTable extends SmartTable
         $this->fillBySelectQuery();
         $pagination = $this->tablePaginationRenderer->render(
             dbResultTable: $this,
+            templateEngine: $this->templateEngine,
             entriesPerPage: $this->itemsPerPage,
         );
         $placeholders = [
-            DbResultTable::FILTER => $this->tableFilter === null ? '' : $this->tableFilter->render(),
+            DbResultTable::FILTER => $this->tableFilter === null ? '' : $this->tableFilter->render(templateEngine: $this->templateEngine),
             DbResultTable::PAGINATION => $pagination,
             DbResultTable::TABLE_FOOTER => ($pagination === '') ? '' : '<div class="table-meta table-meta-footer">' . $pagination . '</div>',
         ];

@@ -279,33 +279,39 @@ class ExceptionHandler
             identifier: 'requestedFileName',
             html: $requestHandler?->fileName,
         );
-        if (
-            $requestHandler !== null
-            && $core->availableLanguages->isMultiLang()
-            && !LocaleHandler::isRegistered()
-        ) {
-            $this->loadLocalizedText(requestHandler: $requestHandler, core: $core);
-        }
 
         return new HtmlSnippet(
             htmlSnippetFilePath: $contentPath,
             replacements: $htmlReplacementCollection,
-        )->render();
+        )->render(
+            templateEngine: $core->createTemplateEngine(
+                localeHandler: $this->createLocaleHandler(requestHandler: $requestHandler, core: $core),
+            ),
+        );
     }
 
-    private function loadLocalizedText(
-        RequestHandler $requestHandler,
-        Core $core,
-    ): void {
-        $localeHandler = new LocaleHandler(
-            language: $requestHandler->language,
-            availableLanguages: $core->availableLanguages,
+    /**
+     * The texts of the error pages: the global texts of the default route of the requested language, if the request
+     * and its language are known.
+     */
+    private function createLocaleHandler(?RequestHandler $requestHandler, Core $core): LocaleHandler
+    {
+        $language = $requestHandler?->language;
+        if (
+            $requestHandler === null
+            || $language === null
+            || !$core->availableLanguages->hasLanguage(languageCode: $language->code)
+        ) {
+            return new LocaleHandler(language: null, availableLanguages: $core->availableLanguages);
+        }
+        $localeHandler = new LocaleHandler(language: $language, availableLanguages: $core->availableLanguages);
+        $localeHandler->applySystemLocale();
+        $defaultRouteForLanguage = $requestHandler->defaultRoutesByLanguage?->getRouteForLanguage(
+            languageCode: $language->code,
         );
-        LocaleHandler::register(localeHandler: $localeHandler);
-        $defaultRouteForLanguage = $requestHandler->defaultRoutesByLanguage->getRouteForLanguage(
-            languageCode: $requestHandler->language->code,
-        );
-        $defaultRouteForLanguage->loadLocalizedText(fileTitle: '', localeHandler: $localeHandler);
+        $defaultRouteForLanguage?->loadLocalizedText(fileTitle: '', localeHandler: $localeHandler);
+
+        return $localeHandler;
     }
 
     protected function sendNotFoundHttpResponseAndExit(Throwable $throwable): void

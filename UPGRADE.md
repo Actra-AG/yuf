@@ -4,6 +4,168 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.26.0] – 2026-10-08
+
+yuf renders with the new template engine (`TemplateEngine`, see v4.24.0) and the old engine is deleted. The syntax of
+the templates is unchanged; the changes below are the removed features, the stricter rules and the signatures that now
+take the engine. Check every template and every call of the changed methods. Compiled templates of the old engine in
+the cache directory are no longer used (see the last section).
+
+### ⚠️ Output of plain strings is escaped by the engine
+
+Before, the engine never escaped: values were encoded when they entered the replacements. Now `text`, `print`,
+`options` and the `vars` values of `lang` escape every string, `int`, `float` and `Stringable` with
+`htmlspecialchars(ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')`. Of the replacements, only `addHtml()` / `HtmlText::fromHtml()`
+(and the texts of language files and non-`.html` snippets) are output as they are; `addText()` / `fromText()` are
+escaped once, as before (the engine does not escape twice). A plain string reaches the engine only through
+`new TemplateData(...)`, an `ArrayObject` or an object you pass yourself.
+
+Before: `$data = new ArrayObject(['name' => $name]);` with `{tst:text value='name'}` output `$name` unescaped.
+After: the same output is escaped. Pass `HtmlText::fromHtml(html: …)` (or prepare the value with `addHtml()`) only for
+HTML built by your own code. Escaping is for HTML text and quoted attributes: values in `<script>` or `<style>` are not
+escaped for these contexts; use `data-*` attributes or JSON prepared by the view.
+
+`null` is output as `''`, a boolean as `'1'` / `''` (as before). An array or an object (without `__toString()`) is a
+`TemplateException` in `text`; `print` outputs an escaped `print_r()` dump and formats every `DateTimeInterface` as
+`Y-m-d H:i:s` (before: only `DateTime`).
+
+### ⚠️ `if`: comparison rules
+
+`if` no longer compares with PHP's loose `==`. `ne` is always the inverse of `eq`.
+
+| `against` | `eq` is true for the value |
+|:--|:--|
+| `null` | `null`, `''`, `[]`, `false`, `0`, `0.0` (not `'0'`) |
+| `""` | `null`, `''`, `false` (not `[]`, not `0`) |
+| `true` | the value is truthy in PHP |
+| `false` | the value is falsy in PHP |
+| anything else | the value is a string, `int`, `float` or `Stringable` and equals `against` as string (`1` equals `"1"`) |
+
+Changes against before:
+
+- Against any other value (`against="abc"`, `"1"`, `"0"`): `null`, booleans and arrays never equal it (before, `true`
+  equalled `'abc'` and `false` / `0` equalled `'0'`). Compare against `true` / `false` to test for booleans.
+- `gt`, `ge`, `lt`, `le` compare numbers; a non-numeric value or `against` (`null`, `''`, `[]`, a boolean, `'abc'`) is
+  a `TemplateException` (before: PHP's comparison of mixed types).
+- `in` compares texts, `against` is split at spaces (as before); `null`, booleans and arrays are never in the list.
+- `operator` is optional (default `eq`), the operator is case-insensitive, an unknown operator is a `TemplateException`.
+  An apostrophe in `against` works (it was a `ParseError`).
+- `<tst:else>` must directly follow `</tst:if>` with only whitespace in between; text in between or an `else` without
+  `if` is a `TemplateException` (before: accepted).
+
+### ⚠️ Removed tags and features
+
+None of these is used by the templates of yuf, the example or `actra/backend`.
+
+| Removed | Replacement |
+|:--|:--|
+| `elseif` (was broken) | nested `if` / `else` |
+| `for2`, `forgroup` | `for`; groups and counters prepared by the view |
+| `option`, `checkbox`, `radio`, `checkboxOptions`, `radioOptions`, `formComponent`, `formAddRemove` | the form components of `src/form/`, rendered by the view and added with `addHtml()` |
+| `if compare="hasSnippet"` | a boolean from the view |
+| `for` attributes `groups`, `classfirst`, `classlast`, `class` and the `_count` value | prepared by the view |
+| raw `{var}`, `{var.prop}`, `${var.prop}` inside `for` | `{tst:text value='var.prop'}` (escaped) |
+| selectors with method calls and arguments (`a.method(x)`) | a getter or a value prepared by the view |
+| PHP code in templates (`<?php`, `<?=`, `<?`) | values from the view |
+
+Before: `<tst:for value="rows" var="row">{row.name}</tst:for>`. After:
+`<tst:for value="rows" var="row">{tst:text value='row.name'}</tst:for>`.
+
+### ⚠️ Stricter syntax and other behaviour of the tags
+
+- A closing tag that does not match the opening tag (`<tst:if …></tst:for>`) is a `TemplateException` with file and
+  line (before: accepted).
+- `<?php`, `<?=` and `<?` (also `<?xml`) in a template are a `TemplateException`; an XML declaration comes from the
+  view.
+- `<tst:text value="x">` without `/` and without a closing tag is "not closed" (before: self-closing).
+  `<tst:text value="x"></tst:text>` works now (the closing tag was left in the output).
+- `for`: the variable `var` only exists inside the body and no longer removes an outer value with the same name.
+  Iterates arrays, `Traversable`, the public properties of an object and `null` (empty).
+- Selectors: array or `ArrayAccess` key, public property, public getter `getX()` / `isX()` / `hasX()` (also without a
+  property `x`), public method without arguments. A missing value, an unknown part or a missing top-level value is a
+  `TemplateException` (file and line) instead of a plain `Exception`.
+- `loadSubTpl`: a missing data key or file is a `TemplateException` (before: `TypeError` / `Exception`).
+- `lang`: `vars` works again, it names an array (`vars='names'` with `['name' => 'Anna']` replaces `[NAME]`); the values
+  are escaped, the language text is output as it is. A missing key is a `TemplateException`.
+- `snippet`: a name that leaves the snippets directory (`..`, absolute path, symbolic link out) is a
+  `TemplateException`; a missing snippet is an error for `.html` and other files.
+- `options`: `selected` is optional, may be an array, and keys and labels are escaped.
+- `date` uses the `Clock` (the system clock) and works as inline tag too.
+- Template errors are `actra\yuf\template\TemplateException` (message `<reason> in <file> on line <n>`), no longer a plain
+  `Exception`. A template that throws no longer leaves an output buffer open.
+
+### ⚠️ `HtmlSnippet::render()` needs the template engine
+
+`HtmlSnippet::render()` read `Core::get()` to create an engine. It takes the engine of the request now.
+
+Before: `$html = $snippet->render();`. After (in a view):
+
+```php
+$html = $snippet->render(templateEngine: $this->context->templateEngine);
+```
+
+### ⚠️ `Pagination`, `TablePaginationRenderer`, `TableFilter`, `DbResultTable`
+
+| Before | After |
+|:--|:--|
+| `Pagination::render(listIdentifier:, totalAmount:, currentPage:, entriesPerPage: …)` | `Pagination::render(listIdentifier:, totalAmount:, currentPage:, templateEngine:, entriesPerPage: …)` |
+| `TablePaginationRenderer::render(dbResultTable:, …)` | `render(dbResultTable:, templateEngine:, …)` |
+| `TableFilter::render()` | `render(templateEngine:)` |
+| `new DbResultTable(identifier:, db:, dbQuery:, …)` | `new DbResultTable(identifier:, db:, dbQuery:, templateEngine:, …)` |
+| `TableHelper::createDbResultTable(identifier:, db:, selectQuery:, params: …)` | `createDbResultTable(identifier:, db:, selectQuery:, templateEngine:, params: …)` |
+
+`DbResultTable::render()` is unchanged: it passes its `templateEngine` to the pagination and the filter. In a view, pass
+`$this->context->templateEngine`.
+
+### ⚠️ `ViewContext`, `HtmlDocument`, `ContentHandler::processRequest()`
+
+- `new ViewContext(…, locale:, templateEngine:)`: new required argument `templateEngine`, also readable as
+  `$this->context->templateEngine` in a view.
+- `new HtmlDocument(requestHandler:, cspNonce:, core:, templateEngine:)`: new required argument.
+- `ContentHandler::processRequest(requestHandler:, localeHandler:, core:, templateEngine:)`: new required argument.
+
+Only code that creates these objects itself (tests, own factories) is affected: `Core` does it for the application.
+
+### ⚠️ `Core::get()` removed
+
+The static accessor is gone; `Core` keeps its guard (a second `new Core()` throws a `LogicException`). Pass the
+`Core` or the value you need (`$core->cacheDirectory`, `$core->snippetsDirectory`, …). New: `Core::createTemplateEngine(localeHandler:)` creates the engine of a request (cache in the
+cache directory, the snippets directory of the `Core`, the system clock). For templates outside of a view, create an engine like that and call
+`$engine->render(templateFile:, data: new TemplateData(values: […]))` (`TemplateData::fromReplacements()` for an
+`HtmlReplacementCollection`).
+
+### ⚠️ `LocaleHandler::get()`, `register()` and `isRegistered()` removed
+
+Before: `LocaleHandler::register(localeHandler: $handler)` stored the instance and set the system locale. After: create
+the handler (`new LocaleHandler(language:, availableLanguages:)`; views get it as `$this->context->locale`) and call
+`$handler->applySystemLocale()` for the system locale (`setlocale()`; `Core` does it for the request). `lang` tags read
+the texts from the `LocaleHandler` of the engine.
+
+The error pages (`ExceptionHandler`) use a `LocaleHandler` of their own: the global texts of the default route of the
+requested language. Before, the one of the request was used if it existed, with the texts of the requested view; an
+error page that uses `lang` with a text of the view's own language file needs it in `global.lang.php` now.
+
+### ⚠️ `LogFile` needs the log directory
+
+`LogFile` read `Core::get()->logDirectory`. The directory is the first argument now.
+
+Before: `LogFile::info(logFileName: 'sync', message: '…')`, `new LogFile(group: 'info', logFileName: 'sync')`.
+After: `LogFile::info(logDirectory: $core->logDirectory, logFileName: 'sync', message: '…')`
+(`debug()`, `error()` the same), `new LogFile(logDirectory: $core->logDirectory, group: 'info', logFileName: 'sync')`.
+
+### ⚠️ The old template classes are removed
+
+`actra\yuf\template\customtags\*`, `actra\yuf\template\htmlparser\*` and `actra\yuf\template\template\*` (the old
+`TemplateEngine`, `DirectoryTemplateCache`, `TemplateTag`, `TagNode`, …) are deleted, with no replacement classes of
+the same name. Code that used the old engine directly uses `actra\yuf\template\TemplateEngine` (see above). Own tags are
+planned for v4.27.0.
+
+### Old compiled templates
+
+The compiled templates of the old engine in the cache directory (`*.php` files named like the template path, e.g.
+`<cacheDirectory>app/view/frontend/templates/default.php`) are no longer used and can be deleted. The new engine writes below `<cacheDirectory>v<format version>/`,
+so an upgrade never runs the compiled code of an older version.
+
 ## [v4.25.0] – 2026-10-08
 
 ### ⚠️ The replacement API says what it does: `fromHtml()` / `fromText()`, `addHtml()` / `addText()`

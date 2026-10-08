@@ -12,6 +12,7 @@ namespace actra\yuf\tests\Double\table;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
 use actra\yuf\table\table\DbResultTable;
+use actra\yuf\template\TemplateEngine;
 
 final class FixedPageDbResultTable extends DbResultTable
 {
@@ -19,10 +20,11 @@ final class FixedPageDbResultTable extends DbResultTable
         string $identifier,
         FrameworkDb $db,
         DbQuery $dbQuery,
+        TemplateEngine $templateEngine,
         private readonly int $totalAmount,
         private readonly int $currentPage,
     ) {
-        parent::__construct(identifier: $identifier, db: $db, dbQuery: $dbQuery);
+        parent::__construct(identifier: $identifier, db: $db, dbQuery: $dbQuery, templateEngine: $templateEngine);
     }
 
     #[\Override]

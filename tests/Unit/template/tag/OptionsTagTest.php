@@ -13,10 +13,10 @@ use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\html\HtmlText;
 use actra\yuf\html\HtmlTextCollection;
 use actra\yuf\template\TemplateException;
-use actra\yuf\tests\Double\template\NewEngineTestCase;
 use actra\yuf\tests\Double\template\StringableValue;
+use actra\yuf\tests\Double\template\TemplateEngineTestCase;
 
-final class OptionsTagTest extends NewEngineTestCase
+final class OptionsTagTest extends TemplateEngineTestCase
 {
     private const string SOURCE = '<tst:options options="o" selected="s"/>';
 

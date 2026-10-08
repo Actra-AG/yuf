@@ -11,6 +11,7 @@ namespace actra\yuf\table\renderer;
 
 use actra\yuf\pagination\Pagination;
 use actra\yuf\table\table\DbResultTable;
+use actra\yuf\template\TemplateEngine;
 
 readonly class TablePaginationRenderer
 {
@@ -22,6 +23,7 @@ readonly class TablePaginationRenderer
 
     public function render(
         DbResultTable $dbResultTable,
+        TemplateEngine $templateEngine,
         int $entriesPerPage = 25,
         int $beforeAfter = 2,
         int $startEnd = 1,
@@ -30,6 +32,7 @@ readonly class TablePaginationRenderer
             listIdentifier: $dbResultTable->identifier,
             totalAmount: $dbResultTable->getTotalAmount(),
             currentPage: $dbResultTable->getCurrentPaginationPage(),
+            templateEngine: $templateEngine,
             entriesPerPage: $entriesPerPage,
             beforeAfter: $beforeAfter,
             startEnd: $startEnd,

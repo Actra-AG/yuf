@@ -13,6 +13,7 @@ use actra\yuf\Core;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\html\HtmlDocument;
 use actra\yuf\security\CspNonce;
+use actra\yuf\template\TemplateEngine;
 use Exception;
 use LogicException;
 
@@ -25,6 +26,7 @@ class ContentHandler
     private ?HtmlDocument $htmlDocument = null;
     private ?RequestHandler $requestHandler = null;
     private ?Core $core = null;
+    private ?TemplateEngine $templateEngine = null;
 
     public function __construct(
         ContentType $contentType,
@@ -41,13 +43,14 @@ class ContentHandler
     public function getHtmlDocument(): HtmlDocument
     {
         if ($this->htmlDocument === null) {
-            if ($this->requestHandler === null || $this->core === null) {
+            if ($this->requestHandler === null || $this->core === null || $this->templateEngine === null) {
                 throw new LogicException(message: 'The HTML document is only available while the request is processed.');
             }
             $this->htmlDocument = new HtmlDocument(
                 requestHandler: $this->requestHandler,
                 cspNonce: $this->cspNonce,
                 core: $this->core,
+                templateEngine: $this->templateEngine,
             );
         }
 
@@ -59,13 +62,18 @@ class ContentHandler
      *
      * @throws LogicException if called twice
      */
-    public function processRequest(RequestHandler $requestHandler, LocaleHandler $localeHandler, Core $core): void
-    {
+    public function processRequest(
+        RequestHandler $requestHandler,
+        LocaleHandler $localeHandler,
+        Core $core,
+        TemplateEngine $templateEngine,
+    ): void {
         if ($this->requestHandler !== null) {
             throw new LogicException(message: 'The request is already processed.');
         }
         $this->requestHandler = $requestHandler;
         $this->core = $core;
+        $this->templateEngine = $templateEngine;
         $route = $requestHandler->route;
         if ($route->viewCallback !== null) {
             $this->setContent(contentString: call_user_func(callback: $route->viewCallback));
@@ -84,6 +92,7 @@ class ContentHandler
             pathVars: new PathVars(values: $requestHandler->pathVars),
             content: $this,
             locale: $localeHandler,
+            templateEngine: $templateEngine,
         );
         $view = ($route->viewFactory ?? new ClassNameViewFactory())->createView(context: $context);
         if ($view === null) {

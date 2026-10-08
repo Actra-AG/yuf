@@ -11,6 +11,7 @@ namespace actra\yuf;
 
 use actra\autoloader\Autoloader;
 use actra\autoloader\AutoloaderPath;
+use actra\yuf\clock\SystemClock;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ErrorHandler;
 use actra\yuf\core\HttpRequest;
@@ -28,12 +29,15 @@ use actra\yuf\security\CspPolicySettings;
 use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\session\FileSessionHandler;
 use actra\yuf\session\SessionSettings;
+use actra\yuf\template\cache\DirectoryTemplateCache;
+use actra\yuf\template\tag\TemplateTagCollection;
+use actra\yuf\template\TemplateEngine;
 use LogicException;
 
 class Core
 {
     public const string APP_CLASS_PREFIX = 'app';
-    private static ?Core $instance = null;
+    private static bool $isInitialized = false;
     private static ?HttpResponse $httpResponse = null;
     private static array $config;
 
@@ -67,10 +71,10 @@ class Core
         string $snippetsDirectory = '{APP_DIRECTORY}snippets/',
         string $viewDirectory = '{APP_DIRECTORY}view/',
     ) {
-        if (Core::$instance !== null) {
+        if (Core::$isInitialized) {
             throw new LogicException(message: 'Core is already initialized');
         }
-        Core::$instance = $this;
+        Core::$isInitialized = true;
         Core::$config = require_once $envFilePath;
         error_reporting(error_level: Core::$config['defaultErrorReporting']);
         date_default_timezone_set(timezoneId: Core::$config['defaultTimeZone']);
@@ -225,7 +229,8 @@ class Core
             language: $requestHandler->language,
             availableLanguages: $this->availableLanguages,
         );
-        LocaleHandler::register(localeHandler: $localeHandler);
+        $localeHandler->applySystemLocale();
+        $templateEngine = $this->createTemplateEngine(localeHandler: $localeHandler);
         $defaultContentType = $requestHandler->route->defaultContentType;
         if ($defaultContentType === null) {
             throw new LogicException(
@@ -238,6 +243,7 @@ class Core
             requestHandler: $requestHandler,
             localeHandler: $localeHandler,
             core: $this,
+            templateEngine: $templateEngine,
         );
         if (!$contentHandler->hasContent()) {
             throw new NotFoundException();
@@ -265,9 +271,24 @@ class Core
         return Core::$config[$key];
     }
 
-    public static function get(): Core
+    /**
+     * Creates the template engine of a request: the compiled templates are cached in the cache directory, `snippet`
+     * tags read from the snippets directory and `lang` tags from the given locale handler. Create one per request;
+     * the exception handler creates its own for the error pages.
+     */
+    public function createTemplateEngine(LocaleHandler $localeHandler): TemplateEngine
     {
-        return Core::$instance;
+        return new TemplateEngine(
+            cache: new DirectoryTemplateCache(
+                cacheDirectory: $this->cacheDirectory,
+                templateBaseDirectory: $this->baseDirectory,
+            ),
+            tags: TemplateTagCollection::createDefault(
+                localeHandler: $localeHandler,
+                snippetsDirectory: $this->snippetsDirectory,
+                clock: new SystemClock(),
+            ),
+        );
     }
 
     public function renderCopyrightYear(): string

@@ -10,12 +10,12 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\template\tag;
 
 use actra\yuf\template\TemplateException;
-use actra\yuf\tests\Double\template\NewEngineTestCase;
+use actra\yuf\tests\Double\template\TemplateEngineTestCase;
 
 /**
- * The renderer of NewEngineTestCase has a fixed clock at 2026-01-02 03:04:05.
+ * The renderer of TemplateEngineTestCase has a fixed clock at 2026-01-02 03:04:05.
  */
-final class DateTagTest extends NewEngineTestCase
+final class DateTagTest extends TemplateEngineTestCase
 {
     public function testElementForm(): void
     {

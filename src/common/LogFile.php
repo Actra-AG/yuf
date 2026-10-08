@@ -11,7 +11,6 @@ namespace actra\yuf\common;
 
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
-use actra\yuf\Core;
 use Throwable;
 
 class LogFile
@@ -21,9 +20,16 @@ class LogFile
     /** @var resource */
     private $stream;
 
-    public function __construct(string $group, string $logFileName, private readonly Clock $clock = new SystemClock())
-    {
-        $groupDirectoryPath = LogFile::createDirectoryIfMissing(path: Core::get()->logDirectory . $group);
+    /**
+     * @param string $logDirectory The log directory of the project (`Core::$logDirectory`, with trailing slash)
+     */
+    public function __construct(
+        string $logDirectory,
+        string $group,
+        string $logFileName,
+        private readonly Clock $clock = new SystemClock(),
+    ) {
+        $groupDirectoryPath = LogFile::createDirectoryIfMissing(path: $logDirectory . $group);
         $dateArr = explode(separator: '-', string: $this->clock->now()->format(format: 'Y-m-d'));
         $yearDirectoryPath = LogFile::createDirectoryIfMissing(
             path: $groupDirectoryPath . DIRECTORY_SEPARATOR . $dateArr[0],
@@ -63,10 +69,12 @@ class LogFile
     }
 
     public static function info(
+        string $logDirectory,
         string $logFileName,
         string $message,
     ): void {
         LogFile::log(
+            logDirectory: $logDirectory,
             group: 'info',
             logFileName: $logFileName,
             message: $message,
@@ -74,6 +82,7 @@ class LogFile
     }
 
     private static function log(
+        string $logDirectory,
         string $group,
         string $logFileName,
         string $message,
@@ -85,6 +94,7 @@ class LogFile
             $logFile = LogFile::$openLogFiles[$group . '-' . $logFileName];
         } else {
             $logFile = new LogFile(
+                logDirectory: $logDirectory,
                 group: $group,
                 logFileName: $logFileName,
             );
@@ -107,10 +117,12 @@ class LogFile
     }
 
     public static function debug(
+        string $logDirectory,
         string $logFileName,
         string $message,
     ): void {
         LogFile::log(
+            logDirectory: $logDirectory,
             group: 'debug',
             logFileName: $logFileName,
             message: $message,
@@ -118,10 +130,12 @@ class LogFile
     }
 
     public static function error(
+        string $logDirectory,
         string $logFileName,
         string $message,
     ): void {
         LogFile::log(
+            logDirectory: $logDirectory,
             group: 'error',
             logFileName: $logFileName,
             message: $message,

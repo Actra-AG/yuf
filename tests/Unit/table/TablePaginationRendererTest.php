@@ -12,8 +12,9 @@ namespace actra\yuf\tests\Unit\table;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
 use actra\yuf\table\renderer\TablePaginationRenderer;
-use actra\yuf\tests\Double\CoreTestInstance;
+use actra\yuf\template\TemplateEngine;
 use actra\yuf\tests\Double\table\FixedPageDbResultTable;
+use actra\yuf\tests\Double\template\TemplateEngineFactory;
 use Override;
 use PHPUnit\Framework\TestCase;
 
@@ -21,21 +22,17 @@ final class TablePaginationRendererTest extends TestCase
 {
     private static int $tableCounter = 0;
 
-    #[Override]
-    public static function setUpBeforeClass(): void
-    {
-        $cacheDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-pagination-test' . DIRECTORY_SEPARATOR;
-        if (!is_dir(filename: $cacheDirectory)) {
-            mkdir(directory: $cacheDirectory);
-        }
-        CoreTestInstance::register(cacheDirectory: $cacheDirectory);
-    }
+    private TemplateEngine $templateEngine;
 
     #[Override]
     protected function setUp(): void
     {
         // The template cache checks for its files via is_dir()/file_exists(), which would report stale results
         clearstatcache();
+        $this->templateEngine = TemplateEngineFactory::create(
+            cacheDirectory: sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-pagination-test' . DIRECTORY_SEPARATOR,
+            templateBaseDirectory: dirname(path: __DIR__, levels: 3) . '/',
+        );
     }
 
     public function testDefaultTitlesAreEnglish(): void
@@ -85,10 +82,11 @@ final class TablePaginationRendererTest extends TestCase
             identifier: 'paginationTest' . ++self::$tableCounter,
             db: TablePaginationRendererTest::createStub(FrameworkDb::class),
             dbQuery: TablePaginationRendererTest::createStub(DbQuery::class),
+            templateEngine: $this->templateEngine,
             totalAmount: 100,
             currentPage: 2,
         );
 
-        return $renderer->render(dbResultTable: $table);
+        return $renderer->render(dbResultTable: $table, templateEngine: $this->templateEngine);
     }
 }

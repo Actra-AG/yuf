@@ -127,8 +127,9 @@ Only the view of the current request is created; a file without a mapped view is
 
 Every view receives the `ViewContext` of the request and passes it to `BaseView::__construct()`. It holds the route
 (`$this->context->route`), the file group and title, the `PathVars` and the `ContentHandler`
-(`$this->context->content->getContentType()`); `BaseView::getHtmlDocument()` and `getJsonRequestBody()` give the HTML
-document and the JSON request body.
+(`$this->context->content->getContentType()`), the `LocaleHandler` (`$this->context->locale`) and the template engine
+(`$this->context->templateEngine`); `BaseView::getHtmlDocument()` and `getJsonRequestBody()` give the HTML document and
+the JSON request body.
 
 ```php
 new Route(
@@ -202,23 +203,86 @@ JSON error responses use this structure:
 
 Optional additional response data is returned in a top-level `data` property.
 
-## Template Tags
+## Templates
 
-`yuf` templates support custom tags for common rendering logic.
+Templates are HTML files with `tst:` tags, rendered by the `TemplateEngine`. `Core` creates one engine per request; a
+view gets it as `$this->context->templateEngine`, `HtmlDocument` renders the page with it. The engine compiles a
+template to PHP once and keeps it in the cache directory (below `v<format version>/`, so an upgrade never runs old
+compiled code).
 
-### Conditional snippet rendering
+- Inline tag: `{tst:text value='customer.name'}` (attribute values in single quotes).
+- Element tag: `<tst:text value="customer.name"/>` or `<tst:for …>…</tst:for>` (attribute values in double quotes). A
+  closing tag that does not match its opening tag is an error.
+- Selector (attributes that name data): `a.b.c`. The first part is a key of the template data; each further part is an
+  array key, a public property, a public getter (`getB()`, `isB()`, `hasB()`) or a public method without arguments.
+- Text outside of tags is copied unchanged. PHP code in a template (`<?php`) is an error.
 
-The `tst:if` tag can check whether a snippet file exists in the configured snippets directory by using
-`compare="hasSnippet"`.
+| Tag | Attributes | Output |
+|:--|:--|:--|
+| `text` | `value` | The value, escaped. |
+| `if` / `else` | `compare`, `operator` (`eq` default, `ne`, `gt`, `ge`, `lt`, `le`, `in`), `against` | The block when the comparison is true, else the `else` block that directly follows `</tst:if>`. |
+| `for` | `value`, `var` | The body for each item of an array or iterable; `var` is only visible inside. |
+| `loadSubTpl` | `tplfile` (path or `{key}`) | Another template with the same data. |
+| `lang` | `key`, `vars` (optional, an array) | The text of the `LocaleHandler`; `[NAME]` is replaced by `vars['name']` (escaped). |
+| `snippet` | `name` | A file of the snippets directory: `.html` as template, other files as they are. |
+| `print` | `var` | Debug output of a value, escaped. |
+| `date` | `format` | The current date of the clock, in the `date()` format. |
+| `options` | `options`, `selected` (optional) | `<option>` elements (`<optgroup>` for nested arrays). |
+
+`if` compares explicitly: `against="null"` is true for `null`, `''`, `[]`, `false` and `0`; `against="true"` / `"false"`
+test the truthiness; any other `against` is compared as string with strings, numbers and `Stringable` values;
+`gt`/`ge`/`lt`/`le` need numbers and throw a `TemplateException` otherwise.
 
 ```html
-
-<tst:if compare="hasSnippet" operator="eq" against="example.html">
-  <tst:snippet name="example.html"/>
+<tst:if compare="user.isAdmin" operator="eq" against="true">
+    <p>{tst:lang key='welcomeAdmin'}</p>
 </tst:if>
+<tst:else>
+    <p>{tst:text value='user.name'}</p>
+</tst:else>
+<tst:for value="items" var="item">
+    <li>{tst:text value='item.label'}</li>
+</tst:for>
+<tst:snippet name="menu.html"/>
 ```
 
-The value of `against` is resolved relative to `Core::get()->snippetsDirectory`.
+### Escaping
+
+`text`, `print`, `options` and the `vars` of `lang` escape every string, number and `Stringable` value with
+`htmlspecialchars()`. The replacement API says what it does: `addText()` / `HtmlText::fromText()` take plain text (escaped
+once), `addHtml()` / `HtmlText::fromHtml()` take HTML built by your own code and output it as it is. Never pass user data to
+`addHtml()`. Language texts and non-`.html` snippets are output as they are. Escaping is for HTML text and quoted
+attributes: values in `<script>` or `<style>` are not escaped for these contexts, use `data-*` attributes or JSON
+prepared by the view. yuf ships no JavaScript.
+
+### Snippets, pagination and tables
+
+`HtmlSnippet` renders a snippet file with replacements; the engine is passed explicitly (there is no static accessor):
+
+```php
+$snippet = HtmlSnippet::createForCurrentView(route: $this->context->route, snippetName: 'menu');
+$snippet->replacements->addText(identifier: 'title', text: $title);
+$html = $snippet->render(templateEngine: $this->context->templateEngine);
+```
+
+`Pagination::render()`, `TablePaginationRenderer::render()` and `TableFilter::render()` take `templateEngine:` the same
+way; a `DbResultTable` takes it in its constructor (`TableHelper::createDbResultTable(identifier:, db:, selectQuery:,
+templateEngine:)`) and passes it to the pagination and the filter.
+
+### Using the engine directly
+
+In a view, `$this->context->templateEngine` is the engine of the request. Elsewhere, with the `Core` at hand:
+
+```php
+$engine = $core->createTemplateEngine(localeHandler: $localeHandler);
+$html = $engine->render(
+    templateFile: $templateFile,
+    data: new TemplateData(values: ['name' => $name]), // plain strings are escaped by the template
+);
+```
+
+`TemplateData::fromReplacements($replacements)` takes an `HtmlReplacementCollection`. Errors are `TemplateException`s with
+the template file and line. Own tags (`TemplateTag`, `TemplateTagCollection`) are planned for the next release.
 
 ## Forms
 
