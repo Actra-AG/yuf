@@ -136,3 +136,130 @@ Key results: `against="null"` matches `null`, `''`, `[]`, `false` and `0` (but n
 the real clock of `date`; PHP warnings and deprecations of the compiled code (not testable because PHPUnit fails on
 them; documented above); the `HtmlSnippet`, `ContentHandler` and `ExceptionHandler` wiring (not part of the engine; the
 templates are rendered through the renderer with the replacement keys of `HtmlDocument` and `ExceptionHandler`).
+
+### Step 2 (v4.24.0) – done
+
+New engine built next to the old one, not wired. `Core`, `HtmlDocument`, `HtmlSnippet`, `Pagination`, `TableFilter` and
+the old classes are unchanged. `composer check` is green, the baseline is unchanged (760 entries, no entry for new code).
+
+**Classes (`src/template/`).** Public API: `TemplateEngine`, `TemplateData`, `TemplateException`, and in `tag/`
+`TemplateTag`, `TemplateTagContext`, `TemplateTagCollection`, `TextTag`, `LoadSubTplTag`, `LangTag`, `SnippetTag`,
+`PrintTag`, `DateTag`, `OptionsTag`; in `cache/` `TemplateCache`, `DirectoryTemplateCache`. `@internal`: `parser/`
+(`TemplateParser`, `TemplateNode`, `TextNode`, `TagNode`, `TemplateTreeBuilder`, `OpenTagFrame`), `compiler/`
+(`TemplateCompiler`, `IfElseNode`), `runtime/` (`TemplateRuntime`, `TemplateLoader`, `TemplateScopes`,
+`SelectorResolver`, `ValueComparator`, `ComparisonOperatorEnum`, `ValueFormatter`, `TrustedHtml`).
+
+**Public signatures.**
+
+- `TemplateEngine::__construct(TemplateCache $cache, TemplateTagCollection $tags, string $namespacePrefix = 'tst')`,
+  `render(string $templateFile, TemplateData $data): string` (one engine per request; no static state).
+- `TemplateData::__construct(array $values = [])`, `TemplateData::fromReplacements(HtmlReplacementCollection)`,
+  `with(string $identifier, mixed $value): TemplateData`. `fromReplacements()` marks every string of the replacements as
+  trusted HTML (`TrustedHtml`): `HtmlReplacement::getDataForRenderer()` has rendered `HtmlText`, the items of
+  `HtmlTextCollection` and the strings of `HtmlDataObject` / `HtmlDataObjectCollection` already, so `HtmlDocument` pages
+  stay byte-identical later. Plain strings in `new TemplateData(...)`, `ArrayObject` or objects are escaped.
+- `TemplateTag`: `getName(): string`, `render(TemplateTagContext $context, array $attributes, ?Closure $body): string`
+  (`$body` renders the children of `<tst:name>…</tst:name>`, `null` for inline tags and `<tst:name/>`).
+- `TemplateTagContext`: `resolve(string $selector)`, `escape(mixed $value): string`, `text(mixed $value): string`
+  (unescaped text for paths and comparisons), `renderTemplate(string $templateFile): string`,
+  `requireAttribute(array $attributes, string $name): string`.
+- `TemplateTagCollection::__construct(TemplateTag ...$tags)`, `createDefault(LocaleHandler, string $snippetsDirectory,
+  Clock): TemplateTagCollection`, `with(TemplateTag $tag): TemplateTagCollection`, `find(string $name): ?TemplateTag`. A
+  name that is used twice and the names `if`, `else`, `for` (compiled by the engine, `TemplateCompiler::NATIVE_TAGS`) throw an
+  `InvalidArgumentException`.
+- `TemplateCache`: `find(string $templateFile): ?string` (path of an up-to-date compiled file), `store(string
+  $templateFile, string $compiledCode): string`. `DirectoryTemplateCache::__construct(string $cacheDirectory, string
+  $templateBaseDirectory)`: file `<cache>/v<TemplateCompiler::FORMAT_VERSION>/<relative path>.php`, templates outside the base
+  directory (or with `..`) under `external/<sha256 of the path>.php`; outdated when the template is as new or newer
+  (`>=`, so an edit in the same second is not missed); atomic write (temporary file in the same directory +
+  `rename()`), directories `0775`, files `0664`, `opcache_invalidate()` after a write.
+- `TemplateException(string $reason, ?string $templateFile = null, ?int $templateLine = null, ?Throwable $previous =
+  null)`, message `<reason> in <file> on line <n>`; the properties are `reason`, `templateFile`, `templateLine`;
+  `withLocation()` returns a copy with file and line. Tags throw it without a location; `TemplateRuntime` adds the file and
+  line of the tag (an exception that names a file already, e.g. from a sub-template, is kept).
+
+**Design decisions in the code (not in design.md).**
+
+- Parsing: HTML comments are matched first, so tags in comments stay text (as today). CDATA is not special. `<tst:name …>`
+  needs a close tag, there are no self-closing tag names any more (see differences). An element tag with attributes in
+  single quotes is not recognized and stays text (as today). Attribute values of element tags are trimmed (as today).
+- Compiler: output is `echo 'literal';` (via `var_export()`), so a template line break after a tag is removed in the
+  compiler (`\r\n`, `\n` or `\r`, like PHP after `?>`): after inline tags, self-closing tags, the opening tag of a body
+  and every closing tag, except `</tst:if>` that is followed by `<tst:else>`. `if` + whitespace + `else` is joined in a
+  grouping step (`IfElseNode`); anything else between them, or an `else` without `if`, is a `TemplateException`. `operator`
+  is checked at compile time, missing `compare`/`against`/`var`/`value` too. Compiled code only uses `$runtime`
+  (`compare()`, `iterate()`, `pushScope()`/`popScope()`, `renderTag()`), no `::`, no `new`, no `$this`.
+- Execution is in `TemplateRuntime::renderTemplate()` (static closure with only the runtime, `ob_end_clean()` of every buffer the
+  template opened when anything is thrown), not in `TemplateEngine`, because sub-templates (`loadSubTpl`, `snippet`) need
+  the same runtime, scopes and loader. `TemplateEngine::render()` creates one runtime per call.
+- Selector order: array / `ArrayAccess` key, public property, getter `get|is|has`+Ucfirst, public method; getters and
+  methods must be public, non-static and without required arguments (checked with reflection, no `$object->$name`). The
+  values of arrays and objects are untyped, so `mixed` appears in exactly these places (documented): `TemplateData`
+  values, `TemplateScopes`, `SelectorResolver::narrow()`, `ValueFormatter`, `ValueComparator`, `TemplateTagContext::escape()`
+  and `text()`, `TemplateRuntime::escape()` / `text()` / `pushScope()` / `iterate()`.
+- `for` iterates arrays, `Traversable` (also generators), the public properties of an object and `null` (empty);
+  everything else is a `TemplateException`.
+- `lang`: `vars` is the selector of an array (`['name' => 'Anna']`), not a comma separated list of data names (design.md);
+  a missing key is a `TemplateException`.
+- `snippet`: lexical check (empty/absolute/`..`/backslash/NUL) plus `realpath()` containment, so a symbolic link out of the
+  snippets directory is rejected too; a missing snippet is an exception for `.html` and other files.
+- `options`: `selected` may be a single value or an array; every item is compared as text (a boolean is `'1'` / `''`, like
+  in `text`); an item that is an array or object is an error; keys and labels are escaped, `TrustedHtml` labels are not.
+- Values from `HtmlReplacementCollection::addInt()` arrive as `float` (`HtmlReplacement::getDataForRenderer()` has a float return
+  type), the output is the same (`5.0` is output as `5`).
+
+**Tests.** 3114 tests in total, 381 new unit tests: `TemplateParserTest` (27), `TemplateCompilerTest` (38), `SelectorResolverTest`
+(31), `ValueComparatorTest` (98), `ValueFormatterTest` (29), `TemplateScopesTest` (5), `DirectoryTemplateCacheTest` of the new cache
+(13), `TemplateDataTest` (9), `TemplateExceptionTest` (4), `TemplateEngineTest` (28), tag tests (99: `TextTagTest`,
+`LoadSubTplTagTest`, `LangTagTest`, `SnippetTagTest`, `PrintTagTest`, `DateTagTest`, `OptionsTagTest`,
+`TemplateTagCollectionTest`). Doubles in `tests/Double/template/`: `ShoutTag` (own tag with and without body),
+`ThrowingTag`, `NamedTag`, `StringableValue`, `SelectorProbe`, `KeyedObject`, `NewEngineTestCase`, `NewTemplateRenderer`,
+`TemplateWorkDirectory`, `TemplateRenderer` (interface).
+
+**Characterization tests on both engines.** The eight classes of step 1 are now abstract (`AbstractTemplate…TestCase`; the file
+name does not end in `Test.php`, so PHPUnit does not collect them) with one final subclass per engine
+(`OldEngineTemplate…Test`, `NewEngineTemplate…Test`, only `isNewEngine()` differs). `TemplateRenderer` has
+`OldTemplateRenderer` (now also registers `Core` and the `LocaleHandler` itself and resets the `LocaleHandler`) and
+`NewTemplateRenderer` (fixed clock 2026-01-02 03:04:05; `HtmlReplacementCollection` → `TemplateData::fromReplacements()`, array /
+`ArrayObject` → plain `TemplateData`). A test that pins a difference asks `forEngine(old:, new:)`, `expectEngineException()` or
+`isNewEngine()` and states both results; nothing is skipped. 485 cases per engine, 970 in total: 326 cases of the new
+engine have the same expected value as the old one (byte-identical, including pagination, table filter, example templates and
+error pages), 159 differ on purpose (below).
+
+**Intended differences (159 cases on the new engine).**
+
+- `if` comparison matrix, 113 of 320 cells: `eq abc` / `eq 1` / `eq 0` and their `ne` no longer match `true` / `false` (a
+  boolean has no text); `in` compares texts only (`null`, `false`, `true` are no texts; `in ''` only matches `''`);
+  `gt`/`ge`/`lt`/`le` throw a `TemplateException` for every value or `against` that is not numeric (`null`, `''`, `[]`, booleans,
+  `'abc'`), numbers and numeric strings compare numerically (24 rows differ).
+- `if` attributes and syntax (8 cases): `operator` is optional (default `eq`); apostrophe in `against` works (was a `ParseError`);
+  missing `against`, unknown operator, `else` without `if`, text between `</tst:if>` and `<tst:else>`, missing compare value and
+  `compare="hasSnippet"` (now an ordinary missing value) are `TemplateException`s with file and line.
+- Escaping and `print` (10 cases): plain string in `text` (inline, element) and `print` (inline, element), `{tst:text}` inside an
+  attribute, `options` keys/labels, `print` of an array (escaped `print_r()`, inline, element); `print` of a `DateTimeImmutable` is
+  formatted (inline, element).
+- Syntax (7 cases): empty template renders `''`; mismatched close tag and `<?php` are `TemplateException`s; missing template file
+  and unknown tag (element, inline) are `TemplateException`s; `<tst:text …></tst:text>` works (the old engine left
+  `</tst:text>` in the output).
+- Selectors (8 cases): all failing selectors and a missing top-level value throw `TemplateException`s with other messages (7);
+  a getter without a property of that name now works (`computed`).
+- `for` (2 cases): the loop variable never removes an outer value; `{i.html}` inside a `for` stays text (no raw echo).
+- `loadSubTpl` (3 cases): missing data key is a `TemplateException` (was `TypeError`), inline form works; missing file has another
+  message.
+- `snippet` (2 cases): a name with `..` throws; a missing `.html` snippet has another message.
+- `lang` (3 cases): missing key has another message; `vars='name'` with a string is a `TemplateException` (old: `Error: Class
+  "LangTag" not found`); real `vars` are tested in `LangTagTest`.
+- `date` inline works; `options` without `selected` works; `options` without `options` has another message (3 cases).
+- Not a difference: the whitespace rules (line break after a tag removed, whitespace between `</tst:if>` and `<tst:else>` in the
+  `if` branch) are implemented, so the pagination, table filter, example and error page outputs are byte-identical.
+
+**Open points.**
+
+- `<?xml … ?>` (also `<?`) in a template is rejected like `<?php`; a template that needs an XML declaration gets it from the view.
+- `<tst:text value="x">` without `/` or a close tag is now "not closed" (no template of yuf, the example or `actra/backend` does
+  this).
+- `DirectoryTemplateCache` ignores the namespace prefix in the key (one engine uses one prefix).
+- `HtmlReplacementCollection::addInt()` values arrive as `float`; harmless for output and for `eq`.
+- The README does not describe the new engine yet (it is not used); step 5 adds the section.
+- Step 4 must replace `tests/Double/template/OldTemplateRenderer`, the `Old…Test` subclasses and `CoreTestInstance`, and keep the
+  `NewEngine…` classes as the only run of the characterization tests (then the `isNewEngine()` branches can be removed).

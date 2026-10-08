@@ -25,14 +25,20 @@ use PHPUnit\Framework\Attributes\DataProvider;
  * Today the engine never escapes: a plain string is output as it is, an HtmlText created with encoded() is output as
  * it is, and only HtmlText::unencoded() (and addUnencodedText()) is escaped by the replacement API, not by the engine.
  */
-final class TemplateTextTagTest extends TemplateCharacterizationTestCase
+abstract class AbstractTemplateTextTagTestCase extends TemplateCharacterizationTestCase
 {
     /**
-     * @return iterable<string, array{array<string, mixed>|HtmlReplacementCollection, string}>
+     * The third value is the result of the new engine where it differs: it escapes plain strings.
+     *
+     * @return iterable<string, array{array<string, mixed>|HtmlReplacementCollection, string}|array{array<string, mixed>|HtmlReplacementCollection, string, string}>
      */
     public static function valueProvider(): iterable
     {
-        yield 'plain string is not escaped' => [['x' => '<b>a</b> & "q" \'s\''], '<b>a</b> & "q" \'s\''];
+        yield 'plain string' => [
+            ['x' => '<b>a</b> & "q" \'s\''],
+            '<b>a</b> & "q" \'s\'',
+            '&lt;b&gt;a&lt;/b&gt; &amp; &quot;q&quot; &#039;s&#039;',
+        ];
         yield 'empty string' => [['x' => ''], ''];
         yield 'int' => [['x' => 42], '42'];
         yield 'negative int' => [['x' => -3], '-3'];
@@ -83,8 +89,12 @@ final class TemplateTextTagTest extends TemplateCharacterizationTestCase
      * @param array<string, mixed>|HtmlReplacementCollection $data
      */
     #[DataProvider('valueProvider')]
-    public function testInlineTagOutputsValue(array|HtmlReplacementCollection $data, string $expected): void
+    public function testInlineTagOutputsValue(array|HtmlReplacementCollection $data, string $expected, ?string $expectedByNewEngine = null): void
     {
+        if ($this->isNewEngine() && $expectedByNewEngine !== null) {
+            $expected = $expectedByNewEngine;
+        }
+
         $this->assertSame('[' . $expected . ']', $this->renderSource(source: "[{tst:text value='x'}]", data: $data));
     }
 
@@ -92,16 +102,21 @@ final class TemplateTextTagTest extends TemplateCharacterizationTestCase
      * @param array<string, mixed>|HtmlReplacementCollection $data
      */
     #[DataProvider('valueProvider')]
-    public function testElementTagOutputsValue(array|HtmlReplacementCollection $data, string $expected): void
+    public function testElementTagOutputsValue(array|HtmlReplacementCollection $data, string $expected, ?string $expectedByNewEngine = null): void
     {
+        if ($this->isNewEngine() && $expectedByNewEngine !== null) {
+            $expected = $expectedByNewEngine;
+        }
+
         $this->assertSame('[' . $expected . ']', $this->renderSource(source: '[<tst:text value="x"/>]', data: $data));
     }
 
-    public function testElementTagIsSelfClosingSoAClosingTagStaysAsText(): void
+    public function testElementTagWithClosingTag(): void
     {
+        // Differs: the old engine treats <tst:text> as self-closing, so the closing tag stays as text
         $html = $this->renderSource(source: '<tst:text value="x"></tst:text>', data: ['x' => 'v']);
 
-        $this->assertSame('v</tst:text>', $html);
+        $this->assertSame($this->forEngine(old: 'v</tst:text>', new: 'v'), $html);
     }
 
     public function testInlineTagInAttributeValue(): void
@@ -111,7 +126,10 @@ final class TemplateTextTagTest extends TemplateCharacterizationTestCase
             data: ['url' => '?a=1&b=2', 'title' => 'T'],
         );
 
-        $this->assertSame('<a href="?a=1&b=2" title="T">x</a>', $html);
+        $this->assertSame(
+            $this->forEngine(old: '<a href="?a=1&b=2" title="T">x</a>', new: '<a href="?a=1&amp;b=2" title="T">x</a>'),
+            $html,
+        );
     }
 
     public function testSeveralInlineTagsInOneLine(): void
@@ -160,43 +178,66 @@ final class TemplateTextTagTest extends TemplateCharacterizationTestCase
         $this->assertSame($expected, $html);
     }
 
-    public function testMissingTopLevelValueThrowsWithCodeOne(): void
+    public function testMissingTopLevelValueThrows(): void
     {
         $templateFile = $this->writeTemplate(source: "{tst:text value='x'}");
 
-        $this->expectException(Exception::class);
-        $this->expectExceptionCode(1);
-        $this->expectExceptionMessageIs(
-            'The data with offset "x" does not exist for template file ' . $templateFile . '. Check, if the correct BaseView class has been found/executed and set the correct replacements.',
+        $this->expectEngineException(
+            oldClass: Exception::class,
+            oldMessage: 'The data with offset "x" does not exist for template file ' . $templateFile . '. Check, if the correct BaseView class has been found/executed and set the correct replacements.',
+            newMessage: 'The template data "x" does not exist. Check that the view provides a replacement with this identifier in ' . $templateFile . ' on line 1',
+            oldCode: 1,
         );
 
         $this->renderFile(templateFile: $templateFile);
     }
 
     /**
-     * @return iterable<string, array{string, array<string, mixed>, string}>
+     * Selector, data, message of the old engine, reason of the new engine.
+     *
+     * @return iterable<string, array{string, array<string, mixed>, string, string}>
      */
     public static function failingSelectorProvider(): iterable
     {
-        yield 'missing array key' => ['x.y', ['x' => ['a' => 1]], 'Array key "y" does not exist in array "x"'];
+        $cannotRead = static fn(string $name, string $path): string => 'Cannot read "' . $name . '" of "' . $path
+            . '": no key, public property, getter or method without arguments of this name';
+        $notAnObject = 'Cannot read "y" of "x": the value is not an array and not an object';
+
+        yield 'missing array key' => [
+            'x.y',
+            ['x' => ['a' => 1]],
+            'Array key "y" does not exist in array "x"',
+            'The array "x" has no key "y"',
+        ];
         yield 'missing ArrayObject key' => [
             'x.y',
             ['x' => new ArrayObject(array: ['a' => 1])],
             'Array key "y" does not exist in ArrayObject "x"',
+            $cannotRead('y', 'x'),
         ];
-        yield 'missing property' => ['x.y', ['x' => (object) ['a' => 1]], 'Don\'t know how to handle selector part "y"'];
-        yield 'scalar has no parts' => ['x.y', ['x' => 'text'], 'The data with offset "x" is not an object nor an array.'];
-        yield 'null has no parts' => ['x.y', ['x' => null], 'The data with offset "x" is not an object nor an array.'];
+        yield 'missing property' => [
+            'x.y',
+            ['x' => (object) ['a' => 1]],
+            'Don\'t know how to handle selector part "y"',
+            $cannotRead('y', 'x'),
+        ];
+        yield 'scalar has no parts' => [
+            'x.y',
+            ['x' => 'text'],
+            'The data with offset "x" is not an object nor an array.',
+            $notAnObject,
+        ];
+        yield 'null has no parts' => [
+            'x.y',
+            ['x' => null],
+            'The data with offset "x" is not an object nor an array.',
+            $notAnObject,
+        ];
         yield 'private property without getter' => [
             'x.secret',
             ['x' => new SelectorTarget()],
             'Could not access protected/private property "secret". Please provide a getter method',
-        ];
-        // Differs from docs/template-engine/design.md: a getter only works if a property of that name exists
-        yield 'getter without property' => [
-            'x.computed',
-            ['x' => new SelectorTarget()],
-            'Don\'t know how to handle selector part "computed"',
+            $cannotRead('secret', 'x'),
         ];
     }
 
@@ -204,13 +245,34 @@ final class TemplateTextTagTest extends TemplateCharacterizationTestCase
      * @param array<string, mixed> $data
      */
     #[DataProvider('failingSelectorProvider')]
-    public function testUnresolvableSelectorThrows(string $selector, array $data, string $expectedMessage): void
-    {
-        $this->expectException(Exception::class);
-        $this->expectExceptionCode(0);
-        $this->expectExceptionMessageIs($expectedMessage);
+    public function testUnresolvableSelectorThrows(
+        string $selector,
+        array $data,
+        string $oldMessage,
+        string $newReason,
+    ): void {
+        $templateFile = $this->writeTemplate(source: '{tst:text value=\'' . $selector . '\'}');
 
-        $this->renderSource(source: '{tst:text value=\'' . $selector . '\'}', data: $data);
+        $this->expectEngineException(
+            oldClass: Exception::class,
+            oldMessage: $oldMessage,
+            newMessage: $newReason . ' in ' . $templateFile . ' on line 1',
+        );
+
+        $this->renderFile(templateFile: $templateFile, data: $data);
+    }
+
+    public function testGetterWithoutPropertyOfThatName(): void
+    {
+        // Differs: the old engine only calls a getter if a property of that name exists
+        if (!$this->isNewEngine()) {
+            $this->expectException(Exception::class);
+            $this->expectExceptionMessageIs('Don\'t know how to handle selector part "computed"');
+        }
+
+        $html = $this->renderSource(source: "{tst:text value='x.computed'}", data: ['x' => new SelectorTarget()]);
+
+        $this->assertSame('computed', $html);
     }
 
     public function testHtmlDataObjectCollectionItemsAreStdClassList(): void

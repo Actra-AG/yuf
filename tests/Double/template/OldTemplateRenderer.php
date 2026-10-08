@@ -9,63 +9,57 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Double\template;
 
+use actra\yuf\core\LocaleHandler;
+use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\template\template\DirectoryTemplateCache;
 use actra\yuf\template\template\TemplateEngine;
+use actra\yuf\tests\Double\CoreTestInstance;
 use ArrayObject;
-use FilesystemIterator;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use SplFileInfo;
+use Override;
+use ReflectionClass;
 
 /**
- * Renders a template file with today's template engine and a template cache in a fresh temporary directory. The
- * characterization tests only use this class, so a renderer for the new engine can replace it.
+ * Renders a template file with today's template engine and a template cache in a fresh temporary directory. The old
+ * engine reads the snippets directory from `Core::get()` and the texts from `LocaleHandler::get()`, so the renderer
+ * registers them (and removes the `LocaleHandler` again in `cleanUp()`).
  */
-final class OldTemplateRenderer
+final readonly class OldTemplateRenderer implements TemplateRenderer
 {
-    private readonly string $workDirectory;
-    private readonly string $templateDirectory;
-    private readonly string $cacheDirectory;
-    private int $templateCounter = 0;
+    private TemplateWorkDirectory $workDirectory;
 
-    public function __construct()
+    public function __construct(string $snippetsDirectory, LocaleHandler $localeHandler)
     {
-        $this->workDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-template-test-' . bin2hex(string: random_bytes(length: 8)) . DIRECTORY_SEPARATOR;
-        $this->templateDirectory = $this->workDirectory . 'templates' . DIRECTORY_SEPARATOR;
-        $this->cacheDirectory = $this->workDirectory . 'cache' . DIRECTORY_SEPARATOR;
-        mkdir(directory: $this->templateDirectory, recursive: true);
-        mkdir(directory: $this->cacheDirectory, recursive: true);
+        $this->workDirectory = new TemplateWorkDirectory();
+        CoreTestInstance::register(
+            cacheDirectory: $this->workDirectory->cacheDirectory,
+            snippetsDirectory: $snippetsDirectory,
+        );
+        OldTemplateRenderer::resetRegisteredLocaleHandler();
+        LocaleHandler::register(localeHandler: $localeHandler);
     }
 
-    public function getCacheDirectory(): string
-    {
-        return $this->cacheDirectory;
-    }
-
-    /**
-     * Writes the template source to a file in the temporary template directory and returns its path.
-     */
+    #[Override]
     public function writeTemplate(string $source): string
     {
-        $templateFile = $this->templateDirectory . 'template' . ++$this->templateCounter . '.html';
-        file_put_contents(filename: $templateFile, data: $source);
-
-        return $templateFile;
+        return $this->workDirectory->writeTemplate(source: $source);
     }
 
-    /**
-     * @param ArrayObject<string, mixed> $data
-     */
-    public function render(string $templateFile, ArrayObject $data): string
+    #[Override]
+    public function render(string $templateFile, ArrayObject|array|HtmlReplacementCollection $data): string
     {
+        if ($data instanceof HtmlReplacementCollection) {
+            $data = $data->getArrayObject();
+        } elseif (is_array(value: $data)) {
+            $data = new ArrayObject(array: $data);
+        }
         clearstatcache();
         $outputBufferLevel = ob_get_level();
 
         try {
             return new TemplateEngine(
                 templateCacheInterface: new DirectoryTemplateCache(
-                    cachePath: $this->cacheDirectory,
-                    templateBaseDirectory: $this->templateDirectory,
+                    cachePath: $this->workDirectory->cacheDirectory,
+                    templateBaseDirectory: $this->workDirectory->templateDirectory,
                 ),
                 tplNsPrefix: 'tst',
             )->getResultAsHtml(tplFile: $templateFile, dataPool: $data);
@@ -77,26 +71,21 @@ final class OldTemplateRenderer
         }
     }
 
+    #[Override]
     public function cleanUp(): void
     {
-        if (!is_dir(filename: $this->workDirectory)) {
-            return;
-        }
-        $iterator = new RecursiveIteratorIterator(
-            iterator: new RecursiveDirectoryIterator(
-                directory: $this->workDirectory,
-                flags: FilesystemIterator::SKIP_DOTS,
-            ),
-            mode: RecursiveIteratorIterator::CHILD_FIRST,
+        OldTemplateRenderer::resetRegisteredLocaleHandler();
+        $this->workDirectory->cleanUp();
+    }
+
+    /**
+     * There is no public way to unregister the `LocaleHandler`.
+     */
+    private static function resetRegisteredLocaleHandler(): void
+    {
+        new ReflectionClass(objectOrClass: LocaleHandler::class)->setStaticPropertyValue(
+            name: 'registeredInstance',
+            value: null,
         );
-        /** @var SplFileInfo $entry */
-        foreach ($iterator as $entry) {
-            if ($entry->isDir()) {
-                rmdir(directory: $entry->getPathname());
-            } else {
-                unlink(filename: $entry->getPathname());
-            }
-        }
-        rmdir(directory: $this->workDirectory);
     }
 }

@@ -4,6 +4,17 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.24.0] – 2026-10-08
+
+### New template engine (not used yet)
+
+`src/template/` has a new template engine next to the old one: `TemplateEngine`, `TemplateData`, `TemplateException`,
+`TemplateTag`, `TemplateTagContext`, `TemplateTagCollection`, the built-in tags (`TextTag`, `LoadSubTplTag`, `LangTag`,
+`SnippetTag`, `PrintTag`, `DateTag`, `OptionsTag`), `TemplateCache` and `DirectoryTemplateCache`. Nothing in yuf uses
+it yet: `Core`, `ContentHandler`, `HtmlDocument`, `HtmlSnippet`, `Pagination` and `TableFilter` still render with the
+old engine, and the old classes are unchanged. No action is needed. A later release (planned as v4.26.0) switches yuf
+to the new engine and removes the old one; that release lists the changes for templates and views.
+
 ## [v4.23.0] – 2026-10-08
 
 ### ⚠️ `RequestHandler::get()` and `RequestHandler::register()` removed

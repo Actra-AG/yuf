@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\template;
 
+use actra\yuf\template\TemplateException;
 use actra\yuf\tests\Double\template\TemplateCharacterizationTestCase;
 use Exception;
 
@@ -17,7 +18,7 @@ use Exception;
  * tags, whitespace, and what the parser accepts today. Every test marked "Differs" pins behaviour that the rewrite
  * changes on purpose (design sections 1 and 2).
  */
-final class TemplateSyntaxTest extends TemplateCharacterizationTestCase
+abstract class AbstractTemplateSyntaxTestCase extends TemplateCharacterizationTestCase
 {
     public function testTemplateWithoutTagsIsCopiedUnchanged(): void
     {
@@ -32,20 +33,25 @@ final class TemplateSyntaxTest extends TemplateCharacterizationTestCase
         $this->assertSame("v \n", $this->renderSource(source: "{tst:text value='x'} \n", data: ['x' => 'v']));
     }
 
-    public function testEmptyTemplateThrows(): void
+    public function testEmptyTemplate(): void
     {
+        // Differs: the old engine rejects an empty template, the new engine renders an empty string
         $templateFile = $this->writeTemplate(source: '');
+        if (!$this->isNewEngine()) {
+            $this->expectException(Exception::class);
+            $this->expectExceptionMessageIs('Invalid template-file: ' . $templateFile);
+        }
 
-        $this->expectException(Exception::class);
-        $this->expectExceptionMessageIs('Invalid template-file: ' . $templateFile);
-
-        $this->renderFile(templateFile: $templateFile);
+        $this->assertSame('', $this->renderFile(templateFile: $templateFile));
     }
 
     public function testMissingTemplateFileThrows(): void
     {
-        $this->expectException(Exception::class);
-        $this->expectExceptionMessageIs('Could not find template file: /nonexistent/template.html');
+        $this->expectEngineException(
+            oldClass: Exception::class,
+            oldMessage: 'Could not find template file: /nonexistent/template.html',
+            newMessage: 'Template file not found: /nonexistent/template.html',
+        );
 
         $this->renderFile(templateFile: '/nonexistent/template.html');
     }
@@ -54,9 +60,10 @@ final class TemplateSyntaxTest extends TemplateCharacterizationTestCase
     {
         $templateFile = $this->writeTemplate(source: '<tst:foo/>');
 
-        $this->expectException(Exception::class);
-        $this->expectExceptionMessageIs(
-            'Error while processing the template file ' . $templateFile . ': The custom tag "foo" is not registered in this template engine instance',
+        $this->expectEngineException(
+            oldClass: Exception::class,
+            oldMessage: 'Error while processing the template file ' . $templateFile . ': The custom tag "foo" is not registered in this template engine instance',
+            newMessage: 'Unknown template tag "foo" in ' . $templateFile . ' on line 1',
         );
 
         $this->renderFile(templateFile: $templateFile);
@@ -66,9 +73,10 @@ final class TemplateSyntaxTest extends TemplateCharacterizationTestCase
     {
         $templateFile = $this->writeTemplate(source: "{tst:foo value='x'}");
 
-        $this->expectException(Exception::class);
-        $this->expectExceptionMessageIs(
-            'Error while processing the template file ' . $templateFile . ': The custom tag "foo" is not registered in this template engine instance',
+        $this->expectEngineException(
+            oldClass: Exception::class,
+            oldMessage: 'Error while processing the template file ' . $templateFile . ': The custom tag "foo" is not registered in this template engine instance',
+            newMessage: 'Unknown template tag "foo" in ' . $templateFile . ' on line 1',
         );
 
         $this->renderFile(templateFile: $templateFile);
@@ -84,21 +92,32 @@ final class TemplateSyntaxTest extends TemplateCharacterizationTestCase
         $this->assertSame('<other:text value="x"/>{other:text value=\'x\'}', $this->renderSource(source: '<other:text value="x"/>{other:text value=\'x\'}'));
     }
 
-    public function testMismatchedClosingTagIsAccepted(): void
+    public function testMismatchedClosingTag(): void
     {
-        // Differs: a close tag that does not match the open tag is a syntax error
-        $html = $this->renderSource(
-            source: '<tst:if compare="v" operator="eq" against="a">Y</tst:for>',
-            data: ['v' => 'a'],
-        );
+        // Differs: the old engine accepts a close tag that does not match the open tag, the new engine rejects it
+        $templateFile = $this->writeTemplate(source: '<tst:if compare="v" operator="eq" against="a">Y</tst:for>');
+        if ($this->isNewEngine()) {
+            $this->expectException(TemplateException::class);
+            $this->expectExceptionMessageIs(
+                'The closing tag </tst:for> does not match the opening tag <tst:if> of line 1 in ' . $templateFile . ' on line 1',
+            );
+        }
 
-        $this->assertSame('Y', $html);
+        $this->assertSame('Y', $this->renderFile(templateFile: $templateFile, data: ['v' => 'a']));
     }
 
-    public function testPhpCodeInTheTemplateIsExecuted(): void
+    public function testPhpCodeInTheTemplate(): void
     {
-        // Differs: <?php in a template is a syntax error
-        $this->assertSame('axb', $this->renderSource(source: 'a<?php echo \'x\'; ?>b'));
+        // Differs: the old engine executes <?php in a template, the new engine rejects it
+        $templateFile = $this->writeTemplate(source: "a\n<?php echo 'x'; ?>b");
+        if ($this->isNewEngine()) {
+            $this->expectException(TemplateException::class);
+            $this->expectExceptionMessageIs(
+                'PHP code is not allowed in a template, prepare the values in the view instead in ' . $templateFile . ' on line 2',
+            );
+        }
+
+        $this->assertSame("a\nxb", $this->renderFile(templateFile: $templateFile));
     }
 
     public function testHtmlCommentsAndDoctypeAreKept(): void

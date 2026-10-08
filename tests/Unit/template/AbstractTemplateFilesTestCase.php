@@ -20,7 +20,7 @@ use actra\yuf\tests\Double\template\TemplateCharacterizationTestCase;
  * every tag leaves the indentation of its line behind, and the whitespace between an if and its else is rendered
  * with the if branch. TablePaginationRendererTest checks the pagination titles through the real renderer.
  */
-final class TemplateFilesTest extends TemplateCharacterizationTestCase
+abstract class AbstractTemplateFilesTestCase extends TemplateCharacterizationTestCase
 {
     /**
      * @param list<array{int, bool, bool, bool}> $pages number, is current page, group previous, group next
@@ -83,7 +83,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
         );
         $primaryFields = new HtmlDataObjectCollection();
         $primaryFields->add(
-            htmlDataObject: TemplateFilesTest::createFilterField(
+            htmlDataObject: AbstractTemplateFilesTestCase::createFilterField(
                 identifier: 'name',
                 highlight: false,
                 label: 'Name',
@@ -91,7 +91,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
             ),
         );
         $primaryFields->add(
-            htmlDataObject: TemplateFilesTest::createFilterField(
+            htmlDataObject: AbstractTemplateFilesTestCase::createFilterField(
                 identifier: 'city',
                 highlight: true,
                 label: 'City',
@@ -110,7 +110,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
             );
             $secondaryFields = new HtmlDataObjectCollection();
             $secondaryFields->add(
-                htmlDataObject: TemplateFilesTest::createFilterField(
+                htmlDataObject: AbstractTemplateFilesTestCase::createFilterField(
                     identifier: 'status',
                     highlight: false,
                     label: 'Status',
@@ -140,14 +140,14 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
     private function renderProjectFile(string $relativePath, HtmlReplacementCollection $replacements): string
     {
         return $this->renderFile(
-            templateFile: TemplateFilesTest::projectDirectory() . $relativePath,
+            templateFile: AbstractTemplateFilesTestCase::projectDirectory() . $relativePath,
             data: $replacements,
         );
     }
 
     public function testPaginationOnTheFirstPage(): void
     {
-        $replacements = TemplateFilesTest::createPaginationReplacements(
+        $replacements = AbstractTemplateFilesTestCase::createPaginationReplacements(
             pages: [[1, true, false, false], [2, false, false, false], [3, false, false, false]],
             previousPageHref: '',
             nextPageHref: '?page=2|list',
@@ -155,7 +155,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
         $html = $this->renderProjectFile(relativePath: 'src/pagination/pagination.html', replacements: $replacements);
 
         $this->assertSame(
-            TemplateFilesTest::lines([
+            AbstractTemplateFilesTestCase::lines([
                 '<div class="pagination">',
                 '    <ul>',
                 '                    <li class="backdisabled">',
@@ -188,7 +188,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
 
     public function testPaginationInTheMiddleWithGroupDots(): void
     {
-        $replacements = TemplateFilesTest::createPaginationReplacements(
+        $replacements = AbstractTemplateFilesTestCase::createPaginationReplacements(
             pages: [
                 [1, false, false, false],
                 [2, false, false, true],
@@ -202,7 +202,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
         $html = $this->renderProjectFile(relativePath: 'src/pagination/pagination.html', replacements: $replacements);
 
         $this->assertSame(
-            TemplateFilesTest::lines([
+            AbstractTemplateFilesTestCase::lines([
                 '<div class="pagination">',
                 '    <ul>',
                 '                    <li class="back">',
@@ -240,7 +240,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
 
     public function testPaginationOnTheLastPage(): void
     {
-        $replacements = TemplateFilesTest::createPaginationReplacements(
+        $replacements = AbstractTemplateFilesTestCase::createPaginationReplacements(
             pages: [[2, false, false, false], [3, true, false, false]],
             previousPageHref: '?page=2|list',
             nextPageHref: '',
@@ -248,7 +248,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
         $html = $this->renderProjectFile(relativePath: 'src/pagination/pagination.html', replacements: $replacements);
 
         $this->assertSame(
-            TemplateFilesTest::lines([
+            AbstractTemplateFilesTestCase::lines([
                 '<div class="pagination">',
                 '    <ul>',
                 '                    <li class="back">',
@@ -280,7 +280,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
 
     public function testTableFilterWithLegendAndTriggeredSecondaryFilters(): void
     {
-        $replacements = TemplateFilesTest::createTableFilterReplacements(
+        $replacements = AbstractTemplateFilesTestCase::createTableFilterReplacements(
             showLegend: true,
             hasSecondaryFilters: true,
             isSecondaryFilterTriggered: true,
@@ -291,7 +291,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
         );
 
         $this->assertSame(
-            TemplateFilesTest::lines([
+            AbstractTemplateFilesTestCase::lines([
                 '<div class="table-filter-wrapper">',
                 '            <div class="table-filter-legend-wrap">',
                 '            <button class="trigger-table-filter-legend">',
@@ -375,7 +375,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
 
     public function testTableFilterWithUntriggeredSecondaryFilters(): void
     {
-        $replacements = TemplateFilesTest::createTableFilterReplacements(
+        $replacements = AbstractTemplateFilesTestCase::createTableFilterReplacements(
             showLegend: false,
             hasSecondaryFilters: true,
             isSecondaryFilterTriggered: false,
@@ -386,7 +386,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
         );
 
         $this->assertSame(
-            TemplateFilesTest::lines([
+            AbstractTemplateFilesTestCase::lines([
                 '<div class="table-filter-wrapper">',
                 '        <form action="?table&amp;find" class="form-tablefilter" method="post">',
                 '        <input type="hidden" name="csrf" value="token">        <div class="table-filter-primary-wrap">',
@@ -430,7 +430,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
 
     public function testTableFilterWithoutSecondaryFilters(): void
     {
-        $replacements = TemplateFilesTest::createTableFilterReplacements(
+        $replacements = AbstractTemplateFilesTestCase::createTableFilterReplacements(
             showLegend: false,
             hasSecondaryFilters: false,
             isSecondaryFilterTriggered: false,
@@ -441,7 +441,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
         );
 
         $this->assertSame(
-            TemplateFilesTest::lines([
+            AbstractTemplateFilesTestCase::lines([
                 '<div class="table-filter-wrapper">',
                 '        <form action="?table&amp;find" class="form-tablefilter" method="post">',
                 '        <input type="hidden" name="csrf" value="token">        <div class="table-filter-primary-wrap">',
@@ -481,7 +481,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
                 'robots' => 'index,follow',
                 'title' => 'Hello World',
                 'greeting' => 'Hello World!',
-                'this' => TemplateFilesTest::projectDirectory() . 'example/app/view/frontend/html/index.html',
+                'this' => AbstractTemplateFilesTestCase::projectDirectory() . 'example/app/view/frontend/html/index.html',
             ] as $identifier => $content
         ) {
             $replacements->addEncodedText(identifier: $identifier, content: $content);
@@ -492,7 +492,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
         );
 
         $this->assertSame(
-            TemplateFilesTest::lines([
+            AbstractTemplateFilesTestCase::lines([
                 '<!DOCTYPE html>',
                 '<html lang="en">',
                 '<head>',
@@ -530,7 +530,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
         $html = $this->renderProjectFile(relativePath: 'example/app/error_docs/notFound.html', replacements: $replacements);
 
         $this->assertSame(
-            TemplateFilesTest::lines([
+            AbstractTemplateFilesTestCase::lines([
                 '<!DOCTYPE html>',
                 '<html lang="en">',
                 '<head>',
@@ -564,7 +564,7 @@ final class TemplateFilesTest extends TemplateCharacterizationTestCase
         $html = $this->renderProjectFile(relativePath: 'example/app/error_docs/default.html', replacements: $replacements);
 
         $this->assertSame(
-            TemplateFilesTest::lines([
+            AbstractTemplateFilesTestCase::lines([
                 '<!DOCTYPE html>',
                 '<html lang="en">',
                 '<head>',
