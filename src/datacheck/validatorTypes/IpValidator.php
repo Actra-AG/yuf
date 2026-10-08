@@ -17,6 +17,9 @@ use InvalidArgumentException;
  */
 final readonly class IpValidator
 {
+    /** The first 12 bytes of an IPv4-mapped IPv6 address: ten zero bytes and `ffff` (`::ffff:0:0/96`) */
+    private const string MAPPED_PREFIX = "\0\0\0\0\0\0\0\0\0\0\xff\xff";
+
     public static function validate(string $input, IpTypeEnum $ipType): bool
     {
         $filterFlags = match ($ipType) {
@@ -31,7 +34,11 @@ final readonly class IpValidator
     /**
      * Whether the IP address is one of the addresses or in one of the ranges of the whitelist. Fails closed: an
      * address that is no valid IP address is never in the whitelist, whatever the whitelist contains. An IPv4-mapped
-     * IPv6 address (`::ffff:192.0.2.1`) is an IPv6 address: it matches IPv6 entries only.
+     * IPv6 address (`::ffff:192.0.2.1`, `::ffff:c000:201`; exactly the range `::ffff:0:0/96`) is the same address as
+     * the IPv4 address: it matches IPv4 entries, and an IPv4 address matches entries written as mapped address or
+     * range (`::ffff:192.0.2.0/120` is `192.0.2.0/24`; `::ffff:0:0/96` is all IPv4 addresses). A mapped address
+     * still matches the IPv6 ranges that contain it (`::/0`). Other IPv6 addresses are never taken as IPv4:
+     * not the deprecated IPv4-compatible `::192.0.2.1` and not the NAT64 range `64:ff9b::/96`.
      *
      * @param array<string> $whiteList IPv4 and IPv6 addresses and ranges in CIDR notation (`192.0.2.0/24`,
      *     `2001:db8::/32`); IPv4 ranges may be shortened (`10/8` is `10.0.0.0/8`). An entry that is neither a valid
@@ -45,9 +52,11 @@ final readonly class IpValidator
         if ($addressBytes === null) {
             return false;
         }
+        $ipv4Bytes = IpValidator::mappedToIpv4(bytes: $addressBytes);
         foreach ($whiteList as $whitelistItem) {
             if (!str_contains(haystack: $whitelistItem, needle: '/')) {
-                if (IpValidator::toBytes(ipAddress: $whitelistItem) === $addressBytes) {
+                $itemBytes = IpValidator::toBytes(ipAddress: $whitelistItem);
+                if ($itemBytes !== null && IpValidator::mappedToIpv4(bytes: $itemBytes) === $ipv4Bytes) {
                     return true;
                 }
                 continue;
@@ -74,6 +83,19 @@ final readonly class IpValidator
     }
 
     /**
+     * @return string The 4 bytes of the IPv4 address if the bytes are an IPv4-mapped IPv6 address (`::ffff:0:0/96`),
+     *                otherwise the bytes unchanged
+     */
+    private static function mappedToIpv4(string $bytes): string
+    {
+        if (strlen(string: $bytes) === 16 && str_starts_with(haystack: $bytes, needle: IpValidator::MAPPED_PREFIX)) {
+            return substr(string: $bytes, offset: 12);
+        }
+
+        return $bytes;
+    }
+
+    /**
      * @throws InvalidArgumentException if the range is invalid
      */
     private static function isInRange(string $range, string $addressBytes): bool
@@ -95,16 +117,27 @@ final readonly class IpValidator
         if ($prefixBits > strlen(string: $networkBytes) * 8) {
             throw new InvalidArgumentException(message: 'Invalid IP range in the whitelist: ' . $range);
         }
-        if (strlen(string: $addressBytes) !== strlen(string: $networkBytes)) {
-            // IPv4 address and IPv6 range, or vice versa
-            return false;
+        $ipv4NetworkBytes = IpValidator::mappedToIpv4(bytes: $networkBytes);
+        if ($ipv4NetworkBytes !== $networkBytes && $prefixBits >= 96) {
+            // A mapped range is an IPv4 range: ::ffff:192.0.2.0/120 is 192.0.2.0/24
+            $networkBytes = $ipv4NetworkBytes;
+            $prefixBits -= 96;
+        }
+        foreach ([$addressBytes, IpValidator::mappedToIpv4(bytes: $addressBytes)] as $candidateBytes) {
+            if (
+                strlen(string: $candidateBytes) === strlen(string: $networkBytes)
+                && IpValidator::bytesShareThePrefix(
+                    addressBytes: $candidateBytes,
+                    networkBytes: $networkBytes,
+                    prefixBits: $prefixBits,
+                )
+            ) {
+                return true;
+            }
         }
 
-        return IpValidator::bytesShareThePrefix(
-            addressBytes: $addressBytes,
-            networkBytes: $networkBytes,
-            prefixBits: $prefixBits,
-        );
+        // IPv4 address and IPv6 range, or vice versa
+        return false;
     }
 
     private static function bytesShareThePrefix(string $addressBytes, string $networkBytes, int $prefixBits): bool

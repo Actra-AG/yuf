@@ -4,6 +4,67 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.52.0] – 2026-10-08
+
+Small functional gaps closed: stricter validation and a few mistakes that used to pass silently now throw or fail.
+Search your project for `IbanValidator`, `IbanNumberField`, `IpValidator::isInWhitelist(`, `CountryCodeEnum::AA`,
+`CountryCodeEnum::UR`, `addPrimaryField(`, `addSecondaryField(`, `NavigationItemCollection`, `->addItem(navigationItem:`
+and `DateFilterField`.
+
+### ⚠️ `IbanValidator`: the length of the IBAN is checked per country
+
+| Before | After |
+|:--|:--|
+| Known country, valid characters and checksum: valid, whatever the length (e.g. a Swiss IBAN with 20 characters and correct check digits) | The length must be the one of the country (CH 21, DE 22, GB 22, NO 15, MT 31, …), taken from the SWIFT IBAN registry |
+
+The supported countries are the same as before. `IbanNumberField` uses the validator and rejects such numbers now.
+Spaces are still ignored, the case does not matter.
+
+### ⚠️ `IpValidator::isInWhitelist()`: IPv4-mapped IPv6 addresses match IPv4 entries
+
+| Before | After |
+|:--|:--|
+| Whitelist `['192.0.2.0/24']`, client `::ffff:192.0.2.1` (or `::ffff:c000:201`): not in the whitelist | In the whitelist: an address of the range `::ffff:0:0/96` is the IPv4 address |
+| Whitelist `['::ffff:192.0.2.1']` or `['::ffff:192.0.2.0/120']`, client `192.0.2.1`: not in the whitelist | In the whitelist (a mapped entry is the IPv4 entry; `::ffff:0:0/96` is all IPv4 addresses) |
+
+A mapped address still matches the IPv6 ranges that contain it (`::/0`). Other IPv6 addresses are never taken as IPv4:
+not the deprecated IPv4-compatible `::192.0.2.1` and not NAT64 (`64:ff9b::/96`). Check whitelists that contain
+`::ffff:0:0/96` (it admits all IPv4 clients now) and whitelists behind servers that report IPv4 clients as mapped
+addresses (they work now without extra entries).
+
+### ⚠️ `CountryCodeEnum`: `AA` and `UR` are removed
+
+Neither is an ISO 3166-1 code (`UY` is Uruguay and stays). `CountryCodeEnum::tryFrom('AA')` and `tryFrom('UR')` return
+`null`; `CountryCodeEnum::AA` and `::UR` no longer exist. Replace stored values with the right code.
+
+### ⚠️ `TableFilter`: a second field with the same identifier throws
+
+| Before | After |
+|:--|:--|
+| `addPrimaryField()` / `addSecondaryField()` with an identifier that is already used (in either list): the field replaced the earlier one in `$allFilterFields` and was rendered twice | `InvalidArgumentException` (the first field stays) |
+
+The identifier of a field is `<filter identifier>_<field identifier>`.
+
+### ⚠️ `NavigationItemCollection::addItem()`: a second item with the same `navKey` throws
+
+| Before | After |
+|:--|:--|
+| The second item silently replaced the first (at the position of the first) | `InvalidArgumentException` |
+
+Someone who relied on replacing an item must build the collection without the item to replace.
+
+### ⚠️ `DateFilterField`: only date formats are accepted
+
+| Before | After |
+|:--|:--|
+| Input and the value of the session went to `new DateTimeImmutable()`: `tomorrow`, `next monday`, `+1 day`, `01/03/2026` and more were accepted | Only `Y-m-d`, `Y-n-j`, `d.m.Y` and `j.n.Y` (`2026-03-01`, `2026-3-1`, `01.03.2026`, `1.3.2026`, as the form `DateField`), each optionally with ` H:i` or ` H:i:s`, and the `renderFormat` of the field. Everything else is invalid: the field is reset, as for any invalid date |
+| An unreadable value in the session threw `DateMalformedStringException` | It is ignored: the field has no value |
+
+The date must exist (`2026-02-30` is invalid) and look exactly like the format. A date without time still gets
+`00:00:00` (field for dates from) or `23:59:59` (field for dates to).
+
+---
+
 ## [v4.51.0] – 2026-10-08
 
 Form renderers keep no tag any more, so a component (a field, a form) can be rendered more than once: `render()` and

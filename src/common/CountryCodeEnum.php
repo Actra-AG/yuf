@@ -26,7 +26,6 @@ enum CountryCodeEnum: string
     case GQ = 'GQ';
     case AR = 'AR';
     case AM = 'AM';
-    case AA = 'AA';
     case AZ = 'AZ';
     case ET = 'ET';
     case AU = 'AU';
@@ -251,7 +250,6 @@ enum CountryCodeEnum: string
     case UA = 'UA';
     case HU = 'HU';
     case UY = 'UY';
-    case UR = 'UR';
     case US = 'US';
     case UZ = 'UZ';
     case VU = 'VU';

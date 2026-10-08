@@ -265,16 +265,6 @@ final class NavigationItemTest extends TestCase
         );
     }
 
-    public function testAddingTheSameKeyReplacesTheItem(): void
-    {
-        $collection = new NavigationItemCollection();
-        $collection->addItem(navigationItem: self::item(navKey: 'a', title: 'Old'));
-        $replacement = self::item(navKey: 'a', title: 'New');
-        $collection->addItem(navigationItem: $replacement);
-
-        $this->assertSame($replacement, $collection->getFirst(accessRightCollection: AccessRightCollection::createEmpty()));
-    }
-
     /**
      * @return iterable<string, array{string}>
      */
@@ -322,5 +312,33 @@ final class NavigationItemTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         self::item(navKey: 'a', href: $href);
+    }
+
+    public function testAddItemRejectsASecondItemWithTheSameKey(): void
+    {
+        $collection = new NavigationItemCollection();
+        $collection->addItem(navigationItem: self::item(navKey: 'a', title: 'First'));
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageIsOrContains('The navigation already has an item with the key a.');
+        $collection->addItem(navigationItem: self::item(navKey: 'a', title: 'Second'));
+    }
+
+    public function testRejectedItemDoesNotReplaceTheEarlierOne(): void
+    {
+        $collection = new NavigationItemCollection();
+        $collection->addItem(navigationItem: self::item(navKey: 'a', title: 'First'));
+
+        try {
+            $collection->addItem(navigationItem: self::item(navKey: 'a', title: 'Second'));
+        } catch (InvalidArgumentException) {
+        }
+
+        $data = $collection->prepareForRenderer(
+            activeSubNavigationItem: '',
+            accessRightCollection: AccessRightCollection::createEmpty(),
+        );
+        $this->assertCount(1, $data->items);
+        $this->assertSame('First', $data->items[0]->toTemplateData()->title);
     }
 }

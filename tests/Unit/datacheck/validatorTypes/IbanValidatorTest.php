@@ -159,4 +159,92 @@ final class IbanValidatorTest extends TestCase
 
         $this->assertFalse(IbanValidator::validate(input: $changedIban));
     }
+
+    /**
+     * @return string The IBAN of the country with the BBAN and correct check digits
+     */
+    private static function withValidCheckDigits(string $countryCode, string $bban): string
+    {
+        $digits = '';
+        foreach (str_split(string: $bban . $countryCode . '00') as $character) {
+            $digits .= ctype_digit(text: $character) ? $character : (string) (ord(character: $character) - 55);
+        }
+        $checkDigits = 98 - (int) bcmod(num1: $digits, num2: '97');
+
+        return $countryCode . str_pad(string: (string) $checkDigits, length: 2, pad_string: '0', pad_type: STR_PAD_LEFT)
+            . $bban;
+    }
+
+    #[DataProvider('countryExampleProvider')]
+    public function testIbanOneCharacterTooShortIsRejectedWithCorrectCheckDigits(string $iban): void
+    {
+        $tooShort = IbanValidatorTest::withValidCheckDigits(
+            countryCode: substr(string: $iban, offset: 0, length: 2),
+            bban: substr(string: $iban, offset: 4, length: strlen(string: $iban) - 5),
+        );
+
+        $this->assertFalse(IbanValidator::validate(input: $tooShort));
+    }
+
+    #[DataProvider('countryExampleProvider')]
+    public function testIbanOneCharacterTooLongIsRejectedWithCorrectCheckDigits(string $iban): void
+    {
+        $tooLong = IbanValidatorTest::withValidCheckDigits(
+            countryCode: substr(string: $iban, offset: 0, length: 2),
+            bban: substr(string: $iban, offset: 4) . '0',
+        );
+
+        $this->assertFalse(IbanValidator::validate(input: $tooLong));
+    }
+
+    #[DataProvider('countryExampleProvider')]
+    public function testRebuiltExampleWithCorrectCheckDigitsIsAccepted(string $iban): void
+    {
+        $rebuilt = IbanValidatorTest::withValidCheckDigits(
+            countryCode: substr(string: $iban, offset: 0, length: 2),
+            bban: substr(string: $iban, offset: 4),
+        );
+
+        $this->assertSame($iban, $rebuilt);
+        $this->assertTrue(IbanValidator::validate(input: $rebuilt));
+    }
+
+    /**
+     * Lengths of the IBAN registry (SWIFT, via Wikipedia "IBAN formats by country").
+     *
+     * @return iterable<string, array{string, int}>
+     */
+    public static function lengthProvider(): iterable
+    {
+        foreach (
+            [
+                'AL' => 28, 'AD' => 24, 'AT' => 20, 'AZ' => 28, 'BH' => 22, 'BE' => 16, 'BA' => 20, 'BR' => 29,
+                'BG' => 22, 'CR' => 22, 'HR' => 21, 'CY' => 28, 'CZ' => 24, 'DK' => 18, 'DO' => 28, 'EE' => 20,
+                'FO' => 18, 'FI' => 18, 'FR' => 27, 'GE' => 22, 'DE' => 22, 'GI' => 23, 'GR' => 27, 'GL' => 18,
+                'GT' => 28, 'HU' => 28, 'IS' => 26, 'IE' => 22, 'IL' => 23, 'IT' => 27, 'JO' => 30, 'KZ' => 20,
+                'KW' => 30, 'LV' => 21, 'LB' => 28, 'LI' => 21, 'LT' => 20, 'LU' => 20, 'MK' => 19, 'MT' => 31,
+                'MR' => 27, 'MU' => 30, 'MC' => 27, 'MD' => 24, 'ME' => 22, 'NL' => 18, 'NO' => 15, 'PK' => 24,
+                'PS' => 29, 'PL' => 28, 'PT' => 25, 'QA' => 29, 'RO' => 24, 'SM' => 27, 'SA' => 24, 'RS' => 22,
+                'SK' => 24, 'SI' => 19, 'ES' => 24, 'SE' => 24, 'CH' => 21, 'TN' => 24, 'TR' => 26, 'AE' => 23,
+                'GB' => 22, 'VG' => 24,
+            ] as $countryCode => $length
+        ) {
+            yield $countryCode => [$countryCode, $length];
+        }
+    }
+
+    #[DataProvider('lengthProvider')]
+    public function testExampleHasTheLengthOfTheRegistry(string $countryCode, int $length): void
+    {
+        $examples = iterator_to_array(iterator: IbanValidatorTest::countryExampleProvider());
+
+        $this->assertSame($length, strlen(string: $examples[$countryCode][0] ?? ''));
+    }
+
+    public function testLengthIsCheckedAfterRemovingSpaces(): void
+    {
+        $tooShort = IbanValidatorTest::withValidCheckDigits(countryCode: 'CH', bban: '0076201162385295');
+
+        $this->assertFalse(IbanValidator::validate(input: chunk_split(string: $tooShort, length: 4, separator: ' ')));
+    }
 }

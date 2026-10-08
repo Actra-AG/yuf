@@ -21,6 +21,7 @@ use actra\yuf\session\SessionSectionEnum;
 use actra\yuf\table\table\DbResultTable;
 use actra\yuf\table\TableSessionState;
 use actra\yuf\template\TemplateEngine;
+use InvalidArgumentException;
 
 /**
  * Extension point (the protected methods can be overridden): the filter form above a `DbResultTable`. The identifier
@@ -156,18 +157,39 @@ class TableFilter
         );
     }
 
+    /**
+     * @throws InvalidArgumentException if a field with the same identifier is already in the filter
+     */
     public function addPrimaryField(AbstractTableFilterField $abstractTableFilterField): void
     {
+        $this->assertIdentifierIsFree(abstractTableFilterField: $abstractTableFilterField);
         $abstractTableFilterField->init();
         $this->primaryFields[] = $abstractTableFilterField;
         $this->allFilterFields[$abstractTableFilterField->identifier] = $abstractTableFilterField;
     }
 
+    /**
+     * @throws InvalidArgumentException if a field with the same identifier is already in the filter
+     */
     public function addSecondaryField(AbstractTableFilterField $abstractTableFilterField): void
     {
+        $this->assertIdentifierIsFree(abstractTableFilterField: $abstractTableFilterField);
         $abstractTableFilterField->init();
         $this->secondaryFields[] = $abstractTableFilterField;
         $this->allFilterFields[$abstractTableFilterField->identifier] = $abstractTableFilterField;
+    }
+
+    /**
+     * @throws InvalidArgumentException
+     */
+    private function assertIdentifierIsFree(AbstractTableFilterField $abstractTableFilterField): void
+    {
+        if (array_key_exists(key: $abstractTableFilterField->identifier, array: $this->allFilterFields)) {
+            throw new InvalidArgumentException(
+                message: 'The filter ' . $this->identifier . ' already has a field with the identifier '
+                . $abstractTableFilterField->identifier . '.',
+            );
+        }
     }
 
     public function render(TemplateEngine $templateEngine): string

@@ -448,3 +448,41 @@ each small enough to release on its own. `actra/backend` follows when the plan i
 - `UPGRADE.md`: `## [v4.51.0]`. `ddev composer check` green, baseline empty, `curl https://yuf.ddev.site/` 200 (`example/`
   renders no form, so no HTML comparison).
 - Open: none.
+
+### Step 11 (v4.52.0) – done
+
+- **`IbanValidator`:** `COUNTRY_CODES` list replaced by `LENGTH_BY_COUNTRY_CODE` (same 66 countries, no new ones); the
+  length must match after removing spaces. Source of the lengths: SWIFT IBAN registry (release 99, December 2024) as
+  listed in https://en.wikipedia.org/wiki/International_Bank_Account_Number, "IBAN formats by country" (fetched as raw
+  wikitext and parsed). All 66 existing registry examples in `IbanValidatorTest` have exactly these lengths (checked
+  by a script and by a test). Tests per country: example valid, rebuilt from its BBAN with computed check digits
+  valid, one character too short and one too long (with correct check digits, so only the length is wrong) rejected.
+  The "before" behaviour (wrong length with correct checksum accepted) was seen by running those tests before the change.
+- **`IpValidator`:** only `::ffff:0:0/96` is normalized (`mappedToIpv4()`; ten zero bytes plus `ffff`), checked on the
+  binary form from `inet_pton()`, so `::ffff:a.b.c.d`, the hex form and long forms are the same. Single entries and
+  addresses are compared normalized (both directions). Ranges: a mapped range with prefix >= 96 becomes the IPv4 range
+  (prefix - 96); with a shorter prefix it stays an IPv6 range. The address is tried in its original form too, so a mapped
+  client still matches IPv6 ranges that contain it (`::/0`, `::/80`), as before. `::ffff:0:0/96` as entry now admits all
+  IPv4 clients (decision; documented). Not treated as IPv4: `::a.b.c.d` (compatible), `64:ff9b::/96` (NAT64),
+  `::ffff:0:a.b.c.d` (translated), `ffff` in other positions (all tested). PHPDoc updated.
+- **`CountryCodeEnum`:** `AA` and `UR` removed. Usages: none in `src/`, `tests/`, `example/`, `backend`,
+  `drogeriehaas.ch`, `yuf-skeleton` (grep of `::AA`, `::UR`, `'AA'`, `'UR'`).
+- **`TableFilter`:** `assertIdentifierIsFree()` (checks `$allFilterFields`, i.e. both lists) before `init()` in
+  `addPrimaryField()` / `addSecondaryField()`; the rejected field is not initialised and not added.
+- **`NavigationItemCollection::addItem()`:** throws for a second `navKey`. The old test
+  `testAddingTheSameKeyReplacesTheItem` (characterization of replacing) is replaced by rejection tests. Usages (read
+  only): yuf has no caller besides the tests; `backend` (`ActraBackend`: one `users` item, children `userList`,
+  `tokens`, `visits`, `notifications`) and `drogeriehaas.ch` (`BackendNavigationItemCollection`, frontend collection)
+  use distinct keys per collection, nothing relies on replacing. `backend` adds its item to a collection the project
+  passes in: a project that already has a `users` item there would now throw. Neither project uses `TableFilter`.
+- **`DateFilterField`:** the field renders `<input type="text">` (not `type="date"`) with the value in `renderFormat`
+  (default `d.m.Y H:i:s`), the session stores `Y-m-d H:i:s`. Decision: accepted input formats are `Y-m-d` and `d.m.Y`
+  (each optionally ` H:i` / ` H:i:s`) plus the `renderFormat` (resubmitted values must work). `createFromFormat('!'.$f)`,
+  `getLastErrors() === false` (rejects `2026-02-30`) and a round trip `format() === input` (rejects `26-03-01`). In review: also `Y-n-j` and `j.n.Y` (`2026-3-1`,
+  `1.3.2026`, as the form `DateField` and as Swiss users type it).
+  A date without `:` still gets 00:00:00 / 23:59:59. The session value is parsed with `Y-m-d H:i:s` only and ignored
+  if it does not fit (before: `DateMalformedStringException`). Whitespace around the input is trimmed by
+  `HttpRequest::getPostString()` (unchanged). Used in `my.cmas.ch` / `artplattform.com` (old framework, not yuf 4).
+- `UPGRADE.md`: `## [v4.52.0]`. `ddev composer check` green, baseline empty, `curl https://yuf.ddev.site/` 200.
+- Tests: 12248 -> 12593.
+- Open: none.

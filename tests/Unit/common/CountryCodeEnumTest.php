@@ -31,6 +31,9 @@ final class CountryCodeEnumTest extends TestCase
         yield 'switzerland' => ['CH', CountryCodeEnum::CH];
         yield 'lower case' => ['ch', null];
         yield 'unknown' => ['XX', null];
+        yield 'uruguay' => ['UY', CountryCodeEnum::UY];
+        yield 'AA is no ISO 3166 code' => ['AA', null];
+        yield 'UR is no ISO 3166 code' => ['UR', null];
     }
 
     #[DataProvider('codeProvider')]

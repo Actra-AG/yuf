@@ -11,6 +11,7 @@ namespace actra\yuf\layout;
 
 use actra\yuf\auth\AccessRightCollection;
 use actra\yuf\html\HtmlDataObjectCollection;
+use InvalidArgumentException;
 
 /**
  * The navigation items of one level by `navKey`.
@@ -23,10 +24,15 @@ final class NavigationItemCollection
     private array $items = [];
 
     /**
-     * An item with a key that is already in the collection replaces the earlier one.
+     * @throws InvalidArgumentException if an item with the same `navKey` is already in the collection
      */
     public function addItem(NavigationItem $navigationItem): void
     {
+        if (array_key_exists(key: $navigationItem->navKey, array: $this->items)) {
+            throw new InvalidArgumentException(
+                message: 'The navigation already has an item with the key ' . $navigationItem->navKey . '.',
+            );
+        }
         $this->items[$navigationItem->navKey] = $navigationItem;
     }
 
