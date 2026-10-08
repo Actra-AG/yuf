@@ -13,6 +13,8 @@ Consumers such as `actra/backend` extend yuf classes (`BaseView`, `AuthUser`, `A
 `DbResultTable`, forms and fields), so they can only follow after the yuf release that changes a name or a dependency.
 Each step below is released on its own, with `composer check` green.
 
+The remaining differences to the coding standard after v4.23.0 are listed in [remaining.md](remaining.md).
+
 ## Decisions
 
 - **No backwards compatibility for renames** (decided by the user, 2026-10-07): renamed classes, traits, methods,
