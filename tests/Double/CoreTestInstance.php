@@ -20,15 +20,18 @@ use ReflectionClass;
  */
 final class CoreTestInstance
 {
-    public static function register(string $cacheDirectory): void
+    public static function register(string $cacheDirectory, ?string $snippetsDirectory = null): void
     {
         $reflection = new ReflectionClass(objectOrClass: Core::class);
         $core = $reflection->newInstanceWithoutConstructor();
         $initialize = Closure::bind(
-            closure: function () use ($cacheDirectory): void {
+            closure: function () use ($cacheDirectory, $snippetsDirectory): void {
                 $this->frameworkDirectory = __DIR__ . '/../../src/'; // @phpstan-ignore property.readOnlyAssignOutOfClass
                 $this->cacheDirectory = $cacheDirectory; // @phpstan-ignore property.readOnlyAssignOutOfClass
                 $this->baseDirectory = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR;
+                if ($snippetsDirectory !== null) {
+                    $this->snippetsDirectory = $snippetsDirectory; // @phpstan-ignore property.readOnlyAssignOutOfClass
+                }
             },
             newThis: $core,
             newScope: Core::class,

@@ -8,6 +8,14 @@ Decision of the user (2026-10-08): everything that is still open in yuf, includi
 `src/common/`, `src/core/`, the remaining baseline), is finished before `actra/backend` follows. Work continues with the
 postponed areas.
 
+## Decisions for the remaining work
+
+- Order: the template engine first ([docs/template-engine/](../template-engine/plan.md)), then the other areas.
+- `final`: every class becomes `final` unless it is a documented extension point (abstract base class or PHPDoc
+  "Extension point: …"); inventory first, including what `actra/backend` extends.
+- `src/phone/` (port of libphonenumber) and `src/mailer/` (derived from PHPMailer, license notices kept) are brought to
+  the full standard like own code, with characterization tests first.
+
 ## PHPStan baseline: 760 entries
 
 - By area: `template` 221, `common` 92, `core` 90, `phone` 78, `db` 51, `table` 47, `mailer` 36, `html` 27, `api` 27,
@@ -21,7 +29,8 @@ postponed areas.
 
 - 28 static properties.
 - Kept on purpose so far (see `plan.md`, step 10 "Stays" and "Later"):
-    - `Core::get()` and `LocaleHandler::get()` for the compiled templates (`IfTag`, `SnippetTag`, `LangTag`);
+    - `Core::get()` in `IfTag` and `SnippetTag` (when compiling) and `LocaleHandler::get()` in compiled templates
+      (`LangTag`) – removed by the rewrite in [docs/template-engine/](../template-engine/plan.md);
       `Core::get()` also in `HtmlSnippet::render()` (template cache) and `LogFile`;
     - session: `AbstractSessionHandler::getSessionHandler()` / `enabled()`, `AuthSession`, `CsrfToken`,
       `FormNameRegistry`;
