@@ -72,6 +72,12 @@ final readonly class NativeSessionStorage implements SessionStorage
     }
 
     #[Override]
+    public function isActive(): bool
+    {
+        return $this->sessionHandler->isActive();
+    }
+
+    #[Override]
     public function getId(): string
     {
         return $this->sessionHandler->getId();

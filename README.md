@@ -258,8 +258,11 @@ not for their own data (cart, order data, flash messages, `requestedPageAfterLog
 the session handler touch `$_SESSION`.
 
 The PHP session starts lazily, on the first access of the `Session` (read or write, also through a form with CSRF
-protection, the preferred language of a route with a language or `AuthSession`). A request that never uses it takes no
-lock, sends no session cookie and creates no session file. `Core::prepareHttpResponse()` writes and closes a started
+protection or `AuthSession`). A request that never uses it takes no lock, sends no session cookie and creates no
+session file. A route with a language remembers it as the preferred language only for visitors who have a session
+(`Session::isActive()`: started in this request, or the request carries a session cookie with a valid ID); the request
+of `/` reads it only from such a session, else it uses the browser language. A visitor without a session cookie gets no
+session for the language, until something else starts one (e.g. a login or a form with CSRF protection). `Core::prepareHttpResponse()` writes and closes a started
 session after the view, before the response is built: the lock is released early, so parallel requests of the user do
 not wait for each other. Afterwards the session can still be read, but every write (`set()`, `remove()`,
 `regenerateId()`, `clearUserData()`, `AuthSession::logIn()`, a new CSRF token, …) throws a `LogicException`, as does a

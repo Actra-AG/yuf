@@ -56,6 +56,12 @@ final class FailingSessionStorage implements SessionStorage
     }
 
     #[Override]
+    public function isActive(): bool
+    {
+        return true;
+    }
+
+    #[Override]
     public function getId(): string
     {
         throw FailingSessionStorage::failure();

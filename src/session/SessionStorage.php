@@ -41,6 +41,12 @@ interface SessionStorage
      */
     public function replaceAll(array $data): void;
 
+    /**
+     * Whether the visitor has a session: it was started in this request or the request carries a valid session
+     * cookie. Must not start the session.
+     */
+    public function isActive(): bool;
+
     public function getId(): string;
 
     /**

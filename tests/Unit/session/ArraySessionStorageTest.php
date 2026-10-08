@@ -49,6 +49,12 @@ final class ArraySessionStorageTest extends TestCase
         $this->assertSame(['b' => 2], $storage->all());
     }
 
+    public function testIsActiveByDefaultAndInactiveOnRequest(): void
+    {
+        $this->assertTrue(new ArraySessionStorage()->isActive());
+        $this->assertFalse(new ArraySessionStorage(active: false)->isActive());
+    }
+
     public function testIdChangesWithEveryRegeneration(): void
     {
         $storage = new ArraySessionStorage(id: 'custom');

@@ -100,6 +100,17 @@ final class NativeSessionStorageTest extends TestCase
         $this->assertSame(1, $this->sessionHandler->starts);
     }
 
+    public function testIsActiveAsksTheHandlerAndStartsNothing(): void
+    {
+        $isActiveBefore = $this->storage->isActive();
+        $startsBefore = $this->sessionHandler->starts;
+        $this->sessionHandler->ensureStarted();
+
+        $this->assertFalse($isActiveBefore);
+        $this->assertSame(0, $startsBefore);
+        $this->assertTrue($this->storage->isActive());
+    }
+
     /**
      * @param Closure(NativeSessionStorage): void $access
      */

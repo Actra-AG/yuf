@@ -23,11 +23,11 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   redirect and the 405 response leave the constructor and become responses.
 - **Performance (user, after step 3):** responses go out as fast as possible. `NativeResponseSender` ends the
   request with `fastcgi_finish_request()` (if available) before `exit`, so session write, destructors and shutdown run
-  after the client has the response; the session starts lazily and its lock is released early (step 5); the template
+  after the client has the response; the session starts lazily and its lock is released early (steps 5 and 6); the template
   tags are built once per request; the directories are only checked/created in `Core::fromEnvironment()`; README:
   production settings (`opcache.validate_timestamps=0`, optional preloading). No early flush or streaming of HTML
   (ETag, 304 and `Content-Length` need the whole content).
-- **New features:** all three are planned (steps 12 to 14); their scope is asked at the start of each step.
+- **New features:** all three are planned (steps 13 to 15); their scope is asked at the start of each step.
 - No backwards compatibility: renames and removals without aliases, every breaking change ⚠️ with before/after in
   `UPGRADE.md`, as before.
 
@@ -86,20 +86,26 @@ each small enough to release on its own. `actra/backend` follows when the plan i
    regeneration, trusted client check, cookie SameSite/Lax change for redirects) and its tests; measure parallel
    requests of one session before/after in `example/`.
 
+6. **v4.47.0 – preferred language without a new session (⚠️ behaviour, decision of the user after step 5):** routes
+   with a language remember the preferred language only if the session is active: started in this request or the
+   request carries a session cookie (resuming an existing session). Visitors without a session get the language
+   from the URL and start no session (no lock, no cookie). The redirect of "/" reads the preferred language only
+   from an active session. New `Session::isActive()` (through `SessionStorage`, ⚠️ for own storages); tests for both
+   cases in `RequestHandler`.
 ### Design points
 
-6. **v4.47.0 – split `SearchHelper` (⚠️):** pure static SQL builders (`createSqlFilters()`, `createBooleanQuery()`,
+7. **v4.48.0 – split `SearchHelper` (⚠️):** pure static SQL builders (`createSqlFilters()`, `createBooleanQuery()`,
    `createSqlSearch()`) into their own class (e.g. `SearchQueryBuilder`), the stored search state (`create()`,
    `check…()`) stays or becomes `SearchState`; names decided in the step per `naming.md`. `UPGRADE.md` for
    `actra/backend` (`createBooleanQuery()` and the removed `getInstance()` -> `create()`).
-7. **v4.48.0 – resolved route of `RequestHandler` (⚠️):** `resolveRoute()` returns a readonly value object (route,
+8. **v4.49.0 – resolved route of `RequestHandler` (⚠️):** `resolveRoute()` returns a readonly value object (route,
    language, file title / extension / name / group, route variables, path vars) used by `Core`, `ContentHandler`,
    `ExceptionHandler`; the four `@phpstan-ignore property.uninitialized` go away.
-8. **v4.49.0 – `HtmlDataObject` and `CsvFile`:** `HtmlDataObject` stores an array instead of a shared `stdClass`
+9. **v4.50.0 – `HtmlDataObject` and `CsvFile`:** `HtmlDataObject` stores an array instead of a shared `stdClass`
    (a child added with `addDataObject()` is copied, later changes of the child do not leak); the template engine
    reads the same selectors. `CsvFile`: decided in the step (builder with `addRow()` is fine; immutable result or
    documented builder). Extension point `HtmlDataObject` stays (`actra/backend` uses it).
-9. **v4.50.0 – `FormRenderer` and toggle fields (⚠️ for own renderers):** one-phase renderer API (`render(): HtmlTag`
+10. **v4.51.0 – `FormRenderer` and toggle fields (⚠️ for own renderers):** one-phase renderer API (`render(): HtmlTag`
    without stored tag, so a component can be rendered more than once; `prepare()` / `getHtmlTag()` / `setHtmlTag()`
    removed or adapted); `ToggleField` / `MultiToggleField` share the child methods (trait or delegation via
    `ToggleChildren`). HTML output byte-identical (form and `example/` tests). `UPGRADE.md` with before/after for own
@@ -107,7 +113,7 @@ each small enough to release on its own. `actra/backend` follows when the plan i
 
 ### Small functional gaps
 
-10. **v4.51.0 – validation gaps (⚠️ behaviour):** IBAN length per country (table in `IbanValidator`); IPv4-mapped IPv6
+11. **v4.52.0 – validation gaps (⚠️ behaviour):** IBAN length per country (table in `IbanValidator`); IPv4-mapped IPv6
    addresses (`::ffff:a.b.c.d`) match IPv4 whitelist entries (normalized before the comparison); `CountryCodeEnum`:
    remove the non-ISO `AA` and `UR` (`UY` exists); `TableFilter` throws for a second field with the same identifier,
    `NavigationItemCollection::addItem()` for a second item with the same `navKey`; `DateFilterField` accepts the
@@ -115,18 +121,18 @@ each small enough to release on its own. `actra/backend` follows when the plan i
 
 ### Style
 
-11. **v4.51.1 – lines ≤ 120 characters:** the 3 lines in `src/` (`HtmlTag`, `CurlFormEncoder`, `Form`) and the 63 in
+12. **v4.52.1 – lines ≤ 120 characters:** the 3 lines in `src/` (`HtmlTag`, `CurlFormEncoder`, `Form`) and the 63 in
     `tests/`. No behaviour change.
 
 ### New features (scope asked at the start of each step)
 
-12. **v4.52.0 – phone numbers:** validity per number type, E.164 and national format in `src/phone/`.
-13. **v4.53.0 – SMTP authentication:** more methods than `AUTH LOGIN` in `SmtpMailer` (e.g. `AUTH PLAIN`).
-14. **v4.54.0 – redirect codes:** `acceptRedirectionResponseCode()` also for 302, 307, 308.
+13. **v4.53.0 – phone numbers:** validity per number type, E.164 and national format in `src/phone/`.
+14. **v4.54.0 – SMTP authentication:** more methods than `AUTH LOGIN` in `SmtpMailer` (e.g. `AUTH PLAIN`).
+15. **v4.55.0 – redirect codes:** `acceptRedirectionResponseCode()` also for 302, 307, 308.
 
 ### End
 
-15. Update [docs/standard-migration/remaining.md](../standard-migration/remaining.md) to the final state, so that
+16. Update [docs/standard-migration/remaining.md](../standard-migration/remaining.md) to the final state, so that
     `actra/backend` can follow.
 
 ## Handover notes
@@ -311,3 +317,27 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   if a project relied on the redirect to re-send the cookie as Lax. `NativeResponseSender` could close a started
   session before `fastcgi_finish_request()` for responses that views send themselves (`sendAndExit()` in a view): today
   the lock is held until the end of the script there.
+
+### Step 6 (v4.47.0) – done
+
+- `AbstractSessionHandler::isActive()`: `isStarted()` (the method, so doubles can override it), else the request has a
+  cookie with the session name whose value matches the existing ID pattern (`VALID_SESSION_ID_PATTERN`). The name is
+  `SessionSettings::$individualName`, else `session_name()` (PHP default or ini); nothing is set or started, so the
+  check is safe before the start (tested: status `PHP_SESSION_NONE`, name unchanged). It uses `HttpRequest::getCookie()`,
+  not `$_COOKIE`. Only the format of the ID is checked, not whether a session with that ID exists (that needs the save
+  handler, i.e. the start): an unknown or expired ID counts as active, and the first access replaces it with a new
+  session. A name set by a project handler in `executePreStartActions()` through `ini_set('session.name')` is not
+  known before the start (use `individualName`).
+- `SessionStorage::isActive()` (⚠️ own storages), `NativeSessionStorage` delegates, `ArraySessionStorage` has
+  `active: true` (third constructor argument, after `id`), `Session::isActive()` delegates.
+- `RequestHandler`: `rememberPreferredLanguage()` returns without session or with an inactive one; the preferred
+  language of `findRouteForRootRequest()` is only read from an active session. Without it the code goes on as before
+  without a session (Accept-Language, then the first default route). No other place reads the session on a plain
+  language route.
+- Doubles: new `CountingSessionStorage` (in-memory, counts accesses, flag `active`, to prove "not used"); the
+  `FailingSessionStorage` is active.
+- Tests: handler `isActive()` (data provider: no cookie, valid, default name, invalid / empty / too long ID, other
+  cookie name, individual name not sent; started without cookie; closed), `ArraySessionStorage`, `Session`,
+  `NativeSessionStorage` delegation, `RequestHandler` language route (inactive: storage never used, data unchanged;
+  active: written) and root redirect (inactive: preferred language ignored, storage never used).
+- Open: a visitor without a session who calls only language routes never gets a preferred language (decided).

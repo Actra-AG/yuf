@@ -4,6 +4,37 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.47.0] – 2026-10-08
+
+A visitor without a session no longer gets one just because a route has a language. Search your project for
+`implements SessionStorage`, `preferredLanguage` and `isDefaultForLanguage`.
+
+### ⚠️ The preferred language needs an active session
+
+| Before | After |
+|:--|:--|
+| Every request of a route with a language started the session (lock, `Set-Cookie`, session file) to remember the language | The language is only remembered if the session is active: started in this request, or the request carries a session cookie with a valid ID (`Session::isActive()`). A visitor without a session cookie starts none |
+| The request of `/` read the preferred language from the (started) session | It reads it only from an active session; without one the first browser language with a default route is used, else the first default route |
+
+Consequence: a first-time visitor who only calls language routes has no preferred language, so a later request of `/`
+follows the browser language again. Once the visitor has a session for another reason (login, a form with CSRF
+protection, own data), the language of the next language route is remembered as before. Check the ID of the cookie
+only: whether a session with that ID still exists is known after the start (an expired or unknown ID counts as active
+and is replaced by a new session on the first access).
+
+### ⚠️ `SessionStorage::isActive()`
+
+Own implementations of `SessionStorage` need `public function isActive(): bool` (started in this request or a valid
+session cookie in the request; it must not start the session). `ArraySessionStorage` has the constructor argument
+`active: true` (default); `active: false` simulates a visitor without a session.
+
+### New: `Session::isActive()` and `AbstractSessionHandler::isActive()`
+
+Ask whether the visitor has a session without creating one: `$this->context->session?->isActive()`. The check reads the
+cookie of the request (`SessionSettings::$individualName`, else PHP's default name) and starts nothing.
+
+---
+
 ## [v4.46.0] – 2026-10-08
 
 The session starts on first use and its lock is released early, so responses are faster and parallel requests of one

@@ -18,6 +18,7 @@ use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\session\SessionPreferredLanguage;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\session\CountingSessionStorage;
 use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
@@ -203,6 +204,57 @@ final class RequestHandlerPreferredLanguageTest extends TestCase
 
         $this->assertSame($this->english, $handler->language);
         $this->assertSame([], $this->storage->all());
+    }
+
+    /**
+     * A visitor without a session (no cookie, nothing started) gets no session for the language: the storage is not
+     * used at all (with the real storage that means no start, no lock and no cookie).
+     */
+    public function testInactiveSessionIsNeitherReadNorWritten(): void
+    {
+        $storage = new CountingSessionStorage(active: false);
+
+        $handler = $this->resolve(
+            uri: '/en/',
+            routeLanguage: $this->english,
+            available: $this->bothLanguages(),
+            session: new Session(storage: $storage),
+        );
+
+        $this->assertSame($this->english, $handler->language);
+        $this->assertSame(0, $storage->accesses);
+    }
+
+    public function testActiveSessionIsReadAndWritten(): void
+    {
+        $storage = new CountingSessionStorage(active: true);
+
+        $this->resolve(
+            uri: '/en/',
+            routeLanguage: $this->english,
+            available: $this->bothLanguages(),
+            session: new Session(storage: $storage),
+        );
+
+        $this->assertGreaterThan(0, $storage->accesses);
+        $this->assertSame('en', new SessionPreferredLanguage(session: new Session(storage: $storage))->getCode());
+    }
+
+    public function testInactiveSessionWithDataIsNotChanged(): void
+    {
+        $storage = new ArraySessionStorage(
+            data: ['yuf' => ['handler' => ['preferredLanguage' => 'de']]],
+            active: false,
+        );
+
+        $this->resolve(
+            uri: '/en/',
+            routeLanguage: $this->english,
+            available: $this->bothLanguages(),
+            session: new Session(storage: $storage),
+        );
+
+        $this->assertSame(['yuf' => ['handler' => ['preferredLanguage' => 'de']]], $storage->all());
     }
 
     public function testPreferredLanguageIsReadFromTheSession(): void

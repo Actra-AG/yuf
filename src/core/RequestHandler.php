@@ -41,8 +41,9 @@ final class RequestHandler
      * routes are available afterwards (also for the error page of an unknown route). Call `resolveRoute()` next.
      *
      * @param list<string> $allowedDomains
-     * @param ?Session $session Remembers the language of the last route that has one (`Core::$session`, `null`
-     *                          without sessions)
+     * @param ?Session $session Remembers the language of the last route that has one, and the redirect of "/" reads
+     *                          it, but only while the session is active (`Session::isActive()`: a visitor without
+     *                          a session cookie gets none; `Core::$session`, `null` without sessions)
      * @param ResponseSender $responseSender Sends the redirect of "/"
      */
     public function __construct(
@@ -123,7 +124,7 @@ final class RequestHandler
 
     private function rememberPreferredLanguage(Language $language): void
     {
-        if ($this->session === null) {
+        if ($this->session === null || !$this->session->isActive()) {
             return;
         }
         $preferredLanguage = new SessionPreferredLanguage(session: $this->session);
@@ -257,14 +258,15 @@ final class RequestHandler
 
     /**
      * The default route that a request of "/" is redirected to: the route of the language that the session
-     * remembers, else of the first browser language that has one, else the first default route.
+     * remembers (only an active session is asked), else of the first browser language that has one, else the first
+     * default route.
      *
      * @throws LogicException if there is no default route (`isDefaultForLanguage: true` with an available language)
      */
     public function findRouteForRootRequest(): Route
     {
         $defaultRoutesByLanguage = $this->defaultRoutesByLanguage;
-        $preferredLanguageCode = $this->session === null
+        $preferredLanguageCode = $this->session === null || !$this->session->isActive()
             ? null
             : new SessionPreferredLanguage(session: $this->session)->getCode();
         if ($preferredLanguageCode !== null) {

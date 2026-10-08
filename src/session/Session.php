@@ -106,6 +106,16 @@ final readonly class Session
     }
 
     /**
+     * Whether the visitor has a session: it was started in this request or the request carries a valid session
+     * cookie. Does not start the session, so it is the way to ask without creating a session (and a cookie) for a
+     * visitor who has none.
+     */
+    public function isActive(): bool
+    {
+        return $this->storage->isActive();
+    }
+
+    /**
      * Writes the session and releases its lock, so parallel requests of the user (e.g. loading a page while a long
      * export runs) do not wait any longer. `Core` does this after the view anyway; call it earlier in a view that runs
      * long, after the last write. Afterwards reading still works, but `set()`, `remove()`, `regenerateId()`,

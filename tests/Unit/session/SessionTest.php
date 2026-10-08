@@ -34,6 +34,13 @@ final class SessionTest extends TestCase
         $this->session = new Session(storage: $this->storage);
     }
 
+    public function testIsActiveAsksTheStorageWithoutUsingIt(): void
+    {
+        $this->assertTrue($this->session->isActive());
+        $this->assertFalse(new Session(storage: new ArraySessionStorage(active: false))->isActive());
+        $this->assertSame([], $this->storage->all());
+    }
+
     public function testStringIsStoredAndRead(): void
     {
         $this->session->set(key: 'name', value: 'Ann');

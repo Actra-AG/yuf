@@ -15,7 +15,7 @@ use Override;
 /**
  * Keeps the session data in memory: for tests and scripts without a PHP session. The ID changes with
  * `regenerateId()` (`<id>`, `<id>-1`, `<id>-2`, …). After `close()` writing throws like with `NativeSessionStorage`,
- * so tests behave like production.
+ * so tests behave like production. `$active: false` simulates a visitor without a session.
  *
  * @phpstan-import-type SessionValue from Session
  */
@@ -27,7 +27,11 @@ final class ArraySessionStorage implements SessionStorage
     /**
      * @param array<string, SessionValue> $data
      */
-    public function __construct(private array $data = [], private readonly string $id = 'array-session') {}
+    public function __construct(
+        private array $data = [],
+        private readonly string $id = 'array-session',
+        private readonly bool $active = true,
+    ) {}
 
     #[Override]
     public function has(string $key): bool
@@ -66,6 +70,12 @@ final class ArraySessionStorage implements SessionStorage
     {
         $this->assertNotClosed();
         $this->data = $data;
+    }
+
+    #[Override]
+    public function isActive(): bool
+    {
+        return $this->active;
     }
 
     #[Override]

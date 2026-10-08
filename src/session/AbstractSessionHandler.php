@@ -126,6 +126,27 @@ abstract class AbstractSessionHandler extends SessionHandler implements SessionU
     }
 
     /**
+     * Whether the visitor has a session: it was started in this request, or the request carries a session cookie with
+     * a valid ID (an existing session is resumed by the next access). Starts nothing, takes no lock and sends no
+     * cookie, so code that only wants to know it (e.g. to remember the preferred language) does not create sessions
+     * for visitors without one. Whether the ID belongs to an existing session is only known after the start; the
+     * name of the cookie is `SessionSettings::$individualName`, else the PHP default.
+     */
+    public function isActive(): bool
+    {
+        if ($this->isStarted()) {
+            return true;
+        }
+        $individualName = $this->sessionSettings->individualName;
+        $sessionId = $this->httpRequest->getCookie(
+            name: $individualName !== '' ? $individualName : AbstractSessionHandler::readSessionName(),
+        );
+
+        return $sessionId !== null
+            && preg_match(pattern: AbstractSessionHandler::VALID_SESSION_ID_PATTERN, subject: $sessionId) === 1;
+    }
+
+    /**
      * Whether the session was closed: it can be read, but not written, regenerated or started.
      */
     public function isClosed(): bool

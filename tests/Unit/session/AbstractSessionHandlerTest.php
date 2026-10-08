@@ -958,6 +958,89 @@ final class AbstractSessionHandlerTest extends TestCase
     }
 
     /**
+     * @param array<string, string> $cookies
+     */
+    private function createHandler(
+        array $cookies,
+        string $individualName,
+        string $savePath = '/not/used',
+    ): FileSessionHandler {
+        return new FileSessionHandler(
+            httpRequest: HttpRequestFactory::create(cookies: $cookies),
+            sessionSettings: new SessionSettings(savePath: $savePath, individualName: $individualName),
+            defaultSavePath: '/not/used',
+        );
+    }
+
+    /**
+     * @return array<string, array{array<string, string>, string, bool}> cookies, individual name, expected
+     */
+    public static function isActiveProvider(): array
+    {
+        $name = AbstractSessionHandlerTest::SESSION_NAME;
+        $id = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+
+        return [
+            'no cookie' => [[], $name, false],
+            'valid cookie' => [[$name => $id], $name, true],
+            'valid cookie, default name' => [['PHPSESSID' => $id], '', true],
+            'invalid id' => [[$name => 'not valid!'], $name, false],
+            'empty id' => [[$name => ''], $name, false],
+            'too long id' => [[$name => str_repeat(string: 'a', times: 257)], $name, false],
+            'cookie of another name' => [['other' => $id], $name, false],
+            'default name expected, individual name sent' => [[$name => $id], '', false],
+        ];
+    }
+
+    /**
+     * `isActive()` reads the request only: nothing is started, no lock, no cookie, and the session name of PHP stays.
+     *
+     * @param array<string, string> $cookies
+     */
+    #[DataProvider('isActiveProvider')]
+    #[RunInSeparateProcess]
+    public function testIsActiveLooksForAValidSessionCookieWithoutStartingTheSession(
+        array $cookies,
+        string $individualName,
+        bool $expected,
+    ): void {
+        $sessionHandler = $this->createHandler(cookies: $cookies, individualName: $individualName);
+        $nameBefore = session_name();
+
+        $isActive = $sessionHandler->isActive();
+
+        $this->assertSame($expected, $isActive);
+        $this->assertFalse($sessionHandler->isStarted());
+        $this->assertSame(PHP_SESSION_NONE, session_status());
+        $this->assertSame($nameBefore, session_name());
+    }
+
+    #[RunInSeparateProcess]
+    public function testSessionStartedInTheRequestIsActiveWithoutCookie(): void
+    {
+        $savePath = $this->createSessionSavePath();
+
+        try {
+            $sessionHandler = $this->createHandler(
+                cookies: [],
+                individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                savePath: $savePath,
+            );
+            $isActiveBefore = $sessionHandler->isActive();
+            $sessionHandler->ensureStarted();
+            $isActiveAfter = $sessionHandler->isActive();
+            $sessionHandler->writeClose();
+            $isActiveAfterClose = $sessionHandler->isActive();
+        } finally {
+            $this->removeSessionSavePath(savePath: $savePath);
+        }
+
+        $this->assertFalse($isActiveBefore);
+        $this->assertTrue($isActiveAfter);
+        $this->assertTrue($isActiveAfterClose);
+    }
+
+    /**
      * Creates a save path with an existing session for the ID of the cookie and of the request input, so the strict
      * mode of PHP accepts both IDs.
      */

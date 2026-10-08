@@ -20,6 +20,7 @@ use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\core\RecordingResponseSender;
+use actra\yuf\tests\Double\session\CountingSessionStorage;
 use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
@@ -65,8 +66,9 @@ final class RequestHandlerRootRequestTest extends TestCase
         ?string $preferredLanguage = null,
         ?RouteCollection $routeCollection = null,
         ?ResponseSender $responseSender = null,
+        bool $isSessionActive = true,
     ): RequestHandler {
-        $storage = new ArraySessionStorage();
+        $storage = new ArraySessionStorage(active: $isSessionActive);
         if ($preferredLanguage !== null) {
             $storage->set(key: 'yuf', value: ['handler' => ['preferredLanguage' => $preferredLanguage]]);
         }
@@ -90,6 +92,33 @@ final class RequestHandlerRootRequestTest extends TestCase
         $handler = $this->createHandler(browserLanguages: ['de'], preferredLanguage: 'en');
 
         $this->assertSame($this->englishRoute, $handler->findRouteForRootRequest());
+    }
+
+    public function testPreferredLanguageOfAnInactiveSessionIsNotUsed(): void
+    {
+        $handler = $this->createHandler(
+            browserLanguages: ['de'],
+            preferredLanguage: 'en',
+            isSessionActive: false,
+        );
+
+        $this->assertSame($this->germanRoute, $handler->findRouteForRootRequest());
+    }
+
+    public function testInactiveSessionIsNotReadForTheRootRequest(): void
+    {
+        $storage = new CountingSessionStorage(active: false);
+        $handler = new RequestHandler(
+            httpRequest: HttpRequestFactory::create(headers: ['Accept-Language' => 'en']),
+            routeCollection: new RouteCollection(routes: [$this->germanRoute, $this->englishRoute]),
+            availableLanguages: new LanguageCollection(languages: [$this->german, $this->english]),
+            allowedDomains: ['example.com'],
+            session: new Session(storage: $storage),
+            responseSender: new RecordingResponseSender(),
+        );
+
+        $this->assertSame($this->englishRoute, $handler->findRouteForRootRequest());
+        $this->assertSame(0, $storage->accesses);
     }
 
     public function testBrowserLanguageIsUsedWithoutPreferredLanguage(): void
