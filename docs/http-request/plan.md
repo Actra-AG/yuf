@@ -8,7 +8,7 @@ Design: [design.md](design.md). Step 2 of [docs/standard-completion/plan.md](../
    (protocol detection, host fallback, port, URI/path/query, browser languages, remote address, user agent, referrer,
    input trimming and casting, arrays, files normalization, bearer token, cookies) and `RequestBody::getData()` where
    possible; superglobals restored in `tearDown()`; limits of the static caches documented.
-2. **v4.29.0 – `HttpRequest` as instance (⚠️):** design sections 1–4 in one release. The characterization cases are
+2. **v4.29.0 – `HttpRequest` as instance (⚠️, done):** design sections 1–4 in one release. The characterization cases are
    moved to the instance (built with the constructor and with `fromGlobals()`); every user in yuf gets the request
    explicitly; `UPGRADE.md` with the full static → instance table and before/after examples.
 
@@ -83,3 +83,51 @@ namespaced stand-in `actra\yuf\core\getallheaders()` (resolved before the global
     (D: design reads "the request headers" once). PHPStan baseline entries for `getBearer()` exist.
 11. `getCookies()` returns `$_COOKIE` as is (also non-string values).
 12. `RequestBody::getData()` caches `php://input` statically; `JsonRequestBody` is already instance based.
+
+### Step 2 (v4.29.0) – done
+
+`composer check` green, `example/` checked (`/` 200 with "Hello World!", `/index.html` 200, `/nope.html` 404, http -> https
+303, `TRACE` 405, 304 for a matching `If-None-Match`). Baseline 525 -> 469 entries, no new entry. 2966 tests, no test needs
+a separate process except `HttpRequestGetallheadersTest`.
+
+**`HttpRequest`** (`final readonly`, `src/core/HttpRequest.php`): constructor `__construct(string $host, RequestMethodEnum
+$method = GET, string $uri = '/', string $queryString = '', ProtocolEnum $protocol = HTTPS, int $port = 0, string
+$serverName = '', string $serverAddress = '', string $remoteAddress = '', array $headers = [], array $cookies = [], array
+$queryParameters = [], array $postParameters = [], array $uploadedFiles = [], string $body = '', array $serverVariables
+= [])`; `fromGlobals()`; getters of the design (`getMethod`, `getUri`, `getPath`, `getQuery`, `getProtocol`, `isSsl`,
+`getHost`, `getPort`, `getUrl`, `getServerName`, `getServerAddress`, `getRemoteAddress`, `getUserAgent`, `getReferrer`,
+`listBrowserLanguagesByQuality`, `getHeader`, `getBearerToken`, `getCookie`, `getBody`, `hasQueryValue`/`hasPostValue`,
+`getQuery…`/`getPost…` String/Integer/Float/Array, `getFile`, `getFiles`). Additions to the design, all for forms, the
+error log and the debug page: `listCookies()`, `getQueryParameters()`, `getPostParameters()`, `getRawFiles()`,
+`getServerVariables()`. New: `ProtocolEnum`, `InputSourceEnum`, `UnsupportedRequestMethodException`;
+`RequestMethodEnum` + `HEAD`, `OPTIONS`; `InputParameterCollection::findParameter()`; `HttpResponse::isNotModified()`
+(public, pure, so the 304 decision is testable). `RequestBody` is deleted, `JsonRequestBody` stands alone.
+
+**Decisions in the task** (not in the design): the headers are one case-insensitive map (user agent, referrer,
+`Accept-Language`, bearer, conditional headers come from it; `fromGlobals()` builds it from `HTTP_*`, `CONTENT_*`, then
+`getallheaders()` where it exists, then `REDIRECT_HTTP_AUTHORIZATION`); an empty `HTTP_HOST` falls back to
+`SERVER_NAME`; `getFile()` returns the normalized entry of a one-file field and `null` for a multi field; a request
+method that is unknown is answered with 405 in `Core` (before the exception handler exists); the `Logger` and
+`ExceptionHandlerContext` get the request explicitly (not via `Core`); `Authenticator` and `MicrosoftAuthenticator` take it
+as first constructor argument (smallest clean way, the subclasses of the projects pass `$core->httpRequest`);
+`FileField` requires its `storage` (no default without the request); `AbstractMailer` takes `serverAddress` and
+`AbstractMail::send()` its mailer; `SearchHelper::create()` replaces `getInstance()` (no static registry; `valueSource`
+is required); the tables read sorting and paging from the query, `TableFilter` fields from the post data;
+`UrlHelper::generateAbsoluteUri()` uses the path instead of the URI (bug fix). All in `UPGRADE.md` v4.29.0.
+
+**Remaining superglobal reads in `src/`:** `HttpRequest::fromGlobals()`; `Core` (`$_SERVER['DOCUMENT_ROOT']`, bootstrap
+data, not request data); `AbstractSessionHandler::setSessionName()` (`unset($_COOKIE[$sessionName])` removes an invalid
+session ID, because `session_start()` reads the ID from `$_COOKIE`; the value itself comes from the request). `$_SESSION`
+is the session redesign (step 3). No static call of `HttpRequest` remains except `fromGlobals()` in `Core`.
+
+**Not covered:** `Core::__construct()` (singleton, env file, redirect and 405 end with `exit`), the 304 and redirect
+responses themselves (`exit`), `ExceptionHandler::handleException()`, `php://input` in `fromGlobals()` (empty in the CLI;
+the body is tested through the constructor), `AbstractMailer::getServerName()` (reverse DNS lookup), `getallheaders()`
+only through a stand-in (`tests/Fixture/core/getallheaders.php`, separate processes).
+
+**Open / for later:** `Form::validate()` still needs `FormInput::fromHttpRequest(…, methodPost: …)` with the method
+repeated (a shorter `Form::validateRequest(httpRequest:)` was not added, it would hide the dependency); `getQuery()` (raw
+string) and `getQueryString(name:)` (one parameter) are easy to mix up; `Logger` still writes cookies and `$_SERVER` to
+the log as before (a candidate for a security review); `SmartTable`/`TableFilter`/`AbstractTableFilterField` keep their
+static identifier registries (step 3). `src/common/LogFile.php` showed an unstaged removal of `__destruct()` that is not
+part of this step (found in the working tree after `composer cs:fix`, left as found).

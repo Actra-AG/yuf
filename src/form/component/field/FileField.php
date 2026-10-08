@@ -16,7 +16,6 @@ use actra\yuf\form\model\UploadedFile;
 use actra\yuf\form\model\UploadInput;
 use actra\yuf\form\renderer\FileFieldRenderer;
 use actra\yuf\form\upload\FileUploadStorage;
-use actra\yuf\form\upload\SessionFileUploadStorage;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
 use Override;
@@ -44,22 +43,22 @@ final class FileField extends FormField
      * @param HtmlText|null $alreadyExistsErrorMessage Individual error message if a file with that name has been
      *                                                 uploaded already. Placeholder [fileName]. Default:
      *                                                 `FormMessages::duplicateFile`
-     * @param ?FileUploadStorage $storage Where the files are kept between the requests (default: session and temp
-     *                                    directory)
+     * @param FileUploadStorage $storage Where the files are kept between the requests (the production one is
+     *                                   `SessionFileUploadStorage::forHttpRequest()`)
      */
     public function __construct(
         string $name,
         HtmlText $label,
+        FileUploadStorage $storage,
         ?HtmlText $requiredError = null,
         public private(set) int $maxFileUploadCount = 1,
         private readonly ?HtmlText $tooManyFilesErrMsg = null,
         private readonly ?HtmlText $alreadyExistsErrorMessage = null,
-        ?FileUploadStorage $storage = null,
     ) {
         if ($this->maxFileUploadCount < 1) {
             $this->maxFileUploadCount = 1; // Silent correction
         }
-        $this->storage = $storage ?? SessionFileUploadStorage::forCurrentRequest();
+        $this->storage = $storage;
         $this->uniqueSessFileStorePointer = $this->sanitizePointer(
             pointer: $name . '__' . bin2hex(string: random_bytes(length: 16)),
         );

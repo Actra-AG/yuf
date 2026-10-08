@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\common;
 
+use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
 
 readonly class FileHandler
@@ -41,13 +42,14 @@ readonly class FileHandler
         return StringUtils::formatBytes(bytes: filesize(filename: $filePath));
     }
 
-    public function output(bool $forceDownload = false): void
+    public function output(HttpRequest $httpRequest, bool $forceDownload = false): void
     {
         HttpResponse::createResponseFromFilePath(
             absolutePathToFile: $this->path,
             forceDownload: $forceDownload,
             individualFileName: $this->individualFileName,
             maxAge: $this->maxAge,
+            httpRequest: $httpRequest,
         )->sendAndExit();
     }
 }

@@ -13,6 +13,7 @@ use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
 use actra\yuf\table\renderer\TablePaginationRenderer;
 use actra\yuf\template\TemplateEngine;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\table\FixedPageDbResultTable;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
 use Override;
@@ -83,6 +84,7 @@ final class TablePaginationRendererTest extends TestCase
             db: TablePaginationRendererTest::createStub(FrameworkDb::class),
             dbQuery: TablePaginationRendererTest::createStub(DbQuery::class),
             templateEngine: $this->templateEngine,
+            httpRequest: HttpRequestFactory::create(),
             totalAmount: 100,
             currentPage: 2,
         );

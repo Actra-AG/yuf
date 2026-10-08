@@ -23,7 +23,11 @@ final class RecordingLogger extends Logger
 
     public function __construct()
     {
-        parent::__construct(logEmailRecipient: '', logDirectory: sys_get_temp_dir());
+        parent::__construct(
+            logEmailRecipient: '',
+            logDirectory: sys_get_temp_dir(),
+            httpRequest: HttpRequestFactory::create(),
+        );
     }
 
     #[Override]

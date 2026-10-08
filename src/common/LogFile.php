@@ -55,11 +55,6 @@ final class LogFile
         );
     }
 
-    public function __destruct()
-    {
-        fclose(stream: $this->stream);
-    }
-
     /**
      * @throws RuntimeException
      */

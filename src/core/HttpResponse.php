@@ -23,6 +23,7 @@ class HttpResponse
     private array $headers = [];
 
     private function __construct(
+        HttpRequest              $httpRequest,
         string                   $eTag,
         int                      $lastModifiedTimeStamp,
         private HttpStatusCodeEnum   $httpStatusCode,
@@ -53,7 +54,11 @@ class HttpResponse
                 val: 'attachment; filename="' . $downloadFileName . '"',
             );
         }
-        if ($this->notModifiedCheck(eTag: $eTag, lastModifiedTimeStamp: $lastModifiedTimeStamp)) {
+        if (HttpResponse::isNotModified(
+            httpRequest: $httpRequest,
+            eTag: $eTag,
+            lastModifiedTimeStamp: $lastModifiedTimeStamp,
+        )) {
             $this->httpStatusCode = HttpStatusCodeEnum::HTTP_NOT_MODIFIED;
             $this->setHeader(
                 key: 'Connection',
@@ -90,19 +95,18 @@ class HttpResponse
         $this->headers[$key] = $val;
     }
 
-    private function notModifiedCheck(string $eTag, int $lastModifiedTimeStamp): bool
+    /**
+     * Whether the client has the current version already: its `If-None-Match` header is the ETag or its
+     * `If-Modified-Since` header is the time of the last modification.
+     */
+    public static function isNotModified(HttpRequest $httpRequest, string $eTag, int $lastModifiedTimeStamp): bool
     {
-        if (isset($_SERVER['HTTP_IF_NONE_MATCH']) && $_SERVER['HTTP_IF_NONE_MATCH'] === $eTag) {
+        if ($httpRequest->getHeader(name: 'If-None-Match') === $eTag) {
             return true;
         }
+        $modifiedSince = $httpRequest->getHeader(name: 'If-Modified-Since');
 
-        if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) && strtotime(
-            $_SERVER['HTTP_IF_MODIFIED_SINCE'],
-        ) === $lastModifiedTimeStamp) {
-            return true;
-        }
-
-        return false;
+        return $modifiedSince !== null && strtotime(datetime: $modifiedSince) === $lastModifiedTimeStamp;
     }
 
     public function sendAndExit(): void
@@ -140,6 +144,7 @@ class HttpResponse
 
     public static function redirectAndExit(
         string         $relativeOrAbsoluteUri,
+        HttpRequest    $httpRequest,
         HttpStatusCodeEnum $httpStatusCode = HttpStatusCodeEnum::HTTP_SEE_OTHER,
         bool           $setSameSiteCookieTemporaryToLax = false,
     ): void {
@@ -147,7 +152,10 @@ class HttpResponse
             AbstractSessionHandler::getSessionHandler()->changeCookieSameSiteToLax();
         }
         header(header: $httpStatusCode->getStatusHeader());
-        header(header: 'Location: ' . UrlHelper::generateAbsoluteUri(relativeOrAbsoluteUri: $relativeOrAbsoluteUri));
+        header(header: 'Location: ' . UrlHelper::generateAbsoluteUri(
+            relativeOrAbsoluteUri: $relativeOrAbsoluteUri,
+            httpRequest: $httpRequest,
+        ));
         exit;
     }
 
@@ -156,8 +164,10 @@ class HttpResponse
         string                  $htmlContent,
         ?CspPolicySettings $cspPolicySettings,
         ?string                 $nonce,
+        HttpRequest        $httpRequest,
     ): HttpResponse {
         $httpResponse = new HttpResponse(
+            httpRequest: $httpRequest,
             eTag: md5($htmlContent),
             lastModifiedTimeStamp: time(),
             httpStatusCode: $httpStatusCode,
@@ -169,7 +179,7 @@ class HttpResponse
         if ($cspPolicySettings !== null) {
             $httpResponse->setHeader(
                 key: 'Content-Security-Policy',
-                val: $cspPolicySettings->getHttpHeaderDataString(nonce: $nonce),
+                val: $cspPolicySettings->getHttpHeaderDataString(nonce: $nonce, httpRequest: $httpRequest),
             );
         }
 
@@ -180,12 +190,14 @@ class HttpResponse
         HttpStatusCodeEnum $httpStatusCode,
         string         $contentString,
         ContentType    $contentType,
+        HttpRequest    $httpRequest,
     ): HttpResponse {
         if ($contentType->isHtml()) {
             throw new LogicException(message: 'Use HttpResponse::createHtmlResponse() instead');
         }
 
         return new HttpResponse(
+            httpRequest: $httpRequest,
             eTag: md5(string: $contentString),
             lastModifiedTimeStamp: time(),
             httpStatusCode: $httpStatusCode,
@@ -201,6 +213,7 @@ class HttpResponse
         ?bool   $forceDownload,
         ?string $individualFileName,
         int     $maxAge,
+        HttpRequest $httpRequest,
     ): HttpResponse {
         $realPath = realpath(path: $absolutePathToFile);
 
@@ -225,6 +238,7 @@ class HttpResponse
             $forceDownload = $contentType->forceDownloadByDefault;
         }
         $httpResponse = new HttpResponse(
+            httpRequest: $httpRequest,
             eTag: md5(string: $lastModifiedTimeStamp . $realPath),
             lastModifiedTimeStamp: $lastModifiedTimeStamp,
             httpStatusCode: HttpStatusCodeEnum::HTTP_OK,

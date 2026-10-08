@@ -11,6 +11,7 @@ namespace actra\yuf\tests\Unit\core;
 
 use actra\yuf\clock\FixedClock;
 use actra\yuf\core\Logger;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
 use DateTimeImmutable;
 use Override;
 use PHPUnit\Framework\TestCase;
@@ -46,6 +47,7 @@ final class LoggerTest extends TestCase
         $logger = new Logger(
             logEmailRecipient: '',
             logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(),
             clock: new FixedClock(
                 now: new DateTimeImmutable(datetime: '@' . (LoggerTest::TICKET_MODIFIED + $secondsAfterFirstModification)),
             ),
@@ -70,6 +72,7 @@ final class LoggerTest extends TestCase
         $logger = new Logger(
             logEmailRecipient: '',
             logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(),
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '@' . LoggerTest::TICKET_MODIFIED)),
         );
         $logger->logMessage(message: 'first time');
@@ -82,11 +85,37 @@ final class LoggerTest extends TestCase
         $logger = new Logger(
             logEmailRecipient: '',
             logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(),
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-03-04 05:06:07.123456')),
         );
         $logger->logMessage(message: 'stamped');
 
         $ticket = $this->logDirectory . 'ticket_' . hash(algo: 'sha256', data: 'stamped') . '.txt';
         $this->assertStringStartsWith('2026-03-04 05:06:07,12345600' . PHP_EOL . 'stamped', (string) file_get_contents(filename: $ticket));
+    }
+
+    public function testLogEntryContainsTheDataOfTheRequest(): void
+    {
+        $logger = new Logger(
+            logEmailRecipient: '',
+            logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(
+                cookies: ['session' => 'cookie-value'],
+                queryParameters: ['q' => 'query-value'],
+                postParameters: ['p' => 'post-value'],
+                uploadedFiles: ['f' => ['name' => 'file-name']],
+                serverVariables: ['SERVER_NAME' => 'server-value'],
+            ),
+        );
+        $logger->logMessage(message: 'with request');
+
+        $ticket = $this->logDirectory . 'ticket_' . hash(algo: 'sha256', data: 'with request') . '.txt';
+        $content = (string) file_get_contents(filename: $ticket);
+        $this->assertStringContainsString('$_SERVER = Array', $content);
+        $this->assertStringContainsString('[SERVER_NAME] => server-value', $content);
+        $this->assertStringContainsString('[q] => query-value', $content);
+        $this->assertStringContainsString('[p] => post-value', $content);
+        $this->assertStringContainsString('[name] => file-name', $content);
+        $this->assertStringContainsString('[session] => cookie-value', $content);
     }
 }

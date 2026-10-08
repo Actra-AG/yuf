@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\form;
 
+use actra\yuf\core\HttpRequest;
 use actra\yuf\form\model\UploadInput;
 
 /**
@@ -94,13 +95,18 @@ final readonly class FormInput
     }
 
     /**
-     * The request of the current PHP process, the only place in `src/form/` that reads `$_POST`, `$_GET` and `$_FILES`.
+     * The input of a request.
      *
-     * @param bool $methodPost Whether the form is sent with POST (the values are in `$_POST`) or GET (in `$_GET`)
+     * @param bool $methodPost Whether the form is sent with POST (the values are the posted ones) or GET (the values
+     *                         are the query parameters)
      */
-    public static function fromGlobals(bool $methodPost): FormInput
+    public static function fromHttpRequest(HttpRequest $httpRequest, bool $methodPost): FormInput
     {
-        return FormInput::fromArray(data: $methodPost ? $_POST : $_GET, files: $_FILES, query: $_GET);
+        return FormInput::fromArray(
+            data: $methodPost ? $httpRequest->getPostParameters() : $httpRequest->getQueryParameters(),
+            files: $httpRequest->getRawFiles(),
+            query: $httpRequest->getQueryParameters(),
+        );
     }
 
     /**

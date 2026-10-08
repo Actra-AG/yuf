@@ -19,8 +19,14 @@ abstract class Authenticator
     private static ?Authenticator $instance = null;
     public protected(set) AuthResultEnum $authResult = AuthResultEnum::UNDEFINED;
 
-    protected function __construct(private readonly int $maxAllowedWrongPasswordAttempts)
-    {
+    /**
+     * @param HttpRequest $httpRequest The request of the login: its remote address is checked against the IP
+     *                                 whitelist of the user and logged (`Core::$httpRequest`)
+     */
+    protected function __construct(
+        protected readonly HttpRequest $httpRequest,
+        private readonly int $maxAllowedWrongPasswordAttempts,
+    ) {
         if (Authenticator::$instance !== null) {
             throw new LogicException(message: 'There can only be one Authenticator instance.');
         }
@@ -48,7 +54,7 @@ abstract class Authenticator
             throw new LogicException(message: 'It is not allowed to log in, if user is already logged in.');
         }
         $sessionId = AbstractSessionHandler::getSessionHandler()->getId();
-        $ipAddress = HttpRequest::getRemoteAddress();
+        $ipAddress = $this->httpRequest->getRemoteAddress();
         $authUser = $this->createAuthUserByUserName(userName: $userName);
         if ($authUser === null) {
             $this->authResult = AuthResultEnum::ERROR_UNKNOWN_USER_NAME;

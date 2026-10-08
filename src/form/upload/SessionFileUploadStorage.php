@@ -11,6 +11,7 @@ namespace actra\yuf\form\upload;
 
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
+use actra\yuf\core\HttpRequest;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\form\model\UploadInput;
 use DirectoryIterator;
@@ -38,12 +39,15 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
      * The storage below `<temp directory>/<SERVER_NAME>`, as in yuf v3. Characters of the server name that are not
      * allowed in a directory name are replaced (the name can be derived from the `Host` header).
      */
-    public static function forCurrentRequest(Clock $clock = new SystemClock()): SessionFileUploadStorage
-    {
-        $serverName = $_SERVER['SERVER_NAME'] ?? '';
-        $directoryName = is_string(value: $serverName)
-            ? preg_replace(pattern: '/[^a-zA-Z\d._-]/', replacement: '_', subject: $serverName) ?? ''
-            : '';
+    public static function forHttpRequest(
+        HttpRequest $httpRequest,
+        Clock $clock = new SystemClock(),
+    ): SessionFileUploadStorage {
+        $directoryName = preg_replace(
+            pattern: '/[^a-zA-Z\d._-]/',
+            replacement: '_',
+            subject: $httpRequest->getServerName(),
+        ) ?? '';
         if (trim(string: $directoryName, characters: '.') === '') {
             $directoryName = 'default';
         }

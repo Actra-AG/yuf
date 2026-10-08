@@ -113,11 +113,10 @@ class Form extends FormCollection
     /**
      * Validates all fields with the request data if the form was sent.
      *
-     * @param ?FormInput $input The request data, default: the current request (`FormInput::fromGlobals()`)
+     * @param FormInput $input The request data (`FormInput::fromHttpRequest()`)
      */
-    public function validate(?FormInput $input = null): bool
+    public function validate(FormInput $input): bool
     {
-        $input ??= FormInput::fromGlobals(methodPost: $this->methodPost);
         if (!$this->isSent(input: $input)) {
             return false;
         }
@@ -149,12 +148,10 @@ class Form extends FormCollection
     /**
      * Whether the sent indicator is in the query string of the request.
      *
-     * @param ?FormInput $input The request data, default: the current request (`FormInput::fromGlobals()`)
+     * @param FormInput $input The request data (`FormInput::fromHttpRequest()`)
      */
-    public function isSent(?FormInput $input = null): bool
+    public function isSent(FormInput $input): bool
     {
-        $input ??= FormInput::fromGlobals(methodPost: $this->methodPost);
-
         return $input->hasQueryKey(key: $this->sentIndicator);
     }
 

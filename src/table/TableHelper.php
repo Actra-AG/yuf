@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\table;
 
+use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
 use actra\yuf\table\column\ActionsColumn;
@@ -47,6 +48,7 @@ class TableHelper
         FrameworkDb $db,
         string $selectQuery,
         TemplateEngine $templateEngine,
+        HttpRequest $httpRequest,
         array $params = [],
         ?TableFilter $tableFilter = null,
         ?TablePaginationRenderer $tablePaginationRenderer = null,
@@ -58,6 +60,7 @@ class TableHelper
             db: $db,
             dbQuery: DbQuery::createFromSqlQuery(query: $selectQuery, parameters: $params),
             templateEngine: $templateEngine,
+            httpRequest: $httpRequest,
             tableFilter: $tableFilter,
             tablePaginationRenderer: $tablePaginationRenderer,
             sortableTableHeadRenderer: $sortableTableHeadRenderer,

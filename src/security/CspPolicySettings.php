@@ -32,7 +32,7 @@ readonly class CspPolicySettings
         private string $frameAncestors = "'none'",
     ) {}
 
-    public function getHttpHeaderDataString(string $nonce): string
+    public function getHttpHeaderDataString(string $nonce, HttpRequest $httpRequest): string
     {
         $dataArray = [];
 
@@ -98,8 +98,8 @@ readonly class CspPolicySettings
                         CspPolicySettings::HOST_PLACEHOLDER,
                     ],
                     replace: [
-                        HttpRequest::getProtocol(),
-                        HttpRequest::getHost(),
+                        $httpRequest->getProtocol()->value,
+                        $httpRequest->getHost(),
                     ],
                     subject: $value,
                 ),

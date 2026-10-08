@@ -11,7 +11,6 @@ namespace actra\yuf\core;
 
 use actra\yuf\html\HtmlDocument;
 use actra\yuf\request\JsonRequestBody;
-use actra\yuf\request\RequestBody;
 use actra\yuf\template\TemplateEngine;
 use InvalidArgumentException;
 
@@ -23,6 +22,7 @@ final class ViewContext
     private ?JsonRequestBody $jsonRequestBody = null;
 
     public function __construct(
+        public readonly HttpRequest $httpRequest,
         public readonly Route $route,
         public readonly ?string $fileGroup,
         public readonly string $fileTitle,
@@ -43,7 +43,7 @@ final class ViewContext
     public function getJsonRequestBody(): JsonRequestBody
     {
         if ($this->jsonRequestBody === null) {
-            $this->jsonRequestBody = JsonRequestBody::fromString(json: RequestBody::getData());
+            $this->jsonRequestBody = JsonRequestBody::fromString(json: $this->httpRequest->getBody());
         }
 
         return $this->jsonRequestBody;

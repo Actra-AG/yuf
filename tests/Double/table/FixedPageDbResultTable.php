@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Double\table;
 
+use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
 use actra\yuf\table\table\DbResultTable;
@@ -21,10 +22,17 @@ final class FixedPageDbResultTable extends DbResultTable
         FrameworkDb $db,
         DbQuery $dbQuery,
         TemplateEngine $templateEngine,
+        HttpRequest $httpRequest,
         private readonly int $totalAmount,
         private readonly int $currentPage,
     ) {
-        parent::__construct(identifier: $identifier, db: $db, dbQuery: $dbQuery, templateEngine: $templateEngine);
+        parent::__construct(
+            identifier: $identifier,
+            db: $db,
+            dbQuery: $dbQuery,
+            templateEngine: $templateEngine,
+            httpRequest: $httpRequest,
+        );
     }
 
     #[\Override]

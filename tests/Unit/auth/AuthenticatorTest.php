@@ -15,6 +15,7 @@ use actra\yuf\auth\AuthResultEnum;
 use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\tests\Double\auth\RecordingAuthenticator;
 use actra\yuf\tests\Double\auth\TestAuthUser;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
 use Override;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
@@ -29,7 +30,6 @@ final class AuthenticatorTest extends TestCase
     protected function setUp(): void
     {
         $_SESSION = [];
-        $_SERVER['REMOTE_ADDR'] = '203.0.113.5';
         new ReflectionProperty(class: AbstractSessionHandler::class, property: 'abstractSessionHandler')->setValue(
             null,
             new AuthenticatorTestSessionHandler(),
@@ -45,12 +45,15 @@ final class AuthenticatorTest extends TestCase
             null,
             null,
         );
-        unset($_SESSION, $_SERVER['REMOTE_ADDR']);
+        unset($_SESSION);
     }
 
     public function testLogsAnUnknownUserWithNamedArguments(): void
     {
-        $authenticator = new RecordingAuthenticator(authUser: null);
+        $authenticator = new RecordingAuthenticator(
+            httpRequest: HttpRequestFactory::create(remoteAddress: '203.0.113.5'),
+            authUser: null,
+        );
 
         $this->assertFalse($authenticator->passwordLogin(userName: 'nobody', inputPassword: 'test'));
 
@@ -71,7 +74,10 @@ final class AuthenticatorTest extends TestCase
     public function testLogsASuccessfulPasswordLoginAndLogsTheUserIn(): void
     {
         $authUser = TestAuthUser::create(accessRights: [AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN]);
-        $authenticator = new RecordingAuthenticator(authUser: $authUser);
+        $authenticator = new RecordingAuthenticator(
+            httpRequest: HttpRequestFactory::create(remoteAddress: '203.0.113.5'),
+            authUser: $authUser,
+        );
 
         $this->assertTrue($authenticator->passwordLogin(userName: 'user', inputPassword: 'test'));
 

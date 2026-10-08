@@ -11,16 +11,18 @@ namespace actra\yuf\session;
 
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
+use actra\yuf\core\HttpRequest;
 use Override;
 
 class FileSessionHandler extends AbstractSessionHandler
 {
     public function __construct(
+        HttpRequest $httpRequest,
         private readonly SessionSettings $sessionSettings,
         private readonly string $defaultSavePath,
         Clock $clock = new SystemClock(),
     ) {
-        parent::__construct(sessionSettings: $sessionSettings, clock: $clock);
+        parent::__construct(httpRequest: $httpRequest, sessionSettings: $sessionSettings, clock: $clock);
     }
 
     #[Override]

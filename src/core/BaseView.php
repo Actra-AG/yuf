@@ -47,7 +47,7 @@ abstract class BaseView
                 message: 'View group needs to be ' . $requiredViewGroupName . ' instead of ' . $viewGroup,
             );
         }
-        $ipAddress = HttpRequest::getRemoteAddress();
+        $ipAddress = $context->httpRequest->getRemoteAddress();
         if (
             count(value: $ipWhitelist) > 0
             && !IpValidator::isInWhitelist(
@@ -67,21 +67,54 @@ abstract class BaseView
             throw new UnauthorizedAccessRightException();
         }
         foreach ($inputParameterCollection->listRequiredParameters() as $inputParameter) {
-            $name = $inputParameter->name;
-            $paramValue = HttpRequest::getInputValue(keyName: $name);
-            if (
-                $paramValue === null
-                || (!is_array(value: $paramValue) && trim(string: $paramValue) === '')
-                || $paramValue === []
-            ) {
+            if ($this->isInputMissing(inputParameter: $inputParameter)) {
                 if ($context->content->getContentType()->isHtml()) {
                     throw new NotFoundException();
                 }
-                $this->setErrorResponseContent(errorMessage: 'missing or empty mandatory parameter: ' . $name);
+                $this->setErrorResponseContent(
+                    errorMessage: 'missing or empty mandatory parameter: ' . $inputParameter->name,
+                );
 
                 return;
             }
         }
+    }
+
+    /**
+     * Whether the value of the parameter is missing in its source, an empty text or an empty array.
+     */
+    private function isInputMissing(InputParameter $inputParameter): bool
+    {
+        $text = $this->readInputString(inputParameter: $inputParameter);
+        if ($text !== null) {
+            return $text === '';
+        }
+        $array = $this->readInputArray(inputParameter: $inputParameter);
+
+        return $array === null || $array === [];
+    }
+
+    private function readInputString(InputParameter $inputParameter): ?string
+    {
+        $httpRequest = $this->context->httpRequest;
+
+        return match ($inputParameter->source) {
+            InputSourceEnum::QUERY => $httpRequest->getQueryString(name: $inputParameter->name),
+            InputSourceEnum::POST => $httpRequest->getPostString(name: $inputParameter->name),
+        };
+    }
+
+    /**
+     * @return ?array<array-key, mixed>
+     */
+    private function readInputArray(InputParameter $inputParameter): ?array
+    {
+        $httpRequest = $this->context->httpRequest;
+
+        return match ($inputParameter->source) {
+            InputSourceEnum::QUERY => $httpRequest->getQueryArray(name: $inputParameter->name),
+            InputSourceEnum::POST => $httpRequest->getPostArray(name: $inputParameter->name),
+        };
     }
 
     protected function setContent(string $contentString): void
@@ -93,7 +126,6 @@ abstract class BaseView
 
     public function getInputDomain(string $keyName): ?string
     {
-        $this->onlyDefinedInputParametersAllowed($keyName);
         $value = $this->getInputString(keyName: $keyName);
         if ($value === null) {
             return null;
@@ -102,39 +134,46 @@ abstract class BaseView
         return Sanitizer::domain(input: $value);
     }
 
-    private function onlyDefinedInputParametersAllowed(string $parameterName): void
+    /**
+     * @throws LogicException if the view does not declare the input parameter
+     */
+    private function getDefinedInputParameter(string $parameterName): InputParameter
     {
-        if (!$this->inputParameterCollection->hasParameter(name: $parameterName)) {
-            throw new LogicException(message: 'Access to not defined input parameter "' . $parameterName . '"');
-        }
+        return $this->inputParameterCollection->findParameter(name: $parameterName)
+            ?? throw new LogicException(message: 'Access to not defined input parameter "' . $parameterName . '"');
     }
 
     public function getInputString(string $keyName): ?string
     {
-        $this->onlyDefinedInputParametersAllowed(parameterName: $keyName);
-
-        return HttpRequest::getInputString(keyName: $keyName);
+        return $this->readInputString(inputParameter: $this->getDefinedInputParameter(parameterName: $keyName));
     }
 
     public function getInputInteger(string $keyName): ?int
     {
-        $this->onlyDefinedInputParametersAllowed(parameterName: $keyName);
+        $inputParameter = $this->getDefinedInputParameter(parameterName: $keyName);
 
-        return HttpRequest::getInputInteger(keyName: $keyName);
+        return match ($inputParameter->source) {
+            InputSourceEnum::QUERY => $this->context->httpRequest->getQueryInteger(name: $keyName),
+            InputSourceEnum::POST => $this->context->httpRequest->getPostInteger(name: $keyName),
+        };
     }
 
     public function getInputFloat(string $keyName): ?float
     {
-        $this->onlyDefinedInputParametersAllowed(parameterName: $keyName);
+        $inputParameter = $this->getDefinedInputParameter(parameterName: $keyName);
 
-        return HttpRequest::getInputFloat(keyName: $keyName);
+        return match ($inputParameter->source) {
+            InputSourceEnum::QUERY => $this->context->httpRequest->getQueryFloat(name: $keyName),
+            InputSourceEnum::POST => $this->context->httpRequest->getPostFloat(name: $keyName),
+        };
     }
 
+    /**
+     * @return ?array<array-key, mixed>
+     */
     public function getInputArray(string $keyName): ?array
     {
-        $this->onlyDefinedInputParametersAllowed(parameterName: $keyName);
-
-        return HttpRequest::getInputArray(keyName: $keyName);
+        return $this->readInputArray(inputParameter: $this->getDefinedInputParameter(parameterName: $keyName));
     }
 
     protected function setContentType(ContentType $contentType): void
@@ -210,6 +249,7 @@ abstract class BaseView
             httpStatusCode: HttpStatusCodeEnum::HTTP_OK,
             contentString: $httpSuccessResponseContent->content,
             contentType: $contentType,
+            httpRequest: $this->context->httpRequest,
         )->sendAndExit();
     }
 
@@ -245,6 +285,7 @@ abstract class BaseView
             httpStatusCode: $httpStatusCode,
             contentString: $httpErrorResponseContent->content,
             contentType: $contentType,
+            httpRequest: $this->context->httpRequest,
         )->sendAndExit();
     }
 

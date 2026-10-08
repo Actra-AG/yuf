@@ -4,6 +4,253 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.29.0] – 2026-10-08
+
+`HttpRequest` is an immutable instance now, created once per request by `Core` and passed explicitly to everything that
+needs it. Nothing in yuf reads `$_GET`, `$_POST`, `$_SERVER`, `$_COOKIE`, `$_FILES` or `php://input` after
+`HttpRequest::fromGlobals()` any more, and there is no static state in the request path. Every static call has to be
+replaced, see the table. Search your project for `HttpRequest::`, `RequestBody::`, `FormInput::fromGlobals`,
+`new InputParameter(`, `forCurrentRequest`, `SearchHelper::getInstance`, `createDbResultTable`, `new TableFilter(`,
+`redirectAndExit`, `UrlHelper::generateAbsoluteUri` and for every class that extends `Authenticator`,
+`AbstractSessionHandler`, `AbstractMailer` or `DbResultTable`.
+
+### ⚠️ `HttpRequest`: static getters become instance methods
+
+Where to get the instance: `$this->context->httpRequest` in a view, `$core->httpRequest` in a bootstrap file after
+`new Core(…)`, `HttpRequest::fromGlobals()` in a script without `Core` (CLI, cron: throws an
+`UnexpectedValueException` without a request method, request URI and host). Everything else gets the request from its
+caller (argument or constructor).
+
+| Before (static)                                    | After (instance)                                                          |
+|:---------------------------------------------------|:--------------------------------------------------------------------------|
+| `HttpRequest::getRequestMethod()`                  | `$httpRequest->getMethod()` (also `HEAD` and `OPTIONS` now)               |
+| `HttpRequest::getUri()`                            | `$httpRequest->getUri()`                                                  |
+| `HttpRequest::getPath()`                           | `$httpRequest->getPath()`                                                 |
+| `HttpRequest::getQuery()`                          | `$httpRequest->getQuery()` (the raw query string)                         |
+| `HttpRequest::getProtocol()` (string)              | `$httpRequest->getProtocol()` (`ProtocolEnum`, `->value` is the string)   |
+| `HttpRequest::PROTOCOL_HTTP` / `PROTOCOL_HTTPS`    | `ProtocolEnum::HTTP` / `ProtocolEnum::HTTPS`                              |
+| `HttpRequest::isSsl()`                             | `$httpRequest->isSsl()`                                                   |
+| `HttpRequest::getHost()`                           | `$httpRequest->getHost()`                                                 |
+| `HttpRequest::getPort()`                           | `$httpRequest->getPort()` (0 if unknown)                                  |
+| `HttpRequest::getUrl(protocol: 'https')`           | `$httpRequest->getUrl(protocol: ProtocolEnum::HTTPS)`                     |
+| `HttpRequest::getRemoteAddress()`                  | `$httpRequest->getRemoteAddress()`                                        |
+| `HttpRequest::getUserAgent()`                      | `$httpRequest->getUserAgent()`                                            |
+| `HttpRequest::getReferrer()`                       | `$httpRequest->getReferrer()`                                             |
+| `HttpRequest::listBrowserLanguagesByQuality()`     | `$httpRequest->listBrowserLanguagesByQuality()`                           |
+| `HttpRequest::getBearer()` (`false\|string`)       | `$httpRequest->getBearerToken()` (`?string`)                              |
+| `HttpRequest::getCookies()`                        | `$httpRequest->getCookie(name: …)` (`?string`)                            |
+| `HttpRequest::getInputString(keyName:)`            | `getQueryString(name:)` or `getPostString(name:)`                         |
+| `HttpRequest::getInputInteger(keyName:)`           | `getQueryInteger(name:)` or `getPostInteger(name:)`                       |
+| `HttpRequest::getInputFloat(keyName:)`             | `getQueryFloat(name:)` or `getPostFloat(name:)`                           |
+| `HttpRequest::getInputArray(keyName:)`             | `getQueryArray(name:)` or `getPostArray(name:)`                           |
+| `HttpRequest::getInputValue(keyName:)`             | `getQueryArray()` / `getQueryString()`, `getPostArray()` / `getPostString()` |
+| `HttpRequest::hasScalarInputValue(keyName:)`       | `getQueryString(name:) !== null` / `getPostString(name:) !== null`; `hasQueryValue()` / `hasPostValue()` check only that the key exists |
+| `HttpRequest::getFile(name:)`                      | `$httpRequest->getFile(name:)`: the normalized entry, `null` for a field with several files |
+| `HttpRequest::getFiles(name:)`                     | `$httpRequest->getFiles(name:)`                                           |
+| `RequestBody::getData()`                           | `$httpRequest->getBody()`                                                 |
+
+New: `getHeader(name:)` (case-insensitive), `getServerName()`, `getServerAddress()`, `getQueryParameters()`,
+`getPostParameters()`, `getRawFiles()`, `getServerVariables()` and `listCookies()` (the last five for forms, the error log
+and the debug page). The constructor takes everything as named arguments (`new HttpRequest(host: 'example.com', …)`), so
+tests need no superglobals. The static caches of host, protocol, languages and input are gone: `HttpRequest` is `final
+readonly`.
+
+`RequestBody` is removed (`JsonRequestBody` no longer extends it): replace `RequestBody::getData()` with
+`$httpRequest->getBody()`.
+
+### ⚠️ No merged input: query or post
+
+`getInput…()` merged `$_GET` and `$_POST` (the post value won). Decide per value where it comes from, as it is in the
+form (`method="post"`) or the link (`?page=2`). Numeric keys (`?5=x`) are no longer renumbered by a merge.
+
+### ⚠️ Numbers are strict
+
+`getQueryInteger()`, `getPostInteger()`, `getQueryFloat()` and `getPostFloat()` return a number only for a complete
+number: integers `-?\d+` within the integer range, floats `-?\d+(\.\d+)?([eE][+-]?\d+)?` and finite. Before, `(int)` and
+`(float)` casts were used. The results change as follows (`null` is a missing, malformed or out of range value):
+
+| Value       | `getInputInteger()` before | `getQueryInteger()` now | `getInputFloat()` before | `getQueryFloat()` now |
+|:------------|:---------------------------|:------------------------|:-------------------------|:----------------------|
+| `'12'`      | `12`                       | `12`                    | `12.0`                   | `12.0`                |
+| `'12abc'`   | `12`                       | `null`                  | `12.0`                   | `null`                |
+| `''`        | `0`                        | `null`                  | `0.0`                    | `null`                |
+| `'abc'`     | `0`                        | `null`                  | `0.0`                    | `null`                |
+| `'1.5'`     | `1`                        | `null`                  | `1.5`                    | `1.5`                 |
+| `'1,5'`     | `1`                        | `null`                  | `1.0`                    | `null`                |
+| `'1e3'`     | `1000`                     | `null`                  | `1000.0`                 | `1000.0`              |
+| `'+5'`      | `5`                        | `null`                  | `5.0`                    | `null`                |
+| `'99999999999999999999'` | `PHP_INT_MAX`   | `null`                  | `1.0E+20`                | `1.0E+20`             |
+| `'1e999'`   | `0`                        | `null`                  | `INF`                    | `null`                |
+
+A present but empty or non-numeric value was indistinguishable from `0`; now it is `null`. Check every call that used
+`?? 0` or the number as an ID.
+
+### ⚠️ `Core::$httpRequest` and the other users of the request
+
+`Core` creates the request in its constructor (`public readonly HttpRequest $httpRequest`) and answers a request with an
+unknown method (`TRACE`, …) with `405` before anything else (`UnsupportedRequestMethodException`). A bootstrap file uses
+`$core->httpRequest`:
+
+```php
+// before
+$ip = HttpRequest::getRemoteAddress();
+$sessionHandler = new FileSessionHandler(sessionSettings: new SessionSettings(), defaultSavePath: $path);
+
+// after
+$core = new Core(envFilePath: $envFilePath, copyrightYear: 2026);
+$ip = $core->httpRequest->getRemoteAddress();
+$sessionHandler = new FileSessionHandler(
+    httpRequest: $core->httpRequest,
+    sessionSettings: new SessionSettings(),
+    defaultSavePath: $path,
+);
+```
+
+### ⚠️ Changed constructors and methods
+
+Every call has to pass the request (all arguments are named, so the position does not matter, except where a required
+parameter moved before the optional ones).
+
+| Class / method | Change |
+|:---------------|:-------|
+| `RequestHandler::__construct()` | new first argument `httpRequest:` |
+| `ViewContext::__construct()` | new first argument `httpRequest:` (`$this->context->httpRequest`); `getJsonRequestBody()` reads `getBody()` |
+| `InputParameter::__construct()` | new required `source:` (`InputSourceEnum::QUERY` or `POST`) after `name:` |
+| `BaseView::getInputString()`, `getInputInteger()`, `getInputFloat()`, `getInputArray()`, `getInputDomain()` | unchanged names; they read from the `source` of the declared parameter; the check of required parameters uses it, too |
+| `HttpResponse::createHtmlResponse()`, `createResponseFromString()`, `createResponseFromFilePath()` | new required `httpRequest:` (conditional requests) |
+| `HttpResponse::redirectAndExit()` | new required second argument `httpRequest:` (before `httpStatusCode:`) |
+| `UrlHelper::generateAbsoluteUri()` | new required `httpRequest:` |
+| `CspPolicySettings::getHttpHeaderDataString()` | new required `httpRequest:` |
+| `CsvFile::pushDownloadAndExit()` | new required `httpRequest:` |
+| `FileHandler::output()` | new first argument `httpRequest:` (before `forceDownload:`) |
+| `Logger::__construct()` | new required `httpRequest:` after `logDirectory:` (the log contains its data instead of the superglobals) |
+| `ExceptionHandlerContext::__construct()` | new required `httpRequest:` (last) |
+| `AbstractSessionHandler::__construct()`, `FileSessionHandler::__construct()` | new first argument `httpRequest:` (remote address, user agent, session cookie) |
+| `Authenticator::__construct()`, `MicrosoftAuthenticator::__construct()` | new first argument `httpRequest:`; subclasses pass it on (the remote address of the login) |
+| `AbstractMailer::__construct()`, `SmtpMailer::__construct()` | new first argument `serverAddress:` (`$httpRequest->getServerAddress()`) instead of `$_SERVER['SERVER_ADDR']`; `MailMailer` takes it, too |
+| `AbstractMail::send()` | `$abstractMailer` is required (before: default `new MailMailer()`): `$mail->send(abstractMailer: new MailMailer(serverAddress: $httpRequest->getServerAddress()))` |
+| `FormInput::fromGlobals()` | removed: `FormInput::fromHttpRequest(httpRequest:, methodPost:)` |
+| `Form::validate()`, `Form::isSent()` | `input:` is required (before: the current request) |
+| `FileField::__construct()` | `storage:` is required and the third argument (after `label:`); use `SessionFileUploadStorage::forHttpRequest(httpRequest:)` |
+| `SessionFileUploadStorage::forCurrentRequest()` | removed: `forHttpRequest(httpRequest:)` |
+| `TableFilter::__construct()` | new required `httpRequest:` after `identifier:` (the fields take it from their filter) |
+| `DbResultTable::__construct()` | new required `httpRequest:` after `templateEngine:` |
+| `TableHelper::createDbResultTable()` | new required `httpRequest:` after `templateEngine:` |
+| `SearchHelper::getInstance(instanceName:)` | `SearchHelper::create(instanceName:, httpRequest:, valueSource:)`, no static registry any more; `valueSource` is where the values of the search fields come from |
+
+The parameters of tables, filters and the search helper come from fixed sources: sorting, page, `find` and `reset` from
+the query string; the filter values of a `TableFilter` from the posted data (only with a valid CSRF token and the
+method `POST`, as before); the values of the `SearchHelper` from `valueSource`.
+
+### Before / after
+
+A view with input parameters:
+
+```php
+// before
+$inputParameters->add(inputParameter: new InputParameter(name: 'page', isRequired: false));
+$page = $this->getInputInteger(keyName: 'page') ?? 1;
+$ip = HttpRequest::getRemoteAddress();
+
+// after
+$inputParameters->add(
+    inputParameter: new InputParameter(name: 'page', source: InputSourceEnum::QUERY, isRequired: false),
+);
+$page = $this->getInputInteger(keyName: 'page') ?? 1; // unchanged: reads the query string
+$ip = $this->context->httpRequest->getRemoteAddress();
+```
+
+A form in a view:
+
+```php
+// before
+if ($form->validate()) {
+    // …
+}
+
+// after
+$input = FormInput::fromHttpRequest(httpRequest: $this->context->httpRequest, methodPost: true);
+if ($form->validate(input: $input)) {
+    // …
+}
+```
+
+A table:
+
+```php
+// before
+$table = TableHelper::createDbResultTable(
+    identifier: 'users',
+    db: $db,
+    selectQuery: $sql,
+    templateEngine: $this->context->templateEngine,
+    tableFilter: new TableFilter(identifier: 'usersFilter'),
+);
+
+// after
+$httpRequest = $this->context->httpRequest;
+$table = TableHelper::createDbResultTable(
+    identifier: 'users',
+    db: $db,
+    selectQuery: $sql,
+    templateEngine: $this->context->templateEngine,
+    httpRequest: $httpRequest,
+    tableFilter: new TableFilter(identifier: 'usersFilter', httpRequest: $httpRequest),
+);
+```
+
+A static helper of your project: it must not read the request, its caller passes what it needs in.
+
+```php
+// before
+final class LinkHelper
+{
+    public static function absolute(string $path): string
+    {
+        return 'https://' . HttpRequest::getHost() . $path;
+    }
+}
+$url = LinkHelper::absolute(path: '/login.html');
+
+// after
+final class LinkHelper
+{
+    public static function absolute(string $host, string $path): string
+    {
+        return 'https://' . $host . $path;
+    }
+}
+$url = LinkHelper::absolute(host: $this->context->httpRequest->getHost(), path: '/login.html');
+```
+
+A bootstrap file (`index.php`): use `$core->httpRequest` after `new Core(…)`; before `Core` exists (and in CLI scripts),
+`HttpRequest::fromGlobals()`.
+
+### Bug fixes (no change needed)
+
+- HTTPS detection: the `HTTPS` server variable decides if it exists (`on` or `1`, case-insensitive; `off` means
+  http, also on port 443). Only without it, port 443 means https. Before, `ON` was http and `off` on port 443 https.
+- Browser languages (`listBrowserLanguagesByQuality()`): all languages in quality order (before, a second language with
+  the same quality was dropped), every language once, no `*` and no empty codes, spaces around `;q=` are allowed
+  (`de, en; q=0.5`), qualities are compared exactly (`0.57` before `0.56`) and clamped to 0…1.
+- `getFiles()` returns the files of a field with one file and of one with several (`field[]`) alike, and `[]` for a
+  missing field or a manipulated structure. Before, it threw a `TypeError` for one file and failed for a missing field.
+- Bearer token: header name and scheme `Bearer` are case-insensitive, an empty token is `null` (before: `''`), and it
+  works without `getallheaders()` (fallback to `HTTP_AUTHORIZATION`, `REDIRECT_HTTP_AUTHORIZATION`).
+- A missing `REQUEST_METHOD`, `REQUEST_URI` or host is an `UnexpectedValueException` in `fromGlobals()` (before: a
+  warning "Undefined array key" later); a missing `SERVER_PORT` is port 0 and a missing `QUERY_STRING` is empty. An unknown
+  request method is an `UnsupportedRequestMethodException` (before: a `ValueError`), answered with 405.
+- `UrlHelper::generateAbsoluteUri()` ignores the query string of the request when it takes the directory (a "/" in the
+  query shifted the directory).
+- The debug page of `ExceptionHandler` shows `$_FILES` (before: always empty because of a typo in the variable name).
+- `SearchHelper` checks `reset` and `find` the same way everywhere (query string, key exists).
+- `checkDateRangeFilter()` has typed array arguments and results (`array{minDate: string, maxDate: string}`).
+
+Remaining reads of superglobals: `HttpRequest::fromGlobals()`, `Core` (`$_SERVER['DOCUMENT_ROOT']`) and the session
+handler (removes an invalid session cookie from `$_COOKIE`, because `session_start()` reads it from there).
+
+---
+
 ## [v4.28.0] – 2026-10-08
 
 ### ⚠️ `LogFile` is an instance class only

@@ -17,6 +17,7 @@ use actra\yuf\exception\ExceptionHandler;
 use actra\yuf\exception\ExceptionHandlerContext;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CspPolicySettings;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\core\RecordingLogger;
 use actra\yuf\tests\Double\exception\ContextExposingExceptionHandler;
 use LogicException;
@@ -60,6 +61,7 @@ final class ExceptionHandlerTest extends TestCase
             cspPolicySettings: new CspPolicySettings(),
             isDebug: true,
             core: new ReflectionClass(objectOrClass: Core::class)->newInstanceWithoutConstructor(),
+            httpRequest: HttpRequestFactory::create(),
         );
     }
 

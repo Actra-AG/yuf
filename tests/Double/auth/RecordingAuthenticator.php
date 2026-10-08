@@ -12,6 +12,7 @@ namespace actra\yuf\tests\Double\auth;
 use actra\yuf\auth\Authenticator;
 use actra\yuf\auth\AuthResultEnum;
 use actra\yuf\auth\AuthUser;
+use actra\yuf\core\HttpRequest;
 use Override;
 
 /**
@@ -24,9 +25,9 @@ final class RecordingAuthenticator extends Authenticator
      */
     public array $loggedResults = [];
 
-    public function __construct(private readonly ?AuthUser $authUser)
+    public function __construct(HttpRequest $httpRequest, private readonly ?AuthUser $authUser)
     {
-        parent::__construct(maxAllowedWrongPasswordAttempts: 3);
+        parent::__construct(httpRequest: $httpRequest, maxAllowedWrongPasswordAttempts: 3);
     }
 
     #[Override]

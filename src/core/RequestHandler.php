@@ -40,6 +40,7 @@ class RequestHandler
      * @param list<string> $allowedDomains
      */
     public function __construct(
+        private readonly HttpRequest $httpRequest,
         private readonly RouteCollection $routeCollection,
         private readonly LanguageCollection $availableLanguages,
         private readonly array $allowedDomains,
@@ -47,7 +48,7 @@ class RequestHandler
         if (!$availableLanguages->isEmpty()) {
             $this->language = $availableLanguages->getFirstLanguage();
         }
-        $this->pathParts = explode(separator: '/', string: HttpRequest::getPath());
+        $this->pathParts = explode(separator: '/', string: $this->httpRequest->getPath());
         $this->countPathParts = count(value: $this->pathParts);
         $this->fileName = trim(string: $this->pathParts[$this->countPathParts - 1]);
         $this->defaultRoutesByLanguage = $this->initDefaultRoutes();
@@ -67,7 +68,7 @@ class RequestHandler
         $this->routeResolved = true;
         $this->checkDomain();
         if (str_contains(
-            haystack: HttpRequest::getPath(),
+            haystack: $this->httpRequest->getPath(),
             needle: '//',
         )) {
             throw new NotFoundException();
@@ -129,7 +130,7 @@ class RequestHandler
 
     private function checkDomain(): void
     {
-        $host = HttpRequest::getHost();
+        $host = $this->httpRequest->getHost();
 
         if (
             !in_array(
@@ -177,7 +178,7 @@ class RequestHandler
             $requestedDirectories .= $this->pathParts[$x] . '/';
         }
 
-        $requestedPath = HttpRequest::getPath();
+        $requestedPath = $this->httpRequest->getPath();
         foreach ($this->routeCollection->routes as $route) {
             $routePath = $route->path;
             if ($routePath === $requestedDirectories) {
@@ -212,26 +213,35 @@ class RequestHandler
 
             return $route;
         }
-        if (HttpRequest::getUri() === '/') {
+        if ($this->httpRequest->getUri() === '/') {
             $defaultRoutesByLanguage = $this->defaultRoutesByLanguage;
             if (AbstractSessionHandler::enabled()) {
                 $preferredLanguageCode = AbstractSessionHandler::getSessionHandler()->getPreferredLanguageCode();
                 if ($preferredLanguageCode !== null) {
                     foreach ($defaultRoutesByLanguage->routes as $route) {
                         if ($route->language->code === $preferredLanguageCode) {
-                            HttpResponse::redirectAndExit(relativeOrAbsoluteUri: $route->path);
+                            HttpResponse::redirectAndExit(
+                                relativeOrAbsoluteUri: $route->path,
+                                httpRequest: $this->httpRequest,
+                            );
                         }
                     }
                 }
             }
-            foreach (Httprequest::listBrowserLanguagesByQuality() as $languageCode) {
+            foreach ($this->httpRequest->listBrowserLanguagesByQuality() as $languageCode) {
                 $routeForLanguage = $defaultRoutesByLanguage->getRouteForLanguage(languageCode: $languageCode);
                 if ($routeForLanguage !== null) {
-                    HttpResponse::redirectAndExit(relativeOrAbsoluteUri: $routeForLanguage->path);
+                    HttpResponse::redirectAndExit(
+                        relativeOrAbsoluteUri: $routeForLanguage->path,
+                        httpRequest: $this->httpRequest,
+                    );
                 }
             }
             // Redirect to the first default route if none is available in accepted languages
-            HttpResponse::redirectAndExit(relativeOrAbsoluteUri: $defaultRoutesByLanguage->getFirstRoute()->path);
+            HttpResponse::redirectAndExit(
+                relativeOrAbsoluteUri: $defaultRoutesByLanguage->getFirstRoute()->path,
+                httpRequest: $this->httpRequest,
+            );
         }
 
         throw new NotFoundException();

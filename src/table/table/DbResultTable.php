@@ -47,6 +47,7 @@ class DbResultTable extends SmartTable
         public readonly FrameworkDb     $db,
         public readonly DbQuery         $dbQuery,
         private readonly TemplateEngine $templateEngine,
+        private readonly HttpRequest    $httpRequest,
         private readonly ?TableFilter   $tableFilter = null,
         ?TablePaginationRenderer        $tablePaginationRenderer = null,
         ?SortableTableHeadRenderer      $sortableTableHeadRenderer = null,
@@ -142,7 +143,7 @@ class DbResultTable extends SmartTable
             }
         }
 
-        $requestedSorting = trim(string: (string) HttpRequest::getInputString(keyName: DbResultTable::PARAM_SORT));
+        $requestedSorting = trim(string: (string) $this->httpRequest->getQueryString(name: DbResultTable::PARAM_SORT));
         if ($requestedSorting !== '') {
             $requestedSortingArr = explode(separator: '|', string: $requestedSorting);
             if (count(value: $requestedSortingArr) === 3) {
@@ -171,9 +172,12 @@ class DbResultTable extends SmartTable
             }
         }
 
-        if (empty($this->getCurrentSortColumn()) || HttpRequest::getInputString(
-            keyName: DbResultTable::PARAM_RESET,
-        ) !== null) {
+        $currentSortColumn = $this->getCurrentSortColumn();
+        if (
+            $currentSortColumn === null
+            || $currentSortColumn === ''
+            || $this->httpRequest->getQueryString(name: DbResultTable::PARAM_RESET) !== null
+        ) {
             $this->hasUserDefinedSorting = false;
             $defaultSortColumn = $this->defaultSortColumn;
             if ($defaultSortColumn === null) {
@@ -241,9 +245,7 @@ class DbResultTable extends SmartTable
         $inputPageArr = explode(
             separator: '|',
             string: trim(
-                string: (string) HttpRequest::getInputString(
-                    keyName: DbResultTable::PARAM_PAGE,
-                ),
+                string: (string) $this->httpRequest->getQueryString(name: DbResultTable::PARAM_PAGE),
             ),
         );
         $inputPage = (int) $inputPageArr[0];
@@ -254,8 +256,8 @@ class DbResultTable extends SmartTable
 
         if (
             $this->getCurrentPaginationPage() < 1
-            || HttpRequest::getInputString(keyName: DbResultTable::PARAM_FIND) !== null
-            || HttpRequest::getInputString(keyName: DbResultTable::PARAM_RESET) !== null
+            || $this->httpRequest->getQueryString(name: DbResultTable::PARAM_FIND) !== null
+            || $this->httpRequest->getQueryString(name: DbResultTable::PARAM_RESET) !== null
         ) {
             $this->setCurrentPaginationPage(page: 1);
         }

@@ -13,6 +13,7 @@ use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CspPolicySettings;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
 use PHPUnit\Framework\TestCase;
 use ReflectionProperty;
 
@@ -36,6 +37,7 @@ final class HttpResponseSecurityHeadersTest extends TestCase
             forceDownload: true,
             individualFileName: null,
             maxAge: 0,
+            httpRequest: HttpRequestFactory::create(),
         );
 
         $headers = $this->headersOf(httpResponse: $httpResponse);
@@ -50,6 +52,7 @@ final class HttpResponseSecurityHeadersTest extends TestCase
             htmlContent: '<p>Test</p>',
             cspPolicySettings: null,
             nonce: null,
+            httpRequest: HttpRequestFactory::create(),
         );
 
         $headers = $this->headersOf(httpResponse: $httpResponse);
@@ -64,6 +67,7 @@ final class HttpResponseSecurityHeadersTest extends TestCase
             htmlContent: '<p>Test</p>',
             cspPolicySettings: null,
             nonce: null,
+            httpRequest: HttpRequestFactory::create(),
         );
 
         $headers = $this->headersOf(httpResponse: $httpResponse);
@@ -77,16 +81,13 @@ final class HttpResponseSecurityHeadersTest extends TestCase
     {
         $cspNonce = new CspNonce(value: 'fixed+nonce==');
         // The default policy reads protocol and host of the request
-        $_SERVER['HTTP_HOST'] = 'example.test';
-        $_SERVER['SERVER_PORT'] = '443';
-
         $httpResponse = HttpResponse::createHtmlResponse(
             httpStatusCode: HttpStatusCodeEnum::HTTP_OK,
             htmlContent: '<p>Test</p>',
             cspPolicySettings: new CspPolicySettings(),
             nonce: $cspNonce->value,
+            httpRequest: HttpRequestFactory::create(host: 'example.test'),
         );
-        unset($_SERVER['HTTP_HOST'], $_SERVER['SERVER_PORT']);
 
         $headers = $this->headersOf(httpResponse: $httpResponse);
         $this->assertArrayHasKey('Content-Security-Policy', $headers);

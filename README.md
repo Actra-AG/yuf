@@ -128,8 +128,8 @@ Only the view of the current request is created; a file without a mapped view is
 Every view receives the `ViewContext` of the request and passes it to `BaseView::__construct()`. It holds the route
 (`$this->context->route`), the file group and title, the `PathVars` and the `ContentHandler`
 (`$this->context->content->getContentType()`), the `LocaleHandler` (`$this->context->locale`) and the template engine
-(`$this->context->templateEngine`); `BaseView::getHtmlDocument()` and `getJsonRequestBody()` give the HTML document and
-the JSON request body.
+(`$this->context->templateEngine`) and the `HttpRequest` (`$this->context->httpRequest`); `BaseView::getHtmlDocument()`
+and `getJsonRequestBody()` give the HTML document and the JSON request body.
 
 ```php
 new Route(
@@ -141,6 +141,42 @@ new Route(
         create: fn(ViewContext $context): BaseView => new IndexView(context: $context),
     ),
 );
+```
+
+## The request
+
+`HttpRequest` is an immutable snapshot of the request, created once per request by `Core` from the superglobals
+(`HttpRequest::fromGlobals()`) and available as `$core->httpRequest` and `$this->context->httpRequest`. Nothing in yuf
+reads a superglobal afterwards; everything that needs the request gets it as argument or constructor dependency. In
+tests, build a request with the constructor (`new HttpRequest(host: 'example.com', method: …, queryParameters: …)`).
+`fromGlobals()` is meant for `Core`, bootstrap files and CLI scripts, not for logic classes.
+
+```php
+$httpRequest = $this->context->httpRequest;
+$httpRequest->getMethod();              // RequestMethodEnum (GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS)
+$httpRequest->getPath();                // '/de/page.html', without the query string
+$httpRequest->getUrl();                 // 'https://www.example.com/de/page.html?a=1'
+$httpRequest->getProtocol();            // ProtocolEnum::HTTPS
+$httpRequest->getRemoteAddress();       // client IP address
+$httpRequest->getHeader(name: 'Accept'); // ?string, header names are case-insensitive
+$httpRequest->getBearerToken();         // ?string
+$httpRequest->getCookie(name: 'theme'); // ?string
+$httpRequest->getBody();                // raw body, e.g. for JSON
+```
+
+Input is never merged: `getQueryString()`, `getQueryInteger()`, `getQueryFloat()`, `getQueryArray()` and
+`hasQueryValue()` read the query string, the `getPost…()` methods the posted form data. Strings are trimmed; a missing
+value is `null`. Integers and floats must be complete numbers (`'12'`, `'-1.5'`, `'1e3'`): `'12abc'`, `''` and `'1.5'`
+(as integer) give `null`. Uploads: `getFile()` for a field with one file, `getFiles()` for any field (a list of
+normalized entries).
+
+A view declares the source of each input parameter; `getInputString()`, `getInputInteger()`, `getInputFloat()` and
+`getInputArray()` read from it, and a required parameter is checked there:
+
+```php
+$inputParameters = new InputParameterCollection();
+$inputParameters->add(inputParameter: new InputParameter(name: 'page', source: InputSourceEnum::QUERY, isRequired: false));
+$inputParameters->add(inputParameter: new InputParameter(name: 'title', source: InputSourceEnum::POST, isRequired: true));
 ```
 
 ## Path variables
@@ -174,7 +210,7 @@ must be written to the session after `AuthSession::logOut()`.
 
 Useful backend/API features include:
 
-- `HttpRequest::getRequestMethod()` returns a typed `RequestMethodEnum`.
+- `$this->context->httpRequest->getMethod()` returns a typed `RequestMethodEnum`.
 - `BaseView::getJsonRequestBody()` reads and validates JSON request bodies.
 - `JsonRequestBody` provides typed accessors for required and optional string, integer, float, and array values.
 - `BaseView::setSuccessResponseContent()` creates standardized success responses.
@@ -267,7 +303,9 @@ $html = $snippet->render(templateEngine: $this->context->templateEngine);
 
 `Pagination::render()`, `TablePaginationRenderer::render()` and `TableFilter::render()` take `templateEngine:` the same
 way; a `DbResultTable` takes it in its constructor (`TableHelper::createDbResultTable(identifier:, db:, selectQuery:,
-templateEngine:)`) and passes it to the pagination and the filter.
+templateEngine:, httpRequest:)`) and passes it to the pagination and the filter. The table reads sorting and page from
+the query string of the request; a `TableFilter` (`new TableFilter(identifier:, httpRequest:)`) takes the filter values
+from the posted data (with a valid CSRF token).
 
 ### Using the engine directly
 
@@ -436,17 +474,22 @@ $quantity->addValueRule(formRule: new IntegerMinRule(min: 1, errorMessage: $atLe
 
 ### Request data
 
-`validate()` and `isSent()` read the current request. Pass a `FormInput` to validate other data, e.g. in a test (no
-superglobals needed); the sent indicator (`?order`) is part of the query:
+`validate()` and `isSent()` take the request data as `FormInput`. In a view, build it from the request of the view
+(`methodPost` is the method of the form); to validate other data, e.g. in a test, use `FormInput::fromArray()`. The sent
+indicator (`?order`) is part of the query:
 
 ```php
+$input = FormInput::fromHttpRequest(httpRequest: $this->context->httpRequest, methodPost: true);
+$isValid = $form->validate(input: $input);
+
 $input = FormInput::fromArray(data: ['customer' => 'Ann', 'quantity' => '2'], query: ['order' => '']);
 $isValid = $form->validate(input: $input);
 ```
 
-`FileField` keeps uploaded files in a `FileUploadStorage` (default: session and temp directory) and the CSRF field
-gets its token from a `CsrfTokenSource` (default: session). Both can be replaced with the constructor arguments
-`storage` and `csrfTokenSource` of the field or `Form`. Code that upgrades from v3 finds the changes in
+`FileField` keeps uploaded files in a `FileUploadStorage` (the production one is
+`SessionFileUploadStorage::forHttpRequest(httpRequest:)`: session and temp directory) and the CSRF field gets its token
+from a `CsrfTokenSource` (default: session). The storage is a required argument of the field, the token source an
+optional one of the field or `Form`. Code that upgrades from v3 finds the changes in
 [UPGRADE.md](UPGRADE.md).
 
 ## Clock
@@ -462,6 +505,7 @@ use actra\yuf\core\Logger;
 $logger = new Logger(
     logEmailRecipient: '',
     logDirectory: $logDirectory,
+    httpRequest: $core->httpRequest,
     clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-01-02 03:04:05'))
 );
 ```

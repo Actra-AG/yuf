@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace actra\yuf\table\filter;
 
-use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQueryData;
 use actra\yuf\html\HtmlText;
 use LogicException;
@@ -67,7 +66,7 @@ class OptionsFilterField extends AbstractTableFilterField
     #[Override]
     public function checkInput(): void
     {
-        $inputValue = (string) HttpRequest::getInputString(keyName: $this->identifier);
+        $inputValue = (string) $this->httpRequest->getPostString(name: $this->identifier);
         if (array_key_exists(key: $inputValue, array: $this->filterOptions)) {
             $this->setSelectedValue(selectedValue: $inputValue);
         }

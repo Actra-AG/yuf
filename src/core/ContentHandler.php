@@ -86,6 +86,7 @@ class ContentHandler
             localeHandler: $localeHandler,
         );
         $context = new ViewContext(
+            httpRequest: $core->httpRequest,
             route: $route,
             fileGroup: $requestHandler->fileGroup,
             fileTitle: $requestHandler->fileTitle,

@@ -11,6 +11,12 @@ namespace actra\yuf\mailer;
 
 abstract class AbstractMailer
 {
+    /**
+     * @param string $serverAddress The IP address of this server (`HttpRequest::getServerAddress()`): its host name
+     *                              is part of the message IDs
+     */
+    public function __construct(private readonly string $serverAddress) {}
+
     abstract public function headerHasTo(): bool;
 
     abstract public function headerHasSubject(): bool;
@@ -25,6 +31,8 @@ abstract class AbstractMailer
 
     public function getServerName(): string
     {
-        return gethostbyaddr(ip: $_SERVER['SERVER_ADDR']);
+        $serverName = gethostbyaddr(ip: $this->serverAddress);
+
+        return $serverName === false ? $this->serverAddress : $serverName;
     }
 }

@@ -121,6 +121,7 @@ class ExceptionHandler
             $httpStatusCode = HttpStatusCodeEnum::HTTP_INTERNAL_SERVER_ERROR;
             $title = 'Internal Server Error';
         }
+        $httpRequest = $this->getContext()->httpRequest;
         $this->htmlReplacementCollection->addHtml(
             identifier: 'title',
             html: $title,
@@ -151,19 +152,15 @@ class ExceptionHandler
         );
         $this->htmlReplacementCollection->addHtml(
             identifier: 'vardump_get',
-            html: isset($_GET) ? htmlentities(string: var_export(value: $_GET, return: true)) : '',
+            html: htmlentities(string: var_export(value: $httpRequest->getQueryParameters(), return: true)),
         );
         $this->htmlReplacementCollection->addHtml(
             identifier: 'vardump_post',
-            html: isset($_POST) ? htmlentities(
-                string: var_export(value: $_POST, return: true),
-            ) : '',
+            html: htmlentities(string: var_export(value: $httpRequest->getPostParameters(), return: true)),
         );
         $this->htmlReplacementCollection->addHtml(
             identifier: 'vardump_file',
-            html: isset($_FILE) ? htmlentities(
-                string: var_export(value: $_FILE, return: true),
-            ) : '',
+            html: htmlentities(string: var_export(value: $httpRequest->getRawFiles(), return: true)),
         );
         $this->htmlReplacementCollection->addHtml(
             identifier: 'vardump_sess',
@@ -198,6 +195,7 @@ class ExceptionHandler
                     data: $this->htmlReplacementCollection->getArrayObject(),
                 )->content,
                 contentType: $contentType,
+                httpRequest: $this->getContext()->httpRequest,
             );
             $httpResponse->sendAndExit();
         }
@@ -213,6 +211,7 @@ class ExceptionHandler
                     additionalInfo: $this->htmlReplacementCollection->getArrayObject(),
                 )->content,
                 contentType: $contentType,
+                httpRequest: $this->getContext()->httpRequest,
             );
             $httpResponse->sendAndExit();
         }
@@ -223,6 +222,7 @@ class ExceptionHandler
             ),
             cspPolicySettings: $this->getContext()->cspPolicySettings,
             nonce: $this->getContext()->cspNonce->value,
+            httpRequest: $this->getContext()->httpRequest,
         );
         $httpResponse->sendAndExit();
     }

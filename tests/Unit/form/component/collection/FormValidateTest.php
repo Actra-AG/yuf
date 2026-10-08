@@ -14,42 +14,27 @@ use actra\yuf\form\component\field\TextField;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormNameRegistry;
 use actra\yuf\html\HtmlText;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
 use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
- * `Form::validate(?FormInput)` and `Form::isSent(?FormInput)`: the request is a `FormInput`; without one the form reads
- * the superglobals through `FormInput::fromGlobals()` (restored after each test).
+ * `Form::validate(FormInput)` and `Form::isSent(FormInput)`: the request is a `FormInput`, built from a request or
+ * from arrays.
  */
 final class FormValidateTest extends TestCase
 {
-    /** @var array<array-key, mixed> */
-    private array $savedGet;
-    /** @var array<array-key, mixed> */
-    private array $savedPost;
-    /** @var array<array-key, mixed> */
-    private array $savedFiles;
-
     #[Override]
     protected function setUp(): void
     {
         FormNameRegistry::reset();
-        $this->savedGet = $_GET;
-        $this->savedPost = $_POST;
-        $this->savedFiles = $_FILES;
-        $_GET = [];
-        $_POST = [];
-        $_FILES = [];
     }
 
     #[Override]
     protected function tearDown(): void
     {
-        $_GET = $this->savedGet;
-        $_POST = $this->savedPost;
-        $_FILES = $this->savedFiles;
         FormNameRegistry::reset();
     }
 
@@ -88,14 +73,14 @@ final class FormValidateTest extends TestCase
         $this->assertFalse($form->isSent(input: FormInput::fromArray(data: [], query: ['contact' => ''])));
     }
 
-    public function testIsSentReadsTheGlobalsWithoutInput(): void
+    public function testIsSentReadsTheQueryStringOfTheRequest(): void
     {
         $form = $this->createForm();
-        $this->assertFalse($form->isSent());
+        $notSent = HttpRequestFactory::create();
+        $sent = HttpRequestFactory::create(queryParameters: ['contact' => '']);
 
-        $_GET = ['contact' => ''];
-
-        $this->assertTrue($form->isSent());
+        $this->assertFalse($form->isSent(input: FormInput::fromHttpRequest(httpRequest: $notSent, methodPost: true)));
+        $this->assertTrue($form->isSent(input: FormInput::fromHttpRequest(httpRequest: $sent, methodPost: true)));
     }
 
     public function testValidateReturnsFalseWithoutErrorsIfTheFormWasNotSent(): void
@@ -134,31 +119,43 @@ final class FormValidateTest extends TestCase
         $this->assertTrue($form->getField(name: 'name')->hasErrors(withChildElements: false));
     }
 
-    public function testValidateReadsPostAndGetGlobalsWithoutInput(): void
+    public function testValidateReadsPostAndQueryOfTheRequest(): void
     {
         $form = $this->createForm();
-        $_GET = ['contact' => ''];
-        $_POST = ['name' => 'Ann', 'csrftoken' => 'tok'];
+        $httpRequest = HttpRequestFactory::create(
+            queryParameters: ['contact' => ''],
+            postParameters: ['name' => 'Ann', 'csrftoken' => 'tok'],
+        );
 
-        $this->assertTrue($form->validate());
+        $input = FormInput::fromHttpRequest(httpRequest: $httpRequest, methodPost: true);
+
+        $this->assertTrue($form->validate(input: $input));
     }
 
-    public function testGetFormReadsTheValuesFromTheGetGlobal(): void
+    public function testGetFormReadsTheValuesFromTheQueryOfTheRequest(): void
     {
         $form = $this->createForm(methodPost: false);
-        $_GET = ['contact' => '', 'name' => 'Ann', 'csrftoken' => 'tok'];
-        $_POST = ['name' => ''];
+        $httpRequest = HttpRequestFactory::create(
+            queryParameters: ['contact' => '', 'name' => 'Ann', 'csrftoken' => 'tok'],
+            postParameters: ['name' => ''],
+        );
 
-        $this->assertTrue($form->validate());
+        $input = FormInput::fromHttpRequest(httpRequest: $httpRequest, methodPost: false);
+
+        $this->assertTrue($form->validate(input: $input));
     }
 
-    public function testPostFormIgnoresTheValuesOfTheGetGlobal(): void
+    public function testPostFormIgnoresTheValuesOfTheQueryOfTheRequest(): void
     {
         $form = $this->createForm();
-        $_GET = ['contact' => '', 'name' => 'Ann', 'csrftoken' => 'tok'];
-        $_POST = ['csrftoken' => 'tok'];
+        $httpRequest = HttpRequestFactory::create(
+            queryParameters: ['contact' => '', 'name' => 'Ann', 'csrftoken' => 'tok'],
+            postParameters: ['csrftoken' => 'tok'],
+        );
 
-        $this->assertFalse($form->validate());
+        $input = FormInput::fromHttpRequest(httpRequest: $httpRequest, methodPost: true);
+
+        $this->assertFalse($form->validate(input: $input));
     }
 
     public function testDuplicateFormNameThrows(): void

@@ -9,39 +9,21 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\core;
 
-use actra\yuf\core\HttpRequest;
 use actra\yuf\core\Language;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\RequestHandler;
 use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
 use actra\yuf\exception\NotFoundException;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
 use LogicException;
-use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Not covered: redirects of "/" (they exit) and the preferred language in the session.
- * `HttpRequest` caches the host statically, so the tests read it back instead of assuming a value.
  */
 final class RequestHandlerTest extends TestCase
 {
-    /** @var array<mixed> */
-    private array $serverBackup;
-
-    #[Override]
-    protected function setUp(): void
-    {
-        $this->serverBackup = $_SERVER;
-        $_SERVER['HTTP_HOST'] = 'localhost';
-    }
-
-    #[Override]
-    protected function tearDown(): void
-    {
-        $_SERVER = $this->serverBackup;
-    }
-
     private function createRoute(string $path, ?Language $language = null, bool $isDefaultForLanguage = false): Route
     {
         return new Route(
@@ -58,13 +40,13 @@ final class RequestHandlerTest extends TestCase
         RouteCollection $routeCollection,
         LanguageCollection $availableLanguages = new LanguageCollection(),
         ?string $allowedDomain = null,
+        string $host = 'example.com',
     ): RequestHandler {
-        $_SERVER['REQUEST_URI'] = $requestUri;
-
         return new RequestHandler(
+            httpRequest: HttpRequestFactory::create(host: $host, uri: $requestUri),
             routeCollection: $routeCollection,
             availableLanguages: $availableLanguages,
-            allowedDomains: [$allowedDomain ?? HttpRequest::getHost()],
+            allowedDomains: [$allowedDomain ?? $host],
         );
     }
 
@@ -201,5 +183,31 @@ final class RequestHandlerTest extends TestCase
         $this->assertSame($english, $handler->language);
         $this->assertSame('x.html', $handler->fileName);
         $this->assertSame('/en/', $handler->getLanguageRoot());
+    }
+
+    public function testTheHostIsComparedWithThePortTheClientSent(): void
+    {
+        $handler = $this->createRequestHandler(
+            requestUri: '/index.html',
+            routeCollection: new RouteCollection(routes: [$this->createRoute(path: '/')]),
+            allowedDomain: 'example.com',
+            host: 'example.com:8443',
+        );
+
+        $this->expectException(NotFoundException::class);
+        $this->expectExceptionMessageIs('example.com:8443 is not set as allowed domain in your environment settings.');
+        $handler->resolveRoute();
+    }
+
+    public function testTheQueryStringIsNotPartOfThePath(): void
+    {
+        $handler = $this->createRequestHandler(
+            requestUri: '/detail-5.html?a=//b',
+            routeCollection: new RouteCollection(routes: [$this->createRoute(path: '/')]),
+        );
+
+        $handler->resolveRoute();
+
+        $this->assertSame('detail-5.html', $handler->fileName);
     }
 }

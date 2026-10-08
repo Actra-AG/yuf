@@ -13,6 +13,7 @@ use actra\yuf\clock\FixedClock;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\form\model\UploadInput;
 use actra\yuf\form\upload\SessionFileUploadStorage;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
 use DateTimeImmutable;
 use DirectoryIterator;
 use InvalidArgumentException;
@@ -31,14 +32,11 @@ final class SessionFileUploadStorageTest extends TestCase
     private string $rootDirectory;
     /** @var array<array-key, mixed> */
     private array $savedSession;
-    /** @var array<array-key, mixed> */
-    private array $savedServer;
 
     #[Override]
     protected function setUp(): void
     {
         $this->savedSession = $_SESSION ?? [];
-        $this->savedServer = $_SERVER;
         $_SESSION = [];
         $this->rootDirectory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-upload-test-' . bin2hex(string: random_bytes(length: 8));
         mkdir(directory: $this->rootDirectory);
@@ -48,7 +46,6 @@ final class SessionFileUploadStorageTest extends TestCase
     protected function tearDown(): void
     {
         $_SESSION = $this->savedSession;
-        $_SERVER = $this->savedServer;
         $this->removeTree(path: $this->rootDirectory);
     }
 
@@ -393,11 +390,10 @@ final class SessionFileUploadStorageTest extends TestCase
     }
 
     #[DataProvider('serverNameProvider')]
-    public function testStorageOfTheCurrentRequestLivesInADirectoryNamedAfterTheSanitizedServerName(
+    public function testStorageOfTheRequestLivesInADirectoryNamedAfterTheSanitizedServerName(
         string $serverName,
         string $expectedDirectoryName,
     ): void {
-        $_SERVER['SERVER_NAME'] = $serverName;
         $directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $expectedDirectoryName . DIRECTORY_SEPARATOR . 'yufptr';
         $existedBefore = is_dir(filename: dirname(path: $directory));
         mkdir(directory: $directory, recursive: true);
@@ -407,7 +403,9 @@ final class SessionFileUploadStorageTest extends TestCase
         try {
             $_SESSION['yufptr'] = [['name' => 'a', 'type' => 't', 'size' => 1, 'path' => $path]];
 
-            $this->assertCount(1, SessionFileUploadStorage::forCurrentRequest()->load(pointer: 'yufptr'));
+            $this->assertCount(1, SessionFileUploadStorage::forHttpRequest(
+                httpRequest: HttpRequestFactory::create(serverName: $serverName),
+            )->load(pointer: 'yufptr'));
         } finally {
             unlink(filename: $path);
             rmdir(directory: $directory);
@@ -417,10 +415,10 @@ final class SessionFileUploadStorageTest extends TestCase
         }
     }
 
-    public function testStorageOfTheCurrentRequestWorksWithoutServerName(): void
+    public function testStorageOfTheRequestWorksWithoutServerName(): void
     {
-        unset($_SERVER['SERVER_NAME']);
+        $httpRequest = HttpRequestFactory::create(serverName: '');
 
-        $this->assertSame([], SessionFileUploadStorage::forCurrentRequest()->load(pointer: 'ptr'));
+        $this->assertSame([], SessionFileUploadStorage::forHttpRequest(httpRequest: $httpRequest)->load(pointer: 'ptr'));
     }
 }

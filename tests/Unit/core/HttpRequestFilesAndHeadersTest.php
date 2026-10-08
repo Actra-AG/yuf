@@ -10,179 +10,183 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\core;
 
 use actra\yuf\core\HttpRequest;
-use actra\yuf\tests\Double\core\StaticRequestHeaders;
-use Error;
-use ErrorException;
-use Override;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\PreserveGlobalState;
-use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
-use TypeError;
 
 /**
- * Characterization of the static HttpRequest before the redesign (docs/http-request/plan.md, step 1).
- *
- * Cookies and files are read directly from the superglobals (no cache). The bearer token needs getallheaders(), which
- * does not exist in the CLI: tests that use it load a stand-in function into their own process.
+ * Uploaded files, headers, the bearer token, cookies and the body of a request built with the constructor.
  */
 final class HttpRequestFilesAndHeadersTest extends TestCase
 {
-    /** @var array<mixed> */
-    private array $cookieBackup = [];
-    /** @var array<mixed> */
-    private array $filesBackup = [];
-
-    #[Override]
-    protected function setUp(): void
+    public function testCookie(): void
     {
-        $this->cookieBackup = $_COOKIE;
-        $this->filesBackup = $_FILES;
-        $_COOKIE = [];
-        $_FILES = [];
-        // Warnings (e.g. array access on null) become exceptions, so the tests can name them
-        set_error_handler(
-            callback: static function (int $severity, string $message, string $file, int $line): never {
-                throw new ErrorException(message: $message, code: 0, severity: $severity, filename: $file, line: $line);
-            },
-        );
+        $httpRequest = HttpRequestFactory::create(cookies: ['session' => 'abc', 'theme' => 'dark']);
+
+        $this->assertSame('abc', $httpRequest->getCookie(name: 'session'));
+        $this->assertSame('dark', $httpRequest->getCookie(name: 'theme'));
+        $this->assertNull($httpRequest->getCookie(name: 'missing'));
+        $this->assertSame(['session' => 'abc', 'theme' => 'dark'], $httpRequest->listCookies());
     }
 
-    #[Override]
-    protected function tearDown(): void
+    public function testNoCookies(): void
     {
-        restore_error_handler();
-        $_COOKIE = $this->cookieBackup;
-        $_FILES = $this->filesBackup;
-        StaticRequestHeaders::$headers = [];
+        $this->assertNull(HttpRequestFactory::create()->getCookie(name: 'session'));
     }
 
-    public function testCookiesAreTheCookieSuperglobal(): void
+    public function testBody(): void
     {
-        $_COOKIE = ['session' => 'abc', 'theme' => 'dark'];
-
-        $this->assertSame(['session' => 'abc', 'theme' => 'dark'], HttpRequest::getCookies());
+        $this->assertSame('{"a":1}', HttpRequestFactory::create(body: '{"a":1}')->getBody());
+        $this->assertSame('', HttpRequestFactory::create()->getBody());
     }
 
-    public function testNoCookiesIsEmptyArray(): void
+    public function testHeaderNamesAreCaseInsensitive(): void
     {
-        $this->assertSame([], HttpRequest::getCookies());
-    }
+        $httpRequest = HttpRequestFactory::create(headers: ['X-Request-Id' => 'abc', 'accept' => 'text/html']);
 
-    public function testFileOfSingleUpload(): void
-    {
-        $file = [
-            'name' => 'a.txt',
-            'type' => 'text/plain',
-            'tmp_name' => '/tmp/phpA1',
-            'error' => 0,
-            'size' => 12,
-        ];
-        $_FILES['upload'] = $file;
-
-        $this->assertSame($file, HttpRequest::getFile(name: 'upload'));
-    }
-
-    public function testFileOfMultiUploadIsReturnedUnnormalized(): void
-    {
-        $raw = [
-            'name' => ['a.txt', 'b.txt'],
-            'type' => ['text/plain', 'text/plain'],
-            'tmp_name' => ['/tmp/phpA1', '/tmp/phpB2'],
-            'error' => [0, 0],
-            'size' => [12, 34],
-        ];
-        $_FILES['upload'] = $raw;
-
-        $this->assertSame($raw, HttpRequest::getFile(name: 'upload'));
-    }
-
-    public function testMissingFileIsNull(): void
-    {
-        $this->assertNull(HttpRequest::getFile(name: 'upload'));
-    }
-
-    public function testFilesOfMultiUploadAreNormalizedPerFile(): void
-    {
-        $_FILES['upload'] = [
-            'name' => ['a.txt', 'b.png'],
-            'type' => ['text/plain', 'image/png'],
-            'tmp_name' => ['/tmp/phpA1', '/tmp/phpB2'],
-            'error' => [0, 4],
-            'size' => [12, 0],
-        ];
-
-        $this->assertSame(
-            [
-                ['name' => 'a.txt', 'type' => 'text/plain', 'tmp_name' => '/tmp/phpA1', 'error' => 0, 'size' => 12],
-                ['name' => 'b.png', 'type' => 'image/png', 'tmp_name' => '/tmp/phpB2', 'error' => 4, 'size' => 0],
-            ],
-            HttpRequest::getFiles(name: 'upload'),
-        );
-    }
-
-    public function testFilesOfEmptyMultiUploadIsEmptyList(): void
-    {
-        $_FILES['upload'] = ['name' => [], 'type' => [], 'tmp_name' => [], 'error' => [], 'size' => []];
-
-        $this->assertSame([], HttpRequest::getFiles(name: 'upload'));
-    }
-
-    public function testFilesOfSingleUploadThrowsTypeError(): void
-    {
-        $_FILES['upload'] = ['name' => 'a.txt', 'type' => 'text/plain', 'tmp_name' => '/tmp/phpA1', 'error' => 0, 'size' => 12];
-        $this->expectException(TypeError::class);
-        $this->expectExceptionMessageIs('count(): Argument #1 ($value) must be of type Countable|array, string given');
-
-        HttpRequest::getFiles(name: 'upload');
-    }
-
-    public function testFilesOfMissingFieldFailsWithArrayAccessOnNull(): void
-    {
-        $this->expectException(ErrorException::class);
-        $this->expectExceptionMessageIs('Trying to access array offset on null');
-
-        HttpRequest::getFiles(name: 'upload');
+        $this->assertSame('abc', $httpRequest->getHeader(name: 'x-request-id'));
+        $this->assertSame('abc', $httpRequest->getHeader(name: 'X-REQUEST-ID'));
+        $this->assertSame('text/html', $httpRequest->getHeader(name: 'Accept'));
+        $this->assertNull($httpRequest->getHeader(name: 'X-Other'));
     }
 
     /**
-     * @return iterable<string, array{array<string, string>, false|string}>
+     * @return iterable<string, array{array<string, string>, string|null}>
      */
     public static function bearerProvider(): iterable
     {
         yield 'bearer token' => [['Authorization' => 'Bearer abc.def-123'], 'abc.def-123'];
         yield 'token is trimmed' => [['Authorization' => 'Bearer   abc  '], 'abc'];
-        yield 'only the scheme with a space' => [['Authorization' => 'Bearer '], ''];
-        yield 'scheme without token and space' => [['Authorization' => 'Bearer'], false];
-        yield 'other scheme' => [['Authorization' => 'Basic dXNlcjpwYXNz'], false];
-        yield 'scheme is case sensitive' => [['Authorization' => 'bearer abc'], false];
-        yield 'other header only' => [['X-Other' => 'Bearer abc'], false];
-        yield 'header name is case sensitive' => [['authorization' => 'Bearer abc'], false];
-        yield 'no headers' => [[], false];
+        yield 'only the scheme with a space' => [['Authorization' => 'Bearer '], null];
+        yield 'only the scheme with spaces' => [['Authorization' => 'Bearer    '], null];
+        yield 'scheme without token and space' => [['Authorization' => 'Bearer'], null];
+        yield 'other scheme' => [['Authorization' => 'Basic dXNlcjpwYXNz'], null];
+        yield 'scheme is case-insensitive' => [['Authorization' => 'bearer abc'], 'abc'];
+        yield 'scheme in capitals' => [['Authorization' => 'BEARER abc'], 'abc'];
+        yield 'scheme as a prefix of another one' => [['Authorization' => 'Bearerx abc'], null];
+        yield 'other header only' => [['X-Other' => 'Bearer abc'], null];
+        yield 'header name is case-insensitive' => [['authorization' => 'Bearer abc'], 'abc'];
+        yield 'token with spaces inside' => [['Authorization' => 'Bearer a b'], 'a b'];
+        yield 'no headers' => [[], null];
     }
 
     /**
      * @param array<string, string> $headers
      */
     #[DataProvider('bearerProvider')]
-    #[RunInSeparateProcess]
-    #[PreserveGlobalState(false)]
-    public function testBearer(array $headers, false|string $expected): void
+    public function testBearerToken(array $headers, ?string $expected): void
     {
-        require_once __DIR__ . '/../../Fixture/core/getallheaders.php';
-        StaticRequestHeaders::$headers = $headers;
-
-        $this->assertSame($expected, HttpRequest::getBearer());
+        $this->assertSame($expected, HttpRequestFactory::create(headers: $headers)->getBearerToken());
     }
 
-    #[RunInSeparateProcess]
-    #[PreserveGlobalState(false)]
-    public function testBearerWithoutGetallheadersFunctionIsAnError(): void
-    {
-        // Without Apache/FPM the function does not exist (CLI, cron scripts)
-        $this->expectException(Error::class);
-        $this->expectExceptionMessageIs('Call to undefined function actra\\yuf\\core\\getallheaders()');
+    private const array SINGLE_FILE = [
+        'name' => 'a.txt',
+        'type' => 'text/plain',
+        'tmp_name' => '/tmp/phpA1',
+        'error' => 0,
+        'size' => 12,
+    ];
 
-        HttpRequest::getBearer();
+    private const array MULTI_FILE = [
+        'name' => ['a.txt', 'b.png'],
+        'type' => ['text/plain', 'image/png'],
+        'tmp_name' => ['/tmp/phpA1', '/tmp/phpB2'],
+        'error' => [0, 4],
+        'size' => [12, 0],
+    ];
+
+    private function createWithUpload(mixed $entry): HttpRequest
+    {
+        return HttpRequestFactory::create(uploadedFiles: ['upload' => $entry]);
+    }
+
+    public function testFileOfSingleUpload(): void
+    {
+        $httpRequest = $this->createWithUpload(entry: HttpRequestFilesAndHeadersTest::SINGLE_FILE);
+
+        $this->assertSame(HttpRequestFilesAndHeadersTest::SINGLE_FILE, $httpRequest->getFile(name: 'upload'));
+    }
+
+    public function testFileOfMultiUploadIsNull(): void
+    {
+        $httpRequest = $this->createWithUpload(entry: HttpRequestFilesAndHeadersTest::MULTI_FILE);
+
+        $this->assertNull($httpRequest->getFile(name: 'upload'));
+    }
+
+    public function testMissingFileIsNull(): void
+    {
+        $this->assertNull(HttpRequestFactory::create()->getFile(name: 'upload'));
+    }
+
+    public function testFilesOfSingleUploadIsAListWithOneFile(): void
+    {
+        $httpRequest = $this->createWithUpload(entry: HttpRequestFilesAndHeadersTest::SINGLE_FILE);
+
+        $this->assertSame([HttpRequestFilesAndHeadersTest::SINGLE_FILE], $httpRequest->getFiles(name: 'upload'));
+    }
+
+    public function testFilesOfMultiUploadAreNormalizedPerFile(): void
+    {
+        $httpRequest = $this->createWithUpload(entry: HttpRequestFilesAndHeadersTest::MULTI_FILE);
+
+        $this->assertSame(
+            [
+                ['name' => 'a.txt', 'type' => 'text/plain', 'tmp_name' => '/tmp/phpA1', 'error' => 0, 'size' => 12],
+                ['name' => 'b.png', 'type' => 'image/png', 'tmp_name' => '/tmp/phpB2', 'error' => 4, 'size' => 0],
+            ],
+            $httpRequest->getFiles(name: 'upload'),
+        );
+    }
+
+    public function testFilesOfEmptyMultiUploadIsEmptyList(): void
+    {
+        $httpRequest = HttpRequestFactory::create(
+            uploadedFiles: ['upload' => ['name' => [], 'type' => [], 'tmp_name' => [], 'error' => [], 'size' => []]],
+        );
+
+        $this->assertSame([], $httpRequest->getFiles(name: 'upload'));
+    }
+
+    public function testFilesOfMissingFieldIsEmptyList(): void
+    {
+        $this->assertSame([], HttpRequestFactory::create()->getFiles(name: 'upload'));
+    }
+
+    /**
+     * @return iterable<string, array{mixed}>
+     */
+    public static function malformedFilesProvider(): iterable
+    {
+        yield 'not an array' => ['a.txt'];
+        yield 'empty array' => [[]];
+        yield 'single without size' => [['name' => 'a', 'type' => 't', 'tmp_name' => '/tmp/a', 'error' => 0]];
+        yield 'single with array name and string type' => [
+            ['name' => ['a'], 'type' => 't', 'tmp_name' => ['/tmp/a'], 'error' => [0], 'size' => [1]],
+        ];
+        yield 'single with string error' => [
+            ['name' => 'a', 'type' => 't', 'tmp_name' => '/tmp/a', 'error' => '0', 'size' => 1],
+        ];
+        yield 'multi with a missing entry' => [
+            [
+                'name' => ['a', 'b'],
+                'type' => ['t'],
+                'tmp_name' => ['/tmp/a', '/tmp/b'],
+                'error' => [0, 0],
+                'size' => [1, 2],
+            ],
+        ];
+        yield 'nested names' => [
+            ['name' => [['a']], 'type' => [['t']], 'tmp_name' => [['/tmp/a']], 'error' => [[0]], 'size' => [[1]]],
+        ];
+    }
+
+    #[DataProvider('malformedFilesProvider')]
+    public function testMalformedUploadIsNoFile(mixed $entry): void
+    {
+        $httpRequest = HttpRequestFactory::create(uploadedFiles: ['upload' => $entry]);
+
+        $this->assertSame([], $httpRequest->getFiles(name: 'upload'));
+        $this->assertNull($httpRequest->getFile(name: 'upload'));
     }
 }

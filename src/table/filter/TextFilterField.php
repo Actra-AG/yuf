@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\table\filter;
 
 use actra\yuf\common\SearchHelper;
-use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQueryData;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
@@ -50,7 +49,7 @@ class TextFilterField extends AbstractTableFilterField
     #[Override]
     public function checkInput(): void
     {
-        $this->setValue(value: (string) HttpRequest::getInputString(keyName: $this->identifier));
+        $this->setValue(value: (string) $this->httpRequest->getPostString(name: $this->identifier));
     }
 
     #[Override]

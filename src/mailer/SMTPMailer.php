@@ -23,12 +23,15 @@ class SmtpMailer extends AbstractMailer
     private $stream;
 
     public function __construct(
+        string $serverAddress,
         private readonly string $hostName,
         private readonly string $smtpUserName,
         private readonly string $smtpPassword,
         private readonly int $port = 587,
         private readonly bool $useTls = true,
-    ) {}
+    ) {
+        parent::__construct(serverAddress: $serverAddress);
+    }
 
     #[Override]
     public function headerHasTo(): bool

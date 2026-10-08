@@ -65,12 +65,13 @@ abstract class AbstractSessionHandler extends SessionHandler
     private string $clientUserAgent;
 
     protected function __construct(
+        private readonly HttpRequest $httpRequest,
         private readonly SessionSettings $sessionSettings,
         private readonly Clock $clock = new SystemClock(),
     ) {
         $this->currentTime = $this->clock->now()->getTimestamp();
-        $this->clientRemoteAddress = HttpRequest::getRemoteAddress();
-        $this->clientUserAgent = HttpRequest::getUserAgent();
+        $this->clientRemoteAddress = $httpRequest->getRemoteAddress();
+        $this->clientUserAgent = $httpRequest->getUserAgent();
 
         $this->start();
     }
@@ -159,14 +160,15 @@ abstract class AbstractSessionHandler extends SessionHandler
         // Just generate a new session id if current from cookie contains illegal characters
         // Inspired from http://stackoverflow.com/questions/32898857/session-start-issues-regarding-illegal-characters-empty-session-id-and-failed
         $sessionName = AbstractSessionHandler::readSessionName();
-        if (!array_key_exists(key: $sessionName, array: $_COOKIE)) {
+        $sessionId = $this->httpRequest->getCookie(name: $sessionName);
+        if ($sessionId === null) {
             return;
         }
-        $sessionId = $_COOKIE[$sessionName];
-        if (!is_string(value: $sessionId) || !$this->checkSessionIdAgainstSidBitsPerChar(
+        if (!$this->checkSessionIdAgainstSidBitsPerChar(
             sessionId: $sessionId,
             sidBitsPerChar: (int) ini_get(option: 'session.sid_bits_per_character'),
         )) {
+            // `session_start()` reads the session ID from `$_COOKIE` itself: the invalid one has to go from there
             unset($_COOKIE[$sessionName]);
         }
     }

@@ -151,7 +151,7 @@ abstract class AbstractMail
         );
     }
 
-    public function send(AbstractMailer $abstractMailer = new MailMailer()): void
+    public function send(AbstractMailer $abstractMailer): void
     {
         if ($this->isSent) {
             throw new MailerException(message: 'You cannot send the same email multiple times.');

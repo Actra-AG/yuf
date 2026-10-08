@@ -23,6 +23,7 @@ class Logger
     public function __construct(
         protected readonly string $logEmailRecipient,
         private readonly string $logDirectory,
+        private readonly HttpRequest $httpRequest,
         private readonly Clock $clock = new SystemClock(),
     ) {
         if (!is_dir(filename: $this->logDirectory)) {
@@ -85,11 +86,12 @@ class Logger
 
     private function writeMessage(string $message, string $filenameFullPath): void
     {
-        $message .= Logger::dnl . '$_SERVER = ' . print_r(value: $_SERVER, return: true);
-        $message .= Logger::dnl . '$_GET = ' . print_r(value: $_GET, return: true);
-        $message .= Logger::dnl . '$_POST = ' . print_r(value: $_POST, return: true);
-        $message .= Logger::dnl . '$_FILES = ' . print_r(value: $_FILES, return: true);
-        $message .= Logger::dnl . '$_COOKIE = ' . print_r(value: $_COOKIE, return: true);
+        $httpRequest = $this->httpRequest;
+        $message .= Logger::dnl . '$_SERVER = ' . print_r(value: $httpRequest->getServerVariables(), return: true);
+        $message .= Logger::dnl . '$_GET = ' . print_r(value: $httpRequest->getQueryParameters(), return: true);
+        $message .= Logger::dnl . '$_POST = ' . print_r(value: $httpRequest->getPostParameters(), return: true);
+        $message .= Logger::dnl . '$_FILES = ' . print_r(value: $httpRequest->getRawFiles(), return: true);
+        $message .= Logger::dnl . '$_COOKIE = ' . print_r(value: $httpRequest->listCookies(), return: true);
 
         $this->checkMaxFileSize(filenameFullPath: $filenameFullPath);
         $now = $this->clock->now();
@@ -150,11 +152,18 @@ class Logger
             message_type: 1,
             destination: $this->logEmailRecipient,
             additional_headers: implode(separator: PHP_EOL, array: [
-                'From: error@' . $_SERVER['SERVER_NAME'],
+                'From: error@' . $this->getMailDomain(),
                 'Date: ' . $this->clock->now()->format(format: 'r'),
                 'Content-Type: text/plain; charset=UTF-8',
             ]),
         );
+    }
+
+    private function getMailDomain(): string
+    {
+        $serverName = $this->httpRequest->getServerName();
+
+        return $serverName === '' ? $this->httpRequest->getHost() : $serverName;
     }
 
     public function logMessage(string $message): void

@@ -12,7 +12,7 @@ namespace actra\yuf\request;
 use InvalidArgumentException;
 use stdClass;
 
-class JsonRequestBody extends RequestBody
+class JsonRequestBody
 {
     private function __construct(
         public readonly stdClass $data,

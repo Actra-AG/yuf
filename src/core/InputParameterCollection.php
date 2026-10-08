@@ -58,6 +58,11 @@ class InputParameterCollection
         return $this->optionalParameters;
     }
 
+    public function findParameter(string $name): ?InputParameter
+    {
+        return array_key_exists(key: $name, array: $this->allParameters) ? $this->allParameters[$name] : null;
+    }
+
     public function hasParameter(string $name): bool
     {
         return array_key_exists(key: $name, array: $this->allParameters);

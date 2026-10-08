@@ -9,61 +9,47 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\table\filter;
 
-use actra\yuf\core\HttpRequest;
+use actra\yuf\core\RequestMethodEnum;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
 use actra\yuf\security\CsrfToken;
 use actra\yuf\table\filter\TableFilter;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\table\FixedPageDbResultTable;
 use actra\yuf\tests\Double\table\RecordingTableFilterField;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
 use Override;
 use PHPUnit\Framework\TestCase;
-use ReflectionProperty;
 
 final class TableFilterCsrfTest extends TestCase
 {
     private static int $instanceCounter = 0;
-    /** @var array<mixed> */
-    private array $savedSession = [];
-    /** @var array<mixed> */
-    private array $savedServer = [];
 
     #[Override]
     protected function setUp(): void
     {
-        $this->savedSession = $_SESSION ?? [];
-        $this->savedServer = $_SERVER;
         $_SESSION = [CsrfToken::CSRFTOKENSTORAGE => 'expected-token'];
     }
 
     #[Override]
     protected function tearDown(): void
     {
-        $_SESSION = $this->savedSession;
-        $_SERVER = $this->savedServer;
-        $_GET = [];
-        $_POST = [];
-        $this->resetRequestInput();
-    }
-
-    private function resetRequestInput(): void
-    {
-        new ReflectionProperty(class: HttpRequest::class, property: 'inputData')->setValue(objectOrValue: null, value: null);
+        unset($_SESSION); // Sessions are disabled in the CLI, the request handler checks that
     }
 
     /**
      * @param array<string, string> $post
      * @param array<string, string> $query
      */
-    private function sendFilter(string $requestMethod, array $post, array $query = []): RecordingTableFilterField
+    private function sendFilter(RequestMethodEnum $requestMethod, array $post, array $query = []): RecordingTableFilterField
     {
         $identifier = 'csrfFilter' . ++TableFilterCsrfTest::$instanceCounter;
-        $_SERVER['REQUEST_METHOD'] = $requestMethod;
-        $_GET = [$identifier => ''] + $query;
-        $_POST = $post;
-        $this->resetRequestInput();
-        $tableFilter = new TableFilter(identifier: $identifier);
+        $httpRequest = HttpRequestFactory::create(
+            method: $requestMethod,
+            queryParameters: [$identifier => ''] + $query,
+            postParameters: $post,
+        );
+        $tableFilter = new TableFilter(identifier: $identifier, httpRequest: $httpRequest);
         $field = new RecordingTableFilterField(parentFilter: $tableFilter);
         $tableFilter->addPrimaryField(abstractTableFilterField: $field);
 
@@ -76,6 +62,7 @@ final class TableFilterCsrfTest extends TestCase
                     cacheDirectory: sys_get_temp_dir() . '/yuf-table-filter-test/',
                     templateBaseDirectory: sys_get_temp_dir() . '/',
                 ),
+                httpRequest: $httpRequest,
                 totalAmount: 0,
                 currentPage: 1,
             ),
@@ -86,28 +73,28 @@ final class TableFilterCsrfTest extends TestCase
 
     public function testPostedFilterWithValidTokenIsApplied(): void
     {
-        $field = $this->sendFilter(requestMethod: 'POST', post: ['csrftoken' => 'expected-token']);
+        $field = $this->sendFilter(requestMethod: RequestMethodEnum::POST, post: ['csrftoken' => 'expected-token']);
 
         $this->assertTrue($field->inputChecked);
     }
 
     public function testPostedFilterWithWrongTokenIsIgnored(): void
     {
-        $field = $this->sendFilter(requestMethod: 'POST', post: ['csrftoken' => 'wrong']);
+        $field = $this->sendFilter(requestMethod: RequestMethodEnum::POST, post: ['csrftoken' => 'wrong']);
 
         $this->assertFalse($field->inputChecked);
     }
 
     public function testPostedFilterWithoutTokenIsIgnored(): void
     {
-        $field = $this->sendFilter(requestMethod: 'POST', post: []);
+        $field = $this->sendFilter(requestMethod: RequestMethodEnum::POST, post: []);
 
         $this->assertFalse($field->inputChecked);
     }
 
     public function testFilterWithTokenInTheUrlIsIgnored(): void
     {
-        $field = $this->sendFilter(requestMethod: 'GET', post: [], query: ['csrftoken' => 'expected-token']);
+        $field = $this->sendFilter(requestMethod: RequestMethodEnum::GET, post: [], query: ['csrftoken' => 'expected-token']);
 
         $this->assertFalse($field->inputChecked);
     }

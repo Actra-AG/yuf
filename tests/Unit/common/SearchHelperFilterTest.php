@@ -10,7 +10,9 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\common;
 
 use actra\yuf\common\SearchHelper;
+use actra\yuf\core\InputSourceEnum;
 use actra\yuf\db\DbQuery;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
 use InvalidArgumentException;
 use PDO;
 use PDOStatement;
@@ -143,7 +145,11 @@ final class SearchHelperFilterTest extends TestCase
 
     public function testCreateSQLSearchQuotesColumnsAndEscapesWords(): void
     {
-        $result = SearchHelper::getInstance(instanceName: 'test')->createSqlSearch(
+        $result = SearchHelper::create(
+            instanceName: 'test',
+            httpRequest: HttpRequestFactory::create(),
+            valueSource: InputSourceEnum::POST,
+        )->createSqlSearch(
             string: 'foo "bar baz" 50%',
             columns: ['name', 't.city', '`order`'],
         );
@@ -164,7 +170,11 @@ final class SearchHelperFilterTest extends TestCase
     {
         $this->assertSame(
             ['sql' => '', 'params' => [], 'searchWords' => []],
-            SearchHelper::getInstance(instanceName: 'test')->createSqlSearch(string: ' , ', columns: ['name']),
+            SearchHelper::create(
+                instanceName: 'test',
+                httpRequest: HttpRequestFactory::create(),
+                valueSource: InputSourceEnum::POST,
+            )->createSqlSearch(string: ' , ', columns: ['name']),
         );
     }
 
@@ -189,6 +199,10 @@ final class SearchHelperFilterTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        SearchHelper::getInstance(instanceName: 'test')->createSqlSearch(string: 'foo', columns: $columns);
+        SearchHelper::create(
+            instanceName: 'test',
+            httpRequest: HttpRequestFactory::create(),
+            valueSource: InputSourceEnum::POST,
+        )->createSqlSearch(string: 'foo', columns: $columns);
     }
 }

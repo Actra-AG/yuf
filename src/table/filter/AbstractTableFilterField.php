@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\table\filter;
 
+use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQueryData;
 use actra\yuf\html\HtmlDataObject;
 use actra\yuf\html\HtmlText;
@@ -22,6 +23,7 @@ abstract class AbstractTableFilterField
     /** @var AbstractTableFilterField[] */
     private static array $instances = [];
     public readonly string $identifier;
+    protected readonly HttpRequest $httpRequest;
 
     protected function __construct(
         TableFilter $parentFilter,
@@ -36,6 +38,7 @@ abstract class AbstractTableFilterField
             );
         }
         $this->identifier = $uniqueIdentifier;
+        $this->httpRequest = $parentFilter->httpRequest;
         AbstractTableFilterField::$instances[$uniqueIdentifier] = $this;
     }
 

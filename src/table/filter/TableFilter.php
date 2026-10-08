@@ -35,6 +35,7 @@ class TableFilter
 
     public function __construct(
         public readonly string $identifier,
+        public readonly HttpRequest $httpRequest,
         private readonly bool $showLegend = true,
         private readonly string $resetParameter = 'reset',
         private readonly ?string $individualHtmlSnippetPath = null,
@@ -49,10 +50,10 @@ class TableFilter
 
     public function validate(DbResultTable $dbResultTable): void
     {
-        if (HttpRequest::getInputString(keyName: $this->resetParameter) !== null) {
+        if ($this->httpRequest->getQueryString(name: $this->resetParameter) !== null) {
             $this->reset(dbResultTable: $dbResultTable);
         }
-        if (HttpRequest::getInputString(keyName: $this->identifier) !== null && $this->hasValidCsrfToken()) {
+        if ($this->httpRequest->getQueryString(name: $this->identifier) !== null && $this->hasValidCsrfToken()) {
             $this->reset(dbResultTable: $dbResultTable);
             $this->checkInput();
         }
@@ -65,15 +66,12 @@ class TableFilter
      */
     private function hasValidCsrfToken(): bool
     {
-        if (HttpRequest::getRequestMethod() !== RequestMethodEnum::POST) {
+        if ($this->httpRequest->getMethod() !== RequestMethodEnum::POST) {
             return false;
         }
-        $fieldName = CsrfToken::getFieldName();
-        if (!array_key_exists(key: $fieldName, array: $_POST) || !is_string(value: $_POST[$fieldName])) {
-            return false;
-        }
+        $token = $this->httpRequest->getPostString(name: CsrfToken::getFieldName());
 
-        return CsrfToken::validateToken(token: $_POST[$fieldName]);
+        return $token !== null && CsrfToken::validateToken(token: $token);
     }
 
     protected function reset(DbResultTable $dbResultTable): void

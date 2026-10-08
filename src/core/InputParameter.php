@@ -11,8 +11,12 @@ namespace actra\yuf\core;
 
 readonly class InputParameter
 {
+    /**
+     * @param InputSourceEnum $source Where the value comes from: the query string or the posted form data
+     */
     public function __construct(
         public string $name,
+        public InputSourceEnum $source,
         public bool $isRequired,
         public string $description = '',
     ) {}

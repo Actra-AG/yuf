@@ -67,6 +67,8 @@ large.
 12. `form` (0 baseline; `final` / extension points of 46 classes, superglobals after the redesigns).
 13. `mailer` (36, full standard; characterization tests of the MIME output first).
 14. `core` (89) and `Core.php` (18), incl. the test gaps of the request pipeline.
+    `Logger` writes all cookies (incl. the session ID) and all server variables (may contain secrets set as
+    environment variables) into the error log: decide what to mask (`security.md`: no secrets in logs).
 15. `common` (92).
 16. `phone` (78, full standard; characterization tests first).
 
@@ -89,3 +91,7 @@ The order of 4–16 may change when a redesign already cleaned an area.
   silenced with a temporary error handler, no `@`). Directory or file failure throws a `RuntimeException`; the
   constructor throws if `fopen()` fails (bug fix). Baseline: 532 -> 525 entries (`uniqid()` entry stays).
 
+### Step 2 (v4.29.0) – done
+
+- `HttpRequest` is an immutable instance (`Core::$httpRequest`, `ViewContext::$httpRequest`); details, signatures and
+  what is not covered in [docs/http-request/plan.md](../http-request/plan.md). Baseline: 525 -> 469 entries.

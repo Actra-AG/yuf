@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\auth;
 
+use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\session\AbstractSessionHandler;
 use DateTimeImmutable;
@@ -20,11 +21,15 @@ abstract class MicrosoftAuthenticator extends Authenticator
     private const string AUTHORIZE_PATH = 'https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/' . 'authorize';
 
     protected function __construct(
+        HttpRequest $httpRequest,
         int $maxAllowedWrongPasswordAttempts,
         private readonly string $logDirectory,
         private readonly string $cacheDirectory,
     ) {
-        parent::__construct(maxAllowedWrongPasswordAttempts: $maxAllowedWrongPasswordAttempts);
+        parent::__construct(
+            httpRequest: $httpRequest,
+            maxAllowedWrongPasswordAttempts: $maxAllowedWrongPasswordAttempts,
+        );
     }
 
     protected function redirectToMicrosoftLogin(
@@ -54,6 +59,7 @@ abstract class MicrosoftAuthenticator extends Authenticator
                     'nonce=' . $ssoNonce,
                 ],
             ),
+            httpRequest: $this->httpRequest,
         );
     }
 

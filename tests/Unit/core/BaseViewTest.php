@@ -16,39 +16,25 @@ use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\InputParameter;
 use actra\yuf\core\InputParameterCollection;
+use actra\yuf\core\InputSourceEnum;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\tests\Double\auth\TestAuthUser;
 use actra\yuf\tests\Double\core\ConfigurableTestView;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\core\ViewContextFactory;
 use LogicException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
 /**
- * Not covered: required input parameters that are present, and getJsonRequestBody() (both read HttpRequest /
- * php://input, which are statically cached and cannot be fed in tests); getHtmlDocument() (needs a processed
- * request).
+ * Not covered: getHtmlDocument() (needs a processed request).
  */
 final class BaseViewTest extends TestCase
 {
-    private bool $hadRemoteAddress = false;
-    private mixed $remoteAddress = null;
-
-    #[\Override]
-    protected function setUp(): void
-    {
-        $this->hadRemoteAddress = array_key_exists(key: 'REMOTE_ADDR', array: $_SERVER);
-        $this->remoteAddress = $_SERVER['REMOTE_ADDR'] ?? null;
-    }
-
     #[\Override]
     protected function tearDown(): void
     {
-        if ($this->hadRemoteAddress) {
-            $_SERVER['REMOTE_ADDR'] = $this->remoteAddress;
-        } else {
-            unset($_SERVER['REMOTE_ADDR']);
-        }
         TestAuthUser::release();
     }
 
@@ -72,10 +58,10 @@ final class BaseViewTest extends TestCase
 
     public function testIpAddressInWhitelistIsAllowed(): void
     {
-        $_SERVER['REMOTE_ADDR'] = '192.168.1.5';
-
         $view = new ConfigurableTestView(
-            context: ViewContextFactory::create(),
+            context: ViewContextFactory::create(
+                httpRequest: HttpRequestFactory::create(remoteAddress: '192.168.1.5'),
+            ),
             ipWhitelist: ['10.0.0.1', '192.168.1.0/24'],
         );
 
@@ -84,18 +70,20 @@ final class BaseViewTest extends TestCase
 
     public function testIpAddressNotInWhitelistThrows(): void
     {
-        $_SERVER['REMOTE_ADDR'] = '8.8.8.8';
-
         $this->expectException(UnauthorizedIpAddressException::class);
         $this->expectExceptionMessageIs('Invalid IP address 8.8.8.8');
-        new ConfigurableTestView(context: ViewContextFactory::create(), ipWhitelist: ['10.0.0.1']);
+        new ConfigurableTestView(
+            context: ViewContextFactory::create(httpRequest: HttpRequestFactory::create(remoteAddress: '8.8.8.8')),
+            ipWhitelist: ['10.0.0.1'],
+        );
     }
 
     public function testEmptyWhitelistAllowsAll(): void
     {
-        $_SERVER['REMOTE_ADDR'] = '8.8.8.8';
-
-        $view = new ConfigurableTestView(context: ViewContextFactory::create(), ipWhitelist: []);
+        $view = new ConfigurableTestView(
+            context: ViewContextFactory::create(httpRequest: HttpRequestFactory::create(remoteAddress: '8.8.8.8')),
+            ipWhitelist: [],
+        );
 
         $this->assertSame(0, $view->maxAllowedPathVars);
     }
@@ -254,7 +242,9 @@ final class BaseViewTest extends TestCase
     public function testMissingRequiredParameterThrowsNotFoundForHtml(): void
     {
         $parameters = new InputParameterCollection();
-        $parameters->add(inputParameter: new InputParameter(name: 'viewTestMissingParam', isRequired: true));
+        $parameters->add(
+            inputParameter: new InputParameter(name: 'viewTestMissingParam', source: InputSourceEnum::QUERY, isRequired: true),
+        );
 
         $this->expectException(NotFoundException::class);
         new ConfigurableTestView(
@@ -266,7 +256,9 @@ final class BaseViewTest extends TestCase
     public function testMissingRequiredParameterSetsErrorResponseForJson(): void
     {
         $parameters = new InputParameterCollection();
-        $parameters->add(inputParameter: new InputParameter(name: 'viewTestMissingParam', isRequired: true));
+        $parameters->add(
+            inputParameter: new InputParameter(name: 'viewTestMissingParam', source: InputSourceEnum::QUERY, isRequired: true),
+        );
         $context = ViewContextFactory::create(contentType: ContentType::createJson());
 
         new ConfigurableTestView(context: $context, inputParameterCollection: $parameters);
@@ -290,12 +282,152 @@ final class BaseViewTest extends TestCase
     public function testDefinedOptionalInputParameterIsNullIfAbsent(): void
     {
         $parameters = new InputParameterCollection();
-        $parameters->add(inputParameter: new InputParameter(name: 'viewTestOptionalParam', isRequired: false));
+        $parameters->add(
+            inputParameter: new InputParameter(name: 'viewTestOptionalParam', source: InputSourceEnum::QUERY, isRequired: false),
+        );
         $view = new ConfigurableTestView(
             context: ViewContextFactory::create(),
             inputParameterCollection: $parameters,
         );
 
         $this->assertNull($view->getInputString(keyName: 'viewTestOptionalParam'));
+    }
+
+    /**
+     * @param array<array-key, mixed> $query
+     * @param array<array-key, mixed> $post
+     */
+    private function createViewWithInput(
+        InputSourceEnum $source,
+        array $query = [],
+        array $post = [],
+        bool $isRequired = false,
+        string $body = '',
+    ): ConfigurableTestView {
+        $parameters = new InputParameterCollection();
+        $parameters->add(inputParameter: new InputParameter(name: 'p', source: $source, isRequired: $isRequired));
+        $httpRequest = HttpRequestFactory::create(queryParameters: $query, postParameters: $post, body: $body);
+
+        return new ConfigurableTestView(
+            context: ViewContextFactory::create(httpRequest: $httpRequest),
+            inputParameterCollection: $parameters,
+        );
+    }
+
+    public function testInputIsReadFromTheDeclaredQuerySource(): void
+    {
+        $view = $this->createViewWithInput(
+            source: InputSourceEnum::QUERY,
+            query: ['p' => ' from query '],
+            post: ['p' => 'from post'],
+        );
+
+        $this->assertSame('from query', $view->getInputString(keyName: 'p'));
+    }
+
+    public function testInputIsReadFromTheDeclaredPostSource(): void
+    {
+        $view = $this->createViewWithInput(
+            source: InputSourceEnum::POST,
+            query: ['p' => 'from query'],
+            post: ['p' => ' from post '],
+        );
+
+        $this->assertSame('from post', $view->getInputString(keyName: 'p'));
+    }
+
+    public function testInputOfTheOtherSourceIsIgnored(): void
+    {
+        $view = $this->createViewWithInput(source: InputSourceEnum::POST, query: ['p' => 'from query']);
+
+        $this->assertNull($view->getInputString(keyName: 'p'));
+    }
+
+    public function testIntegerFloatAndArrayAreReadFromTheDeclaredSource(): void
+    {
+        $query = $this->createViewWithInput(source: InputSourceEnum::QUERY, query: ['p' => '42']);
+        $post = $this->createViewWithInput(source: InputSourceEnum::POST, post: ['p' => '1.5']);
+        $array = $this->createViewWithInput(source: InputSourceEnum::POST, post: ['p' => ['a', 'b']]);
+
+        $this->assertSame(42, $query->getInputInteger(keyName: 'p'));
+        $this->assertSame(1.5, $post->getInputFloat(keyName: 'p'));
+        $this->assertSame(['a', 'b'], $array->getInputArray(keyName: 'p'));
+    }
+
+    public function testNumberInputIsStrict(): void
+    {
+        $view = $this->createViewWithInput(source: InputSourceEnum::QUERY, query: ['p' => '12abc']);
+
+        $this->assertNull($view->getInputInteger(keyName: 'p'));
+        $this->assertNull($view->getInputFloat(keyName: 'p'));
+    }
+
+    public function testInputDomainIsSanitized(): void
+    {
+        $view = $this->createViewWithInput(source: InputSourceEnum::QUERY, query: ['p' => ' Example.COM ']);
+
+        $this->assertSame('example.com', $view->getInputDomain(keyName: 'p'));
+    }
+
+    public function testInputOfAnUndefinedParameterThrowsForEveryType(): void
+    {
+        $view = $this->createViewWithInput(source: InputSourceEnum::QUERY, query: ['other' => '1']);
+
+        $this->expectException(LogicException::class);
+        $view->getInputInteger(keyName: 'other');
+    }
+
+    /**
+     * @return iterable<string, array{InputSourceEnum, array<array-key, mixed>, array<array-key, mixed>, bool}>
+     */
+    public static function requiredParameterProvider(): iterable
+    {
+        yield 'query text' => [InputSourceEnum::QUERY, ['p' => 'x'], [], true];
+        yield 'query zero' => [InputSourceEnum::QUERY, ['p' => '0'], [], true];
+        yield 'query array' => [InputSourceEnum::QUERY, ['p' => ['x']], [], true];
+        yield 'post text' => [InputSourceEnum::POST, [], ['p' => 'x'], true];
+        yield 'query missing' => [InputSourceEnum::QUERY, [], [], false];
+        yield 'query empty' => [InputSourceEnum::QUERY, ['p' => ''], [], false];
+        yield 'query blank' => [InputSourceEnum::QUERY, ['p' => '  '], [], false];
+        yield 'query empty array' => [InputSourceEnum::QUERY, ['p' => []], [], false];
+        yield 'post missing, query given' => [InputSourceEnum::POST, ['p' => 'x'], [], false];
+        yield 'query missing, post given' => [InputSourceEnum::QUERY, [], ['p' => 'x'], false];
+    }
+
+    /**
+     * @param array<array-key, mixed> $query
+     * @param array<array-key, mixed> $post
+     */
+    #[DataProvider('requiredParameterProvider')]
+    public function testRequiredParameterIsCheckedInTheDeclaredSource(
+        InputSourceEnum $source,
+        array $query,
+        array $post,
+        bool $isPresent,
+    ): void {
+        if (!$isPresent) {
+            $this->expectException(NotFoundException::class);
+        }
+
+        $view = $this->createViewWithInput(source: $source, query: $query, post: $post, isRequired: true);
+
+        $this->assertSame(0, $view->maxAllowedPathVars);
+    }
+
+    public function testJsonRequestBodyIsReadFromTheRequest(): void
+    {
+        $view = $this->createViewWithInput(source: InputSourceEnum::QUERY, body: '{"id": 5, "name": " Ann "}');
+
+        $jsonRequestBody = $view->callGetJsonRequestBody();
+
+        $this->assertSame(5, $jsonRequestBody->getRequiredInteger(keyName: 'id'));
+        $this->assertSame('Ann', $jsonRequestBody->getRequiredString(keyName: 'name'));
+    }
+
+    public function testEmptyRequestBodyIsAnEmptyJsonObject(): void
+    {
+        $view = $this->createViewWithInput(source: InputSourceEnum::QUERY);
+
+        $this->assertNull($view->callGetJsonRequestBody()->getOptionalString(keyName: 'id'));
     }
 }

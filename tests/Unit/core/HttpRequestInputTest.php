@@ -9,48 +9,20 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\core;
 
-use actra\yuf\core\HttpRequest;
-use Override;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\PreserveGlobalState;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Characterization of the static HttpRequest before the redesign (docs/http-request/plan.md, step 1).
- *
- * The merged input of $_GET and $_POST is cached statically for the whole process, so every test runs in its own
- * process.
+ * The explicit query and post getters. Query and post data are never merged. Number getters are strict (design
+ * section 5 of docs/http-request/design.md): they accept a complete number only, not a prefix of one.
  */
-#[RunTestsInSeparateProcesses]
-#[PreserveGlobalState(false)]
 final class HttpRequestInputTest extends TestCase
 {
-    /** @var array<mixed> */
-    private array $getBackup = [];
-    /** @var array<mixed> */
-    private array $postBackup = [];
-
-    #[Override]
-    protected function setUp(): void
-    {
-        $this->getBackup = $_GET;
-        $this->postBackup = $_POST;
-        $_GET = [];
-        $_POST = [];
-    }
-
-    #[Override]
-    protected function tearDown(): void
-    {
-        $_GET = $this->getBackup;
-        $_POST = $this->postBackup;
-    }
-
     /**
      * @return iterable<string, array{mixed, string|null}>
      */
-    public static function inputStringProvider(): iterable
+    public static function stringProvider(): iterable
     {
         yield 'plain' => ['abc', 'abc'];
         yield 'trimmed' => ["  abc \t\n", 'abc'];
@@ -69,238 +41,236 @@ final class HttpRequestInputTest extends TestCase
         yield 'unicode' => [" Zürich\u{00A0}", "Zürich\u{00A0}"];
     }
 
-    #[DataProvider('inputStringProvider')]
-    public function testInputString(mixed $value, ?string $expected): void
+    #[DataProvider('stringProvider')]
+    public function testQueryString(mixed $value, ?string $expected): void
     {
-        $_GET['key'] = $value;
+        $httpRequest = HttpRequestFactory::create(queryParameters: ['key' => $value]);
 
-        $this->assertSame($expected, HttpRequest::getInputString(keyName: 'key'));
+        $this->assertSame($expected, $httpRequest->getQueryString(name: 'key'));
     }
 
-    public function testMissingInputStringIsNull(): void
+    #[DataProvider('stringProvider')]
+    public function testPostString(mixed $value, ?string $expected): void
     {
-        $this->assertNull(HttpRequest::getInputString(keyName: 'missing'));
+        $httpRequest = HttpRequestFactory::create(postParameters: ['key' => $value]);
+
+        $this->assertSame($expected, $httpRequest->getPostString(name: 'key'));
     }
 
-    public function testInputKeysAreCaseSensitive(): void
+    public function testMissingStringIsNull(): void
     {
-        $_GET['Key'] = 'a';
+        $httpRequest = HttpRequestFactory::create();
 
-        $this->assertNull(HttpRequest::getInputString(keyName: 'key'));
+        $this->assertNull($httpRequest->getQueryString(name: 'missing'));
+        $this->assertNull($httpRequest->getPostString(name: 'missing'));
     }
 
-    public function testNumericKeysAreRenumberedByTheMerge(): void
+    public function testNamesAreCaseSensitive(): void
     {
-        $_GET['5'] = 'five';
+        $httpRequest = HttpRequestFactory::create(queryParameters: ['Key' => 'a']);
 
-        $this->assertNull(HttpRequest::getInputString(keyName: '5'));
-        $this->assertSame('five', HttpRequest::getInputString(keyName: '0'));
+        $this->assertNull($httpRequest->getQueryString(name: 'key'));
     }
 
-    public function testNumericKeysOfGetAndPostCollide(): void
+    public function testNumericNamesAreFoundUnderTheirOwnName(): void
     {
-        $_GET['5'] = 'from get';
-        $_POST['7'] = 'from post';
+        $httpRequest = HttpRequestFactory::create(
+            queryParameters: ['5' => 'five'],
+            postParameters: ['5' => 'post five'],
+        );
 
-        $this->assertSame('from get', HttpRequest::getInputString(keyName: '0'));
-        $this->assertSame('from post', HttpRequest::getInputString(keyName: '1'));
+        $this->assertSame('five', $httpRequest->getQueryString(name: '5'));
+        $this->assertNull($httpRequest->getQueryString(name: '0'));
+        $this->assertSame('post five', $httpRequest->getPostString(name: '5'));
     }
 
-    public function testPostWinsOverGet(): void
+    public function testQueryAndPostAreNotMerged(): void
     {
-        $_GET['key'] = 'from get';
-        $_POST['key'] = 'from post';
+        $httpRequest = HttpRequestFactory::create(
+            queryParameters: ['a' => 'from query', 'key' => 'from query'],
+            postParameters: ['b' => 'from post', 'key' => 'from post'],
+        );
 
-        $this->assertSame('from post', HttpRequest::getInputString(keyName: 'key'));
+        $this->assertSame('from query', $httpRequest->getQueryString(name: 'a'));
+        $this->assertNull($httpRequest->getPostString(name: 'a'));
+        $this->assertSame('from post', $httpRequest->getPostString(name: 'b'));
+        $this->assertNull($httpRequest->getQueryString(name: 'b'));
+        $this->assertSame('from query', $httpRequest->getQueryString(name: 'key'));
+        $this->assertSame('from post', $httpRequest->getPostString(name: 'key'));
     }
 
-    public function testGetAndPostAreMerged(): void
+    public function testHasValueOfTheOwnSourceOnly(): void
     {
-        $_GET['a'] = 'from get';
-        $_POST['b'] = 'from post';
+        $httpRequest = HttpRequestFactory::create(
+            queryParameters: ['q' => '', 'list' => []],
+            postParameters: ['p' => 'x'],
+        );
 
-        $this->assertSame('from get', HttpRequest::getInputString(keyName: 'a'));
-        $this->assertSame('from post', HttpRequest::getInputString(keyName: 'b'));
-    }
-
-    public function testPostArrayReplacesGetStringCompletely(): void
-    {
-        $_GET['key'] = 'from get';
-        $_POST['key'] = ['from post'];
-
-        $this->assertNull(HttpRequest::getInputString(keyName: 'key'));
-        $this->assertSame(['from post'], HttpRequest::getInputArray(keyName: 'key'));
-    }
-
-    public function testInputIsCachedForTheWholeProcess(): void
-    {
-        $_GET['key'] = 'first';
-        $this->assertSame('first', HttpRequest::getInputString(keyName: 'key'));
-
-        $_GET['key'] = 'second';
-        $_POST['other'] = 'new';
-
-        $this->assertSame('first', HttpRequest::getInputString(keyName: 'key'));
-        $this->assertNull(HttpRequest::getInputString(keyName: 'other'));
+        $this->assertTrue($httpRequest->hasQueryValue(name: 'q'));
+        $this->assertTrue($httpRequest->hasQueryValue(name: 'list'));
+        $this->assertFalse($httpRequest->hasQueryValue(name: 'p'));
+        $this->assertTrue($httpRequest->hasPostValue(name: 'p'));
+        $this->assertFalse($httpRequest->hasPostValue(name: 'q'));
     }
 
     /**
      * @return iterable<string, array{mixed, int|null}>
      */
-    public static function inputIntegerProvider(): iterable
+    public static function integerProvider(): iterable
     {
         yield 'plain' => ['12', 12];
-        yield 'trailing garbage' => ['12abc', 12];
-        yield 'leading garbage' => ['abc12', 0];
-        yield 'empty string' => ['', 0];
-        yield 'whitespace only' => ['  ', 0];
-        yield 'surrounding whitespace' => [' 12 ', 12];
-        yield 'decimal string is truncated' => ['1.5', 1];
-        yield 'negative decimal string is truncated' => ['-1.9', -1];
-        yield 'decimal comma' => ['1,5', 1];
-        yield 'exponent notation' => ['1e3', 1000];
+        yield 'zero' => ['0', 0];
+        yield 'trailing garbage' => ['12abc', null];
+        yield 'leading garbage' => ['abc12', null];
+        yield 'empty string' => ['', null];
+        yield 'whitespace only' => ['  ', null];
+        yield 'surrounding whitespace is trimmed' => [' 12 ', 12];
+        yield 'decimal string' => ['1.5', null];
+        yield 'negative decimal string' => ['-1.9', null];
+        yield 'decimal comma' => ['1,5', null];
+        yield 'exponent notation' => ['1e3', null];
         yield 'negative' => ['-5', -5];
-        yield 'plus sign' => ['+5', 5];
-        yield 'hexadecimal is not parsed' => ['0x1A', 0];
+        yield 'plus sign' => ['+5', null];
+        yield 'hexadecimal' => ['0x1A', null];
         yield 'leading zeros' => ['007', 7];
-        yield 'overflow saturates' => ['99999999999999999999', PHP_INT_MAX];
+        yield 'maximum' => [(string) PHP_INT_MAX, PHP_INT_MAX];
+        yield 'minimum' => [(string) PHP_INT_MIN, PHP_INT_MIN];
+        yield 'overflow' => ['99999999999999999999', null];
+        yield 'negative overflow' => ['-99999999999999999999', null];
+        yield 'integer value' => [12, 12];
+        yield 'float value' => [2.9, null];
         yield 'true' => [true, 1];
-        yield 'false' => [false, 0];
-        yield 'float' => [2.9, 2];
+        yield 'false' => [false, null];
         yield 'array' => [['1'], null];
         yield 'null' => [null, null];
     }
 
-    #[DataProvider('inputIntegerProvider')]
-    public function testInputInteger(mixed $value, ?int $expected): void
+    #[DataProvider('integerProvider')]
+    public function testQueryInteger(mixed $value, ?int $expected): void
     {
-        $_GET['key'] = $value;
+        $httpRequest = HttpRequestFactory::create(queryParameters: ['key' => $value]);
 
-        $this->assertSame($expected, HttpRequest::getInputInteger(keyName: 'key'));
+        $this->assertSame($expected, $httpRequest->getQueryInteger(name: 'key'));
     }
 
-    public function testMissingInputIntegerIsNull(): void
+    #[DataProvider('integerProvider')]
+    public function testPostInteger(mixed $value, ?int $expected): void
     {
-        $this->assertNull(HttpRequest::getInputInteger(keyName: 'missing'));
+        $httpRequest = HttpRequestFactory::create(postParameters: ['key' => $value]);
+
+        $this->assertSame($expected, $httpRequest->getPostInteger(name: 'key'));
+    }
+
+    public function testMissingIntegerIsNull(): void
+    {
+        $httpRequest = HttpRequestFactory::create();
+
+        $this->assertNull($httpRequest->getQueryInteger(name: 'missing'));
+        $this->assertNull($httpRequest->getPostInteger(name: 'missing'));
     }
 
     /**
      * @return iterable<string, array{mixed, float|null}>
      */
-    public static function inputFloatProvider(): iterable
+    public static function floatProvider(): iterable
     {
         yield 'plain' => ['1.5', 1.5];
         yield 'integer string' => ['12', 12.0];
-        yield 'trailing garbage' => ['1.5abc', 1.5];
-        yield 'empty string' => ['', 0.0];
-        yield 'decimal comma is cut' => ['1,5', 1.0];
+        yield 'trailing garbage' => ['1.5abc', null];
+        yield 'empty string' => ['', null];
+        yield 'decimal comma' => ['1,5', null];
         yield 'exponent notation' => ['1e3', 1000.0];
+        yield 'negative exponent' => ['25E-1', 2.5];
         yield 'negative' => ['-0.25', -0.25];
-        yield 'not a number' => ['abc', 0.0];
+        yield 'plus sign' => ['+1.5', null];
+        yield 'no digit before the point' => ['.5', null];
+        yield 'no digit after the point' => ['1.', null];
+        yield 'not a number' => ['abc', null];
+        yield 'infinity' => ['INF', null];
+        yield 'not a number constant' => ['NAN', null];
+        yield 'exponent overflow' => ['1e999', null];
+        yield 'surrounding whitespace is trimmed' => [' 1.5 ', 1.5];
+        yield 'integer value' => [3, 3.0];
+        yield 'float value' => [1.25, 1.25];
         yield 'true' => [true, 1.0];
-        yield 'false' => [false, 0.0];
-        yield 'integer' => [3, 3.0];
+        yield 'false' => [false, null];
         yield 'array' => [['1.5'], null];
         yield 'null' => [null, null];
     }
 
-    #[DataProvider('inputFloatProvider')]
-    public function testInputFloat(mixed $value, ?float $expected): void
+    #[DataProvider('floatProvider')]
+    public function testQueryFloat(mixed $value, ?float $expected): void
     {
-        $_GET['key'] = $value;
+        $httpRequest = HttpRequestFactory::create(queryParameters: ['key' => $value]);
 
-        $this->assertSame($expected, HttpRequest::getInputFloat(keyName: 'key'));
+        $this->assertSame($expected, $httpRequest->getQueryFloat(name: 'key'));
     }
 
-    public function testMissingInputFloatIsNull(): void
+    #[DataProvider('floatProvider')]
+    public function testPostFloat(mixed $value, ?float $expected): void
     {
-        $this->assertNull(HttpRequest::getInputFloat(keyName: 'missing'));
+        $httpRequest = HttpRequestFactory::create(postParameters: ['key' => $value]);
+
+        $this->assertSame($expected, $httpRequest->getPostFloat(name: 'key'));
     }
 
-    public function testInputArray(): void
+    public function testMissingFloatIsNull(): void
     {
-        $_POST['key'] = ['a', 'b', ' c ', ['nested']];
+        $httpRequest = HttpRequestFactory::create();
 
-        $this->assertSame(['a', 'b', ' c ', ['nested']], HttpRequest::getInputArray(keyName: 'key'));
+        $this->assertNull($httpRequest->getQueryFloat(name: 'missing'));
+        $this->assertNull($httpRequest->getPostFloat(name: 'missing'));
     }
 
-    public function testInputArrayKeepsKeysAndDoesNotTrim(): void
+    public function testArrayKeepsKeysAndIsNotTrimmed(): void
     {
-        $_GET['key'] = ['x' => ' 1 ', 'y' => '2'];
+        $httpRequest = HttpRequestFactory::create(
+            queryParameters: ['key' => ['x' => ' 1 ', 'y' => '2', 'nested' => ['a']]],
+            postParameters: ['key' => ['a', ' b ']],
+        );
 
-        $this->assertSame(['x' => ' 1 ', 'y' => '2'], HttpRequest::getInputArray(keyName: 'key'));
+        $this->assertSame(['x' => ' 1 ', 'y' => '2', 'nested' => ['a']], $httpRequest->getQueryArray(name: 'key'));
+        $this->assertSame(['a', ' b '], $httpRequest->getPostArray(name: 'key'));
     }
 
-    public function testEmptyInputArray(): void
+    public function testEmptyArray(): void
     {
-        $_GET['key'] = [];
-
-        $this->assertSame([], HttpRequest::getInputArray(keyName: 'key'));
+        $this->assertSame([], HttpRequestFactory::create(queryParameters: ['key' => []])->getQueryArray(name: 'key'));
     }
 
-    public function testInputArrayOfScalarIsNull(): void
+    public function testArrayOfAScalarIsNull(): void
     {
-        $_GET['key'] = 'abc';
+        $httpRequest = HttpRequestFactory::create(queryParameters: ['key' => 'abc'], postParameters: ['key' => 'abc']);
 
-        $this->assertNull(HttpRequest::getInputArray(keyName: 'key'));
+        $this->assertNull($httpRequest->getQueryArray(name: 'key'));
+        $this->assertNull($httpRequest->getPostArray(name: 'key'));
     }
 
-    public function testMissingInputArrayIsNull(): void
+    public function testMissingArrayIsNull(): void
     {
-        $this->assertNull(HttpRequest::getInputArray(keyName: 'missing'));
+        $httpRequest = HttpRequestFactory::create();
+
+        $this->assertNull($httpRequest->getQueryArray(name: 'missing'));
+        $this->assertNull($httpRequest->getPostArray(name: 'missing'));
     }
 
-    public function testInputValueOfStringIsNotTrimmed(): void
+    public function testStringOfAnArrayIsNull(): void
     {
-        $_GET['key'] = '  abc ';
+        $httpRequest = HttpRequestFactory::create(queryParameters: ['key' => ['a']]);
 
-        $this->assertSame('  abc ', HttpRequest::getInputValue(keyName: 'key'));
+        $this->assertNull($httpRequest->getQueryString(name: 'key'));
     }
 
-    public function testInputValueOfArray(): void
+    public function testAllParametersAreAvailableAsSent(): void
     {
-        $_GET['key'] = ['a'];
+        $httpRequest = HttpRequestFactory::create(
+            queryParameters: ['a' => '1'],
+            postParameters: ['b' => ['2']],
+            uploadedFiles: ['f' => ['name' => 'x']],
+        );
 
-        $this->assertSame(['a'], HttpRequest::getInputValue(keyName: 'key'));
-    }
-
-    public function testMissingInputValueIsNull(): void
-    {
-        $this->assertNull(HttpRequest::getInputValue(keyName: 'missing'));
-    }
-
-    public function testExistingNullInputValueIsNull(): void
-    {
-        $_GET['key'] = null;
-
-        $this->assertNull(HttpRequest::getInputValue(keyName: 'key'));
-    }
-
-    /**
-     * @return iterable<string, array{mixed, bool}>
-     */
-    public static function scalarInputProvider(): iterable
-    {
-        yield 'string' => ['abc', true];
-        yield 'empty string' => ['', true];
-        yield 'integer' => [0, true];
-        yield 'float' => [0.5, true];
-        yield 'false' => [false, true];
-        yield 'null' => [null, false];
-        yield 'array' => [['a'], false];
-        yield 'empty array' => [[], false];
-    }
-
-    #[DataProvider('scalarInputProvider')]
-    public function testHasScalarInputValue(mixed $value, bool $expected): void
-    {
-        $_GET['key'] = $value;
-
-        $this->assertSame($expected, HttpRequest::hasScalarInputValue(keyName: 'key'));
-    }
-
-    public function testMissingKeyIsNoScalarInputValue(): void
-    {
-        $this->assertFalse(HttpRequest::hasScalarInputValue(keyName: 'missing'));
+        $this->assertSame(['a' => '1'], $httpRequest->getQueryParameters());
+        $this->assertSame(['b' => ['2']], $httpRequest->getPostParameters());
+        $this->assertSame(['f' => ['name' => 'x']], $httpRequest->getRawFiles());
     }
 }

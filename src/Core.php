@@ -16,11 +16,14 @@ use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ErrorHandler;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
+use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\Logger;
+use actra\yuf\core\ProtocolEnum;
 use actra\yuf\core\RequestHandler;
 use actra\yuf\core\RouteCollection;
+use actra\yuf\core\UnsupportedRequestMethodException;
 use actra\yuf\exception\ExceptionHandler;
 use actra\yuf\exception\ExceptionHandlerContext;
 use actra\yuf\exception\NotFoundException;
@@ -44,6 +47,8 @@ class Core
     private static array $config;
 
     public readonly string $documentRoot;
+    /** The request of this process: create other requests only in tests. */
+    public readonly HttpRequest $httpRequest;
     public readonly string $frameworkDirectory;
     public private(set) string $baseDirectory = '';
     public private(set) string $appDirectory = '';
@@ -111,11 +116,16 @@ class Core
             ),
         );
         ErrorHandler::register();
-        if (!HttpRequest::isSsl()) {
+        try {
+            $this->httpRequest = HttpRequest::fromGlobals();
+        } catch (UnsupportedRequestMethodException) {
+            header(header: HttpStatusCodeEnum::HTTP_METHOD_NOT_ALLOWED->getStatusHeader());
+            exit;
+        }
+        if (!$this->httpRequest->isSsl()) {
             HttpResponse::redirectAndExit(
-                relativeOrAbsoluteUri: HttpRequest::getUrl(
-                    protocol: HttpRequest::PROTOCOL_HTTPS,
-                ),
+                relativeOrAbsoluteUri: $this->httpRequest->getUrl(protocol: ProtocolEnum::HTTPS),
+                httpRequest: $this->httpRequest,
             );
         }
         /** @var list<string> $allowedDomains */
@@ -205,6 +215,7 @@ class Core
             $logger = new Logger(
                 logEmailRecipient: Core::$config['logEmailRecipient'],
                 logDirectory: $this->logDirectory,
+                httpRequest: $this->httpRequest,
             );
         }
         $this->cspPolicySettings = $cspPolicySettings;
@@ -222,10 +233,12 @@ class Core
                 cspPolicySettings: $this->cspPolicySettings,
                 isDebug: $this->debug,
                 core: $this,
+                httpRequest: $this->httpRequest,
             ),
         );
         if ($individualSessionHandler === null) {
             $individualSessionHandler = new FileSessionHandler(
+                httpRequest: $this->httpRequest,
                 sessionSettings: new SessionSettings(),
                 defaultSavePath: $this->cacheDirectory . 'sessions',
             );
@@ -235,6 +248,7 @@ class Core
             throw new LogicException(message: 'There must be at least one route');
         }
         $requestHandler = new RequestHandler(
+            httpRequest: $this->httpRequest,
             routeCollection: $routeCollection,
             availableLanguages: $this->availableLanguages,
             allowedDomains: $this->allowedDomains,
@@ -273,12 +287,14 @@ class Core
                 htmlContent: $content,
                 cspPolicySettings: $contentHandler->suppressCspHeader ? null : $this->cspPolicySettings,
                 nonce: $cspNonce->value,
+                httpRequest: $this->httpRequest,
             );
         }
         return Core::$httpResponse = HttpResponse::createResponseFromString(
             httpStatusCode: $httpStatusCode,
             contentString: $content,
             contentType: $contentType,
+            httpRequest: $this->httpRequest,
         );
     }
 

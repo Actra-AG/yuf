@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\common;
 
+use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
 
 class CsvFile
@@ -89,13 +90,14 @@ class CsvFile
         return $path;
     }
 
-    public function pushDownloadAndExit(): void
+    public function pushDownloadAndExit(HttpRequest $httpRequest): void
     {
         $httpResponse = HttpResponse::createResponseFromFilePath(
             absolutePathToFile: $this->createTemporaryFile(),
             forceDownload: true,
             individualFileName: $this->fileName,
             maxAge: 0,
+            httpRequest: $httpRequest,
         );
         $httpResponse->sendAndExit();
     }

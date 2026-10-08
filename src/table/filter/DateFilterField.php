@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace actra\yuf\table\filter;
 
-use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQueryData;
 use actra\yuf\html\HtmlText;
 use DateTimeImmutable;
@@ -49,7 +48,7 @@ class DateFilterField extends AbstractTableFilterField
     #[Override]
     public function checkInput(): void
     {
-        $inputValue = (string) HttpRequest::getInputString(keyName: $this->identifier);
+        $inputValue = (string) $this->httpRequest->getPostString(name: $this->identifier);
         if ($inputValue === '') {
             $this->reset();
 

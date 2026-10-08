@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\common;
 
 use actra\yuf\core\HttpRequest;
+use actra\yuf\core\InputSourceEnum;
 use actra\yuf\db\DbQueryData;
 use DateTime;
 use InvalidArgumentException;
@@ -28,23 +29,55 @@ class SearchHelper
     private const array LIKE_ESCAPE_MAP = ['!' => '!!', '%' => '!%', '_' => '!_'];
     /** An unquoted column name must not consist of digits only; a "?" would be counted as a placeholder. */
     private const string FIELD_NAME_PATTERN = '/^(`[^`?\s.]+`|[0-9a-z_$]*[a-z_$][0-9a-z_$]*)(\.(`[^`?\s.]+`|[0-9a-z_$]*[a-z_$][0-9a-z_$]*)){0,2}$/i';
-    /** @var SearchHelper[] */
-    private static array $instances = [];
     private string $sessionRootName = 'searchHelper';
-    private string $instanceName;
 
-    private function __construct(string $instanceName)
-    {
-        $this->instanceName = $instanceName;
+    /**
+     * @param string $instanceName The search state of the user is kept in the session below this name
+     * @param InputSourceEnum $valueSource Where the values of the search fields come from (the query string for a
+     *                                     search form with method GET, else the posted data); the parameters `reset`
+     *                                     and `find` always come from the query string
+     */
+    private function __construct(
+        private readonly string $instanceName,
+        private readonly HttpRequest $httpRequest,
+        private readonly InputSourceEnum $valueSource,
+    ) {}
+
+    public static function create(
+        string $instanceName,
+        HttpRequest $httpRequest,
+        InputSourceEnum $valueSource,
+    ): SearchHelper {
+        return new SearchHelper(
+            instanceName: $instanceName,
+            httpRequest: $httpRequest,
+            valueSource: $valueSource,
+        );
     }
 
-    public static function getInstance(string $instanceName): SearchHelper
+    private function readString(string $fieldName): ?string
     {
-        if (!array_key_exists(key: $instanceName, array: SearchHelper::$instances)) {
-            SearchHelper::$instances[$instanceName] = new SearchHelper(instanceName: $instanceName);
-        }
+        return match ($this->valueSource) {
+            InputSourceEnum::QUERY => $this->httpRequest->getQueryString(name: $fieldName),
+            InputSourceEnum::POST => $this->httpRequest->getPostString(name: $fieldName),
+        };
+    }
 
-        return SearchHelper::$instances[$instanceName];
+    /**
+     * @return ?array<array-key, mixed>
+     */
+    private function readArray(string $fieldName): ?array
+    {
+        return match ($this->valueSource) {
+            InputSourceEnum::QUERY => $this->httpRequest->getQueryArray(name: $fieldName),
+            InputSourceEnum::POST => $this->httpRequest->getPostArray(name: $fieldName),
+        };
+    }
+
+    private function isSearchRequested(): bool
+    {
+        return $this->httpRequest->hasQueryValue(name: SearchHelper::PARAM_RESET)
+            || $this->httpRequest->hasQueryValue(name: SearchHelper::PARAM_FIND);
     }
 
     /**
@@ -592,7 +625,7 @@ class SearchHelper
         $instanceName = $this->instanceName;
         $this->resetField(fieldName: $fieldName, default: $default);
 
-        $userInput = HttpRequest::getInputString(keyName: $fieldName);
+        $userInput = $this->readString(fieldName: $fieldName);
         if ($userInput !== null) {
             $_SESSION[$sessionRootName][$instanceName][$fieldName] = $userInput;
         }
@@ -606,8 +639,7 @@ class SearchHelper
         $instanceName = $this->instanceName;
         if (
             !isset($_SESSION[$sessionRootName][$instanceName][$fieldName])
-            || HttpRequest::getInputString(keyName: SearchHelper::PARAM_RESET) !== null
-            || HttpRequest::getInputString(keyName: SearchHelper::PARAM_FIND) !== null
+            || $this->isSearchRequested()
         ) {
             $_SESSION[$sessionRootName][$instanceName][$fieldName] = $default;
         }
@@ -619,7 +651,7 @@ class SearchHelper
         $instanceName = $this->instanceName;
         $this->resetField(fieldName: $fieldName, default: $default);
 
-        $userInput = HttpRequest::getInputString(keyName: $fieldName);
+        $userInput = $this->readString(fieldName: $fieldName);
         if ($userInput !== null && array_key_exists($userInput, $array)) {
             $_SESSION[$sessionRootName][$instanceName][$fieldName] = $userInput;
         }
@@ -630,18 +662,18 @@ class SearchHelper
     public function checkMultiFilter(array $array, string $fieldName, array $default = []): array
     {
         $instanceName = $this->instanceName;
-        if (!isset($_SESSION[$this->sessionRootName][$instanceName][$fieldName]) || isset($_GET[SearchHelper::PARAM_RESET]) || isset($_GET[SearchHelper::PARAM_FIND])) {
+        if (!isset($_SESSION[$this->sessionRootName][$instanceName][$fieldName]) || $this->isSearchRequested()) {
             $_SESSION[$this->sessionRootName][$instanceName][$fieldName] = $default;
         }
 
-        if (isset($_GET[SearchHelper::PARAM_RESET]) || isset($_GET[SearchHelper::PARAM_FIND])) {
+        if ($this->isSearchRequested()) {
             foreach ($array as $key => $val) {
-                $userInput = HttpRequest::getInputArray(keyName: $fieldName);
+                $userInput = $this->readArray(fieldName: $fieldName);
                 if ($userInput !== null && in_array(needle: (string) $key, haystack: $userInput, strict: true)) {
                     $_SESSION[$this->sessionRootName][$instanceName][$fieldName][] = $key;
                 }
             }
-            $requestedValue = HttpRequest::getInputString(keyName: $fieldName . 'ID');
+            $requestedValue = $this->readString(fieldName: $fieldName . 'ID');
 
             if ($requestedValue !== null) {
                 $_SESSION[$this->sessionRootName][$instanceName][$fieldName][] = $requestedValue;
@@ -651,6 +683,11 @@ class SearchHelper
         return $_SESSION[$this->sessionRootName][$instanceName][$fieldName];
     }
 
+    /**
+     * @param array{minDate: string, maxDate: string} $dateRange
+     *
+     * @return array{dateFrom: DateTime, dateTo: DateTime}
+     */
     public function checkDateRangeFilter(
         array $dateRange,
         string $fromField,
@@ -660,16 +697,22 @@ class SearchHelper
     ): array {
         $instanceName = $this->instanceName;
 
-        if (!isset($_SESSION[$this->sessionRootName][$instanceName][$fromField]) || isset($_GET[SearchHelper::PARAM_RESET]) || isset($_GET[SearchHelper::PARAM_FIND])) {
-            $_SESSION[$this->sessionRootName][$instanceName][$fromField] = ($defaultFrom === null) ? $dateRange['minDate'] : $defaultFrom;
+        if (!isset($_SESSION[$this->sessionRootName][$instanceName][$fromField]) || $this->isSearchRequested()) {
+            $this->storeInSession(
+                field: $fromField,
+                value: $defaultFrom === null ? $dateRange['minDate'] : $defaultFrom,
+            );
         }
 
-        if (!isset($_SESSION[$this->sessionRootName][$instanceName][$toField]) || isset($_GET[SearchHelper::PARAM_RESET]) || isset($_GET[SearchHelper::PARAM_FIND])) {
-            $_SESSION[$this->sessionRootName][$instanceName][$toField] = ($defaultTo === null) ? $dateRange['maxDate'] : $defaultTo;
+        if (!isset($_SESSION[$this->sessionRootName][$instanceName][$toField]) || $this->isSearchRequested()) {
+            $this->storeInSession(
+                field: $toField,
+                value: $defaultTo === null ? $dateRange['maxDate'] : $defaultTo,
+            );
         }
 
-        $inputFrom = HttpRequest::getInputString(keyName: $fromField);
-        $inputTo = HttpRequest::getInputString(keyName: $toField);
+        $inputFrom = $this->readString(fieldName: $fromField);
+        $inputTo = $this->readString(fieldName: $toField);
 
         $dateFromStr = $inputFrom === null ? $_SESSION[$this->sessionRootName][$instanceName][$fromField] : $inputFrom;
         $dateToStr = $inputTo === null ? $_SESSION[$this->sessionRootName][$instanceName][$toField] : $inputTo;
@@ -696,10 +739,15 @@ class SearchHelper
             $dateToObj = $maxDateObj;
         }
 
-        $_SESSION[$this->sessionRootName][$instanceName][$fromField] = $dateFromObj->format(format: 'd.m.Y');
-        $_SESSION[$this->sessionRootName][$instanceName][$toField] = $dateToObj->format(format: 'd.m.Y');
+        $this->storeInSession(field: $fromField, value: $dateFromObj->format(format: 'd.m.Y'));
+        $this->storeInSession(field: $toField, value: $dateToObj->format(format: 'd.m.Y'));
 
         return ['dateFrom' => $dateFromObj, 'dateTo' => $dateToObj];
+    }
+
+    private function storeInSession(string $field, string $value): void
+    {
+        $_SESSION[$this->sessionRootName][$this->instanceName][$field] = $value;
     }
 
     public function checkDate(string $date): ?DateTime

@@ -13,6 +13,7 @@ use actra\yuf\security\CsrfToken;
 use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\session\FileSessionHandler;
 use actra\yuf\session\SessionSettings;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
 use Override;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -74,12 +75,16 @@ final class AbstractSessionHandlerTest extends TestCase
     public function testSessionIdIsNotReadFromRequestInput(): void
     {
         $savePath = $this->createSessionSavePath();
+        // session_start() reads the session ID from $_COOKIE itself, the request has the same cookie
         $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
-        $_GET[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::REQUESTED_SESSION_ID;
-        $_POST[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::REQUESTED_SESSION_ID;
+        $httpRequest = HttpRequestFactory::create(
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
+            queryParameters: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::REQUESTED_SESSION_ID],
+            postParameters: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::REQUESTED_SESSION_ID],
+        );
 
         try {
-            $sessionHandler = new FileSessionHandler(sessionSettings: new SessionSettings(
+            $sessionHandler = new FileSessionHandler(httpRequest: $httpRequest, sessionSettings: new SessionSettings(
                 savePath: $savePath,
                 individualName: AbstractSessionHandlerTest::SESSION_NAME,
             ), defaultSavePath: '/not/used');
@@ -101,9 +106,13 @@ final class AbstractSessionHandlerTest extends TestCase
     {
         $defaultSavePath = $this->createSessionSavePath();
         $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        $httpRequest = HttpRequestFactory::create(
+            cookies: [AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID],
+        );
 
         try {
             $sessionHandler = new FileSessionHandler(
+                httpRequest: $httpRequest,
                 sessionSettings: new SessionSettings(individualName: AbstractSessionHandlerTest::SESSION_NAME),
                 defaultSavePath: $defaultSavePath,
             );

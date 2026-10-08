@@ -19,33 +19,36 @@ The plan for the remaining work is [docs/standard-completion/plan.md](../standar
 - `src/phone/` (port of libphonenumber) and `src/mailer/` (derived from PHPMailer, license notices kept) are brought to
   the full standard like own code, with characterization tests first.
 
-## PHPStan baseline: 532 entries
+## PHPStan baseline: 469 entries
 
-- By area: `common` 92, `core` 89, `phone` 78, `db` 51, `table` 47, `mailer` 36, `api` 27, `auth` 26, `html` 25,
-  `Core.php` 18, `exception` 15, `datacheck` 13, `request` 5, `session` 3, `pagination` 3, `security` 2, `response` 2.
+State after v4.29.0 (532 at v4.27.0; `HttpRequest` as instance removed 56, v4.28.0 and the tests 7 more).
+
+- By area: `common` 80, `phone` 78, `db` 51, `core` 47, `table` 45, `mailer` 33, `api` 27, `auth` 26, `html` 25,
+  `Core.php` 18, `datacheck` 13, `exception` 11, `request` 5, `pagination` 3, `session` 3, `security` 2, `response` 2.
   `src/form/` and `src/template/` have none (the old engine's 221 entries were removed with it).
-- Most frequent identifiers: `argument.type` 127, `missingType.iterableValue` 110, `offsetAccess.notFound` 62,
-  `return.type` 43, `assign.propertyType` 18, `binaryOp.invalid` 13, `disallowed.isset` 12,
-  `offsetAccess.nonOffsetAccessible` 11, `method.nonObject` 11, `property.nonObject` 10, `missingType.parameter` 10.
+- Most frequent identifiers: `argument.type` 118, `missingType.iterableValue` 99, `offsetAccess.notFound` 46,
+  `return.type` 32, `assign.propertyType` 16, `binaryOp.invalid` 12, `disallowed.isset` 11, `method.nonObject` 11,
+  `offsetAccess.nonOffsetAccessible` 10, `property.nonObject` 10, `missingType.parameter` 9.
 
 ## Static state (`php.md`, section 1)
 
-- 27 static properties.
+- 21 static properties (v4.29.0: the caches of `HttpRequest`, `RequestBody::$data` and the `SearchHelper` registry are gone).
 - Kept on purpose so far (see `plan.md`, step 10 "Stays" and "Later"):
     - `Core::get()`, `LocaleHandler::get()` / `register()` / `isRegistered()` and `CoreTestInstance` are gone (v4.26.0):
       the template engine, `HtmlSnippet` and `LogFile` get what they need as arguments; `Core` keeps a private guard
       against a second instance (`$isInitialized`);
     - session: `AbstractSessionHandler::getSessionHandler()` / `enabled()`, `AuthSession`, `CsrfToken`,
       `FormNameRegistry`;
-    - `HttpRequest` and its caches;
-    - `FrameworkDb::getInstance()` (connection pool), `SearchHelper::getInstance()`;
-    - identifier registries of `SmartTable`, `TableFilter`, `AbstractTableFilterField`, `SearchHelper`;
+    - `FrameworkDb::getInstance()` (connection pool);
+    - identifier registries of `SmartTable`, `TableFilter`, `AbstractTableFilterField`;
     - caches: `PhoneMetaData`, `PhoneParser`, `AbstractCurlRequest`, `DbQueryLogList`;
     - single-instance guards of `AuthUser` and `Authenticator`.
 - `$GLOBALS`: once, in `AbstractSessionHandler::enabled()`.
-- Superglobals read outside the request boundary in 12 files: `FormInput`, `UploadInput`, `SessionFileUploadStorage`,
-  `HttpResponse`, `Logger`, `CsrfToken`, `ExceptionHandler`, `Core`, `DbResultTable`, `TableFilter`, `SearchHelper`,
-  `AbstractMailer`.
+- `HttpRequest` is an instance since v4.29.0 ([docs/http-request/plan.md](../http-request/plan.md)): the request
+  superglobals (`$_GET`, `$_POST`, `$_SERVER`, `$_COOKIE`, `$_FILES`) are only read in `HttpRequest::fromGlobals()`, in
+  `Core` (`$_SERVER['DOCUMENT_ROOT']`) and in `AbstractSessionHandler` (removes an invalid session cookie from
+  `$_COOKIE`, because `session_start()` reads it from there). `$_SESSION` is read in the session users (the session
+  object redesign, step 3).
 
 ## Explicit comparisons (`php.md`, section 5)
 
@@ -57,7 +60,7 @@ The plan for the remaining work is [docs/standard-completion/plan.md](../standar
   handler); every class needs a review (`final`, or documented extension point, or `@internal`).
 - `mixed` in own code: 21 (e.g. `Core::config()`, `TableItem::getRawValue()`).
 - Enums first: fixed sets still as string constants (126 public string/int constants, not all of them fixed sets), e.g.
-  `ContentType::HTML`, `HttpRequest::PROTOCOL_HTTPS`, `MailerConstants`.
+  `ContentType::HTML`, `MailerConstants` (`HttpRequest::PROTOCOL_*` became `ProtocolEnum` in v4.29.0).
 - Missing types: see the baseline (`missingType.*`, about 170 entries).
 
 ## Exceptions and style (`php.md`, sections 4 and 6)
@@ -75,13 +78,15 @@ The plan for the remaining work is [docs/standard-completion/plan.md](../standar
 
 ## Structure and separation (`php.md`, section 1)
 
-- Session object instead of the static session classes; `HttpRequest` as instance (`HttpRequest::fromGlobals()`); see
-  [docs/standard-completion/plan.md](../standard-completion/plan.md). `LogFile` is an instance class since v4.28.0.
+- Session object instead of the static session classes; see
+  [docs/standard-completion/plan.md](../standard-completion/plan.md). `LogFile` is an instance class since v4.28.0,
+  `HttpRequest` since v4.29.0.
 - Logic mixed with I/O, e.g. `HtmlDocument` and `ExceptionHandler` (render and read files), `Core` (reads the env file,
   creates directories).
 
 ## Tests (`testing.md`)
 
-- Not covered: the request pipeline of `Core`, `HtmlDocument`, redirects, `ExceptionHandler::handleException()` (ends
+- Not covered: `Core::__construct()` and `prepareHttpResponse()` (the request pipeline is testable with a built
+  `HttpRequest` since v4.29.0, but `Core` is a singleton that reads the env file), `HtmlDocument`, redirects, `ExceptionHandler::handleException()` (ends
   with `exit`), the SSO logging of `MicrosoftAuthenticator`.
 - Reflection to reset static state: `AuthSessionTest`, `AuthenticatorTest`, `ExceptionHandlerTest`.

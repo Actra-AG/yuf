@@ -10,8 +10,10 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\common;
 
 use actra\yuf\common\SearchHelper;
+use actra\yuf\core\InputSourceEnum;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\DbQueryData;
+use actra\yuf\tests\Double\core\HttpRequestFactory;
 use InvalidArgumentException;
 use PDO;
 use PDOStatement;
@@ -229,7 +231,11 @@ final class SearchHelperBooleanQueryTest extends TestCase
 
         $this->assertSame(
             // @phpstan-ignore method.deprecated (characterization test of the deprecated method)
-            SearchHelper::getInstance(instanceName: 'test')->getBooleanQuery(
+            SearchHelper::create(
+                instanceName: 'test',
+                httpRequest: HttpRequestFactory::create(),
+                valueSource: InputSourceEnum::POST,
+            )->getBooleanQuery(
                 spaceSeparatedFieldNames: 'a.name b.city',
                 queryText: $queryText,
             ),
