@@ -4,6 +4,26 @@ This document tracks relevant changes and upgrade instructions for developers.
 
 ---
 
+## [v4.55.0] – 2026-10-08
+
+New: `SmtpMailer` authenticates with `AUTH PLAIN` and `XOAUTH2` besides `AUTH LOGIN`.
+
+- `SmtpAuthMethodEnum` (`LOGIN`, `PLAIN`, `XOAUTH2`), interface `OAuthTokenProvider` (`getAccessToken(): string`; the
+  token provider of the Microsoft Graph mailer follows in v4.56.0).
+- New optional constructor arguments of `SmtpMailer`, appended at the end: `authMethod:` (fixes the method) and
+  `oAuthTokenProvider:` (`XOAUTH2`; `smtpUserName:` is the mailbox, `smtpPassword:` is not used). Existing calls work
+  unchanged.
+- ⚠️ **Behaviour: the method is chosen from the `AUTH` line of the server (after STARTTLS).** Before, `AUTH LOGIN` was
+  always used. Now a server that announces `PLAIN` gets `AUTH PLAIN` (user name and password in one command, RFC 4616),
+  otherwise `LOGIN`. A server that announces no method at all still gets `LOGIN`. A server that announces neither
+  `PLAIN` nor `LOGIN` (e.g. only `CRAM-MD5`) aborts with a `MailerException` instead of a rejected `AUTH LOGIN`. A user
+  name or password with a NUL character cannot be sent with `PLAIN`. To keep the old dialogue pass
+  `authMethod: SmtpAuthMethodEnum::LOGIN`.
+- The log (`$mailer->log`) shows `AUTH PLAIN (hidden)` / `AUTH XOAUTH2 (hidden)`; credentials and tokens are never in
+  messages of exceptions.
+
+---
+
 ## [v4.54.0] – 2026-10-08
 
 ⚠️ **`PhoneNumberField` accepts valid numbers only.**

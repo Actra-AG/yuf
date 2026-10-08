@@ -683,6 +683,31 @@ new PhoneNumberField(
 );
 ```
 
+## Sending mail with SMTP
+
+`SmtpMailer` sends through an SMTP server. With `useTls: true` (default) the connection is encrypted with STARTTLS
+before the credentials are sent; a server without STARTTLS aborts the delivery. With a user name the mailer
+authenticates, with the method that the server announces in the `AUTH` line of its answer to `EHLO`:
+
+- `PLAIN`, otherwise `LOGIN` (user name and `smtpPassword:`); a server that announces no method gets `LOGIN`.
+- `XOAUTH2` (Microsoft 365, Gmail) when you pass an `OAuthTokenProvider`: its `getAccessToken()` returns the OAuth 2.0
+  access token, `smtpUserName:` is the mailbox. `smtpPassword:` is not used then (pass `''`). There is no `CRAM-MD5`.
+
+`authMethod:` (`SmtpAuthMethodEnum::LOGIN`, `PLAIN`, `XOAUTH2`) fixes the method; the delivery aborts with a
+`MailerException` if the server does not announce it.
+
+```php
+$mailer = new SmtpMailer(
+    serverAddress: '192.0.2.1',
+    hostName: 'smtp.office365.com',
+    smtpUserName: 'noreply@example.com',
+    smtpPassword: '',
+    oAuthTokenProvider: $tokenProvider, // your implementation of OAuthTokenProvider
+);
+```
+
+Passwords and tokens are neither written to `$mailer->log` (`AUTH ... (hidden)`) nor put into exception messages.
+
 ## Clock
 
 Time-dependent code takes a `actra\yuf\clock\Clock` (`now(): DateTimeImmutable`, the same signature as PSR-20's

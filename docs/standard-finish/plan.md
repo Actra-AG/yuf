@@ -599,3 +599,31 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   the field and in `src/phone/`); no datacheck validator for phone numbers; `example/` has no phone field.
 - `UPGRADE.md`: `## [v4.54.0]`, README "Phone numbers". `ddev composer check` green, baseline empty.
 - Tests: 20455 -> 20458.
+
+### Step 14 (v4.55.0) – done
+
+- **Scope (user):** `AUTH PLAIN` and `XOAUTH2` besides `AUTH LOGIN` in `SmtpMailer`; no `CRAM-MD5`.
+- **New:** `SmtpAuthMethodEnum` (`LOGIN`, `PLAIN`, `XOAUTH2`, value = name in the `AUTH` line), interface
+  `OAuthTokenProvider` (`getAccessToken(): string`, in `actra\yuf\mailer`; step 15 implements it), `SmtpCapabilities`
+  (internal, readonly: parses the answer to `EHLO`, multi-line, several `AUTH` lines, legacy `AUTH=`, the first line
+  is the greeting and never a capability). `SmtpMailer` got the optional arguments `authMethod:` and
+  `oAuthTokenProvider:` at the end of the constructor (existing calls unchanged; `XOAUTH2` without provider and a
+  provider with `LOGIN` / `PLAIN` throw `InvalidArgumentException`).
+- **Selection:** fixed method not announced (also when nothing is announced) -> `MailerException` with the announced
+  methods. Automatic: with a provider `XOAUTH2`, otherwise `PLAIN` before `LOGIN`; a server without any `AUTH` line gets
+  `LOGIN` (`XOAUTH2` with a provider) as before; announced methods that do not contain a candidate -> `MailerException`.
+  The capabilities of the answer to the last `EHLO` count (after STARTTLS). ⚠️ A server that announces `PLAIN` gets
+  `AUTH PLAIN` now instead of `AUTH LOGIN` (marked in `UPGRADE.md`, `authMethod: LOGIN` keeps the old dialogue).
+- **Dialogue:** `PLAIN` sends `AUTH PLAIN base64("\0user\0password")` as initial response (RFC 4954); NUL in user name or
+  password throws. `XOAUTH2` sends `AUTH XOAUTH2 base64("user=…\x01auth=Bearer …\x01\x01")`; `235` is success, `334`
+  (JSON error) is answered with an empty line and the final code is reported, any other code too; the token is requested
+  after STARTTLS and the choice of the method, only with a user name; an empty token throws.
+- **Security:** the existing rule is unchanged: with `useTls: true` (default) the credentials go after STARTTLS (a failed
+  handshake or missing STARTTLS aborts); with `useTls: false` they go in clear text (documented, for a server on the same
+  host). The log gets `AUTH PLAIN (hidden)` / `AUTH XOAUTH2 (hidden)` / `(hidden)` (`sendCommand(logAs:)` replaces the
+  `isCredential` flag); exception messages carry codes only, never credentials, tokens or the server's challenge.
+- **Tests:** 20458 -> 20491 (`SmtpCapabilitiesTest`, `SmtpAuthenticationTest`, double `FixedOAuthTokenProvider`; `AUTH LOGIN`
+  stays covered by the unchanged `SmtpMailerTest`, which passed before and after). Exact base64 payloads are literals made
+  with `base64` on the command line.
+- `UPGRADE.md`: `## [v4.55.0]`, README "Sending mail with SMTP". `ddev composer check` green, baseline empty. `example/`
+  does not use the mailer.
