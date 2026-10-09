@@ -11,6 +11,8 @@ namespace actra\yuf\tests\Unit\db;
 
 use actra\yuf\db\DbConnectionParameters;
 use actra\yuf\db\DbSettings;
+use InvalidArgumentException;
+use PDO;
 use Pdo\Mysql;
 use PHPUnit\Framework\TestCase;
 
@@ -60,7 +62,7 @@ final class DbConnectionParametersTest extends TestCase
         );
 
         $this->assertSame(
-            [Mysql::ATTR_INIT_COMMAND => "SET lc_time_names='de_CH', sql_safe_updates=1"],
+            [PDO::ATTR_TIMEOUT => 3, Mysql::ATTR_INIT_COMMAND => "SET lc_time_names='de_CH', sql_safe_updates=1"],
             $parameters->options,
         );
     }
@@ -77,7 +79,10 @@ final class DbConnectionParametersTest extends TestCase
             ),
         );
 
-        $this->assertSame([Mysql::ATTR_INIT_COMMAND => 'SET sql_safe_updates=1'], $parameters->options);
+        $this->assertSame(
+            [PDO::ATTR_TIMEOUT => 3, Mysql::ATTR_INIT_COMMAND => 'SET sql_safe_updates=1'],
+            $parameters->options,
+        );
     }
 
     public function testOnlyTheTimeNamesAreSetWithoutSafeUpdates(): void
@@ -86,7 +91,10 @@ final class DbConnectionParametersTest extends TestCase
             dbSettings: $this->create(timeNamesLanguage: 'en_US', sqlSafeUpdates: false),
         );
 
-        $this->assertSame([Mysql::ATTR_INIT_COMMAND => "SET lc_time_names='en_US'"], $parameters->options);
+        $this->assertSame(
+            [PDO::ATTR_TIMEOUT => 3, Mysql::ATTR_INIT_COMMAND => "SET lc_time_names='en_US'"],
+            $parameters->options,
+        );
     }
 
     public function testNoInitCommandWithoutAnythingToSet(): void
@@ -95,7 +103,38 @@ final class DbConnectionParametersTest extends TestCase
             dbSettings: $this->create(timeNamesLanguage: null, sqlSafeUpdates: false),
         );
 
-        $this->assertSame([], $parameters->options);
+        $this->assertSame([PDO::ATTR_TIMEOUT => 3], $parameters->options);
+    }
+
+    public function testConnectTimeoutIsTakenFromTheSettings(): void
+    {
+        $parameters = DbConnectionParameters::forMysql(
+            dbSettings: new DbSettings(
+                hostName: 'db.example.com',
+                databaseName: 'app',
+                userName: 'app_user',
+                password: 'not-a-real-password',
+                connectTimeoutInSeconds: 1,
+            ),
+        );
+
+        $this->assertSame(
+            [PDO::ATTR_TIMEOUT => 1, Mysql::ATTR_INIT_COMMAND => "SET lc_time_names='de_CH', sql_safe_updates=1"],
+            $parameters->options,
+        );
+    }
+
+    public function testConnectTimeoutBelowOneSecondThrows(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new DbSettings(
+            hostName: 'db.example.com',
+            databaseName: 'app',
+            userName: 'app_user',
+            password: 'not-a-real-password',
+            connectTimeoutInSeconds: 0,
+        );
     }
 
     public function testParametersForOtherDriversNeedOnlyADsn(): void

@@ -316,9 +316,14 @@ class DbResultTable extends SmartTable
 
         $this->fillBySelectQuery();
 
-        $isFirstPageNotFull = $this->getCurrentPaginationPage() === 1 && $this->filledAmount < $this->itemsPerPage;
-        if ($this->limitToOnePage || $isFirstPageNotFull) {
+        if ($this->limitToOnePage) {
             return $this->totalAmount = $this->filledAmount;
+        }
+        // A page that is not full is the last one: the total is known without a COUNT query (an empty page after the
+        // first one may be beyond the end, so it is counted)
+        $currentPage = $this->getCurrentPaginationPage();
+        if ($this->filledAmount < $this->itemsPerPage && ($currentPage === 1 || $this->filledAmount > 0)) {
+            return $this->totalAmount = ($currentPage - 1) * $this->itemsPerPage + $this->filledAmount;
         }
 
         return $this->totalAmount = $this->dbQuery->getTotalAmount(db: $this->db);

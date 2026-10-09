@@ -89,7 +89,7 @@ final class DbSelectStmtTest extends TestCase
     public function testFetchRowThrowsOnMoreThanOneRow(): void
     {
         $this->expectException(DbRowCountException::class);
-        $this->expectExceptionMessageIsOrContains('returned 2 rows');
+        $this->expectExceptionMessageIsOrContains('returned more than one row');
         $this->stmt(sql: 'SELECT id FROM users')->executeAndFetchRow(parameters: []);
     }
 

@@ -20,7 +20,8 @@ use RuntimeException;
  * Builder for one CSV file: collects the rows with `addRow()` (rows are only added, nothing returns or changes them
  * later; the arrays are values, so changing an array afterwards does not change the row) and writes them to a
  * temporary file or sends them as download. Use one instance per file; writing does not change the instance, so it
- * can write the same rows again.
+ * can write the same rows again. A large export passes its rows as `moreRows` (e.g. a generator over
+ * `FrameworkDb::iterateRows()`): they are written one by one after the added rows and never held in memory.
  *
  * Against CSV injection, a text cell that starts with "=", "+", "-", "@", a tab or a carriage return and is no number
  * gets a leading "'", so a spreadsheet application does not run it as formula (OWASP). Numbers and numeric strings
@@ -102,12 +103,14 @@ final class CsvFile
     }
 
     /**
+     * @param iterable<array<array-key, bool|float|int|string|null>> $moreRows Written after the added rows, one by one
+     *
      * @return string The path of the new file in the temporary directory (readable by the owner only); the caller
      *                removes it
      *
      * @throws RuntimeException If the file cannot be written
      */
-    public function createTemporaryFile(): string
+    public function createTemporaryFile(iterable $moreRows = []): string
     {
         $temporaryPath = tempnam(directory: sys_get_temp_dir(), prefix: 'yuf-csv-');
         if ($temporaryPath === false) {
@@ -124,7 +127,7 @@ final class CsvFile
             throw new RuntimeException(message: 'Cannot open the temporary file "' . $path . '".');
         }
         try {
-            $this->writeTo(fileResource: $fileResource, path: $path);
+            $this->writeTo(fileResource: $fileResource, path: $path, moreRows: $moreRows);
         } catch (RuntimeException $runtimeException) {
             unlink(filename: $path);
             throw $runtimeException;
@@ -137,12 +140,15 @@ final class CsvFile
 
     /**
      * Sends the file as download and ends the script. The temporary file is removed at the end of the script.
+     *
+     * @param iterable<array<array-key, bool|float|int|string|null>> $moreRows Written after the added rows, one by one
      */
     public function pushDownloadAndExit(
         HttpRequest $httpRequest,
         ResponseSender $responseSender = new NativeResponseSender(),
+        iterable $moreRows = [],
     ): never {
-        $path = $this->createTemporaryFile();
+        $path = $this->createTemporaryFile(moreRows: $moreRows);
         register_shutdown_function(static function () use ($path): void {
             if (is_file(filename: $path)) {
                 unlink(filename: $path);
@@ -159,10 +165,11 @@ final class CsvFile
 
     /**
      * @param resource $fileResource
+     * @param iterable<array<array-key, bool|float|int|string|null>> $moreRows
      *
      * @throws RuntimeException
      */
-    private function writeTo($fileResource, string $path): void
+    private function writeTo($fileResource, string $path, iterable $moreRows): void
     {
         if ($this->addByteOrderMark) {
             CsvFile::checkWritten(result: fwrite(stream: $fileResource, data: "\xEF\xBB\xBF"), path: $path);
@@ -171,6 +178,9 @@ final class CsvFile
             $this->writeRow(fileResource: $fileResource, path: $path, row: $this->headersList);
         }
         foreach ($this->rows as $row) {
+            $this->writeRow(fileResource: $fileResource, path: $path, row: $row);
+        }
+        foreach ($moreRows as $row) {
             $this->writeRow(fileResource: $fileResource, path: $path, row: $row);
         }
     }

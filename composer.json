@@ -23,7 +23,7 @@
     "ext-dom": "*",
     "ext-iconv": "*",
     "ext-curl": "*",
-    "actra/autoloader": "^1.1",
+    "actra/autoloader": "~1.2.0",
     "ext-libxml": "*",
     "ext-ctype": "*",
     "ext-fileinfo": "*"

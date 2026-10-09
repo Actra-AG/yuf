@@ -159,3 +159,17 @@ steps that change responses or rendering. No step is breaking unless marked ⚠�
 - Open, in `actra/autoloader` (separate release): write the cache atomically (temporary file and `rename()`; today
   concurrent requests can include a half-written file) and require cached paths directly instead of `file_exists()`
   per class.
+
+### Step 5 (v4.63.0) – done
+
+- Measured on SQLite with 100,000 rows of three columns: `selectRows()` 70.8 ms → 39.2 ms (rows built while fetching,
+  no `fetchAll()` + `array_map()`); new `iterateRows()` 28 ms with +0.2 MB peak memory instead of +54.6 MB.
+- `DbSettings::$connectTimeoutInSeconds` (default 3) → `PDO::ATTR_TIMEOUT`. `selectRow()` fetches at most two rows
+  (new `DbRowCountException::moreThanOneRowWithoutCount()`). `CsvFile` takes `moreRows:` (iterable) in
+  `createTemporaryFile()` and `pushDownloadAndExit()`.
+- `DbResultTable::getTotalAmount()`: no `COUNT` for a page that is not full (except an empty page after the first,
+  which may be beyond the end); tests with `SelectRowCountingDb`.
+- `DbQuery::getTotalAmount()` counts a `SELECT DISTINCT` as sub query with the parameters of the select part.
+- `actra/autoloader` raised to `~1.2.0` (atomic cache, cached classes included without `file_exists()`).
+- Not done (not measured as relevant, optional in the plan): memoizing `TableSessionState`, cell CSS classes per
+  column, a statement cache, `insertMany()`, a maximum size of the query log.

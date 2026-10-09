@@ -4,6 +4,17 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4.0.0–v4.49.0](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v4.63.0 (2026-10-09)
+
+- Requires `actra/autoloader` `~1.2.0` (PHP 8.5, atomic cache file).
+- MySQL connections give up after 3 seconds instead of 60 (`DbSettings::$connectTimeoutInSeconds`).
+- New `FrameworkDb::iterateRows()` and `DbSelectStmt::executeAndIterate()` return rows one by one; `CsvFile` writes
+  rows of the new `moreRows:` argument one by one ([docs/database.md](docs/database.md)).
+- `selectRows()` builds the rows without a second copy; `selectRow()` reads at most two rows, so the message of its
+  `DbRowCountException` says "more than one row" instead of the exact count.
+- `DbResultTable` skips the `COUNT` query on a last page that is not full.
+- Fix: `DbQuery::getTotalAmount()` counts the distinct rows of a `SELECT DISTINCT` (before: all rows).
+
 ## v4.62.0 (2026-10-09)
 
 - `Core::fromEnvironment()` keeps the cache of the autoloader in the cache directory of the application

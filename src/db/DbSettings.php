@@ -30,6 +30,8 @@ final readonly class DbSettings
      *                                   null to keep the default of the server
      * @param bool $sqlSafeUpdates Refuses UPDATE and DELETE statements without a key in the WHERE clause:
      *                             https://dev.mysql.com/doc/refman/8.0/en/mysql-tips.html
+     * @param int $connectTimeoutInSeconds Gives up connecting after this time (`PDO::ATTR_TIMEOUT`), so an unreachable
+     *                                     database does not block every PHP worker for the default 60 seconds
      *
      * @throws InvalidArgumentException
      */
@@ -42,7 +44,13 @@ final readonly class DbSettings
         ?string $charset = null,
         public ?string $timeNamesLanguage = 'de_CH',
         public bool $sqlSafeUpdates = true,
+        public int $connectTimeoutInSeconds = 3,
     ) {
+        if ($connectTimeoutInSeconds < 1) {
+            throw new InvalidArgumentException(
+                message: 'The connect timeout must be at least 1 second, got ' . $connectTimeoutInSeconds . '.',
+            );
+        }
         DbSettings::assertDsnValue(name: 'hostName', value: $hostName);
         DbSettings::assertDsnValue(name: 'databaseName', value: $databaseName);
         $this->charset = DbSettings::normalizeCharset(charset: $charset);

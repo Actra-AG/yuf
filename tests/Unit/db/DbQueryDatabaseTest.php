@@ -69,4 +69,16 @@ final class DbQueryDatabaseTest extends TestCase
 
         $this->assertSame(0, $dbQuery->getTotalAmount(db: SqliteDatabase::create()));
     }
+
+    public function testTotalAmountOfADistinctQueryCountsTheDistinctRows(): void
+    {
+        $db = SqliteDatabase::create();
+        $db->execute(sql: 'INSERT INTO users (id, name, age) VALUES (4, ?, 50)', parameters: ['Anna']);
+        $dbQuery = DbQuery::createFromSqlQuery(
+            query: 'SELECT DISTINCT name, ? AS marker FROM users WHERE id > ?',
+            parameters: ['m', 0],
+        );
+
+        $this->assertSame(3, $dbQuery->getTotalAmount(db: $db));
+    }
 }

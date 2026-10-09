@@ -9,9 +9,11 @@ declare(strict_types=1);
 
 namespace actra\yuf\db;
 
+use Generator;
 use PDO;
 use PDOStatement;
 use stdClass;
+use Throwable;
 
 /**
  * A prepared SELECT statement that can be executed repeatedly. Created by `FrameworkDb::prepareSelect()`.
@@ -62,21 +64,73 @@ final readonly class DbSelectStmt
      */
     public function executeAndFetchRows(array $parameters): array
     {
-        $rows = $this->executor->run(
+        return $this->executor->run(
             statement: $this->pdoStatement,
             parameters: $parameters,
             afterExecution: static function (PDOStatement $statement): array {
-                /** @var list<array<string, mixed>> $rows PDO::fetchAll() is untyped, FETCH_ASSOC gives this shape */
-                $rows = $statement->fetchAll(mode: PDO::FETCH_ASSOC);
+                $rows = [];
+                // Row by row: no second, untyped copy of the whole result
+                while (is_array(value: $values = $statement->fetch(mode: PDO::FETCH_ASSOC))) {
+                    /** @var array<string, mixed> $values FETCH_ASSOC gives this shape */
+                    $rows[] = new DbRow(values: $values);
+                }
 
                 return $rows;
             },
         );
-
-        return array_map(callback: static fn(array $row): DbRow => new DbRow(values: $row), array: $rows);
     }
 
     /**
+     * Executes the statement and returns its typed rows one by one, so a large result (an export, a cron job) is never
+     * held in PHP at once. Read the rows before the next query on the same statement. MySQL buffers the result of a
+     * query on the client by default; for very large results disable that for the connection
+     * (`Pdo\Mysql::ATTR_USE_BUFFERED_QUERY`), then no other query may run until all rows are read.
+     *
+     * @param SqlParameters $parameters
+     *
+     * @return Generator<int, DbRow>
+     * @throws DbRuntimeException if the query fails (on the call) or a row cannot be read (while iterating)
+     */
+    public function executeAndIterate(array $parameters): Generator
+    {
+        $this->executor->run(
+            statement: $this->pdoStatement,
+            parameters: $parameters,
+            afterExecution: static fn(PDOStatement $statement): null => null,
+        );
+
+        return $this->iterateRows(parameters: $parameters);
+    }
+
+    /**
+     * @param SqlParameters $parameters
+     *
+     * @return Generator<int, DbRow>
+     * @throws DbRuntimeException
+     */
+    private function iterateRows(array $parameters): Generator
+    {
+        while (true) {
+            try {
+                $values = $this->pdoStatement->fetch(mode: PDO::FETCH_ASSOC);
+            } catch (Throwable $throwable) {
+                throw new DbRuntimeException(
+                    throwable: $throwable,
+                    sql: $this->pdoStatement->queryString,
+                    parameters: $parameters,
+                );
+            }
+            if (!is_array(value: $values)) {
+                return;
+            }
+            /** @var array<string, mixed> $values FETCH_ASSOC gives this shape */
+            yield new DbRow(values: $values);
+        }
+    }
+
+    /**
+     * Fetches at most two rows: the second one is enough to know that there is more than one.
+     *
      * @param SqlParameters $parameters
      *
      * @return DbRow|null null if the query returns no row
@@ -85,12 +139,25 @@ final readonly class DbSelectStmt
      */
     public function executeAndFetchRow(array $parameters): ?DbRow
     {
-        $rows = $this->executeAndFetchRows(parameters: $parameters);
+        $rows = $this->executor->run(
+            statement: $this->pdoStatement,
+            parameters: $parameters,
+            afterExecution: static function (PDOStatement $statement): array {
+                $rows = [];
+                while (
+                    count(value: $rows) < 2
+                    && is_array(value: $values = $statement->fetch(mode: PDO::FETCH_ASSOC))
+                ) {
+                    /** @var array<string, mixed> $values FETCH_ASSOC gives this shape */
+                    $rows[] = new DbRow(values: $values);
+                }
+                $statement->closeCursor();
+
+                return $rows;
+            },
+        );
         if (count(value: $rows) > 1) {
-            throw DbRowCountException::moreThanOneRow(
-                rowCount: count(value: $rows),
-                sql: $this->pdoStatement->queryString,
-            );
+            throw DbRowCountException::moreThanOneRowWithoutCount(sql: $this->pdoStatement->queryString);
         }
 
         return array_first(array: $rows);

@@ -88,8 +88,44 @@ final class FrameworkDbTest extends TestCase
     public function testSelectRowThrowsForMoreThanOneRow(): void
     {
         $this->expectException(DbRowCountException::class);
+        $this->expectExceptionMessageIs(
+            'Expected at most one row, but the query returned more than one row. SQL-String: "SELECT id FROM users"',
+        );
 
         SqliteDatabase::create()->selectRow(sql: 'SELECT id FROM users');
+    }
+
+    public function testIterateRowsReturnsTheTypedRowsOneByOne(): void
+    {
+        $rows = SqliteDatabase::create()->iterateRows(
+            sql: 'SELECT id, name FROM users WHERE id <= ? ORDER BY id',
+            parameters: [2],
+        );
+
+        $names = [];
+        foreach ($rows as $row) {
+            $names[] = $row->getString(column: 'name');
+        }
+
+        $this->assertSame(['Anna', 'Ben'], $names);
+    }
+
+    public function testIterateRowsThrowsForAnInvalidQueryOnTheCall(): void
+    {
+        $this->expectException(DbRuntimeException::class);
+
+        SqliteDatabase::create()->iterateRows(sql: 'SELECT nothing FROM missing_table');
+    }
+
+    public function testIteratedStatementCanBeExecutedAgain(): void
+    {
+        $statement = SqliteDatabase::create()->prepareSelect(query: 'SELECT name FROM users WHERE id = ?');
+
+        $first = iterator_to_array(iterator: $statement->executeAndIterate(parameters: [1]), preserve_keys: false);
+        $second = iterator_to_array(iterator: $statement->executeAndIterate(parameters: [2]), preserve_keys: false);
+
+        $this->assertSame('Anna', array_first(array: $first)?->getString(column: 'name'));
+        $this->assertSame('Ben', array_first(array: $second)?->getString(column: 'name'));
     }
 
     public function testPrepareSelectCanBeExecutedRepeatedly(): void

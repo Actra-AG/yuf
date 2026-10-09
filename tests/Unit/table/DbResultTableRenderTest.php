@@ -28,6 +28,7 @@ use actra\yuf\table\table\DbResultTable;
 use actra\yuf\table\TableHelper;
 use actra\yuf\template\TemplateEngine;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\db\SelectRowCountingDb;
 use actra\yuf\tests\Double\db\SqliteDatabase;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
@@ -255,6 +256,30 @@ final class DbResultTableRenderTest extends TestCase
             . 'Es wurden <strong>3</strong> Resultate gefunden.</p></div><div class="table-wrap"><table class="table">',
             $html,
         );
+    }
+
+    public function testLastPageThatIsNotFullSkipsTheCountQuery(): void
+    {
+        $db = new SelectRowCountingDb();
+        $table = $this->createTable(query: ['page' => '2|users'], itemsPerPage: 2, db: $db);
+
+        $table->render();
+
+        $this->assertSame(3, $table->getTotalAmount());
+        $this->assertSame(0, $db->selectRowCalls);
+    }
+
+    public function testFullPageAndEmptyPageAfterTheFirstAreCounted(): void
+    {
+        $fullPageDb = new SelectRowCountingDb();
+        $fullPage = $this->createTable(itemsPerPage: 3, db: $fullPageDb);
+        $emptyPageDb = new SelectRowCountingDb();
+        $emptyPage = $this->createTable(query: ['page' => '3|users'], itemsPerPage: 2, db: $emptyPageDb);
+
+        $this->assertSame(3, $fullPage->getTotalAmount());
+        $this->assertSame(1, $fullPageDb->selectRowCalls);
+        $this->assertSame(3, $emptyPage->getTotalAmount());
+        $this->assertSame(1, $emptyPageDb->selectRowCalls);
     }
 
     public function testLimitToOnePageSkipsTheCountQuery(): void

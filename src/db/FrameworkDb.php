@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\db;
 
+use Generator;
 use InvalidArgumentException;
 use LogicException;
 use Override;
@@ -135,6 +136,20 @@ class FrameworkDb extends PDO
     public function selectRows(string $sql, array $parameters = [], bool $logQuery = false): array
     {
         return $this->prepareSelect(query: $sql, logQuery: $logQuery)->executeAndFetchRows(parameters: $parameters);
+    }
+
+    /**
+     * Like selectRows(), but returns the rows one by one: for large results (exports, cron jobs), which are never held
+     * in PHP at once (see `DbSelectStmt::executeAndIterate()`).
+     *
+     * @param SqlParameters $parameters list of parameter values to bind to the prepared sql statement in correct order
+     *
+     * @return Generator<int, DbRow>
+     * @throws DbRuntimeException
+     */
+    public function iterateRows(string $sql, array $parameters = [], bool $logQuery = false): Generator
+    {
+        return $this->prepareSelect(query: $sql, logQuery: $logQuery)->executeAndIterate(parameters: $parameters);
     }
 
     /**

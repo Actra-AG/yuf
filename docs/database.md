@@ -19,7 +19,8 @@ $db = new FrameworkDb(
 ```
 
 - `DbSettings` validates its values (they end up in the DSN and the init command). `sqlSafeUpdates` is on by default
-  (MySQL refuses `UPDATE` and `DELETE` without a key).
+  (MySQL refuses `UPDATE` and `DELETE` without a key). `connectTimeoutInSeconds` (default 3) limits the wait for an
+  unreachable database.
 - Use `?` placeholders for every value (`select()`, `selectRows()`, `selectRow()`, `execute()`, `prepareSelect()`). The
   values are `float|int|string|null`: convert booleans to `0` / `1`.
 - `createInQuery()` creates the placeholders of an `IN (...)` list, `getLastInsertId()` returns the generated ID as
@@ -63,7 +64,9 @@ $users = array_map(callback: User::fromRow(...), array: $db->selectRows(sql: 'SE
 - Getters: `getString`, `getInt`, `getFloat`, `getDecimal` (canonical decimal string like `'12.50'`), `getBool`
   (`0`/`1`), `getDateTimeImmutable` (DATE, DATETIME, TIMESTAMP), `getEnum`, each with a `getNullable…` variant (except
   `getBool`), and `has()`.
-- `selectRow()` returns `null` for no row and throws `DbRowCountException` for more than one.
+- `selectRow()` returns `null` for no row and throws `DbRowCountException` for more than one (it reads at most two).
+- `iterateRows()` (`DbSelectStmt::executeAndIterate()`) returns the rows one by one, for exports and cron jobs over
+  large tables. A CSV export passes them to `CsvFile::pushDownloadAndExit(moreRows: …)`, which writes them one by one.
 - `DbSelectStmt` has the same (`executeAndFetchRows()`, `executeAndFetchRow()`).
 - Date and time columns are parsed in the PHP default time zone: the time zone of the database session must match.
 
@@ -98,7 +101,8 @@ $query->addOrderPart(column: 'users.name');
 
 - The query of `createFromSqlQuery()` consists of `SELECT`, `FROM`, optional joins and an optional `WHERE` only.
   `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT` and `UNION` are rejected: sorting and paging are added by `DbQuery`
-  (`addOrderPart()`, the offset and row count of `selectFromDb()`).
+  (`addOrderPart()`, the offset and row count of `selectFromDb()`). `getTotalAmount()` counts the distinct rows of a
+  `SELECT DISTINCT`.
 - Every added part has exactly one parameter per `?`. Joins go between `FROM` and `WHERE`; each `addWherePart()`
   condition is wrapped in parentheses and combined with `AND`.
 - `addOrderPart()` without `parameters` accepts column names only (letters, digits, `_`, `.`, backticks; several

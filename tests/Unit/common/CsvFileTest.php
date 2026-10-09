@@ -14,6 +14,7 @@ use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\core\RecordingResponseSender;
+use Generator;
 use InvalidArgumentException;
 use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -46,6 +47,21 @@ final class CsvFileTest extends TestCase
             CsvFileTest::BOM . "Name;City\nAnna;Bern\nBen;Zürich\n",
             $this->content(csvFile: $csvFile),
         );
+    }
+
+    public function testMoreRowsAreWrittenOneByOneAfterTheAddedRows(): void
+    {
+        $csvFile = new CsvFile(fileName: 'export.csv', headersList: ['Name']);
+        $csvFile->addRow(data: ['Anna']);
+        $moreRows = (static function (): Generator {
+            yield ['Ben'];
+            yield ['=SUM(A1)'];
+        })();
+
+        $path = $csvFile->createTemporaryFile(moreRows: $moreRows);
+        $this->createdFiles[] = $path;
+
+        $this->assertSame(CsvFileTest::BOM . "Name\nAnna\nBen\n'=SUM(A1)\n", file_get_contents(filename: $path));
     }
 
     public function testWithoutByteOrderMark(): void

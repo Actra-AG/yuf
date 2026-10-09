@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\db;
 
+use PDO;
 use Pdo\Mysql;
 use SensitiveParameter;
 
@@ -42,7 +43,7 @@ final readonly class DbConnectionParameters
                 'charset=' . $dbSettings->charset,
             ],
         );
-        $options = [];
+        $options = [PDO::ATTR_TIMEOUT => $dbSettings->connectTimeoutInSeconds];
         $initCommand = DbConnectionParameters::createMysqlInitCommand(dbSettings: $dbSettings);
         if ($initCommand !== null) {
             $options[Mysql::ATTR_INIT_COMMAND] = $initCommand;

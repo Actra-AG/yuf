@@ -429,18 +429,33 @@ final class DbQuery
      * of the "FROM" or "JOIN" parts and those of the "WHERE" part are kept, as their placeholders
      * remain within the query.
      *
+     * A "SELECT DISTINCT" counts the distinct rows: the query without its sorting is counted as a sub query, with
+     * all its parameters.
+     *
      * @throws DbRuntimeException
      * @throws UnexpectedValueException If the count query returns no row.
      */
     public function getTotalAmount(FrameworkDb $db): int
     {
-        $query = DbQuery::buildQuery(
-            queryParts: [
-                'SELECT COUNT(*) AS amount',
-                ...$this->getFromJoinAndWhereParts(),
-            ],
-        );
-        $parameters = $this->getFromJoinAndWhereParameters();
+        if (strtolower(string: (string) array_first(array: $this->selectParts)) === 'distinct') {
+            $query = DbQuery::buildQuery(
+                queryParts: [
+                    'SELECT COUNT(*) AS amount FROM (SELECT',
+                    ...$this->selectParts,
+                    ...$this->getFromJoinAndWhereParts(),
+                    ') AS distinct_rows',
+                ],
+            );
+            $parameters = [...$this->selectParameters, ...$this->getFromJoinAndWhereParameters()];
+        } else {
+            $query = DbQuery::buildQuery(
+                queryParts: [
+                    'SELECT COUNT(*) AS amount',
+                    ...$this->getFromJoinAndWhereParts(),
+                ],
+            );
+            $parameters = $this->getFromJoinAndWhereParameters();
+        }
         DbQuery::checkParameterCount(queryPart: $query, parameters: $parameters);
 
         $row = $db->selectRow(
