@@ -4,6 +4,11 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4.0.0–v4.49.0](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v4.67.2 (2026-10-09)
+
+- `SmtpTransport`, `StreamSmtpTransport` and `SmtpDataFormatter` are derived from PHPMailer too and now declared as
+  LGPL-2.1-only, like `SmtpMailer`. No code changes.
+
 ## v4.67.1 (2026-10-09)
 
 - The license declaration is now `MIT AND LGPL-2.1-only AND Apache-2.0`: the mailer classes derived from PHPMailer
