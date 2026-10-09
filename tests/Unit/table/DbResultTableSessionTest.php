@@ -441,8 +441,8 @@ final class DbResultTableSessionTest extends TestCase
     }
 
     /**
-     * The identifier is the session key: tables of one page must have different identifiers (documented in the
-     * README), tables with the same identifier share their state.
+     * The identifier is the session key: tables of one page must have different identifiers (documented in
+     * docs/session-and-login.md), tables with the same identifier share their state.
      */
     public function testTablesWithTheSameIdentifierShareTheirState(): void
     {

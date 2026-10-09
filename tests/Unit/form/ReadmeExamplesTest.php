@@ -29,7 +29,7 @@ use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The code of the "Forms" section of README.md, with the request passed as `FormInput` instead of the superglobals.
+ * The examples of docs/forms.md, with the request passed as `FormInput` instead of the superglobals.
  * Keep both in sync.
  */
 final class ReadmeExamplesTest extends TestCase

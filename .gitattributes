@@ -5,7 +5,9 @@
 /.php-cs-fixer.dist.php export-ignore
 /AGENTS.md export-ignore
 /CLAUDE.md export-ignore
-/docs export-ignore
+# Plans, designs and analyses of refactorings; the user docs and docs/upgrade/ are shipped
+/docs/*/** export-ignore
+/docs/upgrade/** -export-ignore
 /example export-ignore
 /phpstan.neon export-ignore
 /phpstan-baseline.neon export-ignore
