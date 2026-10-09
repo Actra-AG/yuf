@@ -13,7 +13,7 @@ use actra\yuf\tests\Double\template\TemplateEngineTestCase;
 use stdClass;
 
 /**
- * The `for` tag (docs/template-engine/design.md, section 3).
+ * The `for` tag (docs/plans/template-engine/design.md, section 3).
  */
 final class TemplateForTagTest extends TemplateEngineTestCase
 {

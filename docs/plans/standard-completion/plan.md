@@ -1,7 +1,7 @@
 # Plan: finish the coding standard in yuf
 
 Everything that is still open after the template engine rewrite (v4.27.0), see
-[docs/standard-migration/remaining.md](../standard-migration/remaining.md). `actra/backend` follows when yuf is done.
+[docs/plans/standard-migration/remaining.md](../standard-migration/remaining.md). `actra/backend` follows when yuf is done.
 
 ## Decisions (user)
 
@@ -17,7 +17,7 @@ Everything that is still open after the template engine rewrite (v4.27.0), see
 - `src/phone/` and `src/mailer/` get the full standard (characterization tests first, license notices of the mailer
   kept).
 - No backwards compatibility: renames and removals without aliases, every breaking change ⚠️ with before/after in
-  `UPGRADE.md` (as in docs/standard-migration/plan.md).
+  `UPGRADE.md` (as in docs/plans/standard-migration/plan.md).
 
 ## Definition of done for an area
 
@@ -39,13 +39,13 @@ Every area release does all of this for the classes of its area (and nothing out
 1. **v4.28.0 – `LogFile` instance only (⚠️):** remove `info()`, `debug()`, `error()` and the static registry; `final`;
    constructor and `write()` stay (`logDirectory` since v4.26.0). Tests with a temporary log directory and a fixed
    clock. Small, so it goes first.
-2. **`HttpRequest` as instance** (design first in `docs/http-request/design.md`, approved by the user): one object per
+2. **`HttpRequest` as instance** (design first in `docs/plans/http-request/design.md`, approved by the user): one object per
    request created by `Core` from the superglobals (`HttpRequest::fromGlobals()`), passed to `RequestHandler`, views
    (`ViewContext`), forms (`FormInput::fromGlobals()`), tables (`DbResultTable`, `TableFilter`), `SearchHelper`,
    `CspPolicySettings`, `HttpResponse`, `Logger` and `ExceptionHandler`; the static caches (`$inputData`, `$host`,
    `$protocol`, `$languages`) and `RequestBody::getData()` go away; fixed sets (`PROTOCOL_*`, request methods) as enums.
    Makes the request pipeline of `Core` testable. Several releases (decided in the design).
-3. **Session object** (design first in `docs/session/design.md`): one session object per request instead of the static
+3. **Session object** (design first in `docs/plans/session/design.md`): one session object per request instead of the static
    `AbstractSessionHandler::getSessionHandler()` / `enabled()` / `$GLOBALS`, `AuthSession`, `CsrfToken`,
    `FormNameRegistry`, `SessionFileUploadStorage::forCurrentRequest()` and the session state of `DbResultTable` /
    `TableFilter` / `SearchHelper`; removes the reflection in `AuthSessionTest`, `AuthenticatorTest`; the single-instance
@@ -93,14 +93,14 @@ too large.
 ### Step 2 (v4.29.0) – done
 
 - `HttpRequest` is an immutable instance (`Core::$httpRequest`, `ViewContext::$httpRequest`); details, signatures and
-  what is not covered in [docs/http-request/plan.md](../http-request/plan.md). Baseline: 525 -> 469 entries.
+  what is not covered in [docs/plans/http-request/plan.md](../http-request/plan.md). Baseline: 525 -> 469 entries.
 
 ### Step 3 (v4.30.0) – done
 
 - Session object: `Session` per request (`Core::$session`), `AuthSession`, `SessionCsrfTokenSource`, `FormContext`; the
   static session classes, `FormNameRegistry`, the identifier registries and the guards of `AuthUser` / `Authenticator`
   are gone; all data of yuf is below `$_SESSION['yuf']`. Details, layout and what is not covered in
-  [docs/session/plan.md](../session/plan.md). Baseline: 469 -> 447 entries.
+  [docs/plans/session/plan.md](../session/plan.md). Baseline: 469 -> 447 entries.
 
 
 ### Step 4 (v4.31.0) – done
@@ -741,7 +741,7 @@ too large.
 ### Plan complete
 
 All areas of `src/` have the coding standard; the baseline is empty (`phpstan-baseline.neon`: `ignoreErrors: []`).
-What is left is listed in [docs/standard-migration/remaining.md](../standard-migration/remaining.md) ("Open points"), taken
+What is left is listed in [docs/plans/standard-migration/remaining.md](../standard-migration/remaining.md) ("Open points"), taken
 from the "Open / for later" notes above: the Git index names of `CSVFile.php` / `SimpleXMLExtended.php` (step 5), the
 follow-up of `actra/backend` per release (`UPGRADE.md`), and the small functional points of each area. `actra/backend`
 follows next, as decided.

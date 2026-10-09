@@ -344,7 +344,7 @@ is deleted again.
 
 **Remaining `mixed` / static state.** `mixed` stays only where the engine reads untyped data (listed in step 2). Static state
 of this area is gone: `Core::$isInitialized` (guard only) and `LogFile::$openLogFiles` remain, see
-`docs/standard-migration/remaining.md`.
+`docs/plans/standard-migration/remaining.md`.
 
 **For step 5.** Own tags: `Core::prepareHttpResponse(templateTags: …)` has to store them on the `Core` so that
 `createTemplateEngine()` (used by the request and the error pages) adds them with `TemplateTagCollection::with()`.

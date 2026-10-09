@@ -1,6 +1,6 @@
 # Plan: `HttpRequest` as instance
 
-Design: [design.md](design.md). Step 2 of [docs/standard-completion/plan.md](../standard-completion/plan.md).
+Design: [design.md](design.md). Step 2 of [docs/plans/standard-completion/plan.md](../standard-completion/plan.md).
 
 ## Steps
 

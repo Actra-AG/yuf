@@ -17,7 +17,7 @@ use DateTimeZone;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * The `print`, `date` and `options` tags (docs/template-engine/design.md, section 3): their output is escaped.
+ * The `print`, `date` and `options` tags (docs/plans/template-engine/design.md, section 3): their output is escaped.
  */
 final class TemplateOutputTagsTest extends TemplateEngineTestCase
 {

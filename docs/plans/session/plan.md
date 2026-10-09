@@ -1,6 +1,6 @@
 # Plan: session object
 
-Design: [design.md](design.md). Step 3 of [docs/standard-completion/plan.md](../standard-completion/plan.md).
+Design: [design.md](design.md). Step 3 of [docs/plans/standard-completion/plan.md](../standard-completion/plan.md).
 
 ## Steps
 

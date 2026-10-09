@@ -19,7 +19,7 @@ use PHPUnit\Framework\TestCase;
 use stdClass;
 
 /**
- * The rules of docs/template-engine/design.md, section 3.1. The 320 cases of the characterization test
+ * The rules of docs/plans/template-engine/design.md, section 3.1. The 320 cases of the characterization test
  * (`TemplateIfTagTest`) pin them through the engine; these tests pin the rules themselves.
  */
 final class ValueComparatorTest extends TestCase

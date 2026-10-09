@@ -1,7 +1,7 @@
 # Plan: move yuf to the remaining rules of the coding standard
 
 yuf follows `actra/coding-standard` (v1.2.0). Code style and PHPStan are covered by
-[docs/coding-standard/plan.md](../coding-standard/plan.md). This plan covers the remaining rules that change the public
+[docs/plans/coding-standard/plan.md](../coding-standard/plan.md). This plan covers the remaining rules that change the public
 API:
 
 - names (`naming.md`): acronyms written like words, no `Model` suffix for settings bundles, `Enum` suffix, constants in
@@ -527,7 +527,7 @@ Smaller releases, each for one area:
 
 - `DbSettings`, `SessionSettings`, `CspPolicySettings`, `TableItem` and the trait `HasSelectOptionsPresentation`
   (`@internal`); named arguments and `Core::$cspPolicySettings` renamed, no aliases. Pure renames, no behaviour change.
-- `TableItemModelTest` → `TableItemTest`; README and `docs/form-v4/plan.md` updated; baseline unchanged (767 entries,
+- `TableItemModelTest` → `TableItemTest`; README and `docs/plans/form-v4/plan.md` updated; baseline unchanged (767 entries,
   6 messages/paths renamed). `example/` needed no change.
 
 ### Step 2 (v4.13.0) – done

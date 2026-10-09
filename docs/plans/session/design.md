@@ -1,6 +1,6 @@
 # Design: session object
 
-Step 3 of [docs/standard-completion/plan.md](../standard-completion/plan.md). Today the session is static state:
+Step 3 of [docs/plans/standard-completion/plan.md](../standard-completion/plan.md). Today the session is static state:
 `AbstractSessionHandler::register()` / `enabled()` (via `$GLOBALS`) / `getSessionHandler()` / `clearUserData()`, the
 static classes `AuthSession` and `CsrfToken`, `DbResultTable::saveToSession()` / `getFromSession()`, and nine files of
 yuf that read or write `$_SESSION` directly (auth, CSRF, tables, filters, `SearchHelper`, upload storage, preferred

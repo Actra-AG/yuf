@@ -1,6 +1,6 @@
 # Plan: Typed form field values (v3.3.0)
 
-Status: done (2026-10-04). Follow-up for v4: [docs/form-v4/plan.md](../form-v4/plan.md).
+Status: done (2026-10-04). Follow-up for v4: [docs/plans/form-v4/plan.md](../form-v4/plan.md).
 
 ## Goal
 
@@ -56,7 +56,7 @@ Determine for every class in `src/form/component/field/` (and `FormField`) which
 
 Deliverables:
 
-- `docs/form-typed-values/value-types.md`: one table row per field class.
+- `docs/plans/form-typed-values/value-types.md`: one table row per field class.
 - Characterization tests in `tests/Unit/form/component/field/` that pin the current value behaviour (including the
   `PhoneNumberField` `TypeError` for array input, marked as known bug).
 - No production code changes. If a field cannot be tested without global state (`Core`, session), note it.
@@ -65,7 +65,7 @@ Verify: table covers every field class; `ddev composer check` green.
 
 Handover notes:
 
-Done (2026-10-04): `docs/form-typed-values/value-types.md` (table per class, normalizing rules, 15 notes with
+Done (2026-10-04): `docs/plans/form-typed-values/value-types.md` (table per class, normalizing rules, 15 notes with
 file:line) and 17 characterization test classes in `tests/Unit/form/component/field/` (`*FieldValueTest.php`, 189 tests
 in the suite). No change in `src/`. `ddev composer check` is green without baseline changes.
 
@@ -446,7 +446,7 @@ Done (2026-10-04): documentation only, no change in `src/` or `tests/`.
   (also `TextAreaField::getValues()` for subclasses that split lines), `valueIsInt`, `AmountParser`, fixes (⚠️ for the
   stricter amount rule: integer fields reject decimals/exponent, out-of-range values rejected; phone/zip `TypeError`;
   `DateField` null-safe), ⚠️ possible method name conflicts, outlook for v4.
-- `docs/form-v4/plan.md`: new section "Input from v3.3.0" (API to keep, remaining baseline entries per file, open
+- `docs/plans/form-v4/plan.md`: new section "Input from v3.3.0" (API to keep, remaining baseline entries per file, open
   oddities).
 - Verified against the code (`git diff v3.2.2..HEAD -- src/`): all method names, signatures and the `HiddenField`
   parameter match the notes of Tasks 1 to 5. Baseline entry counts per touched file taken from `phpstan-baseline.neon`.

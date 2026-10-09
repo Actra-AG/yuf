@@ -1,9 +1,9 @@
 # Plan: finish yuf
 
-What is still open after [docs/standard-completion/plan.md](../standard-completion/plan.md) (v4.41.0, empty PHPStan
-baseline), taken from [docs/standard-migration/remaining.md](../standard-migration/remaining.md). One step per release,
+What is still open after [docs/plans/standard-completion/plan.md](../standard-completion/plan.md) (v4.41.0, empty PHPStan
+baseline), taken from [docs/plans/standard-migration/remaining.md](../standard-migration/remaining.md). One step per release,
 each small enough to release on its own. `actra/backend` follows when the plan is done (its
-`docs/standard-migration/plan.md`).
+`docs/plans/standard-migration/plan.md`).
 
 ## Decisions (user)
 
@@ -147,7 +147,7 @@ each small enough to release on its own. `actra/backend` follows when the plan i
 
 ### End
 
-17. Update [docs/standard-migration/remaining.md](../standard-migration/remaining.md) to the final state, so that
+17. Update [docs/plans/standard-migration/remaining.md](../standard-migration/remaining.md) to the final state, so that
     `actra/backend` can follow.
 
 ## Handover notes
@@ -670,7 +670,7 @@ each small enough to release on its own. `actra/backend` follows when the plan i
 
 ### Step 17 – done
 
-- `docs/standard-migration/remaining.md` rewritten to the final state after v4.57.0: follow-up list for
+- `docs/plans/standard-migration/remaining.md` rewritten to the final state after v4.57.0: follow-up list for
   `actra/backend` (from the read-only searches of the steps), the standard figures (baseline 0, 3 documented
   `@phpstan-ignore`, 51 non-final classes = abstract bases / extension points, `Core::$isInitialized` as the only static
   state), what is not covered by tests (incl. the checks of `GraphMailer` against a real tenant) and the open points.
