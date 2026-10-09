@@ -52,4 +52,24 @@ host, IP address, user agent, referrer without query string, a fixed list of ser
 parameters, uploaded files (name, type, size) and the cookie *names*. Values of parameters whose name contains
 `password`, `token`, `secret`, `csrf`, `key` or `auth` (case-insensitive, at any depth) are replaced by `***`.
 
+By default, new issues are mailed with PHP's `mail()`. To send them with `SmtpMailer` or `GraphMailer`
+(see [mail.md](mail.md)), pass a `FileLogger` with a mailer and a sender address:
+
+```php
+$core->prepareHttpResponse(
+    logger: new FileLogger(
+        logEmailRecipient: $core->environmentSettings->logEmailRecipient,
+        logDirectory: $core->logDirectory,
+        httpRequest: $core->httpRequest,
+        mailer: $mailer,
+        mailSenderAddress: 'noreply@example.com',
+    ),
+    routeCollection: $routes,
+);
+```
+
+The mail contains the ticket file name, the issue and the request description. If the mailer fails (SMTP server or
+Graph API not reachable), the failure is noted in the ticket file and the issue is mailed with `mail()` as fallback, so
+the notification still arrives.
+
 For another destination, implement `actra\yuf\core\Logger` and pass it as `prepareHttpResponse(logger: …)`.

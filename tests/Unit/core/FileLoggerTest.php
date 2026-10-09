@@ -11,7 +11,11 @@ namespace actra\yuf\tests\Unit\core;
 
 use actra\yuf\clock\FixedClock;
 use actra\yuf\core\FileLogger;
+use actra\yuf\mailer\MailerException;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\mailer\CapturingMailer;
+use actra\yuf\tests\Double\mailer\FailingMailer;
+use actra\yuf\tests\Double\mailer\RecordingMailFunction;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use LogicException;
@@ -261,6 +265,153 @@ final class FileLoggerTest extends TestCase
     {
         return (string) file_get_contents(
             filename: $this->logDirectory . 'ticket_' . hash(algo: 'sha256', data: $message) . '.txt',
+        );
+    }
+
+    public function testNewIssueIsSentWithTheMailer(): void
+    {
+        $mailer = new CapturingMailer();
+        $mailFunction = new RecordingMailFunction();
+        $logger = new FileLogger(
+            logEmailRecipient: 'admin@example.com',
+            logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(),
+            mailer: $mailer,
+            mailSenderAddress: 'errors@example.com',
+            mailFunction: $mailFunction,
+        );
+
+        $logger->logMessage(message: 'mailed issue');
+
+        $this->assertSame([], $mailFunction->calls);
+
+        $this->assertNotNull($mailer->message);
+        $this->assertStringContainsString('To: admin@example.com', $mailer->message->header);
+        $this->assertStringContainsString('From: errors@example.com', $mailer->message->header);
+        $this->assertStringContainsString('new issue', $mailer->message->header);
+        $this->assertStringContainsString('Ticketfile: ticket_', $mailer->message->body);
+        $this->assertStringContainsString('mailed issue', $mailer->message->body);
+        $this->assertStringContainsString('Request: GET /', $mailer->message->body);
+    }
+
+    public function testKnownIssueIsNotSentWithTheMailer(): void
+    {
+        $mailer = new CapturingMailer();
+        $ticket = $this->logDirectory . 'ticket_' . hash(algo: 'sha256', data: 'known') . '.txt';
+        file_put_contents(filename: $ticket, data: 'old');
+        $logger = new FileLogger(
+            logEmailRecipient: 'admin@example.com',
+            logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(),
+            mailer: $mailer,
+            mailSenderAddress: 'errors@example.com',
+        );
+
+        $logger->logMessage(message: 'known');
+
+        $this->assertNull($mailer->message);
+    }
+
+    public function testMailerSendsNothingWithoutRecipient(): void
+    {
+        $mailer = new CapturingMailer();
+        $logger = new FileLogger(
+            logEmailRecipient: '',
+            logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(),
+            mailer: $mailer,
+            mailSenderAddress: 'errors@example.com',
+        );
+
+        $logger->logMessage(message: 'no recipient');
+
+        $this->assertNull($mailer->message);
+        $this->assertTrue($logger->lastIssueIsNew());
+    }
+
+    public function testFailingMailIsNotedInTheTicketFileAndMailedWithMailFunction(): void
+    {
+        $mailFunction = new RecordingMailFunction();
+        $logger = new FileLogger(
+            logEmailRecipient: 'admin@example.com',
+            logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(),
+            mailer: new FailingMailer(),
+            mailSenderAddress: 'errors@example.com',
+            mailFunction: $mailFunction,
+        );
+
+        $logger->logException(throwable: new RuntimeException(message: 'original error'));
+
+        $failure = 'Mail to the log recipient failed: ' . MailerException::class
+            . ': Connection to the mail server failed';
+        $files = glob(pattern: $this->logDirectory . 'ticket_*.txt');
+        $this->assertIsArray($files);
+        $this->assertCount(1, $files);
+        $content = (string) file_get_contents(filename: $files[0]);
+        $this->assertStringContainsString('RuntimeException: (0) "original error"', $content);
+        $this->assertStringContainsString($failure, $content);
+        $this->assertTrue($logger->lastIssueIsNew());
+        $call = $mailFunction->onlyCall();
+        $this->assertSame('admin@example.com', $call['to']);
+        $this->assertStringContainsString('RuntimeException: (0) "original error"', $call['message']);
+        $this->assertStringContainsString('Request: GET /', $call['message']);
+        $this->assertStringEndsWith($failure, $call['message']);
+    }
+
+    public function testNewIssueIsMailedWithMailFunctionWithoutMailer(): void
+    {
+        $mailFunction = new RecordingMailFunction();
+        $logger = new FileLogger(
+            logEmailRecipient: 'admin@example.com',
+            logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(),
+            clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-03-04 05:06:07 UTC')),
+            mailFunction: $mailFunction,
+        );
+
+        $logger->logMessage(message: 'plain mail');
+
+        $call = $mailFunction->onlyCall();
+        $this->assertSame('admin@example.com', $call['to']);
+        $this->assertSame('PHP error_log message', $call['subject']);
+        $this->assertSame(
+            'Ticketfile: ticket_' . hash(algo: 'sha256', data: 'plain mail') . '.txt' . PHP_EOL . PHP_EOL
+                . 'plain mail',
+            $call['message'],
+        );
+        $this->assertStringContainsString('Date: Wed, 04 Mar 2026 05:06:07 +0000', $call['headers']);
+        $this->assertStringContainsString('Content-Type: text/plain; charset=UTF-8', $call['headers']);
+        $this->assertStringStartsWith('From: error@', $call['headers']);
+    }
+
+    public function testKnownIssueIsNotMailedWithMailFunction(): void
+    {
+        $mailFunction = new RecordingMailFunction();
+        $ticket = $this->logDirectory . 'ticket_' . hash(algo: 'sha256', data: 'known') . '.txt';
+        file_put_contents(filename: $ticket, data: 'old');
+        $logger = new FileLogger(
+            logEmailRecipient: 'admin@example.com',
+            logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(),
+            mailFunction: $mailFunction,
+        );
+
+        $logger->logMessage(message: 'known');
+
+        $this->assertSame([], $mailFunction->calls);
+    }
+
+    public function testMailerWithoutValidSenderAddressThrows(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageIs('A mailer needs a valid mail sender address');
+
+        new FileLogger(
+            logEmailRecipient: 'admin@example.com',
+            logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(),
+            mailer: new CapturingMailer(),
         );
     }
 }

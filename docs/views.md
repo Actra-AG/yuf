@@ -6,9 +6,21 @@ By default, the view of a request is the class `<viewClassPrefix>\view\<viewGrou
 (`ClassNameViewFactory`), created with `new $className(context: $context)`. Its class name is the file name (e.g.
 `welcome`), so it is lowercase: an allowed exception from PascalCase, to be documented in the project.
 
-For views with PascalCase names or constructor dependencies, give the `Route` a `viewFactory`: `ViewMap` maps the file
-name to a closure. Only the view of the current request is created; a file without a mapped view is rendered without
-view.
+To pass further dependencies (e.g. a typed project context) to these views, give the `Route` a
+`ClassNameViewFactory` with a `create` closure. yuf still builds the class name and checks that the class exists and
+extends `BaseView`; the closure only creates the view:
+
+```php
+viewFactory: new ClassNameViewFactory(
+    create: fn(string $className, ViewContext $context): BaseView => new $className(
+        context: $context,
+        projectContext: $projectContext,
+    ),
+),
+```
+
+For views with PascalCase names, give the `Route` a `ViewMap`: it maps the file name to a closure. Only the view of the
+current request is created; a file without a mapped view is rendered without view.
 
 ```php
 new Route(

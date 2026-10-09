@@ -9,15 +9,23 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
+use Closure;
 use LogicException;
 use Override;
 
 /**
  * Default: the class name is built from the route and the file name, the view is created with
- * `new $className(context: $context)`.
+ * `new $className(context: $context)`, or with the `create` closure, which passes further dependencies.
  */
 final readonly class ClassNameViewFactory implements ViewFactory
 {
+    /**
+     * @param (Closure(class-string<BaseView> $className, ViewContext $context): BaseView)|null $create Creates the
+     *     view of an existing class that extends `BaseView`, e.g. with a project context:
+     *     `fn(string $className, ViewContext $context): BaseView => new $className(context: $context, project: $p)`
+     */
+    public function __construct(private ?Closure $create = null) {}
+
     public function createClassName(ViewContext $context): string
     {
         $route = $context->route;
@@ -54,6 +62,10 @@ final readonly class ClassNameViewFactory implements ViewFactory
             );
         }
 
-        return new $className(context: $context);
+        if ($this->create === null) {
+            return new $className(context: $context);
+        }
+
+        return ($this->create)($className, $context);
     }
 }

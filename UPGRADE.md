@@ -4,6 +4,14 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4.0.0–v4.49.0](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v4.58.0 (2026-10-09)
+
+- `FileLogger` sends new issues with a mailer (`SmtpMailer`, `GraphMailer`) when it gets `mailer:` and
+  `mailSenderAddress:`, with `mail()` as fallback if the mailer fails. Without them it mails with `mail()` as before
+  ([docs/setup.md](docs/setup.md)).
+- `ClassNameViewFactory` takes an optional `create:` closure to create the view with further dependencies
+  ([docs/views.md](docs/views.md)).
+
 ## v4.57.6 (2026-10-09)
 
 - The package no longer contains the empty plan directories in `docs/`. No code change.

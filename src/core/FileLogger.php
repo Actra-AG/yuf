@@ -11,6 +11,12 @@ namespace actra\yuf\core;
 
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
+use actra\yuf\mailer\AbstractMailer;
+use actra\yuf\mailer\MailerAddress;
+use actra\yuf\mailer\MailerException;
+use actra\yuf\mailer\MailFunction;
+use actra\yuf\mailer\NativeMailFunction;
+use actra\yuf\mailer\TextMail;
 use InvalidArgumentException;
 use Override;
 use RuntimeException;
@@ -18,8 +24,9 @@ use Throwable;
 
 /**
  * Writes every issue into a ticket file of the log directory (`ticket_<hash>.txt`, one file per distinct issue) and
- * mails a new issue (or one that was not seen for 24 hours) to the log recipient. The entry describes the request
- * without secrets (see `RequestLogFormatter`).
+ * mails a new issue (or one that was not seen for 24 hours) to the log recipient: with PHP's `mail()`, or with the
+ * given mailer (`SmtpMailer`, `GraphMailer`) and `mail()` as fallback. The entry describes the request without secrets
+ * (see `RequestLogFormatter`).
  */
 final class FileLogger implements Logger
 {
@@ -34,8 +41,13 @@ final class FileLogger implements Logger
     /**
      * @param string $logEmailRecipient Mail address of the new issues, empty for no mails
      * @param int $maxLogSize Size in bytes at which a ticket file is moved to `<file>.<number>`, 0 for no limit
+     * @param ?AbstractMailer $mailer Sends the mails of new issues instead of `mail()`. If it fails, the failure is
+     *     noted in the ticket file and the issue is mailed with `mail()`, so the notification still arrives
+     * @param string $mailSenderAddress Sender of the mails, required with a mailer
+     * @param MailFunction $mailFunction `mail()`, replaceable in tests
      *
-     * @throws InvalidArgumentException if the log directory does not exist
+     * @throws InvalidArgumentException if the log directory does not exist, or for a mailer without a valid sender
+     *     address
      */
     public function __construct(
         private readonly string $logEmailRecipient,
@@ -43,9 +55,22 @@ final class FileLogger implements Logger
         private readonly HttpRequest $httpRequest,
         private readonly Clock $clock = new SystemClock(),
         private readonly int $maxLogSize = FileLogger::DEFAULT_MAX_LOG_SIZE,
+        private readonly ?AbstractMailer $mailer = null,
+        private readonly string $mailSenderAddress = '',
+        private readonly MailFunction $mailFunction = new NativeMailFunction(),
     ) {
         if (!is_dir(filename: $logDirectory)) {
             throw new InvalidArgumentException(message: 'Log directory does not exist: ' . $logDirectory);
+        }
+        if ($mailer !== null) {
+            try {
+                MailerAddress::createSenderAddress(inputEmail: $mailSenderAddress, inputName: '');
+            } catch (MailerException $mailerException) {
+                throw new InvalidArgumentException(
+                    message: 'A mailer needs a valid mail sender address',
+                    previous: $mailerException,
+                );
+            }
         }
         $this->logDirectory = rtrim(string: $logDirectory, characters: DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         $this->requestLogFormatter = new RequestLogFormatter();
@@ -98,11 +123,27 @@ final class FileLogger implements Logger
         $ticketFile = 'ticket_' . $hash . '.txt';
         $ticketFullPath = $this->logDirectory . $ticketFile;
         $isNewIssue = $this->isNewIssue(ticketFullPath: $ticketFullPath);
-        $this->writeMessage(message: $message, filenameFullPath: $ticketFullPath);
-        if ($isNewIssue) {
-            $this->lastIssueIsNew = true;
-            $this->mailMessage(fullMessage: 'Ticketfile: ' . $ticketFile . FileLogger::DOUBLE_NEW_LINE . $message);
+        $requestDescription = $this->requestLogFormatter->format(httpRequest: $this->httpRequest);
+        $this->writeMessage(
+            message: $message . FileLogger::DOUBLE_NEW_LINE . $requestDescription,
+            filenameFullPath: $ticketFullPath,
+        );
+        if (!$isNewIssue) {
+            return;
         }
+        $this->lastIssueIsNew = true;
+        $mailMessage = 'Ticketfile: ' . $ticketFile . FileLogger::DOUBLE_NEW_LINE . $message;
+        if ($this->mailer === null) {
+            $this->mailMessage(fullMessage: $mailMessage);
+
+            return;
+        }
+        $this->sendWithMailer(
+            mailer: $this->mailer,
+            ticketFile: $ticketFile,
+            fullMessage: $mailMessage . FileLogger::DOUBLE_NEW_LINE . $requestDescription,
+            ticketFullPath: $ticketFullPath,
+        );
     }
 
     private function isNewIssue(string $ticketFullPath): bool
@@ -121,8 +162,6 @@ final class FileLogger implements Logger
 
     private function writeMessage(string $message, string $filenameFullPath): void
     {
-        $message .= FileLogger::DOUBLE_NEW_LINE . $this->requestLogFormatter->format(httpRequest: $this->httpRequest);
-
         $this->rotateIfTooLarge(filenameFullPath: $filenameFullPath);
         $now = $this->clock->now();
         // Eight fractional digits, as before: microseconds plus two zeros
@@ -181,21 +220,52 @@ final class FileLogger implements Logger
         return $highestNumber;
     }
 
+    /**
+     * Mails like `error_log()` with message type 1 did before (same subject and headers).
+     */
     private function mailMessage(string $fullMessage): void
     {
         if ($this->logEmailRecipient === '') {
             return;
         }
-        error_log(
+        $this->mailFunction->send(
+            to: $this->logEmailRecipient,
+            subject: 'PHP error_log message',
             message: $fullMessage,
-            message_type: 1,
-            destination: $this->logEmailRecipient,
-            additional_headers: implode(separator: PHP_EOL, array: [
+            additionalHeaders: implode(separator: PHP_EOL, array: [
                 'From: error@' . $this->getMailDomain(),
                 'Date: ' . $this->clock->now()->format(format: 'r'),
                 'Content-Type: text/plain; charset=UTF-8',
             ]),
+            additionalParameters: '',
         );
+    }
+
+    private function sendWithMailer(
+        AbstractMailer $mailer,
+        string $ticketFile,
+        string $fullMessage,
+        string $ticketFullPath,
+    ): void {
+        if ($this->logEmailRecipient === '') {
+            return;
+        }
+        try {
+            new TextMail(
+                senderEmail: $this->mailSenderAddress,
+                fromEmail: $this->mailSenderAddress,
+                fromName: '',
+                toEmail: $this->logEmailRecipient,
+                toName: '',
+                subject: $this->getMailDomain() . ': new issue ' . $ticketFile,
+                textBody: $fullMessage,
+            )->send(abstractMailer: $mailer);
+        } catch (Throwable $throwable) {
+            // A failing mail server must not hide the issue: note it and fall back to mail()
+            $failure = 'Mail to the log recipient failed: ' . $throwable::class . ': ' . $throwable->getMessage();
+            $this->writeMessage(message: $failure, filenameFullPath: $ticketFullPath);
+            $this->mailMessage(fullMessage: $fullMessage . FileLogger::DOUBLE_NEW_LINE . $failure);
+        }
     }
 
     private function getMailDomain(): string
