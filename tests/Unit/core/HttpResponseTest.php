@@ -64,14 +64,10 @@ final class HttpResponseTest extends TestCase
         $headers = $httpResponse->listHeaders();
         $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $httpResponse->httpStatusCode);
         $this->assertSame('text/html; charset=utf-8', $httpResponse->getHeader(key: 'Content-Type'));
-        $this->assertSame(hash(algo: 'sha256', data: '<p>Test</p>'), $httpResponse->getHeader(key: 'Etag'));
-        $this->assertSame(
-            gmdate(format: 'r', timestamp: HttpResponseTest::NOW),
-            $httpResponse->getHeader(key: 'Last-Modified'),
-        );
-        $this->assertSame('private, must-revalidate', $httpResponse->getHeader(key: 'Cache-Control'));
+        $this->assertSame('private, no-store', $httpResponse->getHeader(key: 'Cache-Control'));
+        $this->assertArrayNotHasKey('Etag', $headers);
+        $this->assertArrayNotHasKey('Last-Modified', $headers);
         $this->assertArrayNotHasKey('Content-Security-Policy', $headers);
-        $this->assertArrayNotHasKey('Connection', $headers);
     }
 
     public function testHtmlResponseWithPolicyButWithoutNonceThrows(): void
@@ -116,25 +112,54 @@ final class HttpResponseTest extends TestCase
         $this->assertSame('application/json; charset=utf-8', $httpResponse->getHeader(key: 'Content-Type'));
         $this->assertArrayNotHasKey('Content-Language', $headers);
         $this->assertSame('max-age=31536000', $httpResponse->getHeader(key: 'Strict-Transport-Security'));
+        $this->assertSame('private, no-store', $httpResponse->getHeader(key: 'Cache-Control'));
+        $this->assertArrayNotHasKey('Etag', $headers);
     }
 
-    public function testMatchingETagIsAnsweredWithNotModifiedWithoutContentHeaders(): void
+    public function testGeneratedContentIsNeverAnsweredWithNotModified(): void
     {
-        $eTag = hash(algo: 'sha256', data: '<p>Test</p>');
-
         $httpResponse = HttpResponse::createHtmlResponse(
             httpStatusCode: HttpStatusCodeEnum::HTTP_OK,
             htmlContent: '<p>Test</p>',
             cspPolicySettings: null,
             nonce: null,
+            httpRequest: HttpRequestFactory::create(headers: [
+                'If-None-Match' => '*',
+                'If-Modified-Since' => gmdate(format: 'D, d M Y H:i:s', timestamp: HttpResponseTest::NOW) . ' GMT',
+            ]),
+            clock: $this->clock,
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $httpResponse->httpStatusCode);
+        $this->assertSame('<p>Test</p>', $httpResponse->getContentString());
+    }
+
+    public function testMatchingETagOfAFileIsAnsweredWithNotModifiedWithoutContentHeaders(): void
+    {
+        $eTag = (string) HttpResponse::createResponseFromFilePath(
+            absolutePathToFile: $this->file,
+            forceDownload: true,
+            individualFileName: null,
+            maxAge: 0,
+            httpRequest: HttpRequestFactory::create(),
+        )->getHeader(key: 'Etag');
+
+        $httpResponse = HttpResponse::createResponseFromFilePath(
+            absolutePathToFile: $this->file,
+            forceDownload: true,
+            individualFileName: null,
+            maxAge: 0,
             httpRequest: HttpRequestFactory::create(headers: ['If-None-Match' => $eTag]),
         );
 
         $headers = $httpResponse->listHeaders();
+        $this->assertMatchesRegularExpression('/^"[0-9a-f]{64}"$/', $eTag);
         $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_MODIFIED, $httpResponse->httpStatusCode);
-        $this->assertSame('Close', $httpResponse->getHeader(key: 'Connection'));
         $this->assertSame($eTag, $httpResponse->getHeader(key: 'Etag'));
+        $this->assertArrayNotHasKey('Connection', $headers);
         $this->assertArrayNotHasKey('Content-Type', $headers);
+        $this->assertArrayNotHasKey('Content-Length', $headers);
+        $this->assertArrayNotHasKey('Content-Disposition', $headers);
     }
 
     public function testFileResponseSendsTheFileAsDownloadByDefaultForCsv(): void
@@ -153,14 +178,27 @@ final class HttpResponseTest extends TestCase
         $this->assertSame('attachment; filename="export.csv"', $httpResponse->getHeader(key: 'Content-Disposition'));
         $this->assertSame('File Transfer', $httpResponse->getHeader(key: 'Content-Description'));
         $this->assertSame('4', $httpResponse->getHeader(key: 'Content-Length'));
+        $this->assertSame('Tue, 14 Nov 2023 22:13:20 GMT', $httpResponse->getHeader(key: 'Last-Modified'));
         $this->assertSame(
-            gmdate(format: 'r', timestamp: 1_700_000_000),
-            $httpResponse->getHeader(key: 'Last-Modified'),
-        );
-        $this->assertSame(
-            gmdate(format: 'r', timestamp: HttpResponseTest::NOW + 3600),
+            gmdate(format: 'D, d M Y H:i:s', timestamp: HttpResponseTest::NOW + 3600) . ' GMT',
             $httpResponse->getHeader(key: 'Expires'),
         );
+        $this->assertSame('private, max-age=3600', $httpResponse->getHeader(key: 'Cache-Control'));
+    }
+
+    public function testVersionedPublicFileMayBeStoredBySharedCachesForever(): void
+    {
+        $httpResponse = HttpResponse::createResponseFromFilePath(
+            absolutePathToFile: $this->file,
+            forceDownload: false,
+            individualFileName: null,
+            maxAge: 31536000,
+            httpRequest: HttpRequestFactory::create(),
+            isPublic: true,
+            isImmutable: true,
+        );
+
+        $this->assertSame('public, max-age=31536000, immutable', $httpResponse->getHeader(key: 'Cache-Control'));
     }
 
     public function testFileResponseWithoutDownloadHasNoDisposition(): void
@@ -176,8 +214,9 @@ final class HttpResponseTest extends TestCase
 
         $headers = $httpResponse->listHeaders();
         $this->assertArrayNotHasKey('Content-Disposition', $headers);
+        $this->assertSame('private, no-cache', $httpResponse->getHeader(key: 'Cache-Control'));
         $this->assertSame(
-            gmdate(format: 'r', timestamp: HttpResponseTest::NOW),
+            gmdate(format: 'D, d M Y H:i:s', timestamp: HttpResponseTest::NOW) . ' GMT',
             $httpResponse->getHeader(key: 'Expires'),
         );
     }

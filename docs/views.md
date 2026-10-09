@@ -103,3 +103,13 @@ Integers are strict: optional minus and digits only; values outside the integer 
 - `BaseView::setSuccessResponseContent()` answers `{"success": true, "data": {}}`.
 - `BaseView::setErrorResponseContent()` answers `{"success": false, "error": {"code": 0, "message": "…"}}` with an
   HTTP status code; optional additional data is in a top-level `data` property.
+
+## Responses and caching
+
+- Generated content (HTML, JSON, text) is sent with `Cache-Control: private, no-store`: it may contain personal data
+  and CSRF tokens, so neither browsers nor proxies store it.
+- Files (`HttpResponse::createResponseFromFilePath()`, `FileHandler`) have an ETag and `Last-Modified`; a request with
+  the current version gets `304 Not Modified`. `maxAge:` sets `max-age` (0: the browser asks every time). Versioned
+  assets without personal data (`/css/styles.min.css?v=20260922`) add `isPublic: true, isImmutable: true`.
+- `sendAndExit()` closes a started session before the content is sent, so a download does not block other requests of
+  the user. Write the session before.

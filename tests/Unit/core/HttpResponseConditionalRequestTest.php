@@ -10,8 +10,8 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\core;
 
 use actra\yuf\core\HttpResponse;
-use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -91,21 +91,58 @@ final class HttpResponseConditionalRequestTest extends TestCase
         ));
     }
 
-    public function testResponseToARequestWithAnOtherETagCarriesTheContent(): void
+    /**
+     * @return array<string, array{string, bool}>
+     */
+    public static function provideIfNoneMatch(): array
     {
-        $httpRequest = HttpRequestFactory::create(headers: ['If-None-Match' => 'other']);
+        return [
+            'quoted' => ['"abc"', true],
+            'unquoted' => ['abc', true],
+            'weak' => ['W/"abc"', true],
+            'in a list' => ['"x", "abc" , "y"', true],
+            'any' => ['*', true],
+            'other' => ['"abcd"', false],
+            'empty' => ['', false],
+        ];
+    }
 
-        $httpResponse = HttpResponse::createHtmlResponse(
-            httpStatusCode: HttpStatusCodeEnum::HTTP_OK,
-            htmlContent: '<p>Test</p>',
-            cspPolicySettings: null,
-            nonce: null,
+    #[DataProvider('provideIfNoneMatch')]
+    public function testIfNoneMatchIsComparedWeaklyWithEveryEntityTag(string $ifNoneMatch, bool $isNotModified): void
+    {
+        $httpRequest = HttpRequestFactory::create(headers: ['If-None-Match' => $ifNoneMatch]);
+
+        $this->assertSame($isNotModified, HttpResponse::isNotModified(
             httpRequest: $httpRequest,
+            eTag: 'abc',
+            lastModifiedTimeStamp: HttpResponseConditionalRequestTest::MODIFIED,
+        ));
+    }
+
+    public function testIfNoneMatchTakesPrecedenceOverIfModifiedSince(): void
+    {
+        $httpRequest = HttpRequestFactory::create(headers: [
+            'If-None-Match' => '"other"',
+            'If-Modified-Since' => gmdate(format: 'r', timestamp: self::MODIFIED),
+        ]);
+
+        $this->assertFalse(HttpResponse::isNotModified(
+            httpRequest: $httpRequest,
+            eTag: 'abc',
+            lastModifiedTimeStamp: HttpResponseConditionalRequestTest::MODIFIED,
+        ));
+    }
+
+    public function testLaterModificationTimeIsNotModified(): void
+    {
+        $httpRequest = HttpRequestFactory::create(
+            headers: ['If-Modified-Since' => gmdate(format: 'r', timestamp: self::MODIFIED + 60)],
         );
 
-        $headers = $httpResponse->listHeaders();
-        $this->assertArrayHasKey('Etag', $headers);
-        $this->assertSame(64, strlen(string: $headers['Etag']));
-        $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $httpResponse->httpStatusCode);
+        $this->assertTrue(HttpResponse::isNotModified(
+            httpRequest: $httpRequest,
+            eTag: 'abc',
+            lastModifiedTimeStamp: HttpResponseConditionalRequestTest::MODIFIED,
+        ));
     }
 }

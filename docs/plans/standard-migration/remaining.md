@@ -59,9 +59,7 @@ Needs the real process, the network or a real upload; each place is documented i
 
 ## Open points (no standard violation, decisions or ideas for later)
 
-- **Performance:** the template tags are built twice per request (the `lang` tag needs the locale handler of the
-  resolved route; about 7 small objects). Views that send their own response (`sendAndExit()` / `redirectAndExit()`)
-  keep the session lock until the end of the script (`fastcgi_finish_request()` sends the response before that).
+- **Performance:** moved to [docs/plans/performance/plan.md](../performance/plan.md).
 - **Session:** a request with a session cookie that never touches the session sends no `Set-Cookie` on the Lax
   redirect change (the browser keeps the Strict cookie); a visitor without a session gets no preferred language (both
   decided).

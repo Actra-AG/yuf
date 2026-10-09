@@ -19,8 +19,10 @@ use LogicException;
 use RuntimeException;
 
 /**
- * A response with its headers; created by the `create…()` factories, sent with `sendAndExit()`. A request that
- * already has the current version (`If-None-Match`, `If-Modified-Since`) gets a 304 response without content.
+ * A response with its headers; created by the `create…()` factories, sent with `sendAndExit()`. Generated content
+ * (HTML, JSON, text) is never stored by browsers or proxies (`Cache-Control: private, no-store`): it can contain
+ * personal data and CSRF tokens. A file response has validators: a request that already has the current version
+ * (`If-None-Match`, `If-Modified-Since`) gets a 304 response without content.
  */
 final class HttpResponse
 {
@@ -36,28 +38,14 @@ final class HttpResponse
         private readonly ?string $contentFilePath = null,
     ) {}
 
-    private static function createContentResponse(
-        HttpRequest $httpRequest,
-        string $eTag,
-        int $lastModifiedTimeStamp,
+    private static function createGeneratedContentResponse(
         HttpStatusCodeEnum $httpStatusCode,
-        ?string $downloadFileName,
         ContentType $contentType,
-        ?string $contentString = null,
-        ?string $contentFilePath = null,
+        string $contentString,
     ): HttpResponse {
-        $httpResponse = new HttpResponse(
-            httpStatusCode: $httpStatusCode,
-            contentString: $contentString,
-            contentFilePath: $contentFilePath,
-        );
-        $httpResponse->setContentHeaders(
-            httpRequest: $httpRequest,
-            eTag: $eTag,
-            lastModifiedTimeStamp: $lastModifiedTimeStamp,
-            downloadFileName: $downloadFileName,
-            contentType: $contentType,
-        );
+        $httpResponse = new HttpResponse(httpStatusCode: $httpStatusCode, contentString: $contentString);
+        $httpResponse->setHeader(key: 'Cache-Control', val: 'private, no-store');
+        $httpResponse->setContentTypeAndSecurityHeaders(contentType: $contentType);
 
         return $httpResponse;
     }
@@ -71,48 +59,8 @@ final class HttpResponse
         return new HttpResponse(httpStatusCode: $httpStatusCode);
     }
 
-    private function setContentHeaders(
-        HttpRequest $httpRequest,
-        string $eTag,
-        int $lastModifiedTimeStamp,
-        ?string $downloadFileName,
-        ContentType $contentType,
-    ): void {
-        $this->setHeader(
-            key: 'Etag',
-            val: $eTag,
-        );
-        $this->setHeader(
-            key: 'Last-Modified',
-            val: gmdate(format: 'r', timestamp: $lastModifiedTimeStamp),
-        );
-        $this->setHeader(
-            key: 'Cache-Control',
-            val: 'private, must-revalidate',
-        );
-        if ($downloadFileName !== null) {
-            $this->setHeader(
-                key: 'Content-Description',
-                val: 'File Transfer',
-            );
-            $this->setHeader(
-                key: 'Content-Disposition',
-                val: 'attachment; filename="' . $downloadFileName . '"',
-            );
-        }
-        if (HttpResponse::isNotModified(
-            httpRequest: $httpRequest,
-            eTag: $eTag,
-            lastModifiedTimeStamp: $lastModifiedTimeStamp,
-        )) {
-            $this->httpStatusCode = HttpStatusCodeEnum::HTTP_NOT_MODIFIED;
-            $this->setHeader(
-                key: 'Connection',
-                val: 'Close',
-            ); // Prevent keep-alive
-
-            return;
-        }
+    private function setContentTypeAndSecurityHeaders(ContentType $contentType): void
+    {
         $this->setHeader(
             key: 'Content-Type',
             val: $contentType->getHttpHeaderString(),
@@ -143,17 +91,38 @@ final class HttpResponse
     }
 
     /**
-     * Whether the client has the current version already: its `If-None-Match` header is the ETag or its
-     * `If-Modified-Since` header is the time of the last modification.
+     * Whether the client has the current version already (RFC 9110, section 13.1). If the request has an
+     * `If-None-Match` header, only it counts: `*` or one of its entity tags is the ETag (weak comparison, with or
+     * without quotes). Otherwise its `If-Modified-Since` header is not before the time of the last modification.
+     *
+     * @param string $eTag The entity tag without quotes
      */
     public static function isNotModified(HttpRequest $httpRequest, string $eTag, int $lastModifiedTimeStamp): bool
     {
-        if ($httpRequest->getHeader(name: 'If-None-Match') === $eTag) {
-            return true;
+        $ifNoneMatch = $httpRequest->getHeader(name: 'If-None-Match');
+        if ($ifNoneMatch !== null) {
+            foreach (explode(separator: ',', string: $ifNoneMatch) as $entityTag) {
+                $entityTag = trim(string: $entityTag);
+                if ($entityTag === '*') {
+                    return true;
+                }
+                if (str_starts_with(haystack: $entityTag, needle: 'W/')) {
+                    $entityTag = substr(string: $entityTag, offset: 2);
+                }
+                if (trim(string: $entityTag, characters: '"') === $eTag) {
+                    return true;
+                }
+            }
+
+            return false;
         }
         $modifiedSince = $httpRequest->getHeader(name: 'If-Modified-Since');
+        if ($modifiedSince === null) {
+            return false;
+        }
+        $modifiedSinceTimeStamp = strtotime(datetime: $modifiedSince);
 
-        return $modifiedSince !== null && strtotime(datetime: $modifiedSince) === $lastModifiedTimeStamp;
+        return $modifiedSinceTimeStamp !== false && $modifiedSinceTimeStamp >= $lastModifiedTimeStamp;
     }
 
     public function getHeader(string $key): ?string
@@ -235,6 +204,7 @@ final class HttpResponse
     }
 
     /**
+     * @param Clock $clock Not used since v4.59.0 (generated content has no `Last-Modified`)
      * @param ?string $languageCode Language of the content, sent as `Content-Language` (none for `null`)
      *
      * @throws LogicException if a policy is given without the nonce of the request
@@ -248,15 +218,10 @@ final class HttpResponse
         Clock $clock = new SystemClock(),
         ?string $languageCode = null,
     ): HttpResponse {
-        $httpResponse = HttpResponse::createContentResponse(
-            httpRequest: $httpRequest,
-            eTag: HttpResponse::createETag(content: $htmlContent),
-            lastModifiedTimeStamp: $clock->now()->getTimestamp(),
+        $httpResponse = HttpResponse::createGeneratedContentResponse(
             httpStatusCode: $httpStatusCode,
-            downloadFileName: null,
             contentType: ContentType::createHtml(languageCode: $languageCode),
             contentString: $htmlContent,
-            contentFilePath: null,
         );
         if ($cspPolicySettings === null) {
             return $httpResponse;
@@ -273,6 +238,8 @@ final class HttpResponse
     }
 
     /**
+     * @param Clock $clock Not used since v4.59.0 (generated content has no `Last-Modified`)
+     *
      * @throws LogicException for an HTML content type (use `createHtmlResponse()`)
      */
     public static function createResponseFromString(
@@ -286,20 +253,19 @@ final class HttpResponse
             throw new LogicException(message: 'Use HttpResponse::createHtmlResponse() instead');
         }
 
-        return HttpResponse::createContentResponse(
-            httpRequest: $httpRequest,
-            eTag: HttpResponse::createETag(content: $contentString),
-            lastModifiedTimeStamp: $clock->now()->getTimestamp(),
+        return HttpResponse::createGeneratedContentResponse(
             httpStatusCode: $httpStatusCode,
-            downloadFileName: null,
             contentType: $contentType,
             contentString: $contentString,
-            contentFilePath: null,
         );
     }
 
     /**
      * A 404 response (only the status) if the path is no file, a 403 response if it is not readable.
+     *
+     * @param int $maxAge Seconds the browser may use the file without asking again (`max-age`); 0: it asks every time
+     * @param bool $isPublic Shared caches (proxies, CDN) may store the file too; only for files without personal data
+     * @param bool $isImmutable The file never changes under this URL (a version in the URL, e.g. `?v=20260922`)
      *
      * @throws RuntimeException if the modification time or the size of the readable file cannot be read
      */
@@ -310,6 +276,8 @@ final class HttpResponse
         int $maxAge,
         HttpRequest $httpRequest,
         Clock $clock = new SystemClock(),
+        bool $isPublic = false,
+        bool $isImmutable = false,
     ): HttpResponse {
         $realPath = realpath(path: $absolutePathToFile);
         if ($realPath === false || !is_file(filename: $realPath)) {
@@ -327,24 +295,35 @@ final class HttpResponse
         $extension = FileHandler::getExtension(filename: $fileName);
         $contentType = ContentType::createFromFileExtension(extension: $extension);
         $forceDownload ??= $contentType->forceDownloadByDefault;
-        $httpResponse = HttpResponse::createContentResponse(
-            httpRequest: $httpRequest,
-            eTag: HttpResponse::createETag(content: $lastModifiedTimeStamp . $realPath),
-            lastModifiedTimeStamp: $lastModifiedTimeStamp,
-            httpStatusCode: HttpStatusCodeEnum::HTTP_OK,
-            downloadFileName: $forceDownload ? $fileName : null,
-            contentType: $contentType,
-            contentString: null,
-            contentFilePath: $realPath,
-        );
+        $eTag = HttpResponse::createETag(content: $lastModifiedTimeStamp . '-' . $fileSize . '-' . $realPath);
+        $cacheControl = ($isPublic ? 'public' : 'private') . ', ' . ($maxAge > 0 ? 'max-age=' . $maxAge : 'no-cache')
+            . ($isImmutable ? ', immutable' : '');
+        $httpResponse = new HttpResponse(httpStatusCode: HttpStatusCodeEnum::HTTP_OK, contentFilePath: $realPath);
+        $httpResponse->setHeader(key: 'Etag', val: '"' . $eTag . '"');
         $httpResponse->setHeader(
-            key: 'Content-Length',
-            val: (string) $fileSize,
+            key: 'Last-Modified',
+            val: gmdate(format: 'D, d M Y H:i:s', timestamp: $lastModifiedTimeStamp) . ' GMT',
         );
+        $httpResponse->setHeader(key: 'Cache-Control', val: $cacheControl);
         $httpResponse->setHeader(
             key: 'Expires',
-            val: gmdate(format: 'r', timestamp: $clock->now()->getTimestamp() + $maxAge),
+            val: gmdate(format: 'D, d M Y H:i:s', timestamp: $clock->now()->getTimestamp() + $maxAge) . ' GMT',
         );
+        if (HttpResponse::isNotModified(
+            httpRequest: $httpRequest,
+            eTag: $eTag,
+            lastModifiedTimeStamp: $lastModifiedTimeStamp,
+        )) {
+            $httpResponse->httpStatusCode = HttpStatusCodeEnum::HTTP_NOT_MODIFIED;
+
+            return $httpResponse;
+        }
+        if ($forceDownload) {
+            $httpResponse->setHeader(key: 'Content-Description', val: 'File Transfer');
+            $httpResponse->setHeader(key: 'Content-Disposition', val: 'attachment; filename="' . $fileName . '"');
+        }
+        $httpResponse->setContentTypeAndSecurityHeaders(contentType: $contentType);
+        $httpResponse->setHeader(key: 'Content-Length', val: (string) $fileSize);
 
         return $httpResponse;
     }

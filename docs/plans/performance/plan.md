@@ -101,4 +101,15 @@ steps that change responses or rendering. No step is breaking unless marked ⚠�
 
 ## Handover notes
 
-(none yet)
+### Step 1 (v4.59.0) – done
+
+- Generated content (`createHtmlResponse()`, `createResponseFromString()`): `Cache-Control: private, no-store`, no
+  ETag, no `Last-Modified`, never `304` (fixes the same-second stale page). The `clock:` argument of both is kept for
+  compatibility but unused; `ErrorResponseFactory` still passes it (its own `clock:` is public API).
+- Files: ETag `"sha256(mtime-size-path)"` (header key stays `Etag` for `getHeader()`), IMF-fixdate with `GMT`,
+  `private|public, max-age=N|no-cache[, immutable]`, `Expires` kept. A `304` has the validators and caching headers
+  only. `isNotModified()`: `If-None-Match` list, weak comparison, `*`, precedence; `If-Modified-Since` `>=`.
+- `NativeResponseSender::send()`: `session_write_close()` if a session is active, all output buffers cleared for files,
+  `fpassthru()` instead of 8 KB chunks with `flush()`.
+- Not measured with a benchmark: the step removes work (SHA-256 of every HTML body) and fixes behaviour; the example
+  app was checked in the browser (200, `private, no-store`).

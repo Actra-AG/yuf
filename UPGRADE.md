@@ -4,6 +4,22 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4.0.0–v4.49.0](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v4.59.0 (2026-10-09)
+
+### ⚠️ Generated content is not stored by browsers
+
+HTML, JSON and text responses send `Cache-Control: private, no-store` and no ETag or `Last-Modified` (before:
+`private, must-revalidate` with both). They are never answered with `304`; this fixes stale pages when the same URL was
+requested twice within one second. A view that wants a cacheable response sets the headers itself.
+
+### Other changes
+
+- File responses: quoted ETag, `If-None-Match` with lists and weak comparison (takes precedence over
+  `If-Modified-Since`), `Cache-Control` with `max-age`, new optional `isPublic:` and `isImmutable:` of
+  `createResponseFromFilePath()`, no `Connection: Close` on `304` ([docs/views.md](docs/views.md)).
+- `sendAndExit()` closes a started session before the content is sent and streams files without output buffers.
+- The `clock:` argument of `createHtmlResponse()` and `createResponseFromString()` is not used any more.
+
 ## v4.58.0 (2026-10-09)
 
 - `FileLogger` sends new issues with a mailer (`SmtpMailer`, `GraphMailer`) when it gets `mailer:` and

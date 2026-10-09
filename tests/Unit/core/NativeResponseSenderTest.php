@@ -78,13 +78,13 @@ final class NativeResponseSenderTest extends TestCase
 
     public function testWritesNothingForANotModifiedResponse(): void
     {
-        $httpResponse = HttpResponse::createResponseFromString(
-            httpStatusCode: HttpStatusCodeEnum::HTTP_OK,
-            contentString: 'Hello',
-            contentType: ContentType::createTxt(),
-            httpRequest: HttpRequestFactory::create(
-                headers: ['If-None-Match' => hash(algo: 'sha256', data: 'Hello')],
-            ),
+        file_put_contents(filename: $this->file, data: 'Hello');
+        $httpResponse = HttpResponse::createResponseFromFilePath(
+            absolutePathToFile: $this->file,
+            forceDownload: false,
+            individualFileName: null,
+            maxAge: 0,
+            httpRequest: HttpRequestFactory::create(headers: ['If-None-Match' => '*']),
         );
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_MODIFIED, $httpResponse->httpStatusCode);

@@ -14,12 +14,10 @@ use Override;
 /**
  * Sends the response with `header()` and `echo` and ends the script with `exit`. With PHP-FPM, the request is finished
  * with `fastcgi_finish_request()` before. `send()` itself is not unit tested (it calls `header()`,
- * `fastcgi_finish_request()` and `exit`); the output of the content is `writeContent()`.
+ * `session_write_close()`, `fastcgi_finish_request()` and `exit`); the output of the content is `writeContent()`.
  */
 final class NativeResponseSender implements ResponseSender
 {
-    private const int FILE_CHUNK_SIZE = 8192;
-
     #[Override]
     public function send(HttpResponse $httpResponse): never
     {
@@ -27,14 +25,20 @@ final class NativeResponseSender implements ResponseSender
         foreach ($httpResponse->listHeaders() as $key => $val) {
             header(header: $key . ': ' . $val);
         }
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            // A view that sends its own response (a download, sendAndExit()) must not keep the session lock while the
+            // client receives the content: parallel requests of the user would wait
+            session_write_close();
+        }
         if (
             $httpResponse->httpStatusCode !== HttpStatusCodeEnum::HTTP_NOT_MODIFIED
             && $httpResponse->getContentString() === null
             && $httpResponse->getContentFilePath() !== null
-            && ob_get_level() > 0
         ) {
-            // A file is streamed: the output buffer of the application must not hold it
-            ob_end_clean();
+            // A file is streamed: no output buffer of the application may hold it
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
         }
         $this->writeContent(httpResponse: $httpResponse);
         if (function_exists(function: 'fastcgi_finish_request')) {
@@ -46,7 +50,7 @@ final class NativeResponseSender implements ResponseSender
     }
 
     /**
-     * Prints the string content, or the file in chunks, of the response; nothing for a 304 and for a response without
+     * Prints the string content, or streams the file, of the response; nothing for a 304 and for a response without
      * content (a redirect, a 404).
      */
     public function writeContent(HttpResponse $httpResponse): void
@@ -71,13 +75,7 @@ final class NativeResponseSender implements ResponseSender
         if ($file === false) {
             return;
         }
-        while (!feof(stream: $file)) {
-            echo fread(
-                stream: $file,
-                length: NativeResponseSender::FILE_CHUNK_SIZE,
-            );
-            flush();
-        }
+        fpassthru(stream: $file);
         fclose(stream: $file);
     }
 }
