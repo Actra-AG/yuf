@@ -133,3 +133,17 @@ steps that change responses or rendering. No step is breaking unless marked ⚠�
   writes the whole session like `write()`. A cheaper `updateTimestamp()` (touch the file) for `FileSessionHandler` and
   a read-only session start (`read_and_close`) remain ideas for later.
 - `CoreTest`: both new tests fail on the code before the change (checked with `git stash`).
+
+### Step 3 (v4.61.0) – done
+
+- Measured with a page of 2000 table rows, one `loadSubTpl` per row, three selectors and an `if` per row (benchmark
+  script, not committed): render 13.1 ms → 8.1 ms, conversion of the data 1.1 ms → 0.9 ms, same HTML.
+- `TemplateLoader` keeps the compiled file per template (one lookup per engine). `DirectoryTemplateCache` has
+  `checkTemplateChanges` (`.env.php` key of the same name, `EnvironmentSettings::$checkTemplateChanges`).
+- `SelectorResolver`: `stdClass` read directly, other classes with a `ReflectionProperty` / `ReflectionMethod` kept
+  per class and name (not for dynamic properties). `TemplateScopes`: innermost scope first, no `array_reverse()`.
+- `TemplateData::fromReplacements()` marks the snapshots of `HtmlDataObject` in place instead of copying them.
+- `SnippetTag` keeps the real path of the directory and the content of non-template snippets; `HtmlDocument` skips
+  the navigation regex without `id="nav-` and looks up the active ids by key.
+- Not done: the tag collection that `Core::prepareHttpResponse()` builds only to validate the own tags (a few small
+  objects per request, not worth new API).

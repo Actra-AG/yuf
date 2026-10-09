@@ -16,7 +16,8 @@ use Override;
 /**
  * Stores the compiled templates as PHP files in a directory. The path of a compiled file contains the format version of
  * the compiler, so a yuf upgrade never runs code of an older compiler. A compiled file is outdated when the template is
- * as new or newer. The files are written atomically: temporary file in the same directory, then `rename()`.
+ * as new or newer (unless changes are not checked). The files are written atomically: temporary file in the same
+ * directory, then `rename()`.
  */
 final readonly class DirectoryTemplateCache implements TemplateCache
 {
@@ -28,9 +29,14 @@ final readonly class DirectoryTemplateCache implements TemplateCache
      * @param string $cacheDirectory Directory for the compiled files
      * @param string $templateBaseDirectory Templates below it are cached under their relative path, all others under a
      *                                      hash of their path
+     * @param bool $checkTemplateChanges `false`: an existing compiled file is used without comparing it with the
+     *                                   template (production; clear the cache directory on every deployment)
      */
-    public function __construct(private string $cacheDirectory, string $templateBaseDirectory)
-    {
+    public function __construct(
+        private string $cacheDirectory,
+        string $templateBaseDirectory,
+        private bool $checkTemplateChanges = true,
+    ) {
         $this->templateBaseDirectory = rtrim(string: $templateBaseDirectory, characters: '/') . '/';
     }
 
@@ -38,6 +44,9 @@ final readonly class DirectoryTemplateCache implements TemplateCache
     public function find(string $templateFile): ?string
     {
         $compiledFile = $this->getCompiledFile(templateFile: $templateFile);
+        if (!$this->checkTemplateChanges) {
+            return is_file(filename: $compiledFile) ? $compiledFile : null;
+        }
         if (!is_file(filename: $templateFile) || !is_file(filename: $compiledFile)) {
             return null;
         }

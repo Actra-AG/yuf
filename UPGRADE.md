@@ -4,6 +4,14 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4.0.0–v4.49.0](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v4.61.0 (2026-10-09)
+
+- Faster templates: a template is looked up once per request, members of objects are read without new reflection
+  objects, snippets that are no templates are read once.
+- New optional `.env.php` key `checkTemplateChanges` (default `true`). With `false`, compiled templates are used
+  without comparing them with the templates; delete `app/cache/v*/` on every deployment
+  ([docs/setup.md](docs/setup.md)).
+
 ## v4.60.0 (2026-10-09)
 
 - The language of a route no longer starts the session: it is remembered as preferred language after the view, only

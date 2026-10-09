@@ -429,6 +429,7 @@ final class Core
             cache: new DirectoryTemplateCache(
                 cacheDirectory: $this->cacheDirectory,
                 templateBaseDirectory: $this->baseDirectory,
+                checkTemplateChanges: $this->environmentSettings->checkTemplateChanges,
             ),
             tags: $this->createTemplateTags(localeHandler: $localeHandler),
         );

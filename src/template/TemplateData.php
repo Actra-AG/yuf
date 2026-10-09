@@ -63,7 +63,7 @@ final readonly class TemplateData
             return array_map(callback: TemplateData::markAsTrusted(...), array: $value);
         }
         if ($value instanceof stdClass) {
-            return TemplateData::copyAsTrusted(object: $value);
+            return TemplateData::markPropertiesAsTrusted(object: $value);
         }
         if ($value === null || is_scalar(value: $value) || is_object(value: $value)) {
             return $value;
@@ -72,13 +72,16 @@ final readonly class TemplateData
         throw new LogicException(message: 'Unsupported replacement value of type ' . get_debug_type(value: $value));
     }
 
-    private static function copyAsTrusted(stdClass $object): stdClass
+    /**
+     * Changes the object itself instead of copying it: the replacements create a new snapshot for every call
+     * (`HtmlDataObject::toTemplateData()`), so nobody else holds it.
+     */
+    private static function markPropertiesAsTrusted(stdClass $object): stdClass
     {
-        $copy = new stdClass();
         foreach (get_object_vars(object: $object) as $property => $propertyValue) {
-            $copy->{$property} = TemplateData::markAsTrusted(value: $propertyValue);
+            $object->{$property} = TemplateData::markAsTrusted(value: $propertyValue);
         }
 
-        return $copy;
+        return $object;
     }
 }

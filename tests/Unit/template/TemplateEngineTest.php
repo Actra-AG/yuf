@@ -18,6 +18,7 @@ use actra\yuf\template\tag\TextTag;
 use actra\yuf\template\TemplateData;
 use actra\yuf\template\TemplateEngine;
 use actra\yuf\template\TemplateException;
+use actra\yuf\tests\Double\template\CountingTemplateCache;
 use actra\yuf\tests\Double\template\ShoutTag;
 use actra\yuf\tests\Double\template\TemplateEngineTestCase;
 use actra\yuf\tests\Double\template\TemplateWorkDirectory;
@@ -382,5 +383,30 @@ final class TemplateEngineTest extends TemplateEngineTestCase
         );
 
         $this->assertSame('A &LT;X&GT;|A Y|', $html);
+    }
+
+    public function testATemplateIsLookedUpOncePerEngine(): void
+    {
+        $workDirectory = new TemplateWorkDirectory();
+
+        try {
+            $cache = new CountingTemplateCache(
+                cache: new DirectoryTemplateCache(
+                    cacheDirectory: $workDirectory->cacheDirectory,
+                    templateBaseDirectory: $workDirectory->templateDirectory,
+                ),
+            );
+            $engine = new TemplateEngine(cache: $cache, tags: new TemplateTagCollection(new TextTag()));
+            $templateFile = $workDirectory->writeTemplate(source: "{tst:text value='x'}");
+
+            $first = $engine->render(templateFile: $templateFile, data: new TemplateData(values: ['x' => 1]));
+            $second = $engine->render(templateFile: $templateFile, data: new TemplateData(values: ['x' => 2]));
+
+            $this->assertSame('1', $first);
+            $this->assertSame('2', $second);
+            $this->assertSame(1, $cache->finds);
+        } finally {
+            $workDirectory->cleanUp();
+        }
     }
 }

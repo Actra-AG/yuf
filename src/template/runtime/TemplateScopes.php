@@ -21,7 +21,7 @@ use actra\yuf\template\TemplateData;
  */
 final class TemplateScopes
 {
-    /** @var list<array<string, mixed>> */
+    /** @var list<array<string, mixed>> the innermost scope first, the data of the render call last */
     private array $scopes;
 
     public function __construct(TemplateData $data)
@@ -31,13 +31,13 @@ final class TemplateScopes
 
     public function push(string $name, mixed $value): void
     {
-        $this->scopes[] = [$name => $value];
+        array_unshift($this->scopes, [$name => $value]);
     }
 
     public function pop(): void
     {
         if (count(value: $this->scopes) > 1) {
-            array_pop(array: $this->scopes);
+            array_shift(array: $this->scopes);
         }
     }
 
@@ -54,7 +54,7 @@ final class TemplateScopes
 
     public function get(string $name): mixed
     {
-        foreach (array_reverse(array: $this->scopes) as $scope) {
+        foreach ($this->scopes as $scope) {
             if (array_key_exists(key: $name, array: $scope)) {
                 return $scope[$name];
             }

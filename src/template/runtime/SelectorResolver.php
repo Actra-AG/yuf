@@ -15,6 +15,7 @@ use ArrayAccess;
 use LogicException;
 use ReflectionMethod;
 use ReflectionProperty;
+use stdClass;
 
 /**
  * Resolves selectors like `a.b.c` (design section 2). The first part is a key of the template data; every further part
@@ -27,9 +28,17 @@ use ReflectionProperty;
  *
  * @phpstan-import-type TemplateValue from TemplateData
  */
-final readonly class SelectorResolver
+final class SelectorResolver
 {
     private const array GETTER_PREFIXES = ['get', 'is', 'has'];
+
+    /**
+     * How a member of a class is read, found once per class and name (creating reflection objects is expensive in
+     * loops): the public property, the getter or method, `null` for nothing readable.
+     *
+     * @var array<string, ReflectionProperty|ReflectionMethod|null>
+     */
+    private array $memberAccess = [];
 
     /**
      * @return TemplateValue
@@ -118,21 +127,43 @@ final readonly class SelectorResolver
         string $name,
         string $path,
     ): bool|int|float|string|object|array|null {
-        if (property_exists(object_or_class: $object, property: $name)) {
-            $property = new ReflectionProperty(class: $object, property: $name);
-            if ($property->isPublic()) {
-                return $this->narrow(value: $property->getValue(object: $object));
+        // The data of the html classes: dynamic properties are always public
+        if ($object instanceof stdClass && property_exists(object_or_class: $object, property: $name)) {
+            return $this->narrow(value: $object->{$name});
+        }
+        $key = $object::class . '::' . $name;
+        if (array_key_exists(key: $key, array: $this->memberAccess)) {
+            $access = $this->memberAccess[$key];
+        } else {
+            $access = $this->findMemberAccess(object: $object, name: $name);
+            // A dynamic property belongs to one object, not to its class
+            if (!$access instanceof ReflectionProperty || !$access->isDynamic()) {
+                $this->memberAccess[$key] = $access;
             }
         }
-        $method = $this->findMethod(object: $object, name: $name);
-        if ($method === null) {
+        if ($access instanceof ReflectionProperty) {
+            return $this->narrow(value: $access->getValue(object: $object));
+        }
+        if ($access === null) {
             throw new TemplateException(
                 reason: 'Cannot read "' . $name . '" of "' . $path
                     . '": no key, public property, getter or method without arguments of this name',
             );
         }
 
-        return $this->narrow(value: $method->invoke(object: $object));
+        return $this->narrow(value: $access->invoke(object: $object));
+    }
+
+    private function findMemberAccess(object $object, string $name): ReflectionProperty|ReflectionMethod|null
+    {
+        if (property_exists(object_or_class: $object, property: $name)) {
+            $property = new ReflectionProperty(class: $object, property: $name);
+            if ($property->isPublic()) {
+                return $property;
+            }
+        }
+
+        return $this->findMethod(object: $object, name: $name);
     }
 
     private function findMethod(object $object, string $name): ?ReflectionMethod

@@ -14,8 +14,10 @@ use actra\yuf\template\runtime\TemplateScopes;
 use actra\yuf\template\runtime\TrustedHtml;
 use actra\yuf\template\TemplateData;
 use actra\yuf\template\TemplateException;
+use actra\yuf\tests\Double\template\DynamicSelectorTarget;
 use actra\yuf\tests\Double\template\KeyedObject;
 use actra\yuf\tests\Double\template\SelectorProbe;
+use actra\yuf\tests\Double\template\SelectorTarget;
 use ArrayObject;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -164,5 +166,33 @@ final class SelectorResolverTest extends TestCase
         new SelectorResolver()->resolve(selector: 'a.b', scopes: $scopes);
 
         $this->assertSame(['a' => ['b' => 1]], $data->values);
+    }
+
+    public function testMembersOfObjectsOfTheSameClassAreReadFromEachObject(): void
+    {
+        $resolver = new SelectorResolver();
+        $scopes = new TemplateScopes(data: new TemplateData(values: [
+            'first' => new SelectorTarget(enabled: true),
+            'second' => new SelectorTarget(enabled: false),
+        ]));
+
+        $this->assertTrue($resolver->resolve(selector: 'first.enabled', scopes: $scopes));
+        $this->assertFalse($resolver->resolve(selector: 'second.enabled', scopes: $scopes));
+        $this->assertSame('getter title', $resolver->resolve(selector: 'second.title', scopes: $scopes));
+    }
+
+    public function testDynamicPropertyOfOneObjectIsNotUsedForAnotherObjectOfTheClass(): void
+    {
+        $withProperty = new DynamicSelectorTarget();
+        // @phpstan-ignore property.notFound (a dynamic property is the case under test)
+        $withProperty->title = 'dynamic title';
+        $resolver = new SelectorResolver();
+        $scopes = new TemplateScopes(data: new TemplateData(values: [
+            'with' => $withProperty,
+            'without' => new DynamicSelectorTarget(),
+        ]));
+
+        $this->assertSame('dynamic title', $resolver->resolve(selector: 'with.title', scopes: $scopes));
+        $this->assertSame('getter title', $resolver->resolve(selector: 'without.title', scopes: $scopes));
     }
 }

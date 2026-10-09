@@ -157,10 +157,14 @@ final class HtmlDocument
 
     private function markActiveNavigation(string $html): string
     {
+        if (!str_contains(haystack: $html, needle: 'id="nav-')) {
+            return $html;
+        }
+        $activeIds = array_flip(array: array_values(array: $this->activeHtmlIds));
         $result = preg_replace_callback(
             pattern: '/(\s+id="nav-(.+?)")(\s+class="(.+?)")?/',
-            callback: function (array $matches): string {
-                if (!in_array(needle: $matches[2], haystack: $this->activeHtmlIds, strict: true)) {
+            callback: static function (array $matches) use ($activeIds): string {
+                if (!array_key_exists(key: $matches[2], array: $activeIds)) {
                     // The id is not active, the match stays as it is
                     return $matches[0];
                 }

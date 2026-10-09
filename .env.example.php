@@ -7,5 +7,7 @@ return [
     ],
     'logEmailRecipient' => 'error@example.com',
     'debug' => true,
-    'robots' => 'noindex,nofollow'
+    'robots' => 'noindex,nofollow',
+    // Production: false, and clear the template cache on every deployment
+    'checkTemplateChanges' => true,
 ];

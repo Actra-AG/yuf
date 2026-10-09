@@ -16,7 +16,8 @@ use UnexpectedValueException;
 /**
  * The settings of the environment file (`.env.php`, returns an array), checked once when `Core` starts:
  * `defaultErrorReporting` (int, optional, default `E_ALL`), `defaultTimeZone` (string), `allowedDomains` (list of
- * host names), `logEmailRecipient` (string, may be empty), `debug` (bool) and `robots` (string) are typed properties.
+ * host names), `logEmailRecipient` (string, may be empty), `debug` (bool), `robots` (string) and
+ * `checkTemplateChanges` (bool, optional, default `true`) are typed properties.
  * All keys of the file (also the own keys of a project, used as given, e.g. `mailer.hostname`) are read with
  * `getString()`, `getInt()`, `getBool()` and `getStringList()`, which throw an `UnexpectedValueException` for a
  * missing key or a wrong type.
@@ -26,6 +27,8 @@ final readonly class EnvironmentSettings
     /**
      * @param list<string> $allowedDomains
      * @param array<array-key, mixed> $values All keys of the environment file
+     * @param bool $checkTemplateChanges Whether a changed template is compiled again; `false` in production saves the
+     *     file checks of every render, then the template cache must be cleared on every deployment
      */
     public function __construct(
         public int $errorReporting,
@@ -35,6 +38,7 @@ final readonly class EnvironmentSettings
         public bool $debug,
         public string $robots,
         private array $values = [],
+        public bool $checkTemplateChanges = true,
     ) {}
 
     /**
@@ -56,6 +60,8 @@ final readonly class EnvironmentSettings
             debug: EnvironmentSettings::readBoolean(values: $values, key: 'debug'),
             robots: EnvironmentSettings::readString(values: $values, key: 'robots'),
             values: $values,
+            checkTemplateChanges: !array_key_exists(key: 'checkTemplateChanges', array: $values)
+                || EnvironmentSettings::readBoolean(values: $values, key: 'checkTemplateChanges'),
         );
     }
 

@@ -211,4 +211,33 @@ final class DirectoryTemplateCacheTest extends TestCase
             $cache->getCompiledFile(templateFile: $templateFile),
         );
     }
+
+    public function testWithoutCheckingChangesAnOlderCompiledFileIsUsed(): void
+    {
+        $cache = new DirectoryTemplateCache(
+            cacheDirectory: $this->workDirectory->cacheDirectory,
+            templateBaseDirectory: $this->workDirectory->templateDirectory,
+            checkTemplateChanges: false,
+        );
+        $templateFile = $this->writeTemplate(relativePath: 'page.html', modificationTime: 1_000);
+        $compiledFile = $cache->store(templateFile: $templateFile, compiledCode: 'x');
+        touch(filename: $templateFile, mtime: time() + 100);
+        clearstatcache();
+
+        $this->assertSame($compiledFile, $cache->find(templateFile: $templateFile));
+        $this->assertNull($this->cache->find(templateFile: $templateFile));
+    }
+
+    public function testWithoutCheckingChangesATemplateWithoutCompiledFileIsNotFound(): void
+    {
+        $cache = new DirectoryTemplateCache(
+            cacheDirectory: $this->workDirectory->cacheDirectory,
+            templateBaseDirectory: $this->workDirectory->templateDirectory,
+            checkTemplateChanges: false,
+        );
+
+        $templateFile = $this->writeTemplate(relativePath: 'page.html', modificationTime: 1_000);
+
+        $this->assertNull($cache->find(templateFile: $templateFile));
+    }
 }

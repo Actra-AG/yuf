@@ -15,22 +15,40 @@ use actra\yuf\template\parser\TemplateParser;
 use actra\yuf\template\TemplateException;
 
 /**
- * Finds the compiled PHP file of a template: from the cache, or by parsing and compiling the template.
+ * Finds the compiled PHP file of a template: from the cache, or by parsing and compiling the template. The result is
+ * kept for the lifetime of the loader (one engine per request), so a template used many times (a sub-template in a
+ * loop) is checked once.
  *
  * @internal
  */
-final readonly class TemplateLoader
+final class TemplateLoader
 {
+    /** @var array<string, string> compiled file by template file */
+    private array $compiledFiles = [];
+
     public function __construct(
-        private TemplateCache $cache,
-        private TemplateParser $parser,
-        private TemplateCompiler $compiler,
+        private readonly TemplateCache $cache,
+        private readonly TemplateParser $parser,
+        private readonly TemplateCompiler $compiler,
     ) {}
 
     /**
      * @throws TemplateException if the template does not exist or has a syntax error
      */
     public function getCompiledFile(string $templateFile): string
+    {
+        if (array_key_exists(key: $templateFile, array: $this->compiledFiles)) {
+            return $this->compiledFiles[$templateFile];
+        }
+        $this->compiledFiles[$templateFile] = $this->findOrCompile(templateFile: $templateFile);
+
+        return $this->compiledFiles[$templateFile];
+    }
+
+    /**
+     * @throws TemplateException if the template does not exist or has a syntax error
+     */
+    private function findOrCompile(string $templateFile): string
     {
         if (!is_file(filename: $templateFile)) {
             throw new TemplateException(reason: 'Template file not found: ' . $templateFile);

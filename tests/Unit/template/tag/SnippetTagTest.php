@@ -184,4 +184,12 @@ final class SnippetTagTest extends TestCase
 
         $this->engine->render(templateFile: $templateFile, data: new TemplateData());
     }
+
+    public function testSnippetThatIsNoTemplateIsReadOncePerTag(): void
+    {
+        $first = $this->render(source: "{tst:snippet name='icon.svg'}");
+        file_put_contents(filename: $this->snippetsDirectory . 'icon.svg', data: 'changed');
+
+        $this->assertSame($first, $this->render(source: "{tst:snippet name='icon.svg'}"));
+    }
 }

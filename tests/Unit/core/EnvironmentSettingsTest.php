@@ -207,4 +207,23 @@ final class EnvironmentSettingsTest extends TestCase
         $this->expectExceptionMessageIs($message);
         EnvironmentSettings::fromArray(values: $this->createValues([$key => $value]));
     }
+
+    public function testTemplateChangesAreCheckedByDefault(): void
+    {
+        $this->assertTrue(EnvironmentSettings::fromArray(values: $this->createValues())->checkTemplateChanges);
+    }
+
+    public function testCheckingTemplateChangesCanBeTurnedOff(): void
+    {
+        $settings = EnvironmentSettings::fromArray(values: $this->createValues(['checkTemplateChanges' => false]));
+
+        $this->assertFalse($settings->checkTemplateChanges);
+    }
+
+    public function testCheckTemplateChangesWithWrongTypeThrows(): void
+    {
+        $this->expectException(UnexpectedValueException::class);
+
+        EnvironmentSettings::fromArray(values: $this->createValues(['checkTemplateChanges' => 'no']));
+    }
 }

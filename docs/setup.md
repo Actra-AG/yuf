@@ -30,6 +30,7 @@ key if a setting is missing or has the wrong type:
 | `logEmailRecipient`     | `string`       | Mail address of new errors, empty for no mails       |
 | `debug`                 | `bool`         | Shows the debug page for errors                      |
 | `robots`                | `string`       | Content of the `robots` meta tag                     |
+| `checkTemplateChanges`  | `bool`         | Optional, default `true`: compile changed templates  |
 
 Own keys of a project (flat, e.g. `'mailer.hostname'`) are read from `$core->environmentSettings` with `getString()`,
 `getInt()`, `getBool()` and `getStringList()` (`has()` tells if a key exists); a missing key or a wrong type throws an
@@ -39,6 +40,9 @@ Own keys of a project (flat, e.g. `'mailer.hostname'`) are read from `$core->env
 
 - `opcache.validate_timestamps=0`: reset the opcache on every deployment (restart PHP-FPM or call `opcache_reset()`),
   else the old code keeps running. This includes the compiled templates in `app/cache/`.
+- `'checkTemplateChanges' => false` in `.env.php`: compiled templates are used without comparing them with the
+  templates (no file checks per render). Delete `app/cache/v*/` on every deployment, else changed templates are not
+  compiled again.
 - Optional: `opcache.preload` with a script that loads the classes of yuf and your application.
 - With PHP-FPM, yuf calls `fastcgi_finish_request()` after the response is sent: destructors and shutdown functions run
   after the client has the response. Nothing can be output afterwards, and the session is already closed (see
