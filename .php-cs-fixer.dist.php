@@ -14,6 +14,7 @@ use PhpCsFixer\Runner\Parallel\ParallelConfigFactory;
 /** @var array<string, bool|array<string, mixed>> $rules */
 $rules = require __DIR__ . '/vendor/actra/coding-standard/config/php-cs-fixer.php';
 $header = (require __DIR__ . '/vendor/actra/coding-standard/config/php-cs-fixer-header.php')(
+    copyright: 'Actra AG - https://www.actra.ch',
     license: 'MIT',
     // Code adapted from third-party libraries keeps its license (see README.md, section "License")
     thirdParty: [
