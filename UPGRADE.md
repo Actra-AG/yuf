@@ -4,6 +4,10 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4.0.0–v4.49.0](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v4.57.6 (2026-10-09)
+
+- The package no longer contains the empty plan directories in `docs/`. No code change.
+
 ## v4.57.5 (2026-10-09)
 
 - The documentation moved from `README.md` to `docs/` and is part of the package now; upgrade notes up to v4.49.0 are
