@@ -42,9 +42,16 @@ final class HttpResponse
         HttpStatusCodeEnum $httpStatusCode,
         ContentType $contentType,
         string $contentString,
+        ?string $eTag,
     ): HttpResponse {
         $httpResponse = new HttpResponse(httpStatusCode: $httpStatusCode, contentString: $contentString);
-        $httpResponse->setHeader(key: 'Cache-Control', val: 'private, no-store');
+        if ($eTag === null) {
+            $httpResponse->setHeader(key: 'Cache-Control', val: 'private, no-store');
+        } else {
+            // The browser stores the page and asks with If-None-Match every time (see createNotModifiedResponse())
+            $httpResponse->setHeader(key: 'Cache-Control', val: 'private, no-cache');
+            $httpResponse->setHeader(key: 'Etag', val: '"' . $eTag . '"');
+        }
         $httpResponse->setContentTypeAndSecurityHeaders(contentType: $contentType);
 
         return $httpResponse;
@@ -99,22 +106,8 @@ final class HttpResponse
      */
     public static function isNotModified(HttpRequest $httpRequest, string $eTag, int $lastModifiedTimeStamp): bool
     {
-        $ifNoneMatch = $httpRequest->getHeader(name: 'If-None-Match');
-        if ($ifNoneMatch !== null) {
-            foreach (explode(separator: ',', string: $ifNoneMatch) as $entityTag) {
-                $entityTag = trim(string: $entityTag);
-                if ($entityTag === '*') {
-                    return true;
-                }
-                if (str_starts_with(haystack: $entityTag, needle: 'W/')) {
-                    $entityTag = substr(string: $entityTag, offset: 2);
-                }
-                if (trim(string: $entityTag, characters: '"') === $eTag) {
-                    return true;
-                }
-            }
-
-            return false;
+        if ($httpRequest->getHeader(name: 'If-None-Match') !== null) {
+            return HttpResponse::isETagCurrent(httpRequest: $httpRequest, eTag: $eTag);
         }
         $modifiedSince = $httpRequest->getHeader(name: 'If-Modified-Since');
         if ($modifiedSince === null) {
@@ -123,6 +116,56 @@ final class HttpResponse
         $modifiedSinceTimeStamp = strtotime(datetime: $modifiedSince);
 
         return $modifiedSinceTimeStamp !== false && $modifiedSinceTimeStamp >= $lastModifiedTimeStamp;
+    }
+
+    /**
+     * Whether `*` or one of the entity tags of the `If-None-Match` header is the ETag (weak comparison, with or without
+     * quotes). Apache appends the compression to the ETag of a compressed response (`"abc-gzip"`, `-br`, `-deflate`)
+     * and gets it back so from the browser: that is the same ETag.
+     *
+     * @param string $eTag The entity tag without quotes
+     */
+    public static function isETagCurrent(HttpRequest $httpRequest, string $eTag): bool
+    {
+        $ifNoneMatch = $httpRequest->getHeader(name: 'If-None-Match');
+        if ($ifNoneMatch === null) {
+            return false;
+        }
+        foreach (explode(separator: ',', string: $ifNoneMatch) as $entityTag) {
+            $entityTag = trim(string: $entityTag);
+            if ($entityTag === '*') {
+                return true;
+            }
+            if (str_starts_with(haystack: $entityTag, needle: 'W/')) {
+                $entityTag = substr(string: $entityTag, offset: 2);
+            }
+            $entityTag = trim(string: $entityTag, characters: '"');
+            if (in_array(
+                needle: $entityTag,
+                haystack: [$eTag, $eTag . '-gzip', $eTag . '-br', $eTag . '-deflate'],
+                strict: true,
+            )) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The 304 response to a request whose browser has the current version of a generated page: only the ETag and the
+     * caching header. No Content-Security-Policy: the browser keeps the stored one, whose nonce belongs to the stored
+     * page (a new nonce would block its scripts).
+     *
+     * @param string $eTag The entity tag without quotes
+     */
+    public static function createNotModifiedResponse(string $eTag): HttpResponse
+    {
+        $httpResponse = HttpResponse::createStatusResponse(httpStatusCode: HttpStatusCodeEnum::HTTP_NOT_MODIFIED);
+        $httpResponse->setHeader(key: 'Cache-Control', val: 'private, no-cache');
+        $httpResponse->setHeader(key: 'Etag', val: '"' . $eTag . '"');
+
+        return $httpResponse;
     }
 
     public function getHeader(string $key): ?string
@@ -206,6 +249,8 @@ final class HttpResponse
     /**
      * @param Clock $clock Not used since v4.59.0 (generated content has no `Last-Modified`)
      * @param ?string $languageCode Language of the content, sent as `Content-Language` (none for `null`)
+     * @param ?string $eTag The version of a page without personal data: the browser may store it and revalidate it
+     *                      (`private, no-cache`); `null` for `private, no-store`
      *
      * @throws LogicException if a policy is given without the nonce of the request
      */
@@ -217,11 +262,13 @@ final class HttpResponse
         HttpRequest $httpRequest,
         Clock $clock = new SystemClock(),
         ?string $languageCode = null,
+        ?string $eTag = null,
     ): HttpResponse {
         $httpResponse = HttpResponse::createGeneratedContentResponse(
             httpStatusCode: $httpStatusCode,
             contentType: ContentType::createHtml(languageCode: $languageCode),
             contentString: $htmlContent,
+            eTag: $eTag,
         );
         if ($cspPolicySettings === null) {
             return $httpResponse;
@@ -239,6 +286,7 @@ final class HttpResponse
 
     /**
      * @param Clock $clock Not used since v4.59.0 (generated content has no `Last-Modified`)
+     * @param ?string $eTag See `createHtmlResponse()`
      *
      * @throws LogicException for an HTML content type (use `createHtmlResponse()`)
      */
@@ -248,6 +296,7 @@ final class HttpResponse
         ContentType $contentType,
         HttpRequest $httpRequest,
         Clock $clock = new SystemClock(),
+        ?string $eTag = null,
     ): HttpResponse {
         if ($contentType->isHtml()) {
             throw new LogicException(message: 'Use HttpResponse::createHtmlResponse() instead');
@@ -257,6 +306,7 @@ final class HttpResponse
             httpStatusCode: $httpStatusCode,
             contentType: $contentType,
             contentString: $contentString,
+            eTag: $eTag,
         );
     }
 

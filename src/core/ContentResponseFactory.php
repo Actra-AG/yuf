@@ -22,10 +22,15 @@ use actra\yuf\security\CspPolicySettings;
  */
 final readonly class ContentResponseFactory
 {
+    /**
+     * @param bool $isPersonal The request used the session: the response is never stored (`private, no-store`), even
+     *                         if the view set an ETag
+     */
     public function __construct(
         private HttpRequest $httpRequest,
         private ?CspPolicySettings $cspPolicySettings,
         private ?Language $language = null,
+        private bool $isPersonal = false,
     ) {}
 
     /**
@@ -37,6 +42,9 @@ final readonly class ContentResponseFactory
             throw new NotFoundException();
         }
         $contentType = $contentHandler->getContentType();
+        $eTag = $this->isPersonal || $contentHandler->httpStatusCode !== HttpStatusCodeEnum::HTTP_OK
+            ? null
+            : $contentHandler->eTag;
         if ($contentType->isHtml()) {
             return HttpResponse::createHtmlResponse(
                 httpStatusCode: $contentHandler->httpStatusCode,
@@ -45,6 +53,7 @@ final readonly class ContentResponseFactory
                 nonce: $contentHandler->cspNonce->value,
                 httpRequest: $this->httpRequest,
                 languageCode: $this->language?->code,
+                eTag: $eTag,
             );
         }
 
@@ -53,6 +62,7 @@ final readonly class ContentResponseFactory
             contentString: $contentHandler->getContent(),
             contentType: $contentType,
             httpRequest: $this->httpRequest,
+            eTag: $eTag,
         );
     }
 }

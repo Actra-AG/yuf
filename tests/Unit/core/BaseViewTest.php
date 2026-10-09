@@ -24,6 +24,7 @@ use actra\yuf\tests\Double\core\ConfigurableTestView;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\core\RecordingResponseSender;
 use actra\yuf\tests\Double\core\ViewContextFactory;
+use actra\yuf\tests\Double\session\NonStartingSessionHandler;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -482,5 +483,50 @@ final class BaseViewTest extends TestCase
         );
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_BAD_REQUEST, $response->httpStatusCode);
+    }
+
+    public function testUnchangedPageIsAnsweredWithNotModifiedBeforeRendering(): void
+    {
+        $eTag = hash(algo: 'sha256', data: 'article-7|2026-10-09 10:00');
+
+        $response = RecordingResponseSender::capture(
+            action: static fn(ResponseSender $sender) => new ConfigurableTestView(
+                context: ViewContextFactory::create(
+                    httpRequest: HttpRequestFactory::create(headers: ['If-None-Match' => '"' . $eTag . '"']),
+                    responseSender: $sender,
+                ),
+            )->callRespondNotModifiedIfUnchanged(dataVersion: 'article-7|2026-10-09 10:00'),
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_MODIFIED, $response->httpStatusCode);
+        $this->assertSame(
+            ['Cache-Control' => 'private, no-cache', 'Etag' => '"' . $eTag . '"'],
+            $response->listHeaders(),
+        );
+    }
+
+    public function testChangedPageGetsTheVersionAsETag(): void
+    {
+        $context = ViewContextFactory::create(
+            httpRequest: HttpRequestFactory::create(headers: ['If-None-Match' => '"old"']),
+        );
+
+        new ConfigurableTestView(context: $context)->callRespondNotModifiedIfUnchanged(dataVersion: 'v2');
+
+        $this->assertSame(hash(algo: 'sha256', data: 'v2'), $context->content->eTag);
+    }
+
+    public function testPageOfAStartedSessionIsNeitherAnsweredNorMarked(): void
+    {
+        $sessionHandler = new NonStartingSessionHandler();
+        $sessionHandler->ensureStarted();
+        $context = ViewContextFactory::create(
+            httpRequest: HttpRequestFactory::create(headers: ['If-None-Match' => '*']),
+            sessionHandler: $sessionHandler,
+        );
+
+        new ConfigurableTestView(context: $context)->callRespondNotModifiedIfUnchanged(dataVersion: 'v1');
+
+        $this->assertNull($context->content->eTag);
     }
 }

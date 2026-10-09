@@ -28,12 +28,55 @@ final class ContentResponseFactoryTest extends TestCase
     private function createFactory(
         ?CspPolicySettings $cspPolicySettings,
         ?Language $language = null,
+        bool $isPersonal = false,
     ): ContentResponseFactory {
         return new ContentResponseFactory(
             httpRequest: HttpRequestFactory::create(host: 'example.test'),
             cspPolicySettings: $cspPolicySettings,
             language: $language,
+            isPersonal: $isPersonal,
         );
+    }
+
+    private function createHandlerWithETag(ContentType $contentType): ContentHandler
+    {
+        $contentHandler = new ContentHandler(contentType: $contentType, cspNonce: new CspNonce(value: 'fixed-nonce'));
+        $contentHandler->setContent(contentString: 'content');
+        $contentHandler->setETag(eTag: 'abc');
+
+        return $contentHandler;
+    }
+
+    public function testPageWithETagMayBeStoredAndIsRevalidated(): void
+    {
+        $html = $this->createFactory(cspPolicySettings: new CspPolicySettings())
+            ->create(contentHandler: $this->createHandlerWithETag(contentType: ContentType::createHtml()));
+        $json = $this->createFactory(cspPolicySettings: null)
+            ->create(contentHandler: $this->createHandlerWithETag(contentType: ContentType::createJson()));
+
+        $this->assertSame('private, no-cache', $html->getHeader(key: 'Cache-Control'));
+        $this->assertSame('"abc"', $html->getHeader(key: 'Etag'));
+        $this->assertSame('private, no-cache', $json->getHeader(key: 'Cache-Control'));
+        $this->assertSame('"abc"', $json->getHeader(key: 'Etag'));
+    }
+
+    public function testPersonalPageIsNeverStoredEvenWithETag(): void
+    {
+        $httpResponse = $this->createFactory(cspPolicySettings: null, isPersonal: true)
+            ->create(contentHandler: $this->createHandlerWithETag(contentType: ContentType::createHtml()));
+
+        $this->assertSame('private, no-store', $httpResponse->getHeader(key: 'Cache-Control'));
+        $this->assertNull($httpResponse->getHeader(key: 'Etag'));
+    }
+
+    public function testErrorStatusIsNeverStoredEvenWithETag(): void
+    {
+        $contentHandler = $this->createHandlerWithETag(contentType: ContentType::createHtml());
+        $contentHandler->httpStatusCode = HttpStatusCodeEnum::HTTP_CONFLICT;
+
+        $httpResponse = $this->createFactory(cspPolicySettings: null)->create(contentHandler: $contentHandler);
+
+        $this->assertSame('private, no-store', $httpResponse->getHeader(key: 'Cache-Control'));
     }
 
     public function testHtmlContentGetsAContentSecurityPolicyWithTheNonce(): void

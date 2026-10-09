@@ -108,6 +108,22 @@ Integers are strict: optional minus and digits only; values outside the integer 
 
 - Generated content (HTML, JSON, text) is sent with `Cache-Control: private, no-store`: it may contain personal data
   and CSRF tokens, so neither browsers nor proxies store it.
+- A page that only depends on data with a known version calls `respondNotModifiedIfUnchanged(dataVersion: …)` first
+  in `execute()`: if the browser has this version, yuf answers `304` without rendering; else the page is sent with an
+  ETag and `private, no-cache`. The version contains everything the page depends on, including the version of the
+  application (changed templates). Without effect if the request uses the session.
+
+```php
+public function execute(): void
+{
+    $article = $this->articles->findById(id: $this->getRequiredPathVarAsInt(nr: 1));
+    $this->respondNotModifiedIfUnchanged(
+        dataVersion: $article->updatedAt->format(format: 'c') . '|' . $this->context->route->language?->code . '|'
+            . App::VERSION,
+    );
+    // Render the page as usual
+}
+```
 - Files (`HttpResponse::createResponseFromFilePath()`, `FileHandler`) have an ETag and `Last-Modified`; a request with
   the current version gets `304 Not Modified`. `maxAge:` sets `max-age` (0: the browser asks every time). Versioned
   assets without personal data (`/css/styles.min.css?v=20260922`) add `isPublic: true, isImmutable: true`.

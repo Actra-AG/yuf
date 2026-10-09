@@ -103,6 +103,9 @@ final class HttpResponseConditionalRequestTest extends TestCase
             'in a list' => ['"x", "abc" , "y"', true],
             'any' => ['*', true],
             'other' => ['"abcd"', false],
+            'compressed by Apache' => ['"abc-gzip"', true],
+            'compressed by Apache with Brotli' => ['"abc-br"', true],
+            'other suffix' => ['"abc-zip"', false],
             'empty' => ['', false],
         ];
     }

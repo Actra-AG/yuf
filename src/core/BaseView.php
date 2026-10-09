@@ -214,6 +214,31 @@ abstract class BaseView
         return $this->context->pathVars->getRequiredAsString(nr: $nr);
     }
 
+    /**
+     * For a page whose content only depends on data with a known version (no session data, no CSRF token): answers
+     * `304 Not Modified` before anything is rendered if the browser has this version, else the response carries the
+     * version as ETag and the browser revalidates it on the next request. Call it first in `execute()`.
+     *
+     * Without effect if the request started the session already (the page may contain personal data); the response is
+     * not stored either if the view starts the session later (e.g. a form with CSRF protection).
+     *
+     * @param string $dataVersion Everything the page depends on: e.g. the `updated_at` of the article, the language and
+     *                            the version of the application (so a deployment with changed templates is seen)
+     */
+    protected function respondNotModifiedIfUnchanged(string $dataVersion): void
+    {
+        if ($this->context->sessionHandler?->isStarted() === true) {
+            return;
+        }
+        $eTag = hash(algo: 'sha256', data: $dataVersion);
+        if (HttpResponse::isETagCurrent(httpRequest: $this->context->httpRequest, eTag: $eTag)) {
+            HttpResponse::createNotModifiedResponse(eTag: $eTag)->sendAndExit(
+                responseSender: $this->context->responseSender,
+            );
+        }
+        $this->context->content->setETag(eTag: $eTag);
+    }
+
     protected function getHtmlDocument(): HtmlDocument
     {
         return $this->context->getHtmlDocument();

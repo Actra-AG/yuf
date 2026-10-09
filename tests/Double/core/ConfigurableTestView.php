@@ -105,6 +105,11 @@ final class ConfigurableTestView extends BaseView
         $this->setSuccessResponseContent(data: $data, sendAndExit: $sendAndExit);
     }
 
+    public function callRespondNotModifiedIfUnchanged(string $dataVersion): void
+    {
+        $this->respondNotModifiedIfUnchanged(dataVersion: $dataVersion);
+    }
+
     public function callGetHtmlDocument(): HtmlDocument
     {
         return $this->getHtmlDocument();

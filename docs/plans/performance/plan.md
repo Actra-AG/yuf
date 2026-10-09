@@ -8,6 +8,8 @@ rows/options) and checks the result by measuring again.
 One step per release, `composer check` green, characterization tests first, `example/` checked in the browser after
 steps that change responses or rendering. No step is breaking unless marked ⚠️.
 
+Status: done (2026-10-09, steps 1–8, v4.59.0–v4.67.0).
+
 ## Decisions (user, 2026-10-09)
 
 1. Preferred language: remembered after the view, only on requests that started the session anyway. No own cookie.
@@ -206,3 +208,18 @@ steps that change responses or rendering. No step is breaking unless marked ⚠�
   `MicrosoftClientCredentialsTokenProvider`. Coding standard v1.14.0 (versioning.md, section 9): the mailers require
   `serverNameCache:`, `ReverseDnsServerNameResolver` requires `cache:`, `FileLogger` requires `mailer:` (user's
   decision).
+
+### Step 8 (v4.67.0) – done
+
+- `BaseView::respondNotModifiedIfUnchanged(dataVersion:)`: ETag = SHA-256 of the version; a matching `If-None-Match`
+  is answered with `HttpResponse::createNotModifiedResponse()` (status, ETag, `private, no-cache`, no CSP header: the
+  browser keeps the stored one with the nonce of the stored page), else `ContentHandler::$eTag` is set and
+  `ContentResponseFactory` sends `private, no-cache` with the ETag. Nothing is cached when the session was started
+  before the call (the method does nothing) or during the view (`isPersonal`, from `Core`), or for a status other
+  than 200.
+- Found in the example app: Apache's compression changes the ETag to `"…-gzip"`, and the browser sends that back.
+  `HttpResponse::isETagCurrent()` accepts the suffixes `-gzip`, `-br`, `-deflate` (also for files of step 1).
+  Checked with curl against https://yuf.ddev.site/ (temporary call in `IndexView`, reverted): 200 with ETag, then
+  304 with ETag and `Cache-Control` only.
+- Not done: a server-side cache of rendered fragments (`FileCache` can hold them; no measured need yet). Opt-in by
+  nature: only the view knows the version of its data.

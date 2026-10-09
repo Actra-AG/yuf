@@ -4,6 +4,13 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4.0.0–v4.49.0](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v4.67.0 (2026-10-09)
+
+- New `BaseView::respondNotModifiedIfUnchanged(dataVersion:)`: a page without personal data answers `304` before it
+  is rendered when the browser has its version ([docs/views.md](docs/views.md)).
+- `If-None-Match` also matches the ETags that Apache changes for compressed responses (`"…-gzip"`): files are answered
+  with `304` behind Apache's compression too.
+
 ## v4.66.0 (2026-10-09)
 
 ### ⚠️ Without `debug`, templates are not checked for changes

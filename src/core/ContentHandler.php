@@ -26,6 +26,8 @@ final class ContentHandler
 {
     public HttpStatusCodeEnum $httpStatusCode = HttpStatusCodeEnum::HTTP_OK;
     public private(set) bool $suppressCspHeader = false;
+    /** The version of a page without personal data (`BaseView::respondNotModifiedIfUnchanged()`), else `null` */
+    public private(set) ?string $eTag = null;
     private string $content = '';
     private ContentType $contentType;
     private ?HtmlDocument $htmlDocument = null;
@@ -212,6 +214,14 @@ final class ContentHandler
             throw new LogicException(message: 'Content is already set. You are not allowed to overwrite it.');
         }
         $this->content = $contentString;
+    }
+
+    /**
+     * The response may be stored by the browser and is revalidated with this ETag (without quotes).
+     */
+    public function setETag(string $eTag): void
+    {
+        $this->eTag = $eTag;
     }
 
     public function suppressCspHeader(): void

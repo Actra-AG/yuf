@@ -424,6 +424,7 @@ final class Core
             httpRequest: $this->httpRequest,
             cspPolicySettings: $this->cspPolicySettings,
             language: $resolvedRoute->language,
+            isPersonal: $this->sessionHandler?->isStarted() ?? false,
         )->create(contentHandler: $contentHandler);
 
         return $this->httpResponse;
