@@ -8,6 +8,6 @@ return [
     'logEmailRecipient' => 'error@example.com',
     'debug' => true,
     'robots' => 'noindex,nofollow',
-    // Production: false, and clear the template cache on every deployment
+    // Optional, default: the value of debug. Without checks (production), clear app/cache/v*/ on every deployment
     'checkTemplateChanges' => true,
 ];

@@ -11,6 +11,7 @@ namespace actra\yuf\mailer;
 
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
+use actra\yuf\common\FileCache;
 use InvalidArgumentException;
 use Override;
 use SensitiveParameter;
@@ -46,18 +47,24 @@ final class SmtpMailer extends AbstractMailer
     /** @var list<string> The lines of the last delivery: the answers and the commands, without credentials */
     public private(set) array $log = [];
 
+    /**
+     * @param ?FileCache $serverNameCache Keeps the host name of the server (reverse DNS, used in `EHLO` and the
+     *                                    message IDs) for a day: `$core->fileCache`; `null` looks it up per mailer
+     * @param ?ServerNameResolver $serverNameResolver Default: reverse DNS with the `serverNameCache`
+     */
     public function __construct(
         string $serverAddress,
         private readonly string $hostName,
         private readonly string $smtpUserName,
         #[SensitiveParameter]
         private readonly string $smtpPassword,
+        ?FileCache $serverNameCache,
         private readonly int $port = 587,
         private readonly bool $useTls = true,
         private readonly SmtpTransport $transport = new StreamSmtpTransport(),
         Clock $clock = new SystemClock(),
         MimeIdGenerator $mimeIdGenerator = new RandomMimeIdGenerator(),
-        ServerNameResolver $serverNameResolver = new ReverseDnsServerNameResolver(),
+        ?ServerNameResolver $serverNameResolver = null,
         private readonly ?SmtpAuthMethodEnum $authMethod = null,
         private readonly ?OAuthTokenProvider $oAuthTokenProvider = null,
     ) {
@@ -81,7 +88,7 @@ final class SmtpMailer extends AbstractMailer
             serverAddress: $serverAddress,
             clock: $clock,
             mimeIdGenerator: $mimeIdGenerator,
-            serverNameResolver: $serverNameResolver,
+            serverNameResolver: $serverNameResolver ?? new ReverseDnsServerNameResolver(cache: $serverNameCache),
         );
     }
 

@@ -20,6 +20,7 @@ $mailer = new SmtpMailer(
     hostName: 'smtp.office365.com',
     smtpUserName: 'noreply@example.com',
     smtpPassword: '',
+    serverNameCache: $core->fileCache,
     oAuthTokenProvider: $tokenProvider, // your implementation of OAuthTokenProvider
 );
 ```
@@ -40,12 +41,13 @@ $tokenProvider = new MicrosoftClientCredentialsTokenProvider(
     tenantId: $core->environmentSettings->getString(key: 'mailer.tenantId'),
     clientId: $core->environmentSettings->getString(key: 'mailer.clientId'),
     clientSecret: $core->environmentSettings->getString(key: 'mailer.clientSecret'),
-    tokenCache: new FileCache(directory: $core->cacheDirectory . 'values'), // the token serves the next requests too
+    tokenCache: $core->fileCache, // the token serves the next requests too; null requests one per request
 );
 $mailer = new GraphMailer(
     serverAddress: '192.0.2.1',
     senderMailbox: 'noreply@example.com', // user ID or user principal name
     oAuthTokenProvider: $tokenProvider,
+    serverNameCache: $core->fileCache,
 );
 ```
 
@@ -65,7 +67,8 @@ Online (`New-ServicePrincipal`) with full access to the mailbox (`Add-MailboxPer
 
 - Send mail after the response where possible (a shutdown function runs after `fastcgi_finish_request()`), or from
   a queue or cron job: the user does not wait for the mail server.
-- With a `FileCache`, `MicrosoftClientCredentialsTokenProvider` keeps the token for the next requests (no request to
-  the identity platform per mail), and `new ReverseDnsServerNameResolver(cache: …)` (argument `serverNameResolver:` of
-  the mailers) looks up the server name once a day instead of once per mailer.
+- `MicrosoftClientCredentialsTokenProvider` keeps the token in `tokenCache:` (`$core->fileCache`) for the next
+  requests: no request to the identity platform per mail.
+- The mailers keep the host name of the server (reverse DNS) in `serverNameCache:` (`$core->fileCache`): one lookup a
+  day instead of one per mailer.
 - Connections give up after 3 seconds (Graph, token, cURL default); the transfer may take longer.

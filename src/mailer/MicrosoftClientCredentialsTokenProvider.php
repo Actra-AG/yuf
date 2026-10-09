@@ -50,8 +50,9 @@ final class MicrosoftClientCredentialsTokenProvider implements OAuthTokenProvide
     /**
      * @param string $tenantId Directory (tenant) ID (GUID) or domain name
      * @param string $authorityUrl Without the tenant; tests use a local server
-     * @param ?FileCache $tokenCache Keeps the token for the next requests (a directory of the application that is not
-     *                               served: the token grants sending mail)
+     * @param ?FileCache $tokenCache Keeps the token for the next requests: `$core->fileCache` (a directory of the
+     *                               application that is not served, the token grants sending mail); `null` requests a
+     *                               token in every request
      *
      * @throws InvalidArgumentException If the tenant ID, the client ID or the secret is empty or the tenant ID has
      *                                  characters that do not belong into a URL path
@@ -61,11 +62,11 @@ final class MicrosoftClientCredentialsTokenProvider implements OAuthTokenProvide
         private readonly string $clientId,
         #[SensitiveParameter]
         private readonly string $clientSecret,
+        private readonly ?FileCache $tokenCache,
         private readonly string $scope = MicrosoftClientCredentialsTokenProvider::GRAPH_SCOPE,
         private readonly string $authorityUrl = MicrosoftClientCredentialsTokenProvider::DEFAULT_AUTHORITY_URL,
         private readonly CurlClient $curlClient = new CurlClient(),
         private readonly Clock $clock = new SystemClock(),
-        private readonly ?FileCache $tokenCache = null,
     ) {
         if (preg_match(pattern: '/^[A-Za-z0-9.-]+$/D', subject: $tenantId) !== 1) {
             throw new InvalidArgumentException(

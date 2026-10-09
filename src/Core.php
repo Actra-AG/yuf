@@ -12,6 +12,7 @@ namespace actra\yuf;
 use actra\autoloader\Autoloader;
 use actra\autoloader\AutoloaderPath;
 use actra\yuf\clock\SystemClock;
+use actra\yuf\common\FileCache;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentResponseFactory;
 use actra\yuf\core\CoreSettings;
@@ -92,6 +93,8 @@ final class Core
     public readonly string $baseDirectory;
     public readonly string $appDirectory;
     public readonly string $cacheDirectory;
+    /** Values that survive the request (e.g. an access token), in `<cache directory>values/` */
+    public readonly FileCache $fileCache;
     public readonly string $errorDocsDirectory;
     public readonly string $logDirectory;
     public readonly string $settingsDirectory;
@@ -125,6 +128,7 @@ final class Core
         $this->baseDirectory = $settings->baseDirectory;
         $this->appDirectory = $settings->appDirectory;
         $this->cacheDirectory = $settings->cacheDirectory;
+        $this->fileCache = new FileCache(directory: $settings->cacheDirectory . 'values');
         $this->errorDocsDirectory = $settings->errorDocsDirectory;
         $this->logDirectory = $settings->logDirectory;
         $this->settingsDirectory = $settings->settingsDirectory;
@@ -331,6 +335,7 @@ final class Core
             logEmailRecipient: $this->logEmailRecipient,
             logDirectory: $this->logDirectory,
             httpRequest: $this->httpRequest,
+            mailer: null,
         );
         $this->cspPolicySettings = $cspPolicySettings;
         // Checked before the exception handler exists: it needs the tags for the error pages, too

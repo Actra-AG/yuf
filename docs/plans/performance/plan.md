@@ -201,3 +201,8 @@ steps that change responses or rendering. No step is breaking unless marked тЪая
 - Not done, measured as too small: a select with 250 options renders in 0.14 ms, a multi select with 125 selected of
   250 in 0.21 ms (memoizing tag names, keyed `isSelected()`), `AccessRightCollection`, `SearchState`. Not measured:
   lazy request body (only large non-form bodies), `SmtpMailer` writing in blocks (only large attachments).
+- v4.66.0, fast by default (decision of the user, rule of the coding standard): `checkTemplateChanges` follows
+  `debug`; `Core::$fileCache` (`<cache directory>values/`) and a required `tokenCache:` of
+  `MicrosoftClientCredentialsTokenProvider`. Coding standard v1.14.0 (versioning.md, section 9): the mailers require
+  `serverNameCache:`, `ReverseDnsServerNameResolver` requires `cache:`, `FileLogger` requires `mailer:` (user's
+  decision).

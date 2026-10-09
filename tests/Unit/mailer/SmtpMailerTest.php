@@ -273,6 +273,7 @@ final class SmtpMailerTest extends TestCase
             hostName: 'smtp.example.com',
             smtpUserName: '',
             smtpPassword: '',
+            serverNameCache: null,
             useTls: false,
             transport: $transport,
             mimeIdGenerator: new FixedMimeIdGenerator(),
@@ -355,6 +356,7 @@ final class SmtpMailerTest extends TestCase
             hostName: "smtp.example.com\r\nX",
             smtpUserName: '',
             smtpPassword: '',
+            serverNameCache: null,
         );
     }
 
@@ -367,6 +369,7 @@ final class SmtpMailerTest extends TestCase
             hostName: 'smtp.example.com',
             smtpUserName: '',
             smtpPassword: '',
+            serverNameCache: null,
             port: 70000,
         );
     }
@@ -388,6 +391,7 @@ final class SmtpMailerTest extends TestCase
             hostName: 'smtp.example.com',
             smtpUserName: $userName,
             smtpPassword: self::PASSWORD,
+            serverNameCache: null,
             port: 587,
             useTls: $useTls,
             transport: $transport,

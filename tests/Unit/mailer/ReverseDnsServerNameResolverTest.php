@@ -45,7 +45,7 @@ final class ReverseDnsServerNameResolverTest extends TestCase
 
     public function testInvalidAddressIsNotLookedUp(): void
     {
-        $resolver = new ReverseDnsServerNameResolver();
+        $resolver = new ReverseDnsServerNameResolver(cache: null);
 
         $this->assertSame('localhost', $resolver->resolve(serverAddress: ''));
         $this->assertSame('localhost', $resolver->resolve(serverAddress: 'not an address'));

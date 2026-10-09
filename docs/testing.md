@@ -56,6 +56,7 @@ $logger = new FileLogger(
     logEmailRecipient: '',
     logDirectory: $logDirectory,
     httpRequest: $core->httpRequest,
+    mailer: null,
     clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-01-02 03:04:05')),
 );
 ```

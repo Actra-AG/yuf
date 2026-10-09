@@ -415,6 +415,7 @@ final class SmtpAuthenticationTest extends TestCase
             hostName: 'smtp.example.com',
             smtpUserName: $userName,
             smtpPassword: SmtpAuthenticationTest::PASSWORD,
+            serverNameCache: null,
             port: 587,
             useTls: $useTls,
             transport: $transport,

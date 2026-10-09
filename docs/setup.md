@@ -30,7 +30,7 @@ key if a setting is missing or has the wrong type:
 | `logEmailRecipient`     | `string`       | Mail address of new errors, empty for no mails       |
 | `debug`                 | `bool`         | Shows the debug page for errors                      |
 | `robots`                | `string`       | Content of the `robots` meta tag                     |
-| `checkTemplateChanges`  | `bool`         | Optional, default `true`: compile changed templates  |
+| `checkTemplateChanges`  | `bool`         | Optional, default `debug`: compile changed templates |
 
 Own keys of a project (flat, e.g. `'mailer.hostname'`) are read from `$core->environmentSettings` with `getString()`,
 `getInt()`, `getBool()` and `getStringList()` (`has()` tells if a key exists); a missing key or a wrong type throws an
@@ -40,9 +40,9 @@ Own keys of a project (flat, e.g. `'mailer.hostname'`) are read from `$core->env
 
 - `opcache.validate_timestamps=0`: reset the opcache on every deployment (restart PHP-FPM or call `opcache_reset()`),
   else the old code keeps running. This includes the compiled templates in `app/cache/`.
-- `'checkTemplateChanges' => false` in `.env.php`: compiled templates are used without comparing them with the
-  templates (no file checks per render). Delete `app/cache/v*/` on every deployment, else changed templates are not
-  compiled again.
+- Without `debug`, compiled templates are used without comparing them with the templates (no file checks per render,
+  `checkTemplateChanges` follows `debug`). Delete `app/cache/v*/` on every deployment, else changed templates are not
+  compiled again; or set `'checkTemplateChanges' => true`.
 - The classes of yuf and of `app/` are loaded by `actra/autoloader`. Its cache (`autoloader.php` in the cache directory,
   the paths of the loaded classes) works like a class map: keep it between requests. `composer install --no-dev
   --optimize-autoloader` only covers the Composer packages.

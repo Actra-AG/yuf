@@ -56,6 +56,7 @@ final class FileLoggerTest extends TestCase
             logEmailRecipient: '',
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
+            mailer: null,
             clock: new FixedClock(
                 now: new DateTimeImmutable(
                     datetime: '@' . (FileLoggerTest::TICKET_MODIFIED + $secondsAfterFirstModification),
@@ -83,6 +84,7 @@ final class FileLoggerTest extends TestCase
             logEmailRecipient: '',
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
+            mailer: null,
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '@' . FileLoggerTest::TICKET_MODIFIED)),
         );
         $logger->logMessage(message: 'first time');
@@ -96,6 +98,7 @@ final class FileLoggerTest extends TestCase
             logEmailRecipient: '',
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
+            mailer: null,
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-03-04 05:06:07.123456')),
         );
         $logger->logMessage(message: 'stamped');
@@ -119,6 +122,7 @@ final class FileLoggerTest extends TestCase
                 uploadedFiles: ['f' => ['name' => 'file-name', 'tmp_name' => '/tmp/phpXYZ']],
                 serverVariables: ['SERVER_NAME' => 'server-value', 'SECRET_ENV' => 'environment-secret'],
             ),
+            mailer: null,
         );
         $logger->logMessage(message: 'with request');
 
@@ -142,6 +146,7 @@ final class FileLoggerTest extends TestCase
             logEmailRecipient: '',
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
+            mailer: null,
         );
 
         $logger->logException(throwable: new RuntimeException(message: 'broken', code: 7));
@@ -162,6 +167,7 @@ final class FileLoggerTest extends TestCase
             logEmailRecipient: '',
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
+            mailer: null,
         );
 
         $logger->logException(
@@ -185,6 +191,7 @@ final class FileLoggerTest extends TestCase
             logEmailRecipient: '',
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
+            mailer: null,
         );
 
         $logger->logMessage(message: 'again');
@@ -203,6 +210,7 @@ final class FileLoggerTest extends TestCase
             logEmailRecipient: '',
             logDirectory: rtrim(string: $this->logDirectory, characters: DIRECTORY_SEPARATOR),
             httpRequest: HttpRequestFactory::create(),
+            mailer: null,
         );
 
         $logger->logMessage(message: 'no slash');
@@ -219,6 +227,7 @@ final class FileLoggerTest extends TestCase
             logEmailRecipient: '',
             logDirectory: $this->logDirectory . 'missing',
             httpRequest: HttpRequestFactory::create(),
+            mailer: null,
         );
     }
 
@@ -232,6 +241,7 @@ final class FileLoggerTest extends TestCase
             logEmailRecipient: '',
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
+            mailer: null,
             maxLogSize: 50,
         );
 
@@ -252,6 +262,7 @@ final class FileLoggerTest extends TestCase
             logEmailRecipient: '',
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
+            mailer: null,
             maxLogSize: 50,
         );
 
@@ -369,6 +380,7 @@ final class FileLoggerTest extends TestCase
             logEmailRecipient: 'admin@example.com',
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
+            mailer: null,
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-03-04 05:06:07 UTC')),
             mailFunction: $mailFunction,
             mailAfterResponse: false,
@@ -398,6 +410,7 @@ final class FileLoggerTest extends TestCase
             logEmailRecipient: 'admin@example.com',
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
+            mailer: null,
             mailFunction: $mailFunction,
             mailAfterResponse: false,
         );
@@ -428,6 +441,7 @@ final class FileLoggerTest extends TestCase
             logEmailRecipient: 'admin@example.com',
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
+            mailer: null,
             mailFunction: $mailFunction,
         );
 

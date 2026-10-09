@@ -30,7 +30,7 @@ abstract class AbstractMailer
         private readonly string $serverAddress,
         private readonly Clock $clock = new SystemClock(),
         private readonly MimeIdGenerator $mimeIdGenerator = new RandomMimeIdGenerator(),
-        private readonly ServerNameResolver $serverNameResolver = new ReverseDnsServerNameResolver(),
+        private readonly ServerNameResolver $serverNameResolver = new ReverseDnsServerNameResolver(cache: null),
     ) {}
 
     /**

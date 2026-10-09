@@ -136,6 +136,19 @@ final class CoreTest extends TestCase
         $this->assertNull($core->formContext->csrfTokenSource);
     }
 
+    public function testFileCacheKeepsItsValuesInTheCacheDirectory(): void
+    {
+        $settings = $this->workDirectory->createSettings();
+        $core = new Core(settings: $settings, httpRequest: HttpRequestFactory::create());
+
+        $core->fileCache->set(key: 'core-test', value: 'kept', lifetimeInSeconds: 60);
+
+        $this->assertSame('kept', $core->fileCache->get(key: 'core-test'));
+        $fileName = hash(algo: 'sha256', data: 'core-test') . '.json';
+        $this->assertFileExists($settings->cacheDirectory . 'values' . DIRECTORY_SEPARATOR . $fileName);
+        $core->fileCache->delete(key: 'core-test');
+    }
+
     public function testConstructorTouchesNoGlobals(): void
     {
         $this->createCore();

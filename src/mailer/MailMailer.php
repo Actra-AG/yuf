@@ -11,6 +11,7 @@ namespace actra\yuf\mailer;
 
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
+use actra\yuf\common\FileCache;
 use Override;
 
 /**
@@ -18,18 +19,24 @@ use Override;
  */
 final class MailMailer extends AbstractMailer
 {
+    /**
+     * @param ?FileCache $serverNameCache Keeps the host name of the server (reverse DNS, used in the message IDs) for
+     *                                    a day: `$core->fileCache`; `null` looks it up per mailer
+     * @param ?ServerNameResolver $serverNameResolver Default: reverse DNS with the `serverNameCache`
+     */
     public function __construct(
         string $serverAddress,
+        ?FileCache $serverNameCache,
         private readonly MailFunction $mailFunction = new NativeMailFunction(),
         Clock $clock = new SystemClock(),
         MimeIdGenerator $mimeIdGenerator = new RandomMimeIdGenerator(),
-        ServerNameResolver $serverNameResolver = new ReverseDnsServerNameResolver(),
+        ?ServerNameResolver $serverNameResolver = null,
     ) {
         parent::__construct(
             serverAddress: $serverAddress,
             clock: $clock,
             mimeIdGenerator: $mimeIdGenerator,
-            serverNameResolver: $serverNameResolver,
+            serverNameResolver: $serverNameResolver ?? new ReverseDnsServerNameResolver(cache: $serverNameCache),
         );
     }
 

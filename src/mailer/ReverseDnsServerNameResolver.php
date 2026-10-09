@@ -21,7 +21,10 @@ final readonly class ReverseDnsServerNameResolver implements ServerNameResolver
     private const string FALLBACK_HOST_NAME = 'localhost';
     private const int CACHE_LIFETIME_IN_SECONDS = 86400;
 
-    public function __construct(private ?FileCache $cache = null) {}
+    /**
+     * @param ?FileCache $cache `$core->fileCache`; `null` looks the name up for every mailer
+     */
+    public function __construct(private ?FileCache $cache) {}
 
     #[Override]
     public function resolve(string $serverAddress): string

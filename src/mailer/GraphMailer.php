@@ -13,6 +13,7 @@ use actra\yuf\api\CurlClient;
 use actra\yuf\api\request\CurlPostRequest;
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
+use actra\yuf\common\FileCache;
 use actra\yuf\core\HttpStatusCodeEnum;
 use InvalidArgumentException;
 use LogicException;
@@ -46,6 +47,9 @@ final class GraphMailer extends AbstractMailer
 
     /**
      * @param string $senderMailbox ID or user principal name of the mailbox that sends (`noreply@example.com`)
+     * @param ?FileCache $serverNameCache Keeps the host name of the server (reverse DNS, used in the message IDs) for
+     *                                    a day: `$core->fileCache`; `null` looks it up per mailer
+     * @param ?ServerNameResolver $serverNameResolver Default: reverse DNS with the `serverNameCache`
      *
      * @throws InvalidArgumentException If the mailbox is empty
      */
@@ -53,11 +57,12 @@ final class GraphMailer extends AbstractMailer
         string $serverAddress,
         private readonly string $senderMailbox,
         private readonly OAuthTokenProvider $oAuthTokenProvider,
+        ?FileCache $serverNameCache,
         private readonly string $graphBaseUrl = GraphMailer::DEFAULT_BASE_URL,
         private readonly CurlClient $curlClient = new CurlClient(),
         Clock $clock = new SystemClock(),
         MimeIdGenerator $mimeIdGenerator = new RandomMimeIdGenerator(),
-        ServerNameResolver $serverNameResolver = new ReverseDnsServerNameResolver(),
+        ?ServerNameResolver $serverNameResolver = null,
     ) {
         if ($senderMailbox === '') {
             throw new InvalidArgumentException(message: 'The sender mailbox must not be empty.');
@@ -66,7 +71,7 @@ final class GraphMailer extends AbstractMailer
             serverAddress: $serverAddress,
             clock: $clock,
             mimeIdGenerator: $mimeIdGenerator,
-            serverNameResolver: $serverNameResolver,
+            serverNameResolver: $serverNameResolver ?? new ReverseDnsServerNameResolver(cache: $serverNameCache),
         );
     }
 

@@ -41,8 +41,9 @@ final class FileLogger implements Logger
     /**
      * @param string $logEmailRecipient Mail address of the new issues, empty for no mails
      * @param int $maxLogSize Size in bytes at which a ticket file is moved to `<file>.<number>`, 0 for no limit
-     * @param ?AbstractMailer $mailer Sends the mails of new issues instead of `mail()`. If it fails, the failure is
-     *     noted in the ticket file and the issue is mailed with `mail()`, so the notification still arrives
+     * @param ?AbstractMailer $mailer Sends the mails of new issues instead of `mail()` (`null`: `mail()` only). If it
+     *     fails, the failure is noted in the ticket file and the issue is mailed with `mail()`, so the notification
+     *     still arrives
      * @param string $mailSenderAddress Sender of the mails, required with a mailer
      * @param MailFunction $mailFunction `mail()`, replaceable in tests
      * @param bool $mailAfterResponse Sends the mail of a new issue in a shutdown function, which runs after the
@@ -56,9 +57,9 @@ final class FileLogger implements Logger
         private readonly string $logEmailRecipient,
         string $logDirectory,
         private readonly HttpRequest $httpRequest,
+        private readonly ?AbstractMailer $mailer,
         private readonly Clock $clock = new SystemClock(),
         private readonly int $maxLogSize = FileLogger::DEFAULT_MAX_LOG_SIZE,
-        private readonly ?AbstractMailer $mailer = null,
         private readonly string $mailSenderAddress = '',
         private readonly MailFunction $mailFunction = new NativeMailFunction(),
         private readonly bool $mailAfterResponse = true,

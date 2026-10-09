@@ -17,7 +17,7 @@ use UnexpectedValueException;
  * The settings of the environment file (`.env.php`, returns an array), checked once when `Core` starts:
  * `defaultErrorReporting` (int, optional, default `E_ALL`), `defaultTimeZone` (string), `allowedDomains` (list of
  * host names), `logEmailRecipient` (string, may be empty), `debug` (bool), `robots` (string) and
- * `checkTemplateChanges` (bool, optional, default `true`) are typed properties.
+ * `checkTemplateChanges` (bool, optional, default: the value of `debug`) are typed properties.
  * All keys of the file (also the own keys of a project, used as given, e.g. `mailer.hostname`) are read with
  * `getString()`, `getInt()`, `getBool()` and `getStringList()`, which throw an `UnexpectedValueException` for a
  * missing key or a wrong type.
@@ -60,8 +60,10 @@ final readonly class EnvironmentSettings
             debug: EnvironmentSettings::readBoolean(values: $values, key: 'debug'),
             robots: EnvironmentSettings::readString(values: $values, key: 'robots'),
             values: $values,
-            checkTemplateChanges: !array_key_exists(key: 'checkTemplateChanges', array: $values)
-                || EnvironmentSettings::readBoolean(values: $values, key: 'checkTemplateChanges'),
+            // Fast by default: production (no debug) uses the compiled templates without checking the files
+            checkTemplateChanges: array_key_exists(key: 'checkTemplateChanges', array: $values)
+                ? EnvironmentSettings::readBoolean(values: $values, key: 'checkTemplateChanges')
+                : EnvironmentSettings::readBoolean(values: $values, key: 'debug'),
         );
     }
 

@@ -83,6 +83,7 @@ final class MicrosoftClientCredentialsTokenProviderTest extends TestCase
             tenantId: 'tenant-1',
             clientId: 'client-1',
             clientSecret: MicrosoftClientCredentialsTokenProviderTest::SECRET,
+            tokenCache: null,
             authorityUrl: $this->server->url('/'),
             clock: $this->clock,
         );
@@ -239,6 +240,7 @@ final class MicrosoftClientCredentialsTokenProviderTest extends TestCase
             tenantId: 'tenant-1',
             clientId: 'client-1',
             clientSecret: MicrosoftClientCredentialsTokenProviderTest::SECRET,
+            tokenCache: null,
             authorityUrl: 'http://127.0.0.1:1',
             clock: $this->clock,
         );
@@ -304,6 +306,7 @@ final class MicrosoftClientCredentialsTokenProviderTest extends TestCase
             tenantId: $tenantId,
             clientId: $clientId,
             clientSecret: $clientSecret,
+            tokenCache: null,
         );
     }
 

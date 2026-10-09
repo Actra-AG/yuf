@@ -208,9 +208,22 @@ final class EnvironmentSettingsTest extends TestCase
         EnvironmentSettings::fromArray(values: $this->createValues([$key => $value]));
     }
 
-    public function testTemplateChangesAreCheckedByDefault(): void
+    public function testTemplateChangesAreCheckedByDefaultOnlyWithDebug(): void
     {
-        $this->assertTrue(EnvironmentSettings::fromArray(values: $this->createValues())->checkTemplateChanges);
+        $withDebug = EnvironmentSettings::fromArray(values: $this->createValues(['debug' => true]));
+        $withoutDebug = EnvironmentSettings::fromArray(values: $this->createValues(['debug' => false]));
+
+        $this->assertTrue($withDebug->checkTemplateChanges);
+        $this->assertFalse($withoutDebug->checkTemplateChanges);
+    }
+
+    public function testCheckingTemplateChangesCanBeTurnedOnWithoutDebug(): void
+    {
+        $settings = EnvironmentSettings::fromArray(
+            values: $this->createValues(['debug' => false, 'checkTemplateChanges' => true]),
+        );
+
+        $this->assertTrue($settings->checkTemplateChanges);
     }
 
     public function testCheckingTemplateChangesCanBeTurnedOff(): void

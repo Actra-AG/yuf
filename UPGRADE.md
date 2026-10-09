@@ -4,6 +4,33 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4.0.0–v4.49.0](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v4.66.0 (2026-10-09)
+
+### ⚠️ Without `debug`, templates are not checked for changes
+
+`checkTemplateChanges` (`.env.php`) follows `debug` when it is not set. In production, delete `app/cache/v*/` on every
+deployment, or set `'checkTemplateChanges' => true` ([docs/setup.md](docs/setup.md)).
+
+### ⚠️ `MicrosoftClientCredentialsTokenProvider` requires `tokenCache:`
+
+Before: `new MicrosoftClientCredentialsTokenProvider(tenantId: …, clientId: …, clientSecret: …)`. After: add
+`tokenCache: $core->fileCache` (the token serves the next requests), or `tokenCache: null`.
+
+### ⚠️ The mailers require `serverNameCache:`
+
+`SmtpMailer`, `GraphMailer` and `MailMailer` keep the host name of the server (reverse DNS) for a day. Before:
+`new SmtpMailer(serverAddress: …, hostName: …, smtpUserName: …, smtpPassword: …)`. After: add
+`serverNameCache: $core->fileCache`, or `serverNameCache: null`. `ReverseDnsServerNameResolver` requires `cache:`.
+
+### ⚠️ `FileLogger` requires `mailer:`
+
+Before: `new FileLogger(logEmailRecipient: …, logDirectory: …, httpRequest: …)`. After: add `mailer: $mailer` (see
+[docs/setup.md](docs/setup.md)), or `mailer: null` for `mail()`. `Core` creates its default logger with `mailer: null`.
+
+### Other changes
+
+- New `Core::$fileCache` (`FileCache` in `<cache directory>values/`).
+
 ## v4.65.0 (2026-10-09)
 
 - Phone numbers: the metadata is loaded once per request (`PhoneMetaDataRepository::shared()`); parsing, validating and
