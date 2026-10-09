@@ -4,7 +4,7 @@
   "type": "library",
   "keywords": ["php", "framework", "lightweight", "fast", "smart", "actra"],
   "homepage": "https://github.com/Actra-AG/yuf",
-  "license": "MIT",
+  "license": "MIT AND LGPL-2.1-only AND Apache-2.0",
   "authors": [
     {
       "name": "Actra AG",

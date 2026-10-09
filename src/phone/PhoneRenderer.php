@@ -2,7 +2,7 @@
 
 /**
  * @copyright Actra AG - https://www.actra.ch
- * @license   MIT
+ * @license   Apache-2.0
  */
 
 declare(strict_types=1);
@@ -16,8 +16,9 @@ use LogicException;
  * (`+41446681800`, for interfaces), in the international format (`+41 44 668 18 00`) or in the national format
  * (`044 668 18 00`, for displaying).
  *
- * Adapted work based on https://github.com/giggsey/libphonenumber-for-php , which was published
- * with "Apache License Version 2.0, January 2004" ( http://www.apache.org/licenses/ )
+ * Adapted work based on libphonenumber-for-php (https://github.com/giggsey/libphonenumber-for-php), a port of
+ * libphonenumber (https://github.com/google/libphonenumber), licensed under the Apache License, Version 2.0 (see
+ * the files LICENSE and NOTICE in src/phone/). Changed by Actra AG, see NOTICE.
  */
 final class PhoneRenderer
 {

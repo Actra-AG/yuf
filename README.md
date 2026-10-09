@@ -67,4 +67,16 @@ Follow the [Actra coding standard](https://github.com/Actra-AG/coding-standard) 
 
 ## License
 
-MIT, see [LICENSE](LICENSE). © 2026 [Actra AG](https://www.actra.ch)
+© 2026 [Actra AG](https://www.actra.ch). yuf is licensed under `MIT AND LGPL-2.1-only AND Apache-2.0`; the
+`@license` tag in the header of each file says which applies:
+
+- MIT, see [LICENSE](LICENSE): everything not listed below.
+- LGPL-2.1-only, see [src/mailer/LICENSE](src/mailer/LICENSE): the classes in `src/mailer/` derived from
+  [PHPMailer](https://github.com/PHPMailer/PHPMailer) (they say so in their header); the original copyright lines are
+  kept.
+- Apache-2.0, see [src/phone/LICENSE](src/phone/LICENSE) and [src/phone/NOTICE](src/phone/NOTICE): `src/phone/`,
+  adapted from [libphonenumber-for-php](https://github.com/giggsey/libphonenumber-for-php).
+
+Projects under any license, including proprietary ones, may use yuf. When you distribute yuf (or software containing
+it), keep these license files and headers; the LGPL parts must stay replaceable and their source available, which
+the PHP source of yuf in `vendor/` already ensures. Changes to the LGPL parts stay under the LGPL.

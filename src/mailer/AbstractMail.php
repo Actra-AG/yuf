@@ -2,7 +2,7 @@
 
 /**
  * @copyright Actra AG - https://www.actra.ch
- * @license   MIT
+ * @license   LGPL-2.1-only
  */
 
 declare(strict_types=1);
@@ -20,7 +20,9 @@ declare(strict_types=1);
  * @copyright 2010 - 2012 Jim Jagielski
  * @copyright 2004 - 2009 Andy Prevost
  * @copyright 2022 Actra AG
- * @license   http://www.gnu.org/copyleft/lesser.html GNU Lesser General Public License
+ * @license   https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html GNU Lesser General Public License, version 2.1
+ *            only (LGPL-2.1-only, as PHPMailer), see the file LICENSE in src/mailer/. Changed by Actra AG: reduced,
+ *            split into classes and adapted to the yuf coding standard; see the Git history of yuf for details.
  * @note      This program is distributed in the hope that it will be useful - WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.

@@ -1,0 +1,21 @@
+yuf phone numbers (src/phone/)
+
+This folder contains code and data adapted from:
+
+- libphonenumber-for-php, https://github.com/giggsey/libphonenumber-for-php
+  by Joshua Gigg and contributors, licensed under the Apache License, Version 2.0
+- libphonenumber, https://github.com/google/libphonenumber
+  by The Libphonenumber Authors, licensed under the Apache License, Version 2.0
+
+The full license text is in the file LICENSE in this folder. Neither project ships a NOTICE file.
+
+Changes by Actra AG (https://www.actra.ch), marked in every changed file:
+
+- Reduced to parsing, formatting (E.164, international, national) and validation of phone numbers; geocoding,
+  carrier, time zone, short number and "as you type" features are removed.
+- Classes renamed and restructured into the namespace actra\yuf\phone, rewritten to PHP 8.5 and the Actra coding
+  standard (strict types, enums, immutable objects).
+- Metadata (src/phone/data/) taken over from libphonenumber-for-php with a changed file header.
+
+The adapted files are licensed under the Apache License, Version 2.0, like the original. The rest of yuf is licensed
+under the MIT License (see the file LICENSE in the root folder of yuf).
