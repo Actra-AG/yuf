@@ -40,12 +40,7 @@ final readonly class PhoneValidator
 
     public static function isValidRegionCode(?string $regionCode): bool
     {
-        return $regionCode !== null
-            && in_array(
-                needle: $regionCode,
-                haystack: PhoneRegionCountryCodeMap::getSupportedRegions(),
-                strict: true,
-            );
+        return $regionCode !== null && PhoneRegionCountryCodeMap::isSupportedRegion(regionCode: $regionCode);
     }
 
     public static function testNumberLength(string $number, PhoneMetaData $phoneMetaData): PhoneLengthResultEnum

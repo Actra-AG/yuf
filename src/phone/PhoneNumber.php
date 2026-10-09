@@ -40,7 +40,7 @@ final readonly class PhoneNumber
      */
     public static function createFromString(string $input, ?string $defaultCountryCode): PhoneNumber
     {
-        $metaDataRepository = new PhoneMetaDataRepository();
+        $metaDataRepository = PhoneMetaDataRepository::shared();
         $phoneNumber = new PhoneParser(metaDataRepository: $metaDataRepository)->parse(
             numberToParse: $input,
             defaultCountryCode: $defaultCountryCode,
@@ -60,7 +60,7 @@ final readonly class PhoneNumber
      */
     public function isValid(): bool
     {
-        return new PhoneValidator(metaDataRepository: new PhoneMetaDataRepository())->isValidNumber(
+        return new PhoneValidator(metaDataRepository: PhoneMetaDataRepository::shared())->isValidNumber(
             phoneNumber: $this,
         );
     }
@@ -71,7 +71,7 @@ final readonly class PhoneNumber
      */
     public function getType(): ?PhoneNumberTypeEnum
     {
-        return new PhoneValidator(metaDataRepository: new PhoneMetaDataRepository())->getNumberType(
+        return new PhoneValidator(metaDataRepository: PhoneMetaDataRepository::shared())->getNumberType(
             phoneNumber: $this,
         );
     }
@@ -81,7 +81,7 @@ final readonly class PhoneNumber
      */
     public function isValidForType(PhoneNumberTypeEnum $numberType): bool
     {
-        return new PhoneValidator(metaDataRepository: new PhoneMetaDataRepository())->isValidNumberOfType(
+        return new PhoneValidator(metaDataRepository: PhoneMetaDataRepository::shared())->isValidNumberOfType(
             phoneNumber: $this,
             numberType: $numberType,
         );

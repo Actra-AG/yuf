@@ -20,6 +20,11 @@ use NoDiscard;
 final class SearchQueryBuilder
 {
     /**
+     * Words of one search text that become conditions; the rest is ignored. Every word is a "LIKE '%…%'" condition
+     * per field, which no index can use, so a search text from a user must not create thousands of them.
+     */
+    public const int MAX_SEARCH_WORDS = 20;
+    /**
      * Not "\": with the MySQL mode NO_BACKSLASH_ESCAPES, a backslash is neither the default escape character of LIKE
      * nor can it be written as the same string literal in both modes.
      */
@@ -48,7 +53,7 @@ final class SearchQueryBuilder
     public static function createSqlFilters(array $filterArr): DbQueryData
     {
         $whereConditions = [];
-        $sqlParams = [];
+        $sqlParamLists = [];
         foreach ($filterArr as $dataTableReference => $value) {
             $columnFilter = SearchQueryBuilder::createColumnFilter(
                 column: SearchQueryBuilder::checkColumnExpression(column: trim(string: $dataTableReference)),
@@ -58,13 +63,16 @@ final class SearchQueryBuilder
                 continue;
             }
             $whereConditions[] = $columnFilter->query;
-            $sqlParams = [...$sqlParams, ...$columnFilter->params];
+            $sqlParamLists[] = $columnFilter->params;
         }
         if (count(value: $whereConditions) === 0) {
             $whereConditions[] = '1=1';
         }
 
-        return new DbQueryData(query: implode(separator: ' AND ', array: $whereConditions), params: $sqlParams);
+        return new DbQueryData(
+            query: implode(separator: ' AND ', array: $whereConditions),
+            params: array_merge(...$sqlParamLists),
+        );
     }
 
     private static function checkColumnExpression(string $column): string
@@ -165,7 +173,9 @@ final class SearchQueryBuilder
             flags: PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY,
         );
 
-        return $words === false ? [] : $words;
+        return $words === false
+            ? []
+            : array_slice(array: $words, offset: 0, length: SearchQueryBuilder::MAX_SEARCH_WORDS);
     }
 
     private static function unquote(string $word): string
@@ -218,7 +228,8 @@ final class SearchQueryBuilder
             return new DbQueryData(query: '1=1', params: []);
         }
         $conditions = '';
-        $parameters = [];
+        $parameterLists = [];
+        $terms = array_slice(array: $terms, offset: 0, length: SearchQueryBuilder::MAX_SEARCH_WORDS);
         foreach ($terms as $index => $term) {
             $conditions .= ($index === 0 ? '' : $term['operator']->sqlConnector());
             $conditions .= SearchQueryBuilder::createWordCondition(
@@ -226,13 +237,10 @@ final class SearchQueryBuilder
                 negated: $term['operator']->isNegated(),
             );
             $likePattern = '%' . strtr(string: $term['word'], from: SearchQueryBuilder::LIKE_ESCAPE_MAP) . '%';
-            $parameters = [
-                ...$parameters,
-                ...array_fill(start_index: 0, count: count(value: $fieldNames), value: $likePattern),
-            ];
+            $parameterLists[] = array_fill(start_index: 0, count: count(value: $fieldNames), value: $likePattern);
         }
 
-        return new DbQueryData(query: '(' . $conditions . ')', params: $parameters);
+        return new DbQueryData(query: '(' . $conditions . ')', params: array_merge(...$parameterLists));
     }
 
     /**
@@ -368,20 +376,22 @@ final class SearchQueryBuilder
             subject: $string,
             flags: PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY,
         );
-        $searchWords = $searchWords === false ? [] : $searchWords;
+        $searchWords = $searchWords === false
+            ? []
+            : array_slice(array: $searchWords, offset: 0, length: SearchQueryBuilder::MAX_SEARCH_WORDS);
         $conditions = [];
-        $params = [];
+        $paramLists = [];
         foreach ($searchWords as $searchWord) {
             $conditions[] = '(' . implode(separator: ' OR ', array: $likeConditions) . ')';
             $likePattern = '%'
                 . strtr(string: trim(string: $searchWord), from: SearchQueryBuilder::LIKE_ESCAPE_MAP)
                 . '%';
-            $params = [...$params, ...array_fill(start_index: 0, count: count(value: $columns), value: $likePattern)];
+            $paramLists[] = array_fill(start_index: 0, count: count(value: $columns), value: $likePattern);
         }
 
         return [
             'sql' => $conditions === [] ? '' : '(' . implode(separator: ' AND ', array: $conditions) . ')',
-            'params' => $params,
+            'params' => array_merge(...$paramLists),
             'searchWords' => $searchWords,
         ];
     }

@@ -1462,6 +1462,10 @@ final readonly class TldValidator
 
     public static function validate(string $input): bool
     {
-        return in_array(needle: mb_strtoupper(string: $input), haystack: TldValidator::TLD_LIST, strict: true);
+        // Keyed lookup instead of searching the list, built once per process (the list stays readable as a copy)
+        static $tlds = null;
+        $tlds ??= array_fill_keys(keys: TldValidator::TLD_LIST, value: true);
+
+        return array_key_exists(key: mb_strtoupper(string: $input), array: $tlds);
     }
 }

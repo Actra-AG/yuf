@@ -4,6 +4,15 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4.0.0–v4.49.0](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v4.65.0 (2026-10-09)
+
+- Phone numbers: the metadata is loaded once per request (`PhoneMetaDataRepository::shared()`); parsing, validating and
+  formatting a number is about five times faster.
+- Faster domain and e-mail checks (keyed lookup of the top-level domains).
+- Search texts use the first 20 words (`SearchQueryBuilder::MAX_SEARCH_WORDS`), the rest is ignored.
+- Fix: the text between the variables of a route path is literal (before: `.` in `/v1.0/${fileName}` matched any
+  character).
+
 ## v4.64.0 (2026-10-09)
 
 - New `FileCache`: string values with a lifetime in files, for results that should survive the request.

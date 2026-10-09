@@ -137,5 +137,6 @@ $query->addWherePart(wherePart: $data->query, parameters: $data->params);
 - Every word must be contained in at least one of the fields (`LIKE '%word%'`). Words are combined with `OR`; `and`,
   `or`, `not` or `+word` / `-word` change that. `"quoted phrases"` are one word.
 - Case-insensitive, HTML tags are removed, `%`, `_`, `?` and `\` are searched literally. An empty text gives `1=1`.
+  Only the first 20 words are used (`SearchQueryBuilder::MAX_SEARCH_WORDS`): no index helps a `LIKE '%…%'`.
 - The field names are validated (columns, optionally `table.column` or quoted with backticks); an invalid one throws an
   `InvalidArgumentException`.

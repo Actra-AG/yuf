@@ -226,4 +226,24 @@ final class SearchQueryBuilderFilterTest extends TestCase
 
         SearchQueryBuilder::createSqlSearch(string: 'foo', columns: $columns);
     }
+
+    public function testFilterUsesTheFirstWordsOnly(): void
+    {
+        $words = implode(separator: ' ', array: array_map(static fn(int $i): string => 'w' . $i, range(1, 30)));
+
+        $data = SearchQueryBuilder::createSqlFilters(filterArr: ['c' => $words]);
+
+        $this->assertCount(SearchQueryBuilder::MAX_SEARCH_WORDS, $data->params);
+        $this->assertSame('%w20%', $data->params[19]);
+    }
+
+    public function testSqlSearchUsesTheFirstWordsOnly(): void
+    {
+        $words = implode(separator: ' ', array: array_map(static fn(int $i): string => 'w' . $i, range(1, 30)));
+
+        $search = SearchQueryBuilder::createSqlSearch(string: $words, columns: ['a', 'b']);
+
+        $this->assertCount(SearchQueryBuilder::MAX_SEARCH_WORDS * 2, $search['params']);
+        $this->assertCount(SearchQueryBuilder::MAX_SEARCH_WORDS, $search['searchWords']);
+    }
 }

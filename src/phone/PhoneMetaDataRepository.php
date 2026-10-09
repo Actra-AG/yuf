@@ -13,7 +13,9 @@ use UnexpectedValueException;
 
 /**
  * Loads the phone number metadata from the files in `data/`. A repository remembers what it has loaded for its own
- * lifetime only; there is no static cache. The files are plain PHP arrays, so OPcache holds them.
+ * lifetime. `shared()` is the one repository of the process: the metadata never changes, so it is loaded once per
+ * region and request instead of for every parse, validation and formatting. The files are plain PHP arrays, so
+ * OPcache holds them.
  *
  * Adapted work based on https://github.com/giggsey/libphonenumber-for-php , which was published
  * with "Apache License Version 2.0, January 2004" ( http://www.apache.org/licenses/ )
@@ -22,10 +24,16 @@ use UnexpectedValueException;
  */
 final class PhoneMetaDataRepository
 {
+    private static ?PhoneMetaDataRepository $shared = null;
     /** @var array<string, PhoneMetaData> */
     private array $regionMetaData = [];
     /** @var array<int, PhoneMetaData> */
     private array $nonGeographicalMetaData = [];
+
+    public static function shared(): PhoneMetaDataRepository
+    {
+        return PhoneMetaDataRepository::$shared ??= new PhoneMetaDataRepository();
+    }
 
     public function getForRegionOrCallingCode(int $countryCallingCode, string $regionCode): ?PhoneMetaData
     {

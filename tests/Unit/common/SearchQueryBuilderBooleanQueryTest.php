@@ -273,4 +273,13 @@ final class SearchQueryBuilderBooleanQueryTest extends TestCase
 
         $this->assertSame($expectedIds, $statement->fetchAll(mode: PDO::FETCH_COLUMN));
     }
+
+    public function testBooleanQueryUsesTheFirstWordsOnly(): void
+    {
+        $words = implode(separator: ' ', array: array_map(static fn(int $i): string => 'w' . $i, range(1, 30)));
+
+        $data = SearchQueryBuilder::createBooleanQuery(spaceSeparatedFieldNames: 'a b', queryText: $words);
+
+        $this->assertCount(SearchQueryBuilder::MAX_SEARCH_WORDS * 2, $data->params);
+    }
 }

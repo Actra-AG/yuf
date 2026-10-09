@@ -93,7 +93,7 @@ final class PhoneRenderer
         if (!PhoneRegionCountryCodeMap::countryCodeExists(countryCodeToCheck: $countryCallingCode)) {
             return null;
         }
-        $phoneMetaData = new PhoneMetaDataRepository()->getForRegionOrCallingCode(
+        $phoneMetaData = PhoneMetaDataRepository::shared()->getForRegionOrCallingCode(
             countryCallingCode: $countryCallingCode,
             regionCode: PhoneRegionCountryCodeMap::getRegionCodeForCountryCode(
                 countryCallingCode: $countryCallingCode,

@@ -173,9 +173,12 @@ final class ContentHandler
         }
     }
 
+    /**
+     * Whether the content has other characters than the white space `trim()` removes (without copying the content).
+     */
     public function hasContent(): bool
     {
-        return trim(string: $this->content) !== '';
+        return strspn(string: $this->content, characters: " \t\n\r\0\x0B") < strlen(string: $this->content);
     }
 
     public function getContentType(): ContentType

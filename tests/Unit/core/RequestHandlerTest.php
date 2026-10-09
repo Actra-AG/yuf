@@ -243,6 +243,23 @@ final class RequestHandlerTest extends TestCase
         $this->assertSame(['id' => '42'], $resolved->routeVariables);
     }
 
+    public function testTextBetweenTheVariablesOfAPathPatternIsLiteral(): void
+    {
+        $route = $this->createRoute(path: '/v1.0/${fileName}');
+        $matching = $this->createRequestHandler(
+            requestUri: '/v1.0/list.json',
+            routeCollection: new RouteCollection(routes: [$route]),
+        );
+        $notMatching = $this->createRequestHandler(
+            requestUri: '/v1x0/list.json',
+            routeCollection: new RouteCollection(routes: [$route]),
+        );
+
+        $this->assertSame('list.json', $matching->resolveRoute()->fileName);
+        $this->expectException(NotFoundException::class);
+        $notMatching->resolveRoute();
+    }
+
     public function testResolveRouteWithoutPathPatternHasNoGroupAndNoVariables(): void
     {
         $handler = $this->createRequestHandler(

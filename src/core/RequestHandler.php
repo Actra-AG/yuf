@@ -238,7 +238,15 @@ final class RequestHandler
             ) === 0) {
                 continue;
             }
-            $pattern = '#^' . str_replace(search: $variableMatches[0], replace: '(.*)', subject: $routePath) . '$#';
+            // The text between the variables is literal: a "." of the route path matches a dot only
+            $literalParts = preg_split(pattern: '#\$\{.*?\}#', subject: $routePath);
+            $pattern = '#^' . implode(
+                separator: '(.*)',
+                array: array_map(
+                    callback: static fn(string $part): string => preg_quote(str: $part, delimiter: '#'),
+                    array: $literalParts === false ? [$routePath] : $literalParts,
+                ),
+            ) . '$#';
             if (preg_match(
                 pattern: $pattern,
                 subject: $requestedPath,

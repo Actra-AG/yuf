@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\phone;
 
+use actra\yuf\phone\PhoneMetaDataRepository;
 use actra\yuf\phone\PhoneRegionCountryCodeMap;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -104,5 +105,20 @@ final class PhoneRegionCountryCodeMapTest extends TestCase
             $countryCode = PhoneExampleNumbers::countryCode(region: $region);
             $this->assertTrue(PhoneRegionCountryCodeMap::countryCodeExists(countryCodeToCheck: $countryCode), $region);
         }
+    }
+
+    public function testIsSupportedRegionAgreesWithTheListOfSupportedRegions(): void
+    {
+        foreach (PhoneRegionCountryCodeMap::getSupportedRegions() as $region) {
+            $this->assertTrue(PhoneRegionCountryCodeMap::isSupportedRegion(regionCode: $region));
+        }
+        $this->assertFalse(PhoneRegionCountryCodeMap::isSupportedRegion(regionCode: '001'));
+        $this->assertFalse(PhoneRegionCountryCodeMap::isSupportedRegion(regionCode: 'ch'));
+        $this->assertFalse(PhoneRegionCountryCodeMap::isSupportedRegion(regionCode: 'XX'));
+    }
+
+    public function testMetaDataRepositoryIsSharedByTheProcess(): void
+    {
+        $this->assertSame(PhoneMetaDataRepository::shared(), PhoneMetaDataRepository::shared());
     }
 }

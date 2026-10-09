@@ -187,3 +187,17 @@ steps that change responses or rendering. No step is breaking unless marked ⚠�
   is no tenant to measure against.
 - Not done: millisecond timeout setters (seconds are enough so far); a per-domain cache of `SystemMailDomainResolver`
   (`ValidatedEmailAddress` and the form rule create their own resolver, so it would need plumbing through the rules).
+
+### Step 7 (v4.65.0) – done
+
+- Measured first (`tmp/bench/cpu.php`, not committed): five phone numbers parsed, validated, typed and formatted
+  0.42 ms → 0.076 ms (`PhoneMetaDataRepository::shared()`, keyed `PhoneRegionCountryCodeMap::isSupportedRegion()`);
+  100 domain checks 0.25 ms → 0.027 ms (keyed TLD lookup).
+- `SearchQueryBuilder::MAX_SEARCH_WORDS` (20) in all three builders; parameter lists merged once instead of copied
+  per word.
+- Route path patterns: literal parts with `preg_quote()` (bug, test fails on the old code). The pattern is still built
+  per request (a few routes, not measurable).
+- `ContentHandler::hasContent()` with `strspn()` instead of a `trim()` copy of the body.
+- Not done, measured as too small: a select with 250 options renders in 0.14 ms, a multi select with 125 selected of
+  250 in 0.21 ms (memoizing tag names, keyed `isSelected()`), `AccessRightCollection`, `SearchState`. Not measured:
+  lazy request body (only large non-form bodies), `SmtpMailer` writing in blocks (only large attachments).

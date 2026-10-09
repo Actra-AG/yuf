@@ -943,6 +943,17 @@ final class PhoneRegionCountryCodeMap
         return $supportedRegions;
     }
 
+    /**
+     * Keyed lookup of the supported regions, built once per process (the map is a constant).
+     */
+    public static function isSupportedRegion(string $regionCode): bool
+    {
+        static $supportedRegions = null;
+        $supportedRegions ??= array_fill_keys(keys: PhoneRegionCountryCodeMap::getSupportedRegions(), value: true);
+
+        return array_key_exists(key: $regionCode, array: $supportedRegions);
+    }
+
     public static function countryCodeExists(int $countryCodeToCheck): bool
     {
         return array_key_exists(
