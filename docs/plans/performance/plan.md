@@ -99,6 +99,16 @@ steps that change responses or rendering. No step is breaking unless marked ⚠�
 - `Route`: build the match pattern once, with `preg_quote()` (bug: `.` in a route path matches any character).
 - `SmtpMailer`: write the message in blocks instead of one `fwrite()` per line.
 
+### Step 8 – Opt-in caching of generated pages
+
+- A view that knows the version of its data (e.g. `updated_at` of an article plus the language) answers `304` before
+  rendering: ETag and `Last-Modified` from the data, not from the body. Only for pages without session data and CSRF
+  tokens.
+- The `304` must not send a new CSP nonce header (the browser would replace the stored header and block the scripts
+  of the cached page): send the CSP header of the cached page, or no nonce-based CSP for such pages.
+- Optional: server-side cache of rendered fragments (key with everything the fragment depends on, lifetime,
+  invalidation).
+
 ## Handover notes
 
 ### Step 1 (v4.59.0) – done
@@ -113,3 +123,13 @@ steps that change responses or rendering. No step is breaking unless marked ⚠�
   `fpassthru()` instead of 8 KB chunks with `flush()`.
 - Not measured with a benchmark: the step removes work (SHA-256 of every HTML body) and fixes behaviour; the example
   app was checked in the browser (200, `private, no-store`).
+
+### Step 2 (v4.60.0) – done
+
+- The preferred language is remembered after the view by `Core` (`RequestHandler::rememberPreferredLanguage()`, now
+  public), only if the session handler was started and is not closed. `resolveRoute()` no longer touches the session.
+  Visitors without cookie whose view starts a session now get the language remembered too (before: not).
+- Not done, on purpose: throttling `lastActivity` saves nothing, because `AbstractSessionHandler::updateTimestamp()`
+  writes the whole session like `write()`. A cheaper `updateTimestamp()` (touch the file) for `FileSessionHandler` and
+  a read-only session start (`read_and_close`) remain ideas for later.
+- `CoreTest`: both new tests fail on the code before the change (checked with `git stash`).

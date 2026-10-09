@@ -13,6 +13,7 @@ use actra\yuf\Core;
 use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpStatusCodeEnum;
+use actra\yuf\core\Language;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\ProtocolEnum;
@@ -22,6 +23,7 @@ use actra\yuf\exception\ExceptionHandler;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\security\CspPolicySettings;
+use actra\yuf\session\SessionPreferredLanguage;
 use actra\yuf\template\TemplateData;
 use actra\yuf\tests\Double\core\CoreWorkDirectory;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
@@ -257,6 +259,64 @@ final class CoreTest extends TestCase
         $this->assertSame(1, $sessionHandler->closes);
         $this->assertTrue($sessionHandler->isClosed());
         $this->assertSame('full', $core->session?->getString(key: 'cart'));
+    }
+
+    /**
+     * @param callable(Core): void $view
+     */
+    private function prepareLanguageRoute(NonStartingSessionHandler $sessionHandler, callable $view): Core
+    {
+        $english = new Language(code: 'en', locale: 'en_US.UTF-8');
+        $core = $this->createCore(httpRequest: HttpRequestFactory::create(uri: '/en/'));
+        $core->availableLanguages->add(language: $english);
+        $route = new Route(
+            path: '/en/',
+            viewDirectory: $this->workDirectory->viewDirectory,
+            viewCallback: function () use ($core, $view): string {
+                $view($core);
+
+                return 'Hello World!';
+            },
+            defaultContentType: ContentType::createTxt(),
+            language: $english,
+        );
+        $core->prepareHttpResponse(
+            logger: new RecordingLogger(),
+            routeCollection: new RouteCollection(routes: [$route]),
+            individualSessionHandler: $sessionHandler,
+        );
+
+        return $core;
+    }
+
+    public function testLanguageOfTheRouteDoesNotStartTheSessionOfAVisitorWithASessionCookie(): void
+    {
+        $sessionHandler = new NonStartingSessionHandler(
+            httpRequest: HttpRequestFactory::create(cookies: ['PHPSESSID' => 'abc123']),
+        );
+        $this->assertTrue($sessionHandler->isActive());
+
+        $this->prepareLanguageRoute(sessionHandler: $sessionHandler, view: static function (): void {});
+
+        $this->assertSame(0, $sessionHandler->starts);
+    }
+
+    public function testLanguageOfTheRouteIsRememberedInASessionTheViewStarted(): void
+    {
+        $_SESSION = [];
+        $sessionHandler = new NonStartingSessionHandler();
+
+        $core = $this->prepareLanguageRoute(
+            sessionHandler: $sessionHandler,
+            view: static function (Core $core): void {
+                $core->session?->set(key: 'cart', value: 'full');
+            },
+        );
+
+        $this->assertSame(1, $sessionHandler->starts);
+        $this->assertSame(1, $sessionHandler->closes);
+        $this->assertNotNull($core->session);
+        $this->assertSame('en', new SessionPreferredLanguage(session: $core->session)->getCode());
     }
 
     public function testSessionCannotBeWrittenAfterTheResponseIsPrepared(): void

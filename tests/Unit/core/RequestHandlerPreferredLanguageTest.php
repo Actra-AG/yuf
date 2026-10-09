@@ -24,8 +24,8 @@ use Override;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The preferred language of the user: written by `RequestHandler::resolveRoute()` for routes with an explicit
- * language and kept in the data of the session handler (`yuf.handler.preferredLanguage`), so it survives
+ * The preferred language of the user: written by `RequestHandler::rememberPreferredLanguage()` for routes with an
+ * explicit language and kept in the data of the session handler (`yuf.handler.preferredLanguage`), so it survives
  * `Session::clearUserData()`.
  *
  * The redirect of "/" itself (`HttpResponse::redirectAndExit()` exits) is not covered; the route it redirects to is
@@ -80,7 +80,7 @@ final class RequestHandlerPreferredLanguageTest extends TestCase
             allowedDomains: ['example.com'],
             session: $session,
         );
-        $handler->resolveRoute();
+        $handler->rememberPreferredLanguage(resolvedRoute: $handler->resolveRoute());
 
         return $handler;
     }
@@ -297,5 +297,32 @@ final class RequestHandlerPreferredLanguageTest extends TestCase
 
         $this->assertSame('en', $this->storedPreferredLanguage());
         $this->assertFalse($this->session->has(key: 'other'));
+    }
+
+    public function testResolvingTheRouteDoesNotUseTheSession(): void
+    {
+        $storage = new CountingSessionStorage(active: true);
+        $handler = new RequestHandler(
+            httpRequest: HttpRequestFactory::create(uri: '/en/'),
+            routeCollection: new RouteCollection(
+                routes: [
+                    new Route(
+                        path: '/en/',
+                        viewDirectory: '/tmp/views/',
+                        defaultFileName: 'index.html',
+                        isDefaultForLanguage: false,
+                        language: $this->english,
+                    ),
+                ],
+            ),
+            availableLanguages: $this->bothLanguages(),
+            allowedDomains: ['example.com'],
+            session: new Session(storage: $storage),
+        );
+
+        $handler->resolveRoute();
+
+        $this->assertSame($this->english, $handler->language);
+        $this->assertSame(0, $storage->accesses);
     }
 }

@@ -37,9 +37,10 @@ final class RequestHandler
      * routes are available afterwards (also for the error page of an unknown route). Call `resolveRoute()` next.
      *
      * @param list<string> $allowedDomains
-     * @param ?Session $session Remembers the language of the last route that has one, and the redirect of "/" reads
-     *                          it, but only while the session is active (`Session::isActive()`: a visitor without
-     *                          a session cookie gets none; `Core::$session`, `null` without sessions)
+     * @param ?Session $session Remembers the language of the last route that has one (`rememberPreferredLanguage()`),
+     *                          and the redirect of "/" reads it, but only while the session is active
+     *                          (`Session::isActive()`: a visitor without a session cookie gets none; `Core::$session`,
+     *                          `null` without sessions)
      * @param ResponseSender $responseSender Sends the redirect of "/"
      */
     public function __construct(
@@ -95,8 +96,6 @@ final class RequestHandler
         $routeLanguage = $route->language;
         if ($routeLanguage !== null) {
             $this->language = $routeLanguage;
-            // Only a route with an explicit language tells the language of the user
-            $this->rememberPreferredLanguage(language: $routeLanguage);
         }
         $requestedFileName = $this->fileName ?? '';
         $fileName = (trim(string: $requestedFileName) === '') ? $route->defaultFileName : $requestedFileName;
@@ -128,9 +127,18 @@ final class RequestHandler
         );
     }
 
-    private function rememberPreferredLanguage(Language $language): void
+    /**
+     * Remembers the language of a route with an explicit language as preferred language of the user (the redirect of
+     * "/" uses it). `Core` calls it after the view, only if the view started the session anyway: remembering the
+     * language alone must not start a session (lock, file, cookie). Nothing happens without a language of the route
+     * or without an active session.
+     *
+     * @throws LogicException if the language of the route is not available
+     */
+    public function rememberPreferredLanguage(ResolvedRoute $resolvedRoute): void
     {
-        if ($this->session === null || !$this->session->isActive()) {
+        $language = $resolvedRoute->route->language;
+        if ($language === null || $this->session === null || !$this->session->isActive()) {
             return;
         }
         $preferredLanguage = new SessionPreferredLanguage(session: $this->session);

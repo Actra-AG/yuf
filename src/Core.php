@@ -402,6 +402,10 @@ final class Core
         );
         // Release the lock of the session before the response is built and sent: parallel requests of the user go on
         if ($this->sessionHandler !== null && $this->sessionHandler->isStarted()) {
+            if (!$this->sessionHandler->isClosed()) {
+                // Only a session the view started anyway: the language alone does not start one (no lock per page)
+                $requestHandler->rememberPreferredLanguage(resolvedRoute: $resolvedRoute);
+            }
             $this->sessionHandler->writeClose();
         }
         $this->httpResponse = new ContentResponseFactory(

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Double\session;
 
+use actra\yuf\core\HttpRequest;
 use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\session\SessionSettings;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
@@ -29,9 +30,15 @@ final class NonStartingSessionHandler extends AbstractSessionHandler
     private bool $started = false;
     private bool $closed = false;
 
-    public function __construct()
+    /**
+     * @param ?HttpRequest $httpRequest The request of the client, e.g. with a session cookie (default: none)
+     */
+    public function __construct(?HttpRequest $httpRequest = null)
     {
-        parent::__construct(httpRequest: HttpRequestFactory::create(), sessionSettings: new SessionSettings());
+        parent::__construct(
+            httpRequest: $httpRequest ?? HttpRequestFactory::create(),
+            sessionSettings: new SessionSettings(),
+        );
     }
 
     #[Override]

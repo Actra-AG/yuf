@@ -24,8 +24,9 @@ $session?->remove(key: 'cart');
 
 - The PHP session starts lazily, on the first read or write (also through CSRF protection or `AuthSession`). A request
   that never uses it takes no lock, sends no cookie and creates no session file.
-- A route with a language remembers it as preferred language only if the visitor has a session
-  (`Session::isActive()`); `/` reads it only from such a session, else it uses the browser language.
+- A route with a language remembers it as preferred language only if the view used the session anyway (login, form
+  with CSRF protection): the language alone never starts a session or takes its lock. `/` reads it only from an
+  existing session, else it uses the browser language.
 - `prepareHttpResponse()` writes and closes a started session after the view, so parallel requests of the user do not
   wait for each other. Afterwards every write (`set()`, `remove()`, `regenerateId()`, `AuthSession::logIn()`, a new
   CSRF token, …) and a first access throw a `LogicException`: write the session while the view runs, not in a

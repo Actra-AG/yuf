@@ -4,6 +4,13 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4.0.0–v4.49.0](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v4.60.0 (2026-10-09)
+
+- The language of a route no longer starts the session: it is remembered as preferred language after the view, only
+  if the view used the session anyway. Visitors with a session cookie no longer get a session lock on every page.
+- `RequestHandler::resolveRoute()` no longer remembers the language; `Core` calls the new
+  `RequestHandler::rememberPreferredLanguage()`. Only code that resolves routes itself must call it.
+
 ## v4.59.0 (2026-10-09)
 
 ### ⚠️ Generated content is not stored by browsers

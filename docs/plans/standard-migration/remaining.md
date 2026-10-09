@@ -61,8 +61,8 @@ Needs the real process, the network or a real upload; each place is documented i
 
 - **Performance:** moved to [docs/plans/performance/plan.md](../performance/plan.md).
 - **Session:** a request with a session cookie that never touches the session sends no `Set-Cookie` on the Lax
-  redirect change (the browser keeps the Strict cookie); a visitor without a session gets no preferred language (both
-  decided).
+  redirect change (the browser keeps the Strict cookie); the preferred language is only remembered on requests that
+  use the session anyway (both decided).
 - **Phone:** carrier codes and `nationalPrefixOptionalWhenFormatting` of libphonenumber are not ported;
   `PhoneMatcher::groupCount()` counts groups up to the last matched one (fine for the metadata, which has one group).
 - **Uploads:** `GraphMailer` has no upload sessions, so attachments above about 2 MB need SMTP.
