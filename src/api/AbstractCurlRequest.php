@@ -25,7 +25,10 @@ use SensitiveParameter;
  */
 abstract class AbstractCurlRequest
 {
+    /** The default request timeout (the whole transfer) */
     public const int DEFAULT_TIMEOUT_IN_SECONDS = 10;
+    /** The default connect timeout: an unreachable server fails fast instead of blocking the request */
+    public const int DEFAULT_CONNECT_TIMEOUT_IN_SECONDS = 3;
     public const int DEFAULT_MAX_RESPONSE_SIZE_IN_BYTES = 33554432;
     private const string CONTENT_TYPE = 'Content-Type';
     private const string CONTENT_LENGTH = 'Content-Length';
@@ -35,7 +38,7 @@ abstract class AbstractCurlRequest
     private ?string $body = null;
     private ?CurlBodyTypeEnum $bodyType = null;
     private ?CurlAuthentication $authentication = null;
-    private int $connectTimeoutInSeconds = AbstractCurlRequest::DEFAULT_TIMEOUT_IN_SECONDS;
+    private int $connectTimeoutInSeconds = AbstractCurlRequest::DEFAULT_CONNECT_TIMEOUT_IN_SECONDS;
     private int $requestTimeoutInSeconds = AbstractCurlRequest::DEFAULT_TIMEOUT_IN_SECONDS;
     private int $maxResponseSizeInBytes = AbstractCurlRequest::DEFAULT_MAX_RESPONSE_SIZE_IN_BYTES;
     private bool $acceptRedirectionResponseCode = false;

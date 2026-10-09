@@ -13,6 +13,7 @@ use actra\yuf\api\CurlClient;
 use actra\yuf\api\request\CurlPostRequest;
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
+use actra\yuf\common\FileCache;
 use actra\yuf\common\JsonUtils;
 use DateTimeImmutable;
 use InvalidArgumentException;
@@ -28,7 +29,8 @@ use UnexpectedValueException;
  * The scope decides what the token is for: `https://graph.microsoft.com/.default` (default) for `GraphMailer`,
  * `https://outlook.office365.com/.default` for `SmtpMailer` with `SmtpAuthMethodEnum::XOAUTH2`. The token is kept in
  * the instance until shortly before it expires (one minute earlier than `expires_in` says), so one instance serves
- * all mails of a request or a long running process with one token request.
+ * all mails of a request or a long running process with one token request. With a `FileCache` the token also serves
+ * the next requests, which then send their mail without a request to the identity platform.
  *
  * Exception messages contain the HTTP status and the `error` / `error_description` of the response, never the client
  * secret or a token.
@@ -38,7 +40,7 @@ final class MicrosoftClientCredentialsTokenProvider implements OAuthTokenProvide
     public const string GRAPH_SCOPE = 'https://graph.microsoft.com/.default';
     public const string DEFAULT_AUTHORITY_URL = 'https://login.microsoftonline.com';
     private const int EXPIRY_MARGIN_IN_SECONDS = 60;
-    private const int CONNECT_TIMEOUT_IN_SECONDS = 10;
+    private const int CONNECT_TIMEOUT_IN_SECONDS = 3;
     private const int REQUEST_TIMEOUT_IN_SECONDS = 20;
     private const int MAX_RESPONSE_SIZE_IN_BYTES = 1048576;
 
@@ -48,6 +50,8 @@ final class MicrosoftClientCredentialsTokenProvider implements OAuthTokenProvide
     /**
      * @param string $tenantId Directory (tenant) ID (GUID) or domain name
      * @param string $authorityUrl Without the tenant; tests use a local server
+     * @param ?FileCache $tokenCache Keeps the token for the next requests (a directory of the application that is not
+     *                               served: the token grants sending mail)
      *
      * @throws InvalidArgumentException If the tenant ID, the client ID or the secret is empty or the tenant ID has
      *                                  characters that do not belong into a URL path
@@ -61,6 +65,7 @@ final class MicrosoftClientCredentialsTokenProvider implements OAuthTokenProvide
         private readonly string $authorityUrl = MicrosoftClientCredentialsTokenProvider::DEFAULT_AUTHORITY_URL,
         private readonly CurlClient $curlClient = new CurlClient(),
         private readonly Clock $clock = new SystemClock(),
+        private readonly ?FileCache $tokenCache = null,
     ) {
         if (preg_match(pattern: '/^[A-Za-z0-9.-]+$/D', subject: $tenantId) !== 1) {
             throw new InvalidArgumentException(
@@ -82,9 +87,19 @@ final class MicrosoftClientCredentialsTokenProvider implements OAuthTokenProvide
         ) {
             return $this->accessToken;
         }
+        $cachedToken = $this->tokenCache?->get(key: $this->getCacheKey());
+        if ($cachedToken !== null) {
+            return $cachedToken;
+        }
         $this->requestToken();
 
         return $this->accessToken ?? throw new MailerException(message: 'No access token was received.');
+    }
+
+    private function getCacheKey(): string
+    {
+        return 'yuf-oauth-token|' . $this->authorityUrl . '|' . $this->tenantId . '|' . $this->clientId . '|'
+            . $this->scope;
     }
 
     private function requestToken(): void
@@ -157,5 +172,8 @@ final class MicrosoftClientCredentialsTokenProvider implements OAuthTokenProvide
         $lifetime = max(0, $expiresIn - MicrosoftClientCredentialsTokenProvider::EXPIRY_MARGIN_IN_SECONDS);
         $this->accessToken = $token;
         $this->validUntil = $this->clock->now()->modify(modifier: '+' . $lifetime . ' seconds');
+        if ($lifetime > 0) {
+            $this->tokenCache?->set(key: $this->getCacheKey(), value: $token, lifetimeInSeconds: $lifetime);
+        }
     }
 }

@@ -173,3 +173,17 @@ steps that change responses or rendering. No step is breaking unless marked ⚠�
 - `actra/autoloader` raised to `~1.2.0` (atomic cache, cached classes included without `file_exists()`).
 - Not done (not measured as relevant, optional in the plan): memoizing `TableSessionState`, cell CSS classes per
   column, a statement cache, `insertMany()`, a maximum size of the query log.
+
+### Step 6 (v4.64.0) – done
+
+- New `common\FileCache` (JSON file per key, `sha256` of the key as name, 0600 / directory 0700, atomic write,
+  lifetime). Used by `MicrosoftClientCredentialsTokenProvider` (`tokenCache:`, lifetime of the token minus 60 s) and
+  `ReverseDnsServerNameResolver` (`cache:`, one day); both opt-in.
+- `FileLogger`: the mail of a new issue (and its fallback) runs in a shutdown function (`mailAfterResponse`, default
+  `true`); nothing is registered without a recipient.
+- Connect timeouts: `AbstractCurlRequest::DEFAULT_CONNECT_TIMEOUT_IN_SECONDS` 3 (request timeout stays 10),
+  `GraphMailer` and the token provider 3, `MicrosoftKeySetSource` 5, `SystemMailDomainResolver` port 25 check 2.
+- Not measured: the token cache saves one HTTPS request to the identity platform per request that sends mail; there
+  is no tenant to measure against.
+- Not done: millisecond timeout setters (seconds are enough so far); a per-domain cache of `SystemMailDomainResolver`
+  (`ValidatedEmailAddress` and the form rule create their own resolver, so it would need plumbing through the rules).

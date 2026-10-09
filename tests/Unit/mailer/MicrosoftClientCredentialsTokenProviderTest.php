@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\mailer;
 
+use actra\yuf\common\FileCache;
 use actra\yuf\mailer\MailerException;
 use actra\yuf\mailer\MicrosoftClientCredentialsTokenProvider;
 use actra\yuf\tests\Double\api\ScriptedHttpServer;
@@ -108,6 +109,32 @@ final class MicrosoftClientCredentialsTokenProviderTest extends TestCase
 
         $this->assertSame('token-2', $provider->getAccessToken());
         $this->assertCount(2, $this->server->requests());
+    }
+
+    public function testCachedTokenServesTheNextRequestUntilOneMinuteBeforeItExpires(): void
+    {
+        $directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-token-cache-'
+            . bin2hex(string: random_bytes(length: 8));
+        $tokenCache = new FileCache(directory: $directory, clock: $this->clock);
+        $this->respondWithToken(token: 'token-1', expiresIn: 3600);
+
+        try {
+            $this->assertSame('token-1', $this->provider(tokenCache: $tokenCache)->getAccessToken());
+            $this->clock->advanceSeconds(seconds: 3539);
+            $this->assertSame('token-1', $this->provider(tokenCache: $tokenCache)->getAccessToken());
+            $this->assertCount(1, $this->server->requests());
+
+            $this->respondWithToken(token: 'token-2', expiresIn: 3600);
+            $this->clock->advanceSeconds(seconds: 1);
+            $this->assertSame('token-2', $this->provider(tokenCache: $tokenCache)->getAccessToken());
+            $this->assertCount(2, $this->server->requests());
+        } finally {
+            $files = glob(pattern: $directory . DIRECTORY_SEPARATOR . '*');
+            foreach ($files === false ? [] : $files as $file) {
+                unlink(filename: $file);
+            }
+            rmdir(directory: $directory);
+        }
     }
 
     public function testTokenThatLivesNoLongerThanTheMarginIsNotKept(): void
@@ -282,6 +309,7 @@ final class MicrosoftClientCredentialsTokenProviderTest extends TestCase
 
     private function provider(
         string $scope = MicrosoftClientCredentialsTokenProvider::GRAPH_SCOPE,
+        ?FileCache $tokenCache = null,
     ): MicrosoftClientCredentialsTokenProvider {
         return new MicrosoftClientCredentialsTokenProvider(
             tenantId: 'tenant-1',
@@ -290,6 +318,7 @@ final class MicrosoftClientCredentialsTokenProviderTest extends TestCase
             scope: $scope,
             authorityUrl: $this->server->url(''),
             clock: $this->clock,
+            tokenCache: $tokenCache,
         );
     }
 

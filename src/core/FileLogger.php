@@ -45,6 +45,9 @@ final class FileLogger implements Logger
      *     noted in the ticket file and the issue is mailed with `mail()`, so the notification still arrives
      * @param string $mailSenderAddress Sender of the mails, required with a mailer
      * @param MailFunction $mailFunction `mail()`, replaceable in tests
+     * @param bool $mailAfterResponse Sends the mail of a new issue in a shutdown function, which runs after the
+     *     response was sent (PHP-FPM, see `NativeResponseSender`): the error page does not wait for the mail server.
+     *     The ticket file is always written at once.
      *
      * @throws InvalidArgumentException if the log directory does not exist, or for a mailer without a valid sender
      *     address
@@ -58,6 +61,7 @@ final class FileLogger implements Logger
         private readonly ?AbstractMailer $mailer = null,
         private readonly string $mailSenderAddress = '',
         private readonly MailFunction $mailFunction = new NativeMailFunction(),
+        private readonly bool $mailAfterResponse = true,
     ) {
         if (!is_dir(filename: $logDirectory)) {
             throw new InvalidArgumentException(message: 'Log directory does not exist: ' . $logDirectory);
@@ -132,18 +136,29 @@ final class FileLogger implements Logger
             return;
         }
         $this->lastIssueIsNew = true;
+        if ($this->logEmailRecipient === '') {
+            return;
+        }
         $mailMessage = 'Ticketfile: ' . $ticketFile . FileLogger::DOUBLE_NEW_LINE . $message;
-        if ($this->mailer === null) {
-            $this->mailMessage(fullMessage: $mailMessage);
+        $sendMail = function () use ($mailMessage, $ticketFile, $requestDescription, $ticketFullPath): void {
+            if ($this->mailer === null) {
+                $this->mailMessage(fullMessage: $mailMessage);
+
+                return;
+            }
+            $this->sendWithMailer(
+                mailer: $this->mailer,
+                ticketFile: $ticketFile,
+                fullMessage: $mailMessage . FileLogger::DOUBLE_NEW_LINE . $requestDescription,
+                ticketFullPath: $ticketFullPath,
+            );
+        };
+        if ($this->mailAfterResponse) {
+            register_shutdown_function(callback: $sendMail);
 
             return;
         }
-        $this->sendWithMailer(
-            mailer: $this->mailer,
-            ticketFile: $ticketFile,
-            fullMessage: $mailMessage . FileLogger::DOUBLE_NEW_LINE . $requestDescription,
-            ticketFullPath: $ticketFullPath,
-        );
+        $sendMail();
     }
 
     private function isNewIssue(string $ticketFullPath): bool

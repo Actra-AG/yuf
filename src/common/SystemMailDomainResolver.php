@@ -19,7 +19,8 @@ use Override;
 final readonly class SystemMailDomainResolver implements MailDomainResolver
 {
     private const int SMTP_PORT = 25;
-    private const int CONNECTION_TIMEOUT_IN_SECONDS = 5;
+    /** Short: the check runs while the user waits for the form */
+    private const int CONNECTION_TIMEOUT_IN_SECONDS = 2;
 
     #[Override]
     public function findProblem(string $domain): ?EmailAddressError

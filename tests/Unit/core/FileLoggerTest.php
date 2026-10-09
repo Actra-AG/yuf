@@ -279,6 +279,7 @@ final class FileLoggerTest extends TestCase
             mailer: $mailer,
             mailSenderAddress: 'errors@example.com',
             mailFunction: $mailFunction,
+            mailAfterResponse: false,
         );
 
         $logger->logMessage(message: 'mailed issue');
@@ -305,6 +306,7 @@ final class FileLoggerTest extends TestCase
             httpRequest: HttpRequestFactory::create(),
             mailer: $mailer,
             mailSenderAddress: 'errors@example.com',
+            mailAfterResponse: false,
         );
 
         $logger->logMessage(message: 'known');
@@ -339,6 +341,7 @@ final class FileLoggerTest extends TestCase
             mailer: new FailingMailer(),
             mailSenderAddress: 'errors@example.com',
             mailFunction: $mailFunction,
+            mailAfterResponse: false,
         );
 
         $logger->logException(throwable: new RuntimeException(message: 'original error'));
@@ -368,6 +371,7 @@ final class FileLoggerTest extends TestCase
             httpRequest: HttpRequestFactory::create(),
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-03-04 05:06:07 UTC')),
             mailFunction: $mailFunction,
+            mailAfterResponse: false,
         );
 
         $logger->logMessage(message: 'plain mail');
@@ -395,6 +399,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailFunction: $mailFunction,
+            mailAfterResponse: false,
         );
 
         $logger->logMessage(message: 'known');
@@ -412,6 +417,25 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: new CapturingMailer(),
+            mailAfterResponse: false,
         );
+    }
+
+    public function testMailOfANewIssueIsSentAfterTheResponseByDefault(): void
+    {
+        $mailFunction = new RecordingMailFunction();
+        $logger = new FileLogger(
+            logEmailRecipient: 'admin@example.com',
+            logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(),
+            mailFunction: $mailFunction,
+        );
+
+        $logger->logMessage(message: 'deferred');
+
+        // The ticket file is written at once; the mail is sent by a shutdown function
+        $this->assertFileExists($this->logDirectory . 'ticket_' . hash(algo: 'sha256', data: 'deferred') . '.txt');
+        $this->assertTrue($logger->lastIssueIsNew());
+        $this->assertSame([], $mailFunction->calls);
     }
 }

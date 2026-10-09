@@ -77,6 +77,7 @@ $core->prepareHttpResponse(
 
 The mail contains the ticket file name, the issue and the request description. If the mailer fails (SMTP server or
 Graph API not reachable), the failure is noted in the ticket file and the issue is mailed with `mail()` as fallback, so
-the notification still arrives.
+the notification still arrives. The mail is sent after the response (shutdown function), so the error page does not
+wait for the mail server; the ticket file is written at once.
 
 For another destination, implement `actra\yuf\core\Logger` and pass it as `prepareHttpResponse(logger: …)`.

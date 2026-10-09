@@ -58,7 +58,7 @@ final class CurlOptionsBuilderTest extends TestCase
         $this->assertOption(expected: 'http,https', options: $options, option: CURLOPT_PROTOCOLS_STR);
         $this->assertOption(expected: 'http,https', options: $options, option: CURLOPT_REDIR_PROTOCOLS_STR);
         $this->assertOption(expected: false, options: $options, option: CURLOPT_FOLLOWLOCATION);
-        $this->assertOption(expected: 10, options: $options, option: CURLOPT_CONNECTTIMEOUT);
+        $this->assertOption(expected: 3, options: $options, option: CURLOPT_CONNECTTIMEOUT);
         $this->assertOption(expected: 10, options: $options, option: CURLOPT_TIMEOUT);
         $this->assertOption(expected: 33554432, options: $options, option: CURLOPT_MAXFILESIZE);
         $this->assertOption(expected: self::URL, options: $options, option: CURLOPT_URL);

@@ -20,7 +20,8 @@ use RuntimeException;
 final readonly class MicrosoftKeySetSource implements JsonWebKeySetSource
 {
     private const string URL = 'https://login.microsoftonline.com/{tenantId}/discovery/keys';
-    private const int TIMEOUT_IN_SECONDS = 10;
+    /** Short: the keys are downloaded within a request (a login) */
+    private const int TIMEOUT_IN_SECONDS = 5;
     private const int MAX_BYTES = 1_048_576;
 
     /**

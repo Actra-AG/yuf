@@ -40,6 +40,7 @@ $tokenProvider = new MicrosoftClientCredentialsTokenProvider(
     tenantId: $core->environmentSettings->getString(key: 'mailer.tenantId'),
     clientId: $core->environmentSettings->getString(key: 'mailer.clientId'),
     clientSecret: $core->environmentSettings->getString(key: 'mailer.clientSecret'),
+    tokenCache: new FileCache(directory: $core->cacheDirectory . 'values'), // the token serves the next requests too
 );
 $mailer = new GraphMailer(
     serverAddress: '192.0.2.1',
@@ -59,3 +60,12 @@ $mailer = new GraphMailer(
 The same token provider serves `SmtpMailer` with `scope: 'https://outlook.office365.com/.default'`. The app needs the
 permission `SMTP.SendAsApp` of Office 365 Exchange Online, and its service principal must be registered in Exchange
 Online (`New-ServicePrincipal`) with full access to the mailbox (`Add-MailboxPermission`).
+
+## Performance
+
+- Send mail after the response where possible (a shutdown function runs after `fastcgi_finish_request()`), or from
+  a queue or cron job: the user does not wait for the mail server.
+- With a `FileCache`, `MicrosoftClientCredentialsTokenProvider` keeps the token for the next requests (no request to
+  the identity platform per mail), and `new ReverseDnsServerNameResolver(cache: …)` (argument `serverNameResolver:` of
+  the mailers) looks up the server name once a day instead of once per mailer.
+- Connections give up after 3 seconds (Graph, token, cURL default); the transfer may take longer.

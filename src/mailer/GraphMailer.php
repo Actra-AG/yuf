@@ -40,7 +40,7 @@ final class GraphMailer extends AbstractMailer
     public const string DEFAULT_BASE_URL = 'https://graph.microsoft.com/v1.0';
     // The documented limit of the request ("less than 4 MB"), the Base64 text of the message counts
     private const int MAX_REQUEST_SIZE_IN_BYTES = 4194304;
-    private const int CONNECT_TIMEOUT_IN_SECONDS = 10;
+    private const int CONNECT_TIMEOUT_IN_SECONDS = 3;
     private const int REQUEST_TIMEOUT_IN_SECONDS = 60;
     private const int MAX_RESPONSE_SIZE_IN_BYTES = 1048576;
 

@@ -4,6 +4,15 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4.0.0–v4.49.0](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v4.64.0 (2026-10-09)
+
+- New `FileCache`: string values with a lifetime in files, for results that should survive the request.
+- `MicrosoftClientCredentialsTokenProvider` takes an optional `tokenCache:`, `ReverseDnsServerNameResolver` an
+  optional `cache:` ([docs/mail.md](docs/mail.md)).
+- `FileLogger` sends the mail of a new issue after the response (`mailAfterResponse: false` sends it at once).
+- Shorter connect timeouts: cURL default, `GraphMailer` and the token provider 3 seconds (before 10), the signing keys
+  of Microsoft 5 seconds (before 10), the port 25 check of e-mail domains 2 seconds (before 5).
+
 ## v4.63.0 (2026-10-09)
 
 - Requires `actra/autoloader` `~1.2.0` (PHP 8.5, atomic cache file).

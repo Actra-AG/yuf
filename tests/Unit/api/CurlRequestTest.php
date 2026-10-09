@@ -72,7 +72,7 @@ final class CurlRequestTest extends TestCase
     {
         $request = CurlGetRequest::create(requestTargetUrl: CurlRequestTest::URL);
 
-        self::assertSame(10, $request->getConnectTimeoutInSeconds());
+        self::assertSame(3, $request->getConnectTimeoutInSeconds());
         self::assertSame(10, $request->getRequestTimeoutInSeconds());
         self::assertSame(33554432, $request->getMaxResponseSizeInBytes());
         self::assertFalse($request->isRedirectionResponseCodeAccepted());
