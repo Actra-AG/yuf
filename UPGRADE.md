@@ -4,6 +4,11 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4.0.0–v4.49.0](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v4.62.0 (2026-10-09)
+
+- `Core::fromEnvironment()` keeps the cache of the autoloader in the cache directory of the application
+  (`app/cache/autoloader.php`) instead of `vendor/actra/autoloader/src/cache/`. The old file can be deleted.
+
 ## v4.61.0 (2026-10-09)
 
 - Faster templates: a template is looked up once per request, members of objects are read without new reflection

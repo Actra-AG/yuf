@@ -64,6 +64,8 @@ use UnexpectedValueException;
 final class Core
 {
     public const string APP_CLASS_PREFIX = 'app';
+    /** The cache of the autoloader (paths of the loaded classes) in the cache directory of the application */
+    public const string AUTOLOADER_CACHE_FILE_NAME = 'autoloader.php';
     private static bool $isInitialized = false;
     private ?HttpResponse $httpResponse = null;
     private readonly string $logEmailRecipient;
@@ -138,9 +140,10 @@ final class Core
     }
 
     /**
-     * Creates the application of the request of this process: registers the autoloader (own and `app` classes), reads
-     * the environment file, sets `error_reporting()` and the time zone, resolves and creates the directories,
-     * registers the error handler and creates the request from the PHP globals. A request with an unsupported method
+     * Creates the application of the request of this process: resolves and creates the directories, registers the
+     * autoloader (own and `app` classes, its cache is `autoloader.php` in the cache directory), reads the environment
+     * file, sets `error_reporting()` and the time zone, registers the error handler and creates the request from the
+     * PHP globals. A request with an unsupported method
      * is answered with a 405 response and ends the script. Call it once, as the first statement of the front
      * controller; it is not unit tested (global, once per process).
      *
@@ -168,18 +171,11 @@ final class Core
             throw new LogicException(message: 'Core is already initialized');
         }
         Core::$isInitialized = true;
-        // The classes of yuf are needed for the settings and the directories, so they are registered first
         require_once $autoloaderPath;
-        $autoloader = Autoloader::register();
-        $autoloader->addPath(
-            autoloaderPath: new AutoloaderPath(
-                path: __DIR__ . DIRECTORY_SEPARATOR,
-                prefix: 'actra\\yuf\\',
-            ),
-        );
-        $environment = EnvironmentSettings::fromArray(values: Core::loadEnvironmentFile(path: $envFilePath));
-        error_reporting(error_level: $environment->errorReporting);
-        date_default_timezone_set(timezoneId: $environment->timeZone);
+        // The directories are resolved before the autoloader is registered, so the cache of the autoloader is a file
+        // of the cache directory of the application (not in vendor/, which may be read-only or deployed from another
+        // machine); the resolver is the only class needed for that
+        require_once __DIR__ . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'DirectoryPathResolver.php';
         $documentRoot = Core::readDocumentRoot();
         $resolvedBaseDirectory = Core::createIfNotExists(
             path: $baseDirectory,
@@ -199,6 +195,17 @@ final class Core
             baseDirectory: $resolvedBaseDirectory,
             appDirectory: $resolvedAppDirectory,
         );
+        $resolvedCacheDirectory = $resolve(path: $cacheDirectory);
+        $autoloader = Autoloader::register(cacheFilePath: $resolvedCacheDirectory . Core::AUTOLOADER_CACHE_FILE_NAME);
+        $autoloader->addPath(
+            autoloaderPath: new AutoloaderPath(
+                path: __DIR__ . DIRECTORY_SEPARATOR,
+                prefix: 'actra\\yuf\\',
+            ),
+        );
+        $environment = EnvironmentSettings::fromArray(values: Core::loadEnvironmentFile(path: $envFilePath));
+        error_reporting(error_level: $environment->errorReporting);
+        date_default_timezone_set(timezoneId: $environment->timeZone);
         $settings = new CoreSettings(
             environmentSettings: $environment,
             copyrightYear: $copyrightYear,
@@ -206,7 +213,7 @@ final class Core
             frameworkDirectory: __DIR__ . DIRECTORY_SEPARATOR,
             baseDirectory: $resolvedBaseDirectory,
             appDirectory: $resolvedAppDirectory,
-            cacheDirectory: $resolve(path: $cacheDirectory),
+            cacheDirectory: $resolvedCacheDirectory,
             errorDocsDirectory: $resolve(path: $errorDocsDirectory),
             logDirectory: $resolve(path: $logsDirectory),
             settingsDirectory: $resolve(path: $settingsDirectory),

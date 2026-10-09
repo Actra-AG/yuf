@@ -147,3 +147,15 @@ steps that change responses or rendering. No step is breaking unless marked ⚠�
   the navigation regex without `id="nav-` and looks up the active ids by key.
 - Not done: the tag collection that `Core::prepareHttpResponse()` builds only to validate the own tags (a few small
   objects per request, not worth new API).
+
+### Step 4 (v4.62.0) – done
+
+- `Core::fromEnvironment()` resolves the directories first (with `DirectoryPathResolver`, loaded by `require_once`),
+  then registers the autoloader with `<cache directory>autoloader.php` (`Core::AUTOLOADER_CACHE_FILE_NAME`). Checked
+  in the example app: the cache is written to `example/app/cache/autoloader.php`, the file in `vendor/` stays
+  untouched. `fromEnvironment()` stays without unit test (global, once per process).
+- Not measured: the change fixes where the cache lives (a read-only `vendor/` or paths of another machine made every
+  request scan for its classes); the speed of a warm cache is unchanged.
+- Open, in `actra/autoloader` (separate release): write the cache atomically (temporary file and `rename()`; today
+  concurrent requests can include a half-written file) and require cached paths directly instead of `file_exists()`
+  per class.
