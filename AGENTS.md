@@ -17,7 +17,7 @@ This project follows the Actra coding standard, installed as development depende
 - `actra/yuf` is a public Composer library (PHP framework); every public class, argument name and HTML output is API.
 - Minimum PHP version: 8.5. Releases are Git tags with a section in `UPGRADE.md`.
 - The code meets the coding standard (empty PHPStan baseline). State and open points:
-  [docs/plans/standard-migration/remaining.md](docs/plans/standard-migration/remaining.md).
+  [docs/plans/done/standard-migration/remaining.md](docs/plans/done/standard-migration/remaining.md).
 
 ## Project-specific rules
 

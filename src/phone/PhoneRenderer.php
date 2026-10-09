@@ -7,6 +7,15 @@
 
 declare(strict_types=1);
 
+/**
+ * Adapted from libphonenumber-for-php (https://github.com/giggsey/libphonenumber-for-php), a port of libphonenumber
+ * (https://github.com/google/libphonenumber), see LICENSE and NOTICE in src/phone/. Changed by Actra AG: reduced to
+ * parsing, formatting and validation, rewritten to PHP 8.5 and the Actra coding standard (see NOTICE).
+ *
+ * @author Joshua Gigg and contributors (libphonenumber-for-php)
+ * @author The Libphonenumber Authors (libphonenumber)
+ */
+
 namespace actra\yuf\phone;
 
 use LogicException;
@@ -15,10 +24,6 @@ use LogicException;
  * Renders a `PhoneNumber` in the internal format (`+41.446681800`, for storing), in the E.164 format
  * (`+41446681800`, for interfaces), in the international format (`+41 44 668 18 00`) or in the national format
  * (`044 668 18 00`, for displaying).
- *
- * Adapted work based on libphonenumber-for-php (https://github.com/giggsey/libphonenumber-for-php), a port of
- * libphonenumber (https://github.com/google/libphonenumber), licensed under the Apache License, Version 2.0 (see
- * the files LICENSE and NOTICE in src/phone/). Changed by Actra AG, see NOTICE.
  */
 final class PhoneRenderer
 {

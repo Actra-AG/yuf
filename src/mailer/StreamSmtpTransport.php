@@ -6,6 +6,7 @@
  */
 
 declare(strict_types=1);
+
 /**
  * Derived work from the SMTP class of PHPMailer, reduced to the code needed by this Framework.
  * For the original full library, please see:

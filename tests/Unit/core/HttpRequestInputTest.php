@@ -15,7 +15,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * The explicit query and post getters. Query and post data are never merged. Number getters are strict (design
- * section 5 of docs/plans/http-request/design.md): they accept a complete number only, not a prefix of one.
+ * section 5 of docs/plans/done/http-request/design.md): they accept a complete number only, not a prefix of one.
  */
 final class HttpRequestInputTest extends TestCase
 {

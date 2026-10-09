@@ -1,7 +1,7 @@
 # Design: Form fields with typed values (v4)
 
 Status: approved (2026-10-04), refined in review. Task 1 of [plan.md](plan.md). Base: code of v3.3.0
-(`src/form/`), the notes of [docs/plans/form-typed-values/plan.md](../form-typed-values/plan.md) and
+(`src/form/`), the notes of [docs/plans/done/form-typed-values/plan.md](../form-typed-values/plan.md) and
 [value-types.md](../form-typed-values/value-types.md).
 
 ## 1. Goals and constraints

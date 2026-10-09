@@ -6,6 +6,7 @@
  */
 
 declare(strict_types=1);
+
 /**
  * Integral adaptive work to derived PHPMailer classes by Actra AG.
  * For the original library, please see:

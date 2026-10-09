@@ -14,7 +14,7 @@ use actra\yuf\tests\Double\template\TemplateEngineTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * The `if` and `else` tags (docs/plans/template-engine/design.md, section 3.1).
+ * The `if` and `else` tags (docs/plans/done/template-engine/design.md, section 3.1).
  *
  * The comparison matrix pins the rules of `if`. Rows: operator and against attribute; columns: the compared values in
  * the order of values(); Y = the if block is rendered, N = the else block is rendered, E = a TemplateException.

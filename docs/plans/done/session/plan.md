@@ -1,6 +1,6 @@
 # Plan: session object
 
-Design: [design.md](design.md). Step 3 of [docs/plans/standard-completion/plan.md](../standard-completion/plan.md).
+Design: [design.md](design.md). Step 3 of [docs/plans/done/standard-completion/plan.md](../standard-completion/plan.md).
 
 ## Steps
 
@@ -179,3 +179,7 @@ Design sections 1-8 are implemented as written; deviations and additions:
   a successful `SessionFileUploadStorage::store()`. The real session path was checked by the smoke test above and by
   `AbstractSessionHandlerTest` (separate processes).
 - Own `AuthUser` singletons, forms, tables, filters and `$_SESSION` data of projects: see `UPGRADE.md` v4.30.0.
+
+## Final note (2026-10-09)
+
+Done: the session object exists since v4.30.0. The plan moved to `docs/plans/done/` (coding standard v1.16.0).

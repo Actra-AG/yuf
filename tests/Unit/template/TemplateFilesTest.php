@@ -15,8 +15,8 @@ use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\tests\Double\template\TemplateEngineTestCase;
 
 /**
- * The templates that ship with yuf and the example, rendered through the engine (docs/plans/template-engine/plan.md,
- * characterization tests). The whitespace of the expected output is the whitespace the old engine produced and the
+ * The templates that ship with yuf and the example, rendered through the engine
+ * (docs/plans/done/template-engine/plan.md, characterization tests). The whitespace of the expected output is the whitespace the old engine produced and the
  * new engine keeps: a line break after a tag is removed, the indentation of its line stays, and the whitespace between
  * an if and its else is rendered with the if branch. TablePaginationRendererTest checks the pagination titles through
  * the real renderer.

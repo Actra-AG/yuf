@@ -94,3 +94,8 @@ token in GET forms, `TableFilter` validates the posted token, a new CSP nonce pe
 `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`. Fixed in v4.10.1:
 `AbstractSessionHandler` reads the session ID only from the cookie (with `individualName`, a GET or POST parameter
 replaced it: session fixation). No open finding left.
+
+## Final note (2026-10-09)
+
+Done: the shared PHP-CS-Fixer and PHPStan configuration is used, the PHPStan baseline is empty since v4.41.0 (see
+[docs/plans/done/standard-migration/remaining.md](../standard-migration/remaining.md)). The plan moved to `docs/plans/done/` (coding standard v1.16.0).

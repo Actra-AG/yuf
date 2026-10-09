@@ -1,7 +1,7 @@
 # Design: template engine
 
 The template engine in `src/template/` is rewritten behind the same template syntax. It is the largest remaining area
-of [docs/plans/standard-migration/remaining.md](../standard-migration/remaining.md) (221 of 760 baseline entries) and the last
+of [docs/plans/done/standard-migration/remaining.md](../standard-migration/remaining.md) (221 of 760 baseline entries) and the last
 user of `Core::get()` and `LocaleHandler::get()` in compiled code.
 
 Decisions of the user: rewrite with the same syntax; keep the used and working tags, remove the broken or

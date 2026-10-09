@@ -1,7 +1,7 @@
 # Plan: Form fields with typed values (v4)
 
 Status: done (2026-10-04, tasks 1 to 7, form refactoring complete; released as v4.0.0). Builds on
-[docs/plans/form-typed-values/plan.md](../form-typed-values/plan.md) (v3.3.0), which must be released first.
+[docs/plans/done/form-typed-values/plan.md](../form-typed-values/plan.md) (v3.3.0), which must be released first.
 
 ## Goal
 
@@ -24,7 +24,7 @@ are allowed and documented in `UPGRADE.md` with before/after examples.
 
 ## Input from v3.3.0
 
-Findings of [docs/plans/form-typed-values/plan.md](../form-typed-values/plan.md) that the tasks below must take into account.
+Findings of [docs/plans/done/form-typed-values/plan.md](../form-typed-values/plan.md) that the tasks below must take into account.
 
 **The getter semantics of v3.3.0 are the API to keep** (`getValueAsString()`, `getValueAsInt()`, `getValueAsFloat()`,
 `getValues()`, `getValueAsDateTimeImmutable()`, `isChecked()`, `HiddenField` `valueIsInt`, `AmountParser`): `null` and
@@ -69,7 +69,7 @@ Untouched files with entries (renderers, rules, `FileField`, collections) belong
 
 ### Task 1: Design decision
 
-Write `docs/plans/form-v4/design.md` and get it approved by the user before task 2 starts. Decide:
+Write `docs/plans/done/form-v4/design.md` and get it approved by the user before task 2 starts. Decide:
 
 - **Value model per field type:** e.g. single text (`string`), integer (`?int`), decimal (`?float` or string-based
   decimal for amounts), options (`list<string>` / `?string`), boolean (`bool`), date/time (`?DateTimeImmutable`),
@@ -884,3 +884,7 @@ cancel text of `FormControl` is English without `FormMessages::german()` (design
 - Template engine (`src/template/`).
 - Changes to the rendered form HTML beyond what the typed values require.
 - Other areas of the library.
+
+## Final note (2026-10-09)
+
+The plan moved to `docs/plans/done/` (coding standard v1.16.0).

@@ -344,7 +344,7 @@ is deleted again.
 
 **Remaining `mixed` / static state.** `mixed` stays only where the engine reads untyped data (listed in step 2). Static state
 of this area is gone: `Core::$isInitialized` (guard only) and `LogFile::$openLogFiles` remain, see
-`docs/plans/standard-migration/remaining.md`.
+`docs/plans/done/standard-migration/remaining.md`.
 
 **For step 5.** Own tags: `Core::prepareHttpResponse(templateTags: …)` has to store them on the `Core` so that
 `createTemplateEngine()` (used by the request and the error pages) adds them with `TemplateTagCollection::with()`.
@@ -371,3 +371,7 @@ Projects register their own template tags.
 
 The template rewrite is complete (steps 1–5). Nothing of this plan remains; the other areas are listed in
 [../standard-migration/remaining.md](../standard-migration/remaining.md).
+
+## Final note (2026-10-09)
+
+Done: the rewritten template engine is released (v4.24.0–v4.27.0). The plan moved to `docs/plans/done/` (coding standard v1.16.0).

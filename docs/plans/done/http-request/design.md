@@ -1,6 +1,6 @@
 # Design: `HttpRequest` as instance
 
-Step 2 of [docs/plans/standard-completion/plan.md](../standard-completion/plan.md). Today `HttpRequest` is a class of static
+Step 2 of [docs/plans/done/standard-completion/plan.md](../standard-completion/plan.md). Today `HttpRequest` is a class of static
 getters over the superglobals with four static caches (`$inputData`, `$host`, `$protocol`, `$languages`), and
 `RequestBody::getData()` caches `php://input` statically. yuf reads the request statically in 12 files and the
 superglobals directly in 10 more; projects call the static getters from views, forms, static helpers and `index.php`.

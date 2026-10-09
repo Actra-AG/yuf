@@ -20,7 +20,7 @@ use ArrayObject;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * The `text` tag (docs/plans/template-engine/design.md, section 5): a plain string is escaped by the engine, an
+ * The `text` tag (docs/plans/done/template-engine/design.md, section 5): a plain string is escaped by the engine, an
  * `HtmlText` created with `fromHtml()` is output as it is, and `HtmlText::fromText()` (and `addText()`) is escaped.
  */
 final class TemplateTextTagTest extends TemplateEngineTestCase

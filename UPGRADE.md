@@ -4,6 +4,11 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4.0.0–v4.49.0](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v4.67.3 (2026-10-09)
+
+- The adapted files of `src/phone/` and `src/mailer/` name source, original authors and changes in a second docblock
+  after `declare(strict_types=1);`. Comments only, no code change.
+
 ## v4.67.2 (2026-10-09)
 
 - `SmtpTransport`, `StreamSmtpTransport` and `SmtpDataFormatter` are derived from PHPMailer too and now declared as

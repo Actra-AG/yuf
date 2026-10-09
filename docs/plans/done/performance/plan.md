@@ -39,7 +39,7 @@ Status: done (2026-10-09, steps 1–8, v4.59.0–v4.67.0).
   the view, only if the session was started anyway (decision 1), and after the 404 checks.
 - `lastActivity` is written on every start: update it only if older than 60 seconds, so `session.lazy_write` works.
 - Optional: read-only session start (`read_and_close`) for views that only read.
-- Update the open points in `docs/plans/standard-migration/remaining.md` (they assume requests without session use).
+- Update the open points in `docs/plans/done/standard-migration/remaining.md` (they assume requests without session use).
 
 ### Step 3 – Templates
 
@@ -223,3 +223,7 @@ Status: done (2026-10-09, steps 1–8, v4.59.0–v4.67.0).
   304 with ETag and `Cache-Control` only.
 - Not done: a server-side cache of rendered fragments (`FileCache` can hold them; no measured need yet). Opt-in by
   nature: only the view knows the version of its data.
+
+## Final note (2026-10-09)
+
+The plan moved to `docs/plans/done/` (coding standard v1.16.0).

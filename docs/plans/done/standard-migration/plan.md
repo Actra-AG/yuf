@@ -1,7 +1,7 @@
 # Plan: move yuf to the remaining rules of the coding standard
 
 yuf follows `actra/coding-standard` (v1.2.0). Code style and PHPStan are covered by
-[docs/plans/coding-standard/plan.md](../coding-standard/plan.md). This plan covers the remaining rules that change the public
+[docs/plans/done/coding-standard/plan.md](../coding-standard/plan.md). This plan covers the remaining rules that change the public
 API:
 
 - names (`naming.md`): acronyms written like words, no `Model` suffix for settings bundles, `Enum` suffix, constants in
@@ -527,7 +527,7 @@ Smaller releases, each for one area:
 
 - `DbSettings`, `SessionSettings`, `CspPolicySettings`, `TableItem` and the trait `HasSelectOptionsPresentation`
   (`@internal`); named arguments and `Core::$cspPolicySettings` renamed, no aliases. Pure renames, no behaviour change.
-- `TableItemModelTest` → `TableItemTest`; README and `docs/plans/form-v4/plan.md` updated; baseline unchanged (767 entries,
+- `TableItemModelTest` → `TableItemTest`; README and `docs/plans/done/form-v4/plan.md` updated; baseline unchanged (767 entries,
   6 messages/paths renamed). `example/` needed no change.
 
 ### Step 2 (v4.13.0) – done
@@ -670,3 +670,7 @@ Smaller releases, each for one area:
   check, `handleException()` fallbacks, and that `Core` wires everything.
 - `Core::get()` remains in `IfTag`, `SnippetTag`, `HtmlSnippet::render()` and `LogFile` (plus `CoreTestInstance`).
   Baseline 765 -> 760 entries.
+
+## Final note (2026-10-09)
+
+Done: all renames released (v4.12.0–v4.23.0); the final state and open points are in [remaining.md](remaining.md). The plan moved to `docs/plans/done/` (coding standard v1.16.0).

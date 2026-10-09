@@ -1,6 +1,6 @@
 # Plan: `HttpRequest` as instance
 
-Design: [design.md](design.md). Step 2 of [docs/plans/standard-completion/plan.md](../standard-completion/plan.md).
+Design: [design.md](design.md). Step 2 of [docs/plans/done/standard-completion/plan.md](../standard-completion/plan.md).
 
 ## Steps
 
@@ -131,3 +131,7 @@ string) and `getQueryString(name:)` (one parameter) are easy to mix up; `Logger`
 the log as before (a candidate for a security review); `SmartTable`/`TableFilter`/`AbstractTableFilterField` keep their
 static identifier registries (step 3). `src/common/LogFile.php` showed an unstaged removal of `__destruct()` that is not
 part of this step (found in the working tree after `composer cs:fix`, left as found).
+
+## Final note (2026-10-09)
+
+Done: `HttpRequest` is an instance since v4.29.0. The plan moved to `docs/plans/done/` (coding standard v1.16.0).

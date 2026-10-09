@@ -1,8 +1,8 @@
 # Remaining differences to the coding standard
 
 Final state after v4.57.0 (2026-10-08), `actra/coding-standard` v1.3.0. Two plans brought yuf to the standard:
-[docs/plans/standard-completion/plan.md](../standard-completion/plan.md) (v4.28.0–v4.41.0, every area of `src/`, empty
-PHPStan baseline) and [docs/plans/standard-finish/plan.md](../standard-finish/plan.md) (v4.42.0–v4.57.0, security gaps, a
+[docs/plans/done/standard-completion/plan.md](../standard-completion/plan.md) (v4.28.0–v4.41.0, every area of `src/`, empty
+PHPStan baseline) and [docs/plans/done/standard-finish/plan.md](../standard-finish/plan.md) (v4.42.0–v4.57.0, security gaps, a
 testable `Core`, the open design points, small functional gaps, line lengths and new features). `composer check` is
 green (20554 tests), the PHPStan baseline is empty. yuf is done; `actra/backend` follows next.
 
@@ -59,7 +59,7 @@ Needs the real process, the network or a real upload; each place is documented i
 
 ## Open points (no standard violation, decisions or ideas for later)
 
-- **Performance:** moved to [docs/plans/performance/plan.md](../performance/plan.md).
+- **Performance:** moved to [docs/plans/done/performance/plan.md](../performance/plan.md).
 - **Session:** a request with a session cookie that never touches the session sends no `Set-Cookie` on the Lax
   redirect change (the browser keeps the Strict cookie); the preferred language is only remembered on requests that
   use the session anyway (both decided).

@@ -7,16 +7,21 @@
 
 declare(strict_types=1);
 
+/**
+ * Adapted from libphonenumber-for-php (https://github.com/giggsey/libphonenumber-for-php), a port of libphonenumber
+ * (https://github.com/google/libphonenumber), see LICENSE and NOTICE in src/phone/. Changed by Actra AG: reduced to
+ * parsing, formatting and validation, rewritten to PHP 8.5 and the Actra coding standard (see NOTICE).
+ *
+ * @author Joshua Gigg and contributors (libphonenumber-for-php)
+ * @author The Libphonenumber Authors (libphonenumber)
+ */
+
 namespace actra\yuf\phone;
 
 use UnexpectedValueException;
 
 /**
  * Narrows the array of a generated metadata file in `data/` once, at the boundary, into typed value objects.
- *
- * Adapted work based on libphonenumber-for-php (https://github.com/giggsey/libphonenumber-for-php), a port of
- * libphonenumber (https://github.com/google/libphonenumber), licensed under the Apache License, Version 2.0 (see
- * the files LICENSE and NOTICE in src/phone/). Changed by Actra AG, see NOTICE.
  *
  * @internal
  */
