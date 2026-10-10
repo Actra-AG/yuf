@@ -71,6 +71,7 @@ final class AuthUserTest extends TestCase
 
         $this->assertNotSame($oldPassword, $authUser->password);
         $this->assertSame($authUser->password, $authUser->storedPassword);
+        $this->assertNotNull($authUser->password);
         $this->assertTrue($authUser->password->isValid(rawPassword: 'new secret'));
         $this->assertSame(0, $authUser->wrongPasswordAttempts);
     }

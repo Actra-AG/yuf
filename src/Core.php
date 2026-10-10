@@ -32,9 +32,11 @@ use actra\yuf\core\RequestHandler;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\core\RouteCollection;
 use actra\yuf\core\UnsupportedRequestMethodException;
+use actra\yuf\core\ViewContext;
 use actra\yuf\exception\ExceptionHandler;
 use actra\yuf\exception\ExceptionHandlerContext;
 use actra\yuf\form\FormContext;
+use actra\yuf\layout\NavigationItemCollection;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CspPolicySettings;
 use actra\yuf\security\SessionCsrfTokenSource;
@@ -47,6 +49,7 @@ use actra\yuf\template\cache\DirectoryTemplateCache;
 use actra\yuf\template\tag\TemplateTag;
 use actra\yuf\template\tag\TemplateTagCollection;
 use actra\yuf\template\TemplateEngine;
+use Closure;
 use InvalidArgumentException;
 use LogicException;
 use RuntimeException;
@@ -307,6 +310,9 @@ final class Core
      *
      * @param list<TemplateTag> $templateTags The own tags of the project, known to views, snippets, tables and error
      *                                        pages; a name of a built-in or another own tag throws
+     * @param ?Closure(ViewContext): NavigationItemCollection $navigationProvider Builds the navigation of each request
+     *                                        from its `ViewContext` (route, language, login); views read it with
+     *                                        `ViewContext::getNavigation()`. `null`: no navigation of the framework
      *
      * @throws InvalidArgumentException for an invalid template tag name
      * @throws LogicException if called twice, without a route or for a route without default content type
@@ -318,6 +324,7 @@ final class Core
         ?CspPolicySettings $cspPolicySettings = new CspPolicySettings(),
         false|AbstractSessionHandler|null $individualSessionHandler = null,
         array $templateTags = [],
+        ?Closure $navigationProvider = null,
     ): HttpResponse {
         if ($this->httpResponse !== null) {
             throw new LogicException(message: 'The HttpResponse is already prepared');
@@ -336,6 +343,7 @@ final class Core
             logDirectory: $this->logDirectory,
             httpRequest: $this->httpRequest,
             mailer: null,
+            responseSender: $this->responseSender,
         );
         $this->cspPolicySettings = $cspPolicySettings;
         // Checked before the exception handler exists: it needs the tags for the error pages, too
@@ -411,6 +419,7 @@ final class Core
             copyright: $this->renderCopyrightYear(),
             robots: $this->robots,
             responseSender: $this->responseSender,
+            navigationProvider: $navigationProvider,
         );
         // Release the lock of the session before the response is built and sent: parallel requests of the user go on
         if ($this->sessionHandler !== null && $this->sessionHandler->isStarted()) {

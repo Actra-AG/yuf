@@ -24,7 +24,7 @@ final class FileSizeColumn extends AbstractTableColumn
     #[Override]
     protected function renderCellValue(TableItem $tableItem): string
     {
-        $bytes = $tableItem->getScalarValue(name: $this->identifier);
+        $bytes = $tableItem->getRawValue(name: $this->identifier);
         if ($bytes === null) {
             return '';
         }

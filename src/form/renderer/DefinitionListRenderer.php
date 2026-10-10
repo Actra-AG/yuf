@@ -13,7 +13,6 @@ use actra\yuf\form\component\FormField;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
-use actra\yuf\html\HtmlText;
 use Override;
 
 final class DefinitionListRenderer extends FormRenderer
@@ -27,30 +26,7 @@ final class DefinitionListRenderer extends FormRenderer
     public function createHtmlTag(): HtmlTag
     {
         $formField = $this->formField;
-        $labelAttributes = [HtmlTagAttribute::fromText(name: 'for', text: $formField->name)];
-        if (!$this->formField->renderLabel) {
-            $labelAttributes[] = HtmlTagAttribute::fromText(name: 'class', text: 'visuallyhidden');
-        }
-
-        $labelTag = new HtmlTag('label', false, $labelAttributes);
-        $labelTag->addText($formField->label);
-
-        if ($formField->isRequired() && $formField->renderRequiredAbbr) {
-            $abbrTag = new HtmlTag('span', false, [
-                HtmlTagAttribute::fromText(name: 'class', text: 'required'),
-            ]);
-            $abbrTag->addText(HtmlText::fromHtml('*'));
-            $labelTag->addTag($abbrTag);
-        }
-
-        $labelInfoText = $formField->labelInfoText;
-        if ($labelInfoText !== null) {
-            $labelInfoTag = new HtmlTag('i', false, [
-                HtmlTagAttribute::fromText(name: 'class', text: 'label-info'),
-            ]);
-            $labelInfoTag->addText($labelInfoText);
-            $labelTag->addTag($labelInfoTag);
-        }
+        $labelTag = FormRenderer::createLabelTag(formField: $formField);
 
         if (!$this->formField->renderLabel) {
             // A <div> (instead of <dd>) will be created to contain the child with the "visualInvisible" <label>

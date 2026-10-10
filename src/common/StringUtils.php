@@ -277,6 +277,36 @@ final class StringUtils
         );
     }
 
+    /**
+     * Cryptographically secure (random_int) random string of the given characters (multibyte safe: the alphabet is
+     * split into characters, not bytes). Duplicate characters in the alphabet are more likely to be drawn.
+     *
+     * @param int $length Number of characters, at least 1
+     * @param string $alphabet At least two distinct characters
+     *
+     * @throws InvalidArgumentException for a length below 1 or fewer than two distinct characters
+     */
+    public static function randomFromAlphabet(int $length, string $alphabet): string
+    {
+        if ($length < 1) {
+            throw new InvalidArgumentException(message: 'The length must be at least 1, ' . $length . ' given.');
+        }
+        $characters = mb_str_split(string: $alphabet);
+        if (count(value: array_unique(array: $characters)) < 2) {
+            throw new InvalidArgumentException(message: 'The alphabet needs at least two distinct characters.');
+        }
+        $lastIndex = count(value: $characters) - 1;
+        $result = '';
+        for ($index = 0; $index < $length; $index++) {
+            $result .= implode(
+                separator: StringUtils::IMPLODE_DEFAULT_SEPARATOR,
+                array: array_slice(array: $characters, offset: random_int(min: 0, max: $lastIndex), length: 1),
+            );
+        }
+
+        return $result;
+    }
+
     public static function generateSalt(int $length = 16): string
     {
         $charactersLength = mb_strlen(string: StringUtils::SALT_CHARACTERS);

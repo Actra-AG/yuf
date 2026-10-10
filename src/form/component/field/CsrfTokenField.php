@@ -69,6 +69,16 @@ final class CsrfTokenField extends InputField
     }
 
     /**
+     * The token is never a value of the user: the field has no initial value and is never changed by the user, so a
+     * change check of the form (`Form::hasChanges()`) is not triggered by the posted token.
+     */
+    #[Override]
+    public function valueHasChanged(): bool
+    {
+        return false;
+    }
+
+    /**
      * Always the token of the user, never the posted one.
      */
     #[Override]

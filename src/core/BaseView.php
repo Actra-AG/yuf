@@ -68,7 +68,7 @@ abstract class BaseView
                 || !$authUser->hasOneOfRights(accessRightCollection: $requiredAccessRights)
             )
         ) {
-            throw new UnauthorizedAccessRightException();
+            throw new UnauthorizedAccessRightException(isNotLoggedIn: $authUser === null);
         }
         foreach ($inputParameterCollection->listRequiredParameters() as $inputParameter) {
             if ($this->isInputMissing(inputParameter: $inputParameter)) {

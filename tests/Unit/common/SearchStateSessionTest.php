@@ -11,6 +11,8 @@ namespace actra\yuf\tests\Unit\common;
 
 use actra\yuf\common\SearchState;
 use actra\yuf\core\InputSourceEnum;
+use actra\yuf\form\FormOptions;
+use actra\yuf\html\HtmlText;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
@@ -53,12 +55,28 @@ final class SearchStateSessionTest extends TestCase
         );
     }
 
+    /**
+     * @param array<int|string, string> $items
+     */
+    private static function options(array $items): FormOptions
+    {
+        $formOptions = new FormOptions();
+        foreach ($items as $key => $html) {
+            $formOptions->addItem(key: (string) $key, htmlText: HtmlText::fromHtml(html: $html));
+        }
+
+        return $formOptions;
+    }
+
     public function testStorageLayoutIsOneArrayPerInstanceInTheSearchSection(): void
     {
         $this->helper(post: ['status' => 'active'])->checkString(fieldName: 'status');
-        $this->helper(post: ['level' => 'b'])->checkFilter(array: ['a' => 'A', 'b' => 'B'], fieldName: 'level');
-        $this->helper(query: ['find' => ''], post: ['groups' => ['1'], 'groupsID' => '7'])->checkMultiFilter(
-            array: ['1' => 'One', '2' => 'Two'],
+        $this->helper(post: ['level' => 'b'])->checkOptionsFilter(
+            formOptions: SearchStateSessionTest::options(items: ['a' => 'A', 'b' => 'B']),
+            fieldName: 'level',
+        );
+        $this->helper(query: ['find' => ''], post: ['groups' => ['1']])->checkMultiOptionsFilter(
+            formOptions: SearchStateSessionTest::options(items: ['1' => 'One', '2' => 'Two']),
             fieldName: 'groups',
         );
         $this->helper(post: ['from' => '2026-03-01', 'to' => '2026-04-30'])->checkDateRangeFilter(
@@ -74,7 +92,7 @@ final class SearchStateSessionTest extends TestCase
                         'users' => [
                             'status' => 'active',
                             'level' => 'b',
-                            'groups' => [1, '7'],
+                            'groups' => ['1'],
                             'from' => '01.03.2026',
                             'to' => '30.04.2026',
                         ],
@@ -91,8 +109,16 @@ final class SearchStateSessionTest extends TestCase
     public function testFieldsWithoutInputWriteNothingIntoTheSession(): void
     {
         $this->assertSame('all', $this->helper()->checkString(fieldName: 'status', default: 'all'));
-        $this->assertSame([3], $this->helper()->checkMultiFilter(array: [], fieldName: 'groups', default: [3]));
-        $this->assertSame('a', $this->helper()->checkFilter(array: ['a' => 'A'], fieldName: 'level', default: 'a'));
+        $groups = SearchStateSessionTest::options(items: ['3' => 'Three']);
+        $level = SearchStateSessionTest::options(items: ['a' => 'A']);
+        $this->assertSame(
+            ['3'],
+            $this->helper()->checkMultiOptionsFilter(formOptions: $groups, fieldName: 'groups', default: ['3']),
+        );
+        $this->assertSame(
+            'a',
+            $this->helper()->checkOptionsFilter(formOptions: $level, fieldName: 'level', default: 'a'),
+        );
         $range = $this->helper()->checkDateRangeFilter(
             dateRange: SearchStateSessionTest::RANGE,
             fromField: 'from',
@@ -198,11 +224,11 @@ final class SearchStateSessionTest extends TestCase
 
     public function testFilterKeepsTheRememberedKeyForAnUnknownKeyAndStartsWithTheDefault(): void
     {
-        $options = ['a' => 'A', 'b' => 'B'];
+        $options = SearchStateSessionTest::options(items: ['a' => 'A', 'b' => 'B']);
 
-        $first = $this->helper(post: ['level' => 'x'])->checkFilter(array: $options, fieldName: 'level', default: 'a');
-        $this->helper(post: ['level' => 'b'])->checkFilter(array: $options, fieldName: 'level', default: 'a');
-        $next = $this->helper(post: ['level' => 'x'])->checkFilter(array: $options, fieldName: 'level', default: 'a');
+        $first = $this->helper(post: ['level' => 'x'])->checkOptionsFilter(formOptions: $options, fieldName: 'level', default: 'a');
+        $this->helper(post: ['level' => 'b'])->checkOptionsFilter(formOptions: $options, fieldName: 'level', default: 'a');
+        $next = $this->helper(post: ['level' => 'x'])->checkOptionsFilter(formOptions: $options, fieldName: 'level', default: 'a');
 
         $this->assertSame('a', $first);
         $this->assertSame('b', $next);
@@ -210,33 +236,33 @@ final class SearchStateSessionTest extends TestCase
 
     public function testFilterIsResetByFindAndResetToTheDefault(): void
     {
-        $options = ['a' => 'A', 'b' => 'B'];
-        $this->helper(post: ['level' => 'b'])->checkFilter(array: $options, fieldName: 'level', default: 'a');
+        $options = SearchStateSessionTest::options(items: ['a' => 'A', 'b' => 'B']);
+        $this->helper(post: ['level' => 'b'])->checkOptionsFilter(formOptions: $options, fieldName: 'level', default: 'a');
 
-        $value = $this->helper(query: ['reset' => ''])->checkFilter(array: $options, fieldName: 'level', default: 'a');
+        $value = $this->helper(query: ['reset' => ''])->checkOptionsFilter(formOptions: $options, fieldName: 'level', default: 'a');
 
         $this->assertSame('a', $value);
-        $this->assertSame('a', $this->helper()->checkFilter(array: $options, fieldName: 'level', default: 'a'));
+        $this->assertSame('a', $this->helper()->checkOptionsFilter(formOptions: $options, fieldName: 'level', default: 'a'));
     }
 
     public function testMultiFilterIsRememberedAndResetToTheDefaultByFindAndReset(): void
     {
-        $options = ['1' => 'One', '2' => 'Two'];
-        $this->helper(query: ['find' => ''], post: ['groups' => ['2']])->checkMultiFilter(
-            array: $options,
+        $options = SearchStateSessionTest::options(items: ['1' => 'One', '2' => 'Two', '5' => 'Five']);
+        $this->helper(query: ['find' => ''], post: ['groups' => ['2']])->checkMultiOptionsFilter(
+            formOptions: $options,
             fieldName: 'groups',
         );
 
-        $remembered = $this->helper()->checkMultiFilter(array: $options, fieldName: 'groups', default: [5]);
-        $reset = $this->helper(query: ['reset' => ''])->checkMultiFilter(
-            array: $options,
+        $remembered = $this->helper()->checkMultiOptionsFilter(formOptions: $options, fieldName: 'groups', default: ['5']);
+        $reset = $this->helper(query: ['reset' => ''])->checkMultiOptionsFilter(
+            formOptions: $options,
             fieldName: 'groups',
-            default: [5],
+            default: ['5'],
         );
 
-        $this->assertSame([2], $remembered);
-        $this->assertSame([5], $reset);
-        $this->assertSame([5], $this->helper()->checkMultiFilter(array: $options, fieldName: 'groups'));
+        $this->assertSame(['2'], $remembered);
+        $this->assertSame(['5'], $reset);
+        $this->assertSame(['5'], $this->helper()->checkMultiOptionsFilter(formOptions: $options, fieldName: 'groups'));
     }
 
     public function testDateRangeIsRememberedAndFindAndResetGoBackToTheWholeRange(): void

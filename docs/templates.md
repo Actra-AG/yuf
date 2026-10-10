@@ -73,6 +73,33 @@ $html = $snippet->render(templateEngine: $this->context->templateEngine);
   token, if there is a token source) and remembers them in the session.
 - Typed values in table columns: see [database.md](database.md).
 
+### Table texts, CSV export and dates
+
+- The texts a table creates itself ("no entries", the number of results) come from a `TableMessages`
+  (`messages:` of `SmartTable`, `DbResultTable`, `TableHelper::createDbResultTable()`). The defaults are German;
+  `TableMessages::english()` has English texts. `[amount]` in `oneResult` and `numResults` is the amount, output in
+  `<strong>`. The texts are plain text and encoded. The HTML templates of the table (`fullHtml`, `oddRowHtml`, …) are
+  properties; the texts are not.
+- A row (`TableItem`) holds scalars and `NULL` only; an array or object throws an `UnexpectedValueException` when the
+  row is created. Render other values with a `CallbackColumn`.
+- `DbResultTable::exportCsv(fileName: 'users.csv')` sends all rows of the table as CSV download and ends the script,
+  with the filter and the sorting the user chose, but not paged. The first row has the labels of the columns (tags
+  removed), then one row per result row with the values as the database delivers them in the order of the columns;
+  `NULL` is an empty cell, so no cell moves. `ActionsColumn` and `CallbackColumn` have no data of their own and are
+  left out; every other column needs a column of its identifier in the query. The rows are read and written one by one
+  and the temporary file is removed after the response. Call it before the table renders anything (e.g. for a request
+  with `?export`); tests pass `responseSender:` (`RecordingResponseSender`) and read the file of the response.
+- `DateColumn` writes `d.m.Y H:i:s` (`$format`). `useLocale(language: $language, dateStyle: DateStyleEnum::MEDIUM,
+  timeStyle: DateStyleEnum::SHORT)` writes it the way the locale of the language does (`IntlDateFormatter`, e.g.
+  `05.10.2026, 08:30` for `de_CH`); `DateStyleEnum::NONE` as time style gives the date only. Month names and the
+  exact separators come from the ICU version of the server.
+
+### Detail lists
+
+`new DetailDataObject(name: HtmlText::fromText(text: 'Customer'), value: HtmlText::fromText(text: $name))` is one
+label with a value for the template (`item.name`, `item.value`). Plain text is escaped, `HtmlText::fromHtml()` is
+trusted HTML.
+
 ## Using the engine directly
 
 Outside a view, with the `Core` at hand:

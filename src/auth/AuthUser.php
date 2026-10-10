@@ -19,6 +19,8 @@ use SensitiveParameter;
 abstract class AuthUser
 {
     /**
+     * @param ?Password $password `null` for a user without password: a password login is refused
+     *     (`AuthResultEnum::ERROR_NO_PASSWORD_LOGIN_ACTIVE`, not counted), the other login methods work
      * @param list<string> $ipWhitelist IP addresses and ranges the user may log in from (see
      *     `IpValidator::isInWhitelist()`), empty for all
      */
@@ -27,7 +29,7 @@ abstract class AuthUser
         public readonly bool $isActive,
         public private(set) int $wrongPasswordAttempts,
         private readonly AccessRightCollection $accessRightCollection,
-        public private(set) Password $password,
+        public private(set) ?Password $password,
         public readonly array $ipWhitelist,
     ) {}
 

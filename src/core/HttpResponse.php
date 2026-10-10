@@ -247,7 +247,6 @@ final class HttpResponse
     }
 
     /**
-     * @param Clock $clock Not used since v4.59.0 (generated content has no `Last-Modified`)
      * @param ?string $languageCode Language of the content, sent as `Content-Language` (none for `null`)
      * @param ?string $eTag The version of a page without personal data: the browser may store it and revalidate it
      *                      (`private, no-cache`); `null` for `private, no-store`
@@ -260,7 +259,6 @@ final class HttpResponse
         ?CspPolicySettings $cspPolicySettings,
         ?string $nonce,
         HttpRequest $httpRequest,
-        Clock $clock = new SystemClock(),
         ?string $languageCode = null,
         ?string $eTag = null,
     ): HttpResponse {
@@ -285,7 +283,6 @@ final class HttpResponse
     }
 
     /**
-     * @param Clock $clock Not used since v4.59.0 (generated content has no `Last-Modified`)
      * @param ?string $eTag See `createHtmlResponse()`
      *
      * @throws LogicException for an HTML content type (use `createHtmlResponse()`)
@@ -295,7 +292,6 @@ final class HttpResponse
         string $contentString,
         ContentType $contentType,
         HttpRequest $httpRequest,
-        Clock $clock = new SystemClock(),
         ?string $eTag = null,
     ): HttpResponse {
         if ($contentType->isHtml()) {

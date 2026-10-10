@@ -28,8 +28,18 @@
     "ext-ctype": "*",
     "ext-fileinfo": "*"
   },
+  "autoload": {
+    "psr-4": {
+      "actra\\yuf\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "actra\\yuf\\tests\\": "tests/"
+    }
+  },
   "require-dev": {
-    "actra/coding-standard": "^1.17.0",
+    "actra/coding-standard": "^1.18.1",
     "phpunit/phpunit": "^13.4"
   },
   "scripts": {

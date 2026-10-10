@@ -15,6 +15,7 @@ use actra\yuf\session\SessionSectionEnum;
 use InvalidArgumentException;
 use LogicException;
 use Override;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 
@@ -271,6 +272,107 @@ final class SessionTest extends TestCase
         $this->assertTrue($this->session->has(key: 'cart'));
         $this->assertSame('array-session', $this->session->getId());
         $this->assertSame(['cart' => 'full'], $this->session->export());
+    }
+
+    /**
+     * @return iterable<string, array{string|int|array<array-key, mixed>, ?list<string>}>
+     */
+    public static function stringLists(): iterable
+    {
+        yield 'strings' => [['a', 'b'], ['a', 'b']];
+        yield 'empty' => [[], []];
+        yield 'int item' => [['a', 1], null];
+        yield 'null item' => [['a', null], null];
+        yield 'nested array' => [[['a']], null];
+        yield 'map' => [['x' => 'a'], null];
+        yield 'list with a gap' => [[0 => 'a', 2 => 'b'], null];
+        yield 'scalar string' => ['a', null];
+        yield 'int' => [5, null];
+    }
+
+    /**
+     * @param string|int|array<array-key, mixed> $value
+     * @param ?list<string> $expected
+     */
+    #[DataProvider('stringLists')]
+    public function testStringListIsOnlyAListOfStrings(string|int|array $value, ?array $expected): void
+    {
+        $this->storage->set(key: 'k', value: $value);
+
+        $this->assertSame($expected, $this->session->getStringList(key: 'k'));
+    }
+
+    /**
+     * @return iterable<string, array{string|int|array<array-key, mixed>, ?array<string, string>}>
+     */
+    public static function stringMaps(): iterable
+    {
+        yield 'strings' => [['a' => 'x', 'b' => 'y'], ['a' => 'x', 'b' => 'y']];
+        yield 'empty' => [[], []];
+        yield 'int value' => [['a' => 1], null];
+        yield 'null value' => [['a' => null], null];
+        yield 'nested value' => [['a' => ['x']], null];
+        yield 'list' => [['x', 'y'], null];
+        yield 'numeric key' => [['1' => 'x'], null];
+        yield 'scalar' => ['a', null];
+    }
+
+    /**
+     * @param string|int|array<array-key, mixed> $value
+     * @param ?array<string, string> $expected
+     */
+    #[DataProvider('stringMaps')]
+    public function testStringMapIsOnlyAnArrayOfStringKeysAndValues(string|int|array $value, ?array $expected): void
+    {
+        $this->storage->set(key: 'k', value: $value);
+
+        $this->assertSame($expected, $this->session->getStringMap(key: 'k'));
+    }
+
+    public function testStringListAndMapOfAMissingKeyAreNull(): void
+    {
+        $this->assertNull($this->session->getStringList(key: 'missing'));
+        $this->assertNull($this->session->getStringMap(key: 'missing'));
+        $this->assertSame([], $this->storage->all());
+    }
+
+    public function testStructGivesTheArrayToTheMapperAndReturnsItsResult(): void
+    {
+        $this->session->set(key: 'cart', value: ['items' => 3]);
+
+        $items = $this->session->getStruct(
+            key: 'cart',
+            map: static fn(array $data): ?int => is_int(value: $data['items'] ?? null) ? $data['items'] : null,
+        );
+
+        $this->assertSame(3, $items);
+    }
+
+    public function testStructOfAnInvalidShapeIsTheNullOfTheMapper(): void
+    {
+        $this->session->set(key: 'cart', value: ['items' => 'many']);
+
+        $items = $this->session->getStruct(
+            key: 'cart',
+            map: static fn(array $data): ?int => is_int(value: $data['items'] ?? null) ? $data['items'] : null,
+        );
+
+        $this->assertNull($items);
+    }
+
+    public function testStructDoesNotCallTheMapperForMissingKeyOrNoArray(): void
+    {
+        $this->session->set(key: 'name', value: 'Ann');
+        $calls = 0;
+        $map = static function (array $data) use (&$calls): ?int {
+            $calls++;
+
+            return $data === [] ? null : 1;
+        };
+
+        $this->assertNull($this->session->getStruct(key: 'missing', map: $map));
+        $this->assertNull($this->session->getStruct(key: 'name', map: $map));
+        $this->assertSame(0, $calls);
     }
 
     public function testWritingAfterCloseThrows(): void

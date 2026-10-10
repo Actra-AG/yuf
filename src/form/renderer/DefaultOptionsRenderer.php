@@ -28,12 +28,12 @@ abstract class DefaultOptionsRenderer extends FormRenderer
     public function createHtmlTag(): HtmlTag
     {
         $optionsField = $this->optionsField;
-        $options = $optionsField->formOptions->data;
+        $options = $optionsField->formOptions->getItems();
         if (count(value: $options) === 0) {
             throw new LogicException(message: 'There must be at least one option!');
         }
         $ulTag = DefaultOptionsRenderer::createUlTag(optionsField: $optionsField);
-        foreach ($options as $key => $htmlText) {
+        foreach ($options as $option) {
             $liTag = new HtmlTag(
                 name: 'li',
                 selfClosing: false,
@@ -56,12 +56,15 @@ abstract class DefaultOptionsRenderer extends FormRenderer
                 ),
             );
             $inputTag->addHtmlTagAttribute(
-                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'id', text: $optionsField->id . '_' . $key),
+                htmlTagAttribute: HtmlTagAttribute::fromText(
+                    name: 'id',
+                    text: $optionsField->id . '_' . $option->key,
+                ),
             );
             $inputTag->addHtmlTagAttribute(
-                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'value', text: (string) $key),
+                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'value', text: $option->key),
             );
-            if ($optionsField->isSelected(optionKey: (string) $key)) {
+            if ($optionsField->isSelected(optionKey: $option->key)) {
                 $inputTag->addHtmlTagAttribute(
                     htmlTagAttribute: HtmlTagAttribute::fromName(name: 'checked'),
                 );
@@ -75,9 +78,12 @@ abstract class DefaultOptionsRenderer extends FormRenderer
                 htmlTagAttribute: HtmlTagAttribute::fromText(name: 'class', text: 'form-check-label'),
             );
             $labelTag->addHtmlTagAttribute(
-                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'for', text: $optionsField->id . '_' . $key),
+                htmlTagAttribute: HtmlTagAttribute::fromText(
+                    name: 'for',
+                    text: $optionsField->id . '_' . $option->key,
+                ),
             );
-            $labelTag->addText(htmlText: $htmlText);
+            $labelTag->addText(htmlText: $option->htmlText);
             $liTag->addTag(htmlTag: $labelTag);
         }
 

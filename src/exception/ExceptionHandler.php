@@ -9,12 +9,16 @@ declare(strict_types=1);
 
 namespace actra\yuf\exception;
 
+use actra\yuf\auth\UnauthorizedAccessRightException;
+use actra\yuf\common\StringUtils;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\LocaleHandler;
+use actra\yuf\core\LoginRedirect;
 use actra\yuf\core\RequestHandler;
+use actra\yuf\core\RequestMethodEnum;
 use actra\yuf\html\HtmlReplacementCollection;
 use actra\yuf\security\CsrfHiddenFieldRenderer;
 use actra\yuf\security\CsrfTokenSource;
@@ -149,6 +153,10 @@ class ExceptionHandler
     final public function createResponse(Throwable $throwable): HttpResponse
     {
         $context = $this->getContext();
+        $loginRedirect = $this->createLoginRedirect(throwable: $throwable);
+        if ($loginRedirect !== null) {
+            return $loginRedirect;
+        }
         if ($context->isDebug) {
             return $this->createDebugResponse(throwable: $throwable);
         }
@@ -158,6 +166,40 @@ class ExceptionHandler
             ErrorKindEnum::UNAUTHORIZED => $this->createUnauthorizedResponse(throwable: $throwable),
             ErrorKindEnum::INTERNAL_ERROR => $this->logAndCreateDefaultResponse(throwable: $throwable),
         };
+    }
+
+    /**
+     * The redirect to the login page (`RouteCollection::$loginPath`) for a page view that requires access rights
+     * without a logged-in user, with the requested URI as return target; `null` for everything else: a user without
+     * the right, a request that is no GET of an HTML page (a form post, an API call would lose its data or get an HTML
+     * page as answer) and the login page itself (no redirect loop). Without a login path nothing changes.
+     */
+    private function createLoginRedirect(Throwable $throwable): ?HttpResponse
+    {
+        $loginPath = $this->requestHandler?->loginPath;
+        if (
+            $loginPath === null
+            || !$throwable instanceof UnauthorizedAccessRightException
+            || !$throwable->isNotLoggedIn
+        ) {
+            return null;
+        }
+        $httpRequest = $this->getContext()->httpRequest;
+        if (
+            $httpRequest->getMethod() !== RequestMethodEnum::GET
+            || !$this->getContentType()->isHtml()
+            || $httpRequest->getPath() === StringUtils::beforeFirst(string: $loginPath, before: '?')
+        ) {
+            return null;
+        }
+
+        return HttpResponse::createRedirectResponse(
+            relativeOrAbsoluteUri: LoginRedirect::createLoginUri(
+                loginPath: $loginPath,
+                returnUri: $httpRequest->getUri(),
+            ),
+            httpRequest: $httpRequest,
+        );
     }
 
     private function logAndCreateDefaultResponse(Throwable $throwable): HttpResponse

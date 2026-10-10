@@ -46,9 +46,10 @@ final class FileLogger implements Logger
      *     still arrives
      * @param string $mailSenderAddress Sender of the mails, required with a mailer
      * @param MailFunction $mailFunction `mail()`, replaceable in tests
-     * @param bool $mailAfterResponse Sends the mail of a new issue in a shutdown function, which runs after the
-     *     response was sent (PHP-FPM, see `NativeResponseSender`): the error page does not wait for the mail server.
-     *     The ticket file is always written at once.
+     * @param bool $mailAfterResponse Sends the mail of a new issue after the response was sent
+     *     (`ResponseSender::afterResponse()`, PHP-FPM, see `NativeResponseSender`): the error page does not wait for
+     *     the mail server. The ticket file is always written at once.
+     * @param ResponseSender $responseSender Runs the mail after the response (`afterResponse()`); `Core` passes its own
      *
      * @throws InvalidArgumentException if the log directory does not exist, or for a mailer without a valid sender
      *     address
@@ -63,6 +64,7 @@ final class FileLogger implements Logger
         private readonly string $mailSenderAddress = '',
         private readonly MailFunction $mailFunction = new NativeMailFunction(),
         private readonly bool $mailAfterResponse = true,
+        private readonly ResponseSender $responseSender = new NativeResponseSender(),
     ) {
         if (!is_dir(filename: $logDirectory)) {
             throw new InvalidArgumentException(message: 'Log directory does not exist: ' . $logDirectory);
@@ -155,7 +157,7 @@ final class FileLogger implements Logger
             );
         };
         if ($this->mailAfterResponse) {
-            register_shutdown_function(callback: $sendMail);
+            $this->responseSender->afterResponse(callback: $sendMail);
 
             return;
         }

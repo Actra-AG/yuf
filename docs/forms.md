@@ -80,6 +80,62 @@ $agree = new BooleanField(name: 'agree', label: HtmlText::fromHtml(html: 'I agre
 $tags = new MultiSelectOptionsField(name: 'tags', label: $label, formOptions: $options, initialValues: ['a']);
 ```
 
+## Options with integer keys
+
+PHP turns numeric string keys of an array into integers. `FormOptions` keeps them internally; `getKeys()` /
+`getItems()` return the keys as the strings that are rendered and posted (the fields, renderers and `SearchState` use
+them). Add database ids with `addIntItem()` and read them back as integers:
+
+```php
+$groups = new FormOptions();
+foreach ($groupRows as $row) {
+    $name = HtmlText::fromText(text: $row->getString(column: 'name'));
+    $groups->addIntItem(key: $row->getInt(column: 'id'), htmlText: $name);
+}
+$group = new SelectOptionsField(name: 'group', label: $label, formOptions: $groups, initialValue: null);
+$tags = new MultiSelectOptionsField(name: 'tags', label: $label, formOptions: $groups, initialValues: ['1']);
+
+if ($form->validate()) {
+    $groupId = $group->getValueAsInt(); // ?int, null if nothing is selected
+    $tagIds = $tags->getIntValues(); // list<int>; also getAddedIntValues(), getRemovedIntValues()
+}
+```
+
+The input is already checked against the options, so the integer getters only throw an `UnexpectedValueException` if
+an option key is not a strict integer (optional minus, digits, nothing else, within the integer range): use the
+string getters for options with text keys. `FormOptions::toIntKey(string): ?int` does the same check.
+
+Search forms: `SearchState::checkOptionsFilter()`, `checkMultiOptionsFilter()` (keys as strings), and
+`checkIntOptionsFilter()` (`?int`), `checkIntMultiOptionsFilter()` (`list<int>`) take the `FormOptions` of the field.
+They remember keys as strings and drop remembered keys that are not an option any more.
+
+## Changes and password rules
+
+`Form::hasChanges()` is `true` if any field (also the child fields of toggle fields) differs from its initial value.
+The CSRF field never counts; a typed password and an uploaded file do.
+
+`PasswordField::setMinLength(minLength: 12)` requires a minimum length in characters (a rule for fields that set a
+password, `PasswordPurposeEnum::NEW`); the message is `FormMessages::$passwordTooShort` (`[min]` is replaced) or the
+`errorMessage:` argument. `EqualsFieldRule` compares a text with another field, e.g. a password confirmation; add the
+compared field to the form first:
+
+```php
+$purpose = PasswordPurposeEnum::NEW;
+$password = new PasswordField(name: 'password', label: $label, requiredError: $required, purpose: $purpose);
+$password->setMinLength(minLength: 12);
+$confirm = new PasswordField(name: 'confirm', label: $label, requiredError: $required, purpose: $purpose);
+$confirm->addRule(formRule: new EqualsFieldRule(otherField: $password, errorMessage: $differentError));
+```
+
+## Compact fields
+
+The default frame of a field is a definition list (`<dl><dt>label</dt><dd>control</dd></dl>`).
+`Form::useCompactFieldRenderer()` renders the fields without renderer of their own with `CompactFieldRenderer`:
+`<div class="form-compact-field">` with the label and the control (plus errors and field info, only if there are
+some; `has-error` is added to the div).
+For one field, call `$field->setRenderer(renderer: new CompactFieldRenderer(formField: $field))`. Meant for search and
+filter forms.
+
 ## Rules
 
 Rules are small pure predicates with a typed parameter; the field calls them for a non-empty value only. Add them with

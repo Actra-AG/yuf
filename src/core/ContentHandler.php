@@ -14,10 +14,12 @@ use actra\yuf\exception\NotFoundException;
 use actra\yuf\form\FormContext;
 use actra\yuf\html\HtmlDocument;
 use actra\yuf\html\HtmlDocumentSettings;
+use actra\yuf\layout\NavigationItemCollection;
 use actra\yuf\security\CspNonce;
 use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\session\Session;
 use actra\yuf\template\TemplateEngine;
+use Closure;
 use InvalidArgumentException;
 use LogicException;
 use Throwable;
@@ -79,6 +81,8 @@ final class ContentHandler
      * @param ?AbstractSessionHandler $sessionHandler `null` without sessions
      * @param string $copyright Years of the copyright notice of the HTML document
      * @param string $robots Content of the robots meta tag of the HTML document
+     * @param ?Closure(ViewContext): NavigationItemCollection $navigationProvider Builds the navigation of the request
+     *                                                                            (`ViewContext::getNavigation()`)
      *
      * @throws LogicException if called twice
      */
@@ -93,6 +97,7 @@ final class ContentHandler
         string $copyright,
         string $robots,
         ResponseSender $responseSender,
+        ?Closure $navigationProvider = null,
     ): void {
         if ($this->isProcessed) {
             throw new LogicException(message: 'The request is already processed.');
@@ -137,6 +142,7 @@ final class ContentHandler
                 locale: $localeHandler,
                 templateEngine: $templateEngine,
                 responseSender: $responseSender,
+                navigationProvider: $navigationProvider,
             );
             $view = ($route->viewFactory ?? new ClassNameViewFactory())->createView(context: $context);
             if ($view === null) {

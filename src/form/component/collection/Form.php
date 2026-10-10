@@ -10,6 +10,8 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\collection;
 
 use actra\yuf\form\component\field\CsrfTokenField;
+use actra\yuf\form\component\field\MultiToggleField;
+use actra\yuf\form\component\field\ToggleField;
 use actra\yuf\form\component\FormControl;
 use actra\yuf\form\component\FormField;
 use actra\yuf\form\FormCollection;
@@ -18,6 +20,7 @@ use actra\yuf\form\FormContext;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\form\FormRenderer;
+use actra\yuf\form\renderer\CompactFieldRenderer;
 use actra\yuf\form\renderer\DefaultFormRenderer;
 use actra\yuf\form\renderer\DefinitionListRenderer;
 use actra\yuf\html\HtmlText;
@@ -38,6 +41,7 @@ class Form extends FormCollection
     /** @var list<string> */
     public private(set) array $cssClasses = [];
     private bool $renderRequiredAbbr = true;
+    private bool $compactFields = false;
 
     public function __construct(
         public readonly FormContext $context,
@@ -78,7 +82,20 @@ class Form extends FormCollection
 
     public function getDefaultFormFieldRenderer(FormField $formField): FormRenderer
     {
+        if ($this->compactFields) {
+            return new CompactFieldRenderer(formField: $formField);
+        }
+
         return new DefinitionListRenderer(formField: $formField);
+    }
+
+    /**
+     * Renders the fields that have no renderer of their own as label and control (`CompactFieldRenderer`) instead of
+     * a definition list, e.g. for a search form. Call it before the form is rendered.
+     */
+    public function useCompactFieldRenderer(): void
+    {
+        $this->compactFields = true;
     }
 
     public function addCssClass(string $className): void
@@ -224,6 +241,39 @@ class Form extends FormCollection
         }
 
         return $allFields;
+    }
+
+    /**
+     * Whether the current value of any field differs from its initial value (`FormField::valueHasChanged()`), also
+     * of the child fields of toggle fields. The CSRF field never counts; a typed password and an uploaded file do.
+     * Meaningful after `validate()` (the posted values) or after the setters were called.
+     */
+    public function hasChanges(): bool
+    {
+        return array_any(
+            array: $this->getAllFields(),
+            callback: static fn(FormField $formField): bool => $formField->valueHasChanged()
+                || Form::hasChangedChildField(formField: $formField),
+        );
+    }
+
+    private static function hasChangedChildField(FormField $formField): bool
+    {
+        if (!$formField instanceof ToggleField && !$formField instanceof MultiToggleField) {
+            return false;
+        }
+        foreach ($formField->childrenByMainOption as $children) {
+            foreach ($children as $child) {
+                if (
+                    $child instanceof FormField
+                    && ($child->valueHasChanged() || Form::hasChangedChildField(formField: $child))
+                ) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public function dontRenderRequiredAbbr(): void

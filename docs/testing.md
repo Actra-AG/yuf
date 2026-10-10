@@ -1,21 +1,13 @@
 # Static analysis and tests in projects using yuf
 
-## PHPStan
+## PHPStan and PHPUnit
 
-yuf has no Composer autoload configuration: its classes are loaded by `actra/autoloader`, in production and in tests.
-Tell PHPStan where they are (`phpstan.neon`):
+yuf has a Composer autoload configuration (PSR-4, since v5.0.0): PHPStan and PHPUnit find its classes through
+`vendor/autoload.php`, no `scanDirectories` and no yuf path in the test bootstrap are needed. In the application,
+`Core::fromEnvironment()` still loads them with `actra/autoloader`.
 
-```neon
-parameters:
-    scanDirectories:
-        # yuf has no Composer autoload configuration (its classes are loaded by actra/autoloader)
-        - vendor/actra/yuf/src
-```
-
-## PHPUnit bootstrap
-
-The bootstrap (e.g. `tests/bootstrap.php`) loads the Composer autoloader for PHPUnit and registers `actra/autoloader`
-for yuf and the own classes. Delete the cache file of the autoloader first, so no stale class paths remain after files
+The bootstrap (e.g. `tests/bootstrap.php`) loads the Composer autoloader. Projects whose own classes have no Composer
+autoload register `actra/autoloader` for them; delete its cache file first, so no stale class paths remain after files
 have been moved:
 
 ```php
@@ -26,9 +18,6 @@ if (file_exists(filename: $autoloaderCacheFilePath)) {
     unlink(filename: $autoloaderCacheFilePath);
 }
 $autoloader = Autoloader::register(cacheFilePath: $autoloaderCacheFilePath);
-$autoloader->addPath(
-    autoloaderPath: new AutoloaderPath(path: __DIR__ . '/../vendor/actra/yuf/src/', prefix: 'actra\\yuf\\'),
-);
 $autoloader->addPath(autoloaderPath: new AutoloaderPath(path: __DIR__ . '/../app/', prefix: 'app\\'));
 ```
 

@@ -9,17 +9,20 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\table;
 
+use actra\yuf\core\Language;
 use actra\yuf\html\HtmlText;
 use actra\yuf\table\column\AbstractTableColumn;
 use actra\yuf\table\column\ActionsColumn;
 use actra\yuf\table\column\BooleanColumn;
 use actra\yuf\table\column\CallbackColumn;
 use actra\yuf\table\column\DateColumn;
+use actra\yuf\table\column\DateStyleEnum;
 use actra\yuf\table\column\DefaultColumn;
 use actra\yuf\table\column\FileSizeColumn;
 use actra\yuf\table\column\OptionsColumn;
 use actra\yuf\table\column\StripHtmlTagsColumn;
 use actra\yuf\table\TableItem;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use UnexpectedValueException;
@@ -243,17 +246,6 @@ final class TableColumnRenderingTest extends TestCase
         );
     }
 
-    public function testActionsColumnDoesNotReplacePlaceholdersOfNonScalarValues(): void
-    {
-        $actionsColumn = new ActionsColumn();
-        $actionsColumn->addIndividualActionLink(identifier: 'x', linkHtml: '<a href="[list]|[ID]">x</a>');
-
-        $this->assertSame(
-            '<td class="td-action"><a href="[list]|7">x</a></td>',
-            $actionsColumn->renderCell(tableItem: new TableItem(dataObject: (object) ['list' => [1], 'ID' => 7])),
-        );
-    }
-
     public function testActionsColumnHidesDeleteLinkOfANumberLikeItsTextValue(): void
     {
         $actionsColumn = new ActionsColumn();
@@ -369,12 +361,76 @@ final class TableColumnRenderingTest extends TestCase
         );
     }
 
-    public function testNonScalarValueOfAColumnThrows(): void
+    /**
+     * @return iterable<string, array{Language, DateStyleEnum, DateStyleEnum, string}>
+     */
+    public static function localizedDateProvider(): iterable
     {
+        $german = new Language(code: 'de', locale: 'de_CH.UTF-8');
+        $english = new Language(code: 'en', locale: 'en_US.UTF-8');
+
+        yield 'german default' => [$german, DateStyleEnum::MEDIUM, DateStyleEnum::SHORT, '05.10.2026, 08:30'];
+        yield 'german date only' => [$german, DateStyleEnum::MEDIUM, DateStyleEnum::NONE, '05.10.2026'];
+        yield 'german long date' => [$german, DateStyleEnum::LONG, DateStyleEnum::NONE, '5. Oktober 2026'];
+        yield 'german time only' => [$german, DateStyleEnum::NONE, DateStyleEnum::SHORT, '08:30'];
+        // No time in English: newer ICU versions write a narrow no-break space before "AM"
+        yield 'english medium date' => [$english, DateStyleEnum::MEDIUM, DateStyleEnum::NONE, 'Oct 5, 2026'];
+        yield 'english long date' => [$english, DateStyleEnum::LONG, DateStyleEnum::NONE, 'October 5, 2026'];
+    }
+
+    #[DataProvider('localizedDateProvider')]
+    public function testDateColumnWritesTheDateInTheStyleOfTheLocale(
+        Language $language,
+        DateStyleEnum $dateStyle,
+        DateStyleEnum $timeStyle,
+        string $expected,
+    ): void {
+        $column = new DateColumn(identifier: 'created', label: 'Date');
+        $column->useLocale(language: $language, dateStyle: $dateStyle, timeStyle: $timeStyle);
+
+        $this->assertSame(
+            '<td>' . $expected . '</td>',
+            $column->renderCell(
+                tableItem: TableColumnRenderingTest::item(values: ['created' => '2026-10-05 08:30:00']),
+            ),
+        );
+    }
+
+    public function testLocalizedDateColumnKeepsTheEmptyHandlingAndTheTimeZoneOfTheValue(): void
+    {
+        $column = new DateColumn(identifier: 'created', label: 'Date');
+        $column->setEmptyValueText(htmlText: HtmlText::fromHtml(html: '-'));
+        $column->useLocale(language: new Language(code: 'de', locale: 'de_CH'));
+
+        $this->assertSame(
+            '<td>-</td>',
+            $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['created' => ' '])),
+        );
+        $this->assertSame(
+            '<td>05.07.2026, 08:30</td>',
+            $column->renderCell(
+                tableItem: TableColumnRenderingTest::item(values: ['created' => '2026-07-05 08:30:00 +00:00']),
+            ),
+        );
+    }
+
+    public function testLocalizedDateColumnRejectsAnInvalidDate(): void
+    {
+        $column = new DateColumn(identifier: 'created', label: 'Date');
+        $column->useLocale(language: new Language(code: 'de', locale: 'de_CH'));
+
         $this->expectException(UnexpectedValueException::class);
-        $this->expectExceptionMessageIsOrContains('Column "list" holds a array, which cannot be rendered.');
-        new DefaultColumn(identifier: 'list', label: 'List')->renderCell(
-            tableItem: new TableItem(dataObject: (object) ['list' => [1]]),
+        $this->expectExceptionMessageIsOrContains('Column "created" does not hold a date');
+        $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['created' => 'yesterday-ish']));
+    }
+
+    public function testLocalizedDateColumnNeedsADateOrATimeStyle(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        new DateColumn(identifier: 'created', label: 'Date')->useLocale(
+            language: new Language(code: 'de', locale: 'de_CH'),
+            dateStyle: DateStyleEnum::NONE,
+            timeStyle: DateStyleEnum::NONE,
         );
     }
 

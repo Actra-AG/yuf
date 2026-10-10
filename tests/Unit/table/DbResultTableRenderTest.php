@@ -26,6 +26,7 @@ use actra\yuf\table\filter\TextFilterField;
 use actra\yuf\table\renderer\SortableTableHeadRenderer;
 use actra\yuf\table\table\DbResultTable;
 use actra\yuf\table\TableHelper;
+use actra\yuf\table\TableMessages;
 use actra\yuf\template\TemplateEngine;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\db\SelectRowCountingDb;
@@ -311,6 +312,36 @@ final class DbResultTableRenderTest extends TestCase
         $this->assertSame(
             '<p class="no-entry">Es wurden keine Einträge gefunden.</p>',
             $this->createTable(sql: 'SELECT id, name, age FROM users WHERE id > 99')->render(),
+        );
+    }
+
+    public function testMessagesChangeTheTextsOfTheTable(): void
+    {
+        $messages = new TableMessages(noData: 'Nothing found.', numResults: '[amount] results');
+        $emptyTable = TableHelper::createDbResultTable(
+            identifier: 'users',
+            db: SqliteDatabase::create(),
+            selectQuery: 'SELECT id FROM users WHERE id > 99',
+            templateEngine: $this->templateEngine,
+            httpRequest: HttpRequestFactory::create(),
+            session: $this->session,
+            messages: $messages,
+        );
+        $fullTable = TableHelper::createDbResultTable(
+            identifier: 'users',
+            db: SqliteDatabase::create(),
+            selectQuery: 'SELECT id FROM users',
+            templateEngine: $this->templateEngine,
+            httpRequest: HttpRequestFactory::create(),
+            session: $this->session,
+            messages: $messages,
+        );
+        $fullTable->addColumn(abstractTableColumn: TableHelper::createDefaultColumn(identifier: 'id', label: 'Id'));
+
+        $this->assertSame('<p class="no-entry">Nothing found.</p>', $emptyTable->render());
+        $this->assertStringContainsString(
+            '<p class="search-result"><strong>3</strong> results</p>',
+            $fullTable->render(),
         );
     }
 

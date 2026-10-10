@@ -32,6 +32,24 @@ final readonly class PathVars
     }
 
     /**
+     * All trimmed values in the order of their numbers.
+     *
+     * @return list<string>
+     */
+    public function list(): array
+    {
+        $values = $this->values;
+        ksort(array: $values);
+
+        return array_values(array: array_map(callback: trim(...), array: $values));
+    }
+
+    public function count(): int
+    {
+        return count(value: $this->values);
+    }
+
+    /**
      * Strictly integer-formatted values only (same rules as `DbRow::getInt()`): optional minus, digits, nothing else
      * (no "+", no spaces). Anything else, including values outside the integer range, returns `null`.
      */

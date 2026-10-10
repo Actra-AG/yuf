@@ -87,9 +87,7 @@ final class ActionsColumn extends AbstractTableColumn
         // One pass over every link: a value is never searched for placeholders again
         $replacements = [];
         foreach ($tableItem->data as $key => $value) {
-            if ($value === null || is_scalar(value: $value)) {
-                $replacements['[' . $key . ']'] = HtmlEncoder::encode(value: $value);
-            }
+            $replacements['[' . $key . ']'] = HtmlEncoder::encode(value: $value);
         }
         foreach ($actionLinks as $key => $link) {
             $actionLinks[$key] = strtr(string: $link, from: $replacements);
@@ -111,7 +109,7 @@ final class ActionsColumn extends AbstractTableColumn
         ) {
             return false;
         }
-        $value = $tableItem->getScalarValue(name: $this->hideDeleteLinkField);
+        $value = $tableItem->getRawValue(name: $this->hideDeleteLinkField);
 
         return ($value === null ? null : (string) $value) === $this->hideDeleteLinkValue;
     }

@@ -22,6 +22,8 @@ use Override;
 final class RecordingResponseSender implements ResponseSender
 {
     public ?HttpResponse $sentResponse = null;
+    /** @var list<Closure(): void> */
+    private array $afterResponseCallbacks = [];
 
     /**
      * Runs the action with a new sender; the action has to send a response, which is returned.
@@ -51,5 +53,29 @@ final class RecordingResponseSender implements ResponseSender
         $this->sentResponse = $httpResponse;
 
         throw new ResponseSentException(message: 'The response was sent.');
+    }
+
+    #[Override]
+    public function afterResponse(Closure $callback): void
+    {
+        $this->afterResponseCallbacks[] = $callback;
+    }
+
+    /**
+     * Runs (once, in registration order) the callbacks that the code registered with `afterResponse()`, like PHP
+     * does at the end of the script; the test calls it when it wants to see what happens after the response.
+     */
+    public function runAfterResponseCallbacks(): void
+    {
+        $callbacks = $this->afterResponseCallbacks;
+        $this->afterResponseCallbacks = [];
+        foreach ($callbacks as $callback) {
+            $callback();
+        }
+    }
+
+    public function countAfterResponseCallbacks(): int
+    {
+        return count(value: $this->afterResponseCallbacks);
     }
 }

@@ -125,7 +125,9 @@ final class CheckboxItemRenderer extends FormRenderer
             return BooleanField::CHECKED_KEY;
         }
 
-        return (string) key(array: $this->checkboxOptionsField->formOptions->data);
+        $keys = $this->checkboxOptionsField->formOptions->getKeys();
+
+        return $keys === [] ? '' : $keys[0];
     }
 
     private function isChecked(string $optionKey): bool

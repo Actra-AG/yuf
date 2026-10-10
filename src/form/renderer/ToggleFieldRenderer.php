@@ -35,8 +35,8 @@ final class ToggleFieldRenderer extends FormRenderer
     public function createHtmlTag(): HtmlTag
     {
         $ulTag = $this->createListTag();
-        foreach ($this->toggleField->formOptions->data as $key => $htmlText) {
-            $ulTag->addTag(htmlTag: $this->createOptionTag(key: (string) $key, htmlText: $htmlText));
+        foreach ($this->toggleField->formOptions->getItems() as $option) {
+            $ulTag->addTag(htmlTag: $this->createOptionTag(key: $option->key, htmlText: $option->htmlText));
         }
 
         return $this->displayLegend ? $this->wrapInFieldset(ulTag: $ulTag) : $this->wrapInDiv(ulTag: $ulTag);

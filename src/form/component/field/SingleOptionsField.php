@@ -18,6 +18,7 @@ use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
 use LogicException;
 use Override;
+use UnexpectedValueException;
 
 /**
  * An options field with one selected key. The value is the key, `''` means none.
@@ -51,6 +52,17 @@ abstract class SingleOptionsField extends OptionsField
     public function getValueAsString(): string
     {
         return $this->value;
+    }
+
+    /**
+     * The selected key as integer, `null` if nothing is selected. For options added with
+     * `FormOptions::addIntItem()`; the input is already checked against the options.
+     *
+     * @throws UnexpectedValueException If the selected key is not an integer.
+     */
+    public function getValueAsInt(): ?int
+    {
+        return $this->value === '' ? null : $this->keyToInt(key: $this->value);
     }
 
     /**

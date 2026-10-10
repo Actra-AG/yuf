@@ -58,7 +58,6 @@ final class HttpResponseTest extends TestCase
             cspPolicySettings: null,
             nonce: null,
             httpRequest: HttpRequestFactory::create(),
-            clock: $this->clock,
         );
 
         $headers = $httpResponse->listHeaders();
@@ -104,7 +103,6 @@ final class HttpResponseTest extends TestCase
             contentString: '{"a":1}',
             contentType: ContentType::createJson(),
             httpRequest: HttpRequestFactory::create(),
-            clock: $this->clock,
         );
 
         $headers = $httpResponse->listHeaders();
@@ -127,7 +125,6 @@ final class HttpResponseTest extends TestCase
                 'If-None-Match' => '*',
                 'If-Modified-Since' => gmdate(format: 'D, d M Y H:i:s', timestamp: HttpResponseTest::NOW) . ' GMT',
             ]),
-            clock: $this->clock,
         );
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $httpResponse->httpStatusCode);

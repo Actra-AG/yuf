@@ -24,7 +24,7 @@ final class BooleanColumn extends AbstractTableColumn
     #[Override]
     protected function renderCellValue(TableItem $tableItem): string
     {
-        $value = $tableItem->getScalarValue(name: $this->identifier);
+        $value = $tableItem->getRawValue(name: $this->identifier);
 
         if ($value === null) {
             return '';

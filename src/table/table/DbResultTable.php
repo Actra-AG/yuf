@@ -9,20 +9,27 @@ declare(strict_types=1);
 
 namespace actra\yuf\table\table;
 
+use actra\yuf\common\CsvFile;
 use actra\yuf\core\HttpRequest;
+use actra\yuf\core\NativeResponseSender;
+use actra\yuf\core\ResponseSender;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
 use actra\yuf\session\Session;
 use actra\yuf\session\SessionSectionEnum;
 use actra\yuf\table\column\AbstractTableColumn;
+use actra\yuf\table\column\ActionsColumn;
+use actra\yuf\table\column\CallbackColumn;
 use actra\yuf\table\filter\TableFilter;
 use actra\yuf\table\renderer\SortableTableHeadRenderer;
 use actra\yuf\table\renderer\TablePaginationRenderer;
 use actra\yuf\table\TableItem;
 use actra\yuf\table\TableItemCollection;
+use actra\yuf\table\TableMessages;
 use actra\yuf\table\TableSessionState;
 use actra\yuf\table\TableSortDirectionEnum;
 use actra\yuf\template\TemplateEngine;
+use Generator;
 use InvalidArgumentException;
 use Override;
 
@@ -48,6 +55,7 @@ class DbResultTable extends SmartTable
     public private(set) array $additionalLinkParameters = [];
     private ?int $totalAmount = null;
     private bool $filledDataBySelectQuery = false;
+    private bool $isFilterAndSortingApplied = false;
     private ?AbstractTableColumn $defaultSortColumn = null;
     /** Whether the current sorting has been chosen by the user instead of being the default one. */
     private bool $hasUserDefinedSorting = false;
@@ -60,6 +68,7 @@ class DbResultTable extends SmartTable
      * @param Session $session Keeps sorting and page of the user (`ViewContext::$session`)
      * @param int $itemsPerPage Rows per page, at least 1
      * @param bool $limitToOnePage Whether a result that does not fit on one page is cut instead of paginated
+     * @param TableMessages $messages The texts of the table (German by default)
      */
     public function __construct(
         string $identifier,
@@ -73,6 +82,7 @@ class DbResultTable extends SmartTable
         ?SortableTableHeadRenderer $sortableTableHeadRenderer = null,
         private readonly int $itemsPerPage = 25,
         public bool $limitToOnePage = false,
+        TableMessages $messages = new TableMessages(),
     ) {
         if ($itemsPerPage < 1) {
             throw new InvalidArgumentException(
@@ -84,13 +94,19 @@ class DbResultTable extends SmartTable
             identifier: $identifier,
             tableHeadRenderer: $sortableTableHeadRenderer ?? new SortableTableHeadRenderer(),
             tableItemCollection: new TableItemCollection(),
+            messages: $messages,
         );
-        $this->noDataHtml = DbResultTable::FILTER . $this->noDataHtml;
         $this->fullHtml = DbResultTable::FILTER . '<div class="table-meta table-meta-header">'
             . SmartTable::TOTAL_AMOUNT . DbResultTable::PAGINATION . '</div><div class="table-wrap">'
             . SmartTable::TABLE . '</div>' . DbResultTable::TABLE_FOOTER;
         $this->state = new TableSessionState(session: $session, section: SessionSectionEnum::TABLES);
         $this->tablePaginationRenderer = $tablePaginationRenderer ?? new TablePaginationRenderer();
+    }
+
+    #[Override]
+    protected function getNoDataHtml(): string
+    {
+        return DbResultTable::FILTER . parent::getNoDataHtml();
     }
 
     #[Override]
@@ -130,22 +146,8 @@ class DbResultTable extends SmartTable
             return;
         }
 
-        $this->tableFilter?->validate(dbResultTable: $this);
-        $this->initSorting();
+        $this->applyFilterAndSorting();
         $this->initPaginationPage();
-
-        $sortColumn = $this->getCurrentSortColumn();
-        if ($sortColumn !== null && $sortColumn !== '') {
-            if ($this->hasUserDefinedSorting) {
-                // A sorting which has been chosen by the user replaces the one of the given DbQuery
-                // (e.g. a sorting by the relevance of a fulltext search).
-                $this->dbQuery->clearOrderParts();
-            }
-            $this->dbQuery->addOrderPart(
-                column: $sortColumn,
-                ascending: $this->getCurrentSortDirection()->isAscending(),
-            );
-        }
         $res = $this->dbQuery->selectFromDb(
             db: $this->db,
             offset: ($this->getCurrentPaginationPage() - 1) * $this->itemsPerPage,
@@ -156,6 +158,89 @@ class DbResultTable extends SmartTable
         }
         $this->filledDataBySelectQuery = true;
         $this->filledAmount = count(value: $res);
+    }
+
+    /**
+     * Sends all rows of the table as CSV download and ends the script: the rows the table shows with its current
+     * filter and sorting, but not only the current page. Nothing is held in memory (the rows are read and written one
+     * by one), and the page of the table is not changed. Call it before the table renders anything.
+     *
+     * The first row has the labels of the columns (tags removed, entities decoded), then one row per result row with
+     * the values as the database delivers them (`NULL` is an empty cell, so no cell moves). A column without data of
+     * its own (`ActionsColumn`, `CallbackColumn`) is not exported; the other columns need a column of their
+     * identifier in the query.
+     *
+     * @param string $fileName Name of the download, chosen by the application (never user input)
+     */
+    public function exportCsv(string $fileName, ResponseSender $responseSender = new NativeResponseSender()): never
+    {
+        $exportColumns = array_filter(
+            array: $this->columns,
+            callback: static fn(AbstractTableColumn $column): bool => !$column instanceof ActionsColumn
+                && !$column instanceof CallbackColumn,
+        );
+        $this->applyFilterAndSorting();
+        $csvFile = new CsvFile(
+            fileName: $fileName,
+            headersList: array_values(
+                array: array_map(
+                    callback: static fn(AbstractTableColumn $column): string => html_entity_decode(
+                        string: strip_tags(string: $column->label),
+                        flags: ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5,
+                        encoding: 'UTF-8',
+                    ),
+                    array: $exportColumns,
+                ),
+            ),
+        );
+        $csvFile->pushDownloadAndExit(
+            httpRequest: $this->httpRequest,
+            responseSender: $responseSender,
+            moreRows: $this->iterateExportRows(columns: array_keys(array: $exportColumns)),
+        );
+    }
+
+    /**
+     * @param list<string> $columns Identifiers of the columns to export
+     *
+     * @return Generator<int, list<bool|float|int|string>>
+     */
+    private function iterateExportRows(array $columns): Generator
+    {
+        $dbQueryData = $this->dbQuery->getDbQueryData(offset: 0, rowCount: PHP_INT_MAX);
+        foreach ($this->db->iterateRows(sql: $dbQueryData->query, parameters: $dbQueryData->params) as $row) {
+            $cells = [];
+            foreach ($columns as $column) {
+                $cells[] = $row->getScalar(column: $column) ?? '';
+            }
+            yield $cells;
+        }
+    }
+
+    /**
+     * Validates the filter and applies the sorting of the user (else the default one) to the query, once.
+     */
+    private function applyFilterAndSorting(): void
+    {
+        if ($this->isFilterAndSortingApplied) {
+            return;
+        }
+        $this->isFilterAndSortingApplied = true;
+        $this->tableFilter?->validate(dbResultTable: $this);
+        $this->initSorting();
+        $sortColumn = $this->getCurrentSortColumn();
+        if ($sortColumn === null || $sortColumn === '') {
+            return;
+        }
+        if ($this->hasUserDefinedSorting) {
+            // A sorting which has been chosen by the user replaces the one of the given DbQuery
+            // (e.g. a sorting by the relevance of a fulltext search).
+            $this->dbQuery->clearOrderParts();
+        }
+        $this->dbQuery->addOrderPart(
+            column: $sortColumn,
+            ascending: $this->getCurrentSortDirection()->isAscending(),
+        );
     }
 
     private function initSorting(): void

@@ -343,4 +343,24 @@ final class NavigationItemTest extends TestCase
         $this->assertCount(1, $data->items);
         $this->assertSame('First', $data->items[0]->toTemplateData()->title);
     }
+
+    public function testCollectionKnowsItsKeysOnItsLevel(): void
+    {
+        $child = new NavigationItemCollection();
+        $child->addItem(navigationItem: NavigationItemTest::item(navKey: 'child'));
+        $collection = new NavigationItemCollection();
+        $collection->addItem(
+            navigationItem: NavigationItemTest::item(
+                navKey: 'main',
+                requiredAccessRights: AccessRightCollection::createFromStringArray(input: ['admin']),
+                childNavigation: $child,
+            ),
+        );
+
+        $this->assertTrue($collection->has(navKey: 'main'), 'also without the access right of the item');
+        $this->assertFalse($collection->has(navKey: 'child'), 'children are not searched');
+        $this->assertFalse($collection->has(navKey: 'Main'));
+        $this->assertFalse($collection->has(navKey: ''));
+        $this->assertFalse(new NavigationItemCollection()->has(navKey: 'main'));
+    }
 }

@@ -14,6 +14,7 @@ use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\core\RecordingResponseSender;
+use actra\yuf\tests\Double\core\ResponseSentException;
 use Generator;
 use InvalidArgumentException;
 use Override;
@@ -279,7 +280,25 @@ final class CsvFileTest extends TestCase
         $path = $sentResponse->getContentFilePath();
         $this->assertNotNull($path);
         $this->assertSame("a\nb\n", file_get_contents(filename: $path));
-        // The temporary file is removed at the end of the script
         unlink(filename: $path);
+    }
+
+    public function testPushDownloadRemovesTheTemporaryFileAfterTheResponse(): void
+    {
+        $csvFile = new CsvFile(fileName: 'export.csv', headersList: ['a']);
+        $sender = new RecordingResponseSender();
+
+        try {
+            $csvFile->pushDownloadAndExit(httpRequest: HttpRequestFactory::create(), responseSender: $sender);
+        } catch (ResponseSentException) {
+            // The double throws instead of ending the process
+        }
+        $path = $sender->sentResponse?->getContentFilePath();
+
+        $this->assertNotNull($path);
+        $this->assertFileExists($path);
+        $this->assertSame(1, $sender->countAfterResponseCallbacks());
+        $sender->runAfterResponseCallbacks();
+        $this->assertFileDoesNotExist($path);
     }
 }

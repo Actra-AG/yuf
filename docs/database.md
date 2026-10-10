@@ -64,6 +64,8 @@ $users = array_map(callback: User::fromRow(...), array: $db->selectRows(sql: 'SE
 - Getters: `getString`, `getInt`, `getFloat`, `getDecimal` (canonical decimal string like `'12.50'`), `getBool`
   (`0`/`1`), `getDateTimeImmutable` (DATE, DATETIME, TIMESTAMP), `getEnum`, each with a `getNullable…` variant (except
   `getBool`), and `has()`.
+- `getStringList(column:, separator: ',')` splits a string column (`'read,write'`) into `list<string>`: `[]` for `NULL`
+  and `''`, empty parts are skipped. Like `getString()` it does not trim (`'a, b'` gives `['a', ' b']`).
 - `selectRow()` returns `null` for no row and throws `DbRowCountException` for more than one (it reads at most two).
 - `iterateRows()` (`DbSelectStmt::executeAndIterate()`) returns the rows one by one, for exports and cron jobs over
   large tables. A CSV export passes them to `CsvFile::pushDownloadAndExit(moreRows: …)`, which writes them one by one.
@@ -73,7 +75,8 @@ $users = array_map(callback: User::fromRow(...), array: $db->selectRows(sql: 'SE
 ### Typed values in table columns
 
 Columns of a `DbResultTable` or `SmartTable` get each row as `TableItem`. `getRow()` returns it as `DbRow`;
-`renderValue()` returns the HTML-encoded value, `getRawValue()` the untyped one.
+`renderValue()` returns the HTML-encoded value, `getRawValue()` the value as the database delivers it (a scalar or
+`NULL`: `TableItem` holds nothing else).
 
 ```php
 $dbResultTable->addColumn(abstractTableColumn: new CallbackColumn(
@@ -103,6 +106,7 @@ $query->addOrderPart(column: 'users.name');
   `GROUP BY`, `HAVING`, `ORDER BY`, `LIMIT` and `UNION` are rejected: sorting and paging are added by `DbQuery`
   (`addOrderPart()`, the offset and row count of `selectFromDb()`). `getTotalAmount()` counts the distinct rows of a
   `SELECT DISTINCT`.
+- `selectRowsFromDb(db:, offset:, rowCount:)` is `selectFromDb()` with typed rows: `list<DbRow>` (via `selectRows()`).
 - Every added part has exactly one parameter per `?`. Joins go between `FROM` and `WHERE`; each `addWherePart()`
   condition is wrapped in parentheses and combined with `AND`.
 - `addOrderPart()` without `parameters` accepts column names only (letters, digits, `_`, `.`, backticks; several

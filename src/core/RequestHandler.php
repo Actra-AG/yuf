@@ -21,6 +21,10 @@ final class RequestHandler
     public readonly int $countPathParts;
     public readonly RouteCollection $defaultRoutesByLanguage;
     /**
+     * The login path of the route collection (`RouteCollection::$loginPath`), `null` for none.
+     */
+    public readonly ?string $loginPath;
+    /**
      * The language of the request: the first available language, after `resolveRoute()` the language of the route if
      * it has one. Stays as far as resolved when `resolveRoute()` throws, so error pages use it.
      */
@@ -58,6 +62,7 @@ final class RequestHandler
         $this->countPathParts = count(value: $this->pathParts);
         $this->fileName = trim(string: array_last(array: $this->pathParts));
         $this->defaultRoutesByLanguage = $this->initDefaultRoutes();
+        $this->loginPath = $routeCollection->loginPath;
     }
 
     /**

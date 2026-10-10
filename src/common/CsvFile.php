@@ -139,7 +139,8 @@ final class CsvFile
     }
 
     /**
-     * Sends the file as download and ends the script. The temporary file is removed at the end of the script.
+     * Sends the file as download and ends the script. The temporary file is removed after the response
+     * (`ResponseSender::afterResponse()`).
      *
      * @param iterable<array<array-key, bool|float|int|string|null>> $moreRows Written after the added rows, one by one
      */
@@ -149,7 +150,7 @@ final class CsvFile
         iterable $moreRows = [],
     ): never {
         $path = $this->createTemporaryFile(moreRows: $moreRows);
-        register_shutdown_function(static function () use ($path): void {
+        $responseSender->afterResponse(callback: static function () use ($path): void {
             if (is_file(filename: $path)) {
                 unlink(filename: $path);
             }

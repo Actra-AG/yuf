@@ -57,7 +57,7 @@ See [.env.example.php](.env.example.php), [index.example.php](index.example.php)
 ## Upgrading
 
 Read [UPGRADE.md](UPGRADE.md) before `composer update`: minor versions may contain breaking changes (marked ⚠️).
-Libraries that use yuf require it with `~4.67.0` (minor version locked).
+Libraries that use yuf require it with `~5.0.0` (minor version locked).
 
 ## Contributing
 

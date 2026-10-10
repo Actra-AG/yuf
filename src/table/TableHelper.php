@@ -32,12 +32,16 @@ use actra\yuf\template\TemplateEngine;
  */
 final class TableHelper
 {
-    public static function createTable(string $identifier, ?TableHeadRenderer $tableHeadRenderer = null): SmartTable
-    {
+    public static function createTable(
+        string $identifier,
+        ?TableHeadRenderer $tableHeadRenderer = null,
+        TableMessages $messages = new TableMessages(),
+    ): SmartTable {
         return new SmartTable(
             identifier: $identifier,
             tableHeadRenderer: $tableHeadRenderer ?? new TableHeadRenderer(),
             tableItemCollection: new TableItemCollection(),
+            messages: $messages,
         );
     }
 
@@ -56,6 +60,7 @@ final class TableHelper
         ?TablePaginationRenderer $tablePaginationRenderer = null,
         ?SortableTableHeadRenderer $sortableTableHeadRenderer = null,
         int $itemsPerPage = 25,
+        TableMessages $messages = new TableMessages(),
     ): DbResultTable {
         return new DbResultTable(
             identifier: $identifier,
@@ -68,6 +73,7 @@ final class TableHelper
             tablePaginationRenderer: $tablePaginationRenderer,
             sortableTableHeadRenderer: $sortableTableHeadRenderer,
             itemsPerPage: $itemsPerPage,
+            messages: $messages,
         );
     }
 

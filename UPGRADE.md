@@ -1,274 +1,170 @@
 # Upgrade
 
 Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `composer update`. Older versions:
-[v4.0.0–v4.49.0](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
+[v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
-## v4.67.3 (2026-10-09)
+## v5.0.0 (2026-10-10)
 
-- The adapted files of `src/phone/` and `src/mailer/` name source, original authors and changes in a second docblock
-  after `declare(strict_types=1);`. Comments only, no code change.
+### ⚠️ `AuthUser::$password` is nullable, `ACCESS_DO_PASSWORD_LOGIN` is removed
 
-## v4.67.2 (2026-10-09)
-
-- `SmtpTransport`, `StreamSmtpTransport` and `SmtpDataFormatter` are derived from PHPMailer too and now declared as
-  LGPL-2.1-only, like `SmtpMailer`. No code changes.
-
-## v4.67.1 (2026-10-09)
-
-- The license declaration is now `MIT AND LGPL-2.1-only AND Apache-2.0`: the mailer classes derived from PHPMailer
-  (including `SmtpMailer`) are LGPL-2.1-only, `src/phone/` is Apache-2.0. No code changes; projects of any license,
-  including proprietary ones, may still use yuf ([README.md](README.md#license)).
-
-## v4.67.0 (2026-10-09)
-
-- New `BaseView::respondNotModifiedIfUnchanged(dataVersion:)`: a page without personal data answers `304` before it
-  is rendered when the browser has its version ([docs/views.md](docs/views.md)).
-- `If-None-Match` also matches the ETags that Apache changes for compressed responses (`"…-gzip"`): files are answered
-  with `304` behind Apache's compression too.
-
-## v4.66.0 (2026-10-09)
-
-### ⚠️ Without `debug`, templates are not checked for changes
-
-`checkTemplateChanges` (`.env.php`) follows `debug` when it is not set. In production, delete `app/cache/v*/` on every
-deployment, or set `'checkTemplateChanges' => true` ([docs/setup.md](docs/setup.md)).
-
-### ⚠️ `MicrosoftClientCredentialsTokenProvider` requires `tokenCache:`
-
-Before: `new MicrosoftClientCredentialsTokenProvider(tenantId: …, clientId: …, clientSecret: …)`. After: add
-`tokenCache: $core->fileCache` (the token serves the next requests), or `tokenCache: null`.
-
-### ⚠️ The mailers require `serverNameCache:`
-
-`SmtpMailer`, `GraphMailer` and `MailMailer` keep the host name of the server (reverse DNS) for a day. Before:
-`new SmtpMailer(serverAddress: …, hostName: …, smtpUserName: …, smtpPassword: …)`. After: add
-`serverNameCache: $core->fileCache`, or `serverNameCache: null`. `ReverseDnsServerNameResolver` requires `cache:`.
-
-### ⚠️ `FileLogger` requires `mailer:`
-
-Before: `new FileLogger(logEmailRecipient: …, logDirectory: …, httpRequest: …)`. After: add `mailer: $mailer` (see
-[docs/setup.md](docs/setup.md)), or `mailer: null` for `mail()`. `Core` creates its default logger with `mailer: null`.
-
-### Other changes
-
-- New `Core::$fileCache` (`FileCache` in `<cache directory>values/`).
-
-## v4.65.0 (2026-10-09)
-
-- Phone numbers: the metadata is loaded once per request (`PhoneMetaDataRepository::shared()`); parsing, validating and
-  formatting a number is about five times faster.
-- Faster domain and e-mail checks (keyed lookup of the top-level domains).
-- Search texts use the first 20 words (`SearchQueryBuilder::MAX_SEARCH_WORDS`), the rest is ignored.
-- Fix: the text between the variables of a route path is literal (before: `.` in `/v1.0/${fileName}` matched any
-  character).
-
-## v4.64.0 (2026-10-09)
-
-- New `FileCache`: string values with a lifetime in files, for results that should survive the request.
-- `MicrosoftClientCredentialsTokenProvider` takes an optional `tokenCache:`, `ReverseDnsServerNameResolver` an
-  optional `cache:` ([docs/mail.md](docs/mail.md)).
-- `FileLogger` sends the mail of a new issue after the response (`mailAfterResponse: false` sends it at once).
-- Shorter connect timeouts: cURL default, `GraphMailer` and the token provider 3 seconds (before 10), the signing keys
-  of Microsoft 5 seconds (before 10), the port 25 check of e-mail domains 2 seconds (before 5).
-
-## v4.63.0 (2026-10-09)
-
-- Requires `actra/autoloader` `~1.2.0` (PHP 8.5, atomic cache file).
-- MySQL connections give up after 3 seconds instead of 60 (`DbSettings::$connectTimeoutInSeconds`).
-- New `FrameworkDb::iterateRows()` and `DbSelectStmt::executeAndIterate()` return rows one by one; `CsvFile` writes
-  rows of the new `moreRows:` argument one by one ([docs/database.md](docs/database.md)).
-- `selectRows()` builds the rows without a second copy; `selectRow()` reads at most two rows, so the message of its
-  `DbRowCountException` says "more than one row" instead of the exact count.
-- `DbResultTable` skips the `COUNT` query on a last page that is not full.
-- Fix: `DbQuery::getTotalAmount()` counts the distinct rows of a `SELECT DISTINCT` (before: all rows).
-
-## v4.62.0 (2026-10-09)
-
-- `Core::fromEnvironment()` keeps the cache of the autoloader in the cache directory of the application
-  (`app/cache/autoloader.php`) instead of `vendor/actra/autoloader/src/cache/`. The old file can be deleted.
-
-## v4.61.0 (2026-10-09)
-
-- Faster templates: a template is looked up once per request, members of objects are read without new reflection
-  objects, snippets that are no templates are read once.
-- New optional `.env.php` key `checkTemplateChanges` (default `true`). With `false`, compiled templates are used
-  without comparing them with the templates; delete `app/cache/v*/` on every deployment
-  ([docs/setup.md](docs/setup.md)).
-
-## v4.60.0 (2026-10-09)
-
-- The language of a route no longer starts the session: it is remembered as preferred language after the view, only
-  if the view used the session anyway. Visitors with a session cookie no longer get a session lock on every page.
-- `RequestHandler::resolveRoute()` no longer remembers the language; `Core` calls the new
-  `RequestHandler::rememberPreferredLanguage()`. Only code that resolves routes itself must call it.
-
-## v4.59.0 (2026-10-09)
-
-### ⚠️ Generated content is not stored by browsers
-
-HTML, JSON and text responses send `Cache-Control: private, no-store` and no ETag or `Last-Modified` (before:
-`private, must-revalidate` with both). They are never answered with `304`; this fixes stale pages when the same URL was
-requested twice within one second. A view that wants a cacheable response sets the headers itself.
-
-### Other changes
-
-- File responses: quoted ETag, `If-None-Match` with lists and weak comparison (takes precedence over
-  `If-Modified-Since`), `Cache-Control` with `max-age`, new optional `isPublic:` and `isImmutable:` of
-  `createResponseFromFilePath()`, no `Connection: Close` on `304` ([docs/views.md](docs/views.md)).
-- `sendAndExit()` closes a started session before the content is sent and streams files without output buffers.
-- The `clock:` argument of `createHtmlResponse()` and `createResponseFromString()` is not used any more.
-
-## v4.58.0 (2026-10-09)
-
-- `FileLogger` sends new issues with a mailer (`SmtpMailer`, `GraphMailer`) when it gets `mailer:` and
-  `mailSenderAddress:`, with `mail()` as fallback if the mailer fails. Without them it mails with `mail()` as before
-  ([docs/setup.md](docs/setup.md)).
-- `ClassNameViewFactory` takes an optional `create:` closure to create the view with further dependencies
-  ([docs/views.md](docs/views.md)).
-
-## v4.57.6 (2026-10-09)
-
-- The package no longer contains the empty plan directories in `docs/`. No code change.
-
-## v4.57.5 (2026-10-09)
-
-- The documentation moved from `README.md` to `docs/` and is part of the package now; upgrade notes up to v4.49.0 are
-  in `docs/upgrade/`. No code change.
-
-## v4.57.4 (2026-10-08)
-
-- Documentation: PHPStan and PHPUnit setup in projects using yuf ([docs/testing.md](docs/testing.md)).
-
-## v4.57.3 (2026-10-08)
-
-- Documentation: lowercase class names of `ClassNameViewFactory` views are an allowed exception
-  ([docs/views.md](docs/views.md)).
-
-## v4.57.2 (2026-10-08)
-
-- Documentation: error messages of forms use texts with named placeholders ([docs/forms.md](docs/forms.md)).
-
-## v4.57.1 (2026-10-08)
-
-- Documentation: rules for forms ([docs/forms.md](docs/forms.md)).
-
-## v4.57.0 (2026-10-08)
-
-### ⚠️ `acceptRedirectionResponseCode()` accepts 302, 307 and 308
-
-Before, only 301 and 303 were accepted. Redirects are still not followed (the target is in the `Location` header).
-Code that relied on 302, 307 or 308 being an error checks `$response->responseHttpCode` itself. Without
-`acceptRedirectionResponseCode()` every status of 300 or more is an error; 300, 304, 305 and 306 are always errors.
-
-### ⚠️ New `HttpStatusCodeEnum::HTTP_PERMANENT_REDIRECT`
-
-A 308 answer has `CurlResponse::$responseHttpCode` `HTTP_PERMANENT_REDIRECT` (before: `HTTP_UNKNOWN`).
-
-## v4.56.0 (2026-10-08)
-
-- New `GraphMailer` and `MicrosoftClientCredentialsTokenProvider`: send mail through the Microsoft Graph API
-  ([docs/mail.md](docs/mail.md)).
-
-## v4.55.0 (2026-10-08)
-
-### ⚠️ `SmtpMailer` chooses the authentication method from the `AUTH` line of the server
-
-Before, `AUTH LOGIN` was always used. Now a server that announces `PLAIN` gets `AUTH PLAIN`, otherwise `LOGIN`; a
-server that announces neither (e.g. only `CRAM-MD5`) aborts with a `MailerException`. Credentials with a NUL character
-cannot be sent with `PLAIN`. To keep the old behaviour, pass `authMethod: SmtpAuthMethodEnum::LOGIN`.
-
-### Other changes
-
-- New optional arguments of `SmtpMailer`: `authMethod:` and `oAuthTokenProvider:` (`XOAUTH2`), interface
-  `OAuthTokenProvider` ([docs/mail.md](docs/mail.md)).
-
-## v4.54.0 (2026-10-08)
-
-### ⚠️ `PhoneNumberField` accepts valid numbers only
-
-Before, every number of a possible length was accepted (e.g. `044 668 18 00 / 12`). Now the number must be valid
-(`PhoneNumber::isValid()`); an invalid number stays as typed. Check forms that accepted unusual numbers (extensions with
-a slash, unassigned prefixes, test numbers). Stored numbers are not affected.
-
-## v4.53.1 (2026-10-08)
-
-- Phone numbers are parsed, validated and rendered like libphonenumber: leading zeros are kept in every country (e.g.
-  Gabon `01441234`), the national format of Argentina is corrected. `PhoneMatcher::matchesCompletely()` (internal) is
-  removed.
-
-## v4.53.0 (2026-10-08)
-
-- New `PhoneNumberTypeEnum`, `PhoneNumber::isValid()`, `getType()` and `isValidForType()`.
-- New `PhoneRenderer::renderE164Format()` and `renderNationalFormat()`.
-- New `allowedNumberTypes:` and `numberTypeErrorMessage:` of `PhoneNumberField`
-  ([docs/phone-numbers.md](docs/phone-numbers.md)).
-- MIME boundaries and message ids have 42 hexadecimal characters.
-
-## v4.52.1 (2026-10-08)
-
-- Code style only.
-
-## v4.52.0 (2026-10-08)
-
-### ⚠️ `IbanValidator` checks the length per country
-
-An IBAN must have the length of its country (CH 21, DE 22, …, SWIFT IBAN registry). `IbanNumberField` rejects other
-lengths now.
-
-### ⚠️ `IpValidator::isInWhitelist()` takes IPv4-mapped IPv6 addresses as IPv4
-
-`::ffff:192.0.2.1` matches the entry `192.0.2.0/24`, and the entry `::ffff:192.0.2.1` matches `192.0.2.1`. Check
-whitelists with `::ffff:0:0/96`: it admits all IPv4 clients now.
-
-### ⚠️ `CountryCodeEnum::AA` and `::UR` are removed
-
-Neither is an ISO 3166-1 code. Replace stored values with the right code.
-
-### ⚠️ Duplicate identifiers throw
-
-`TableFilter::addPrimaryField()` / `addSecondaryField()` with an identifier already used and
-`NavigationItemCollection::addItem()` with a `navKey` already used throw an `InvalidArgumentException` (before: the
-second replaced the first).
-
-### ⚠️ `DateFilterField` accepts date formats only
-
-Only `Y-m-d`, `Y-n-j`, `d.m.Y`, `j.n.Y` (optionally with ` H:i` or ` H:i:s`) and the `renderFormat` of the field.
-Before, everything `DateTimeImmutable` understood (`tomorrow`, `+1 day`, `01/03/2026`). An unreadable value in the
-session is ignored instead of throwing.
-
-## v4.51.0 (2026-10-08)
-
-### ⚠️ `FormRenderer::prepare()` is replaced by `createHtmlTag()`
-
-Renderers build a new tag on every call, so a component can be rendered more than once. `prepare()`,
-`prepareHtmlTag()`, `getHtmlTag()` and `setHtmlTag()` are removed.
-
-Before:
+`AuthUser::$password` is `?Password`: `null` is a user without password. A password login of such a user gives
+`ERROR_NO_PASSWORD_LOGIN_ACTIVE`, is not counted as wrong attempt and is not rehashed (it costs the time of a
+verification, like an unknown user). Web token login, `verifyCredentials()` with `null`, `precheck()` and
+`logInVerifiedUser()` work without a password. Before: a fake password and the right added when a password exists.
 
 ```php
-public function prepare(): void { …; $this->setHtmlTag(htmlTag: $tag); }
-$tag->addTag(htmlTag: $renderer->prepareHtmlTag());
+// Before
+$accessRights = AccessRightCollection::createFromStringArray(input: $rights);
+if ($hasPassword) {
+    $accessRights->add(accessRight: AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN);
+}
+new MyAuthUser(
+    // …
+    accessRightCollection: $accessRights,
+    password: $hasPassword ? new Password(salt: $salt, hash: $hash) : new Password(salt: '', hash: '!'),
+);
+
+// After
+new MyAuthUser(
+    // …
+    accessRightCollection: AccessRightCollection::createFromStringArray(input: $rights),
+    password: $hasPassword ? new Password(salt: $salt, hash: $hash) : null,
+);
 ```
 
-After:
+The constant `AccessRightCollection::ACCESS_DO_PASSWORD_LOGIN` is removed: a password login is allowed exactly when the
+user has a password. Users with a password but without the right could not log in with it before and now can: projects
+that used the missing right to block the password login must set the password to `null` (e.g. in a migration).
+Code that reads `$authUser->password` must handle `null`.
+
+### ⚠️ `AccessRightCollection::createFromStringArray()` skips empty strings
+
+A user without rights from an empty column (`explode(',', '')` gives `['']`) now gets an empty collection, so
+`isEmpty()` and "no rights" checks work. Read comma-separated columns with `DbRow::getStringList()`.
+
+### ⚠️ `ResponseSender` has a new method `afterResponse()`
+
+Own implementations of `ResponseSender` (usually a test double) must implement
+`afterResponse(Closure $callback): void`. Before: only `send(HttpResponse): never`. After: add
 
 ```php
-public function createHtmlTag(): HtmlTag { …; return $tag; }
-$tag->addTag(htmlTag: $renderer->createHtmlTag());
+public function afterResponse(Closure $callback): void
+{
+    register_shutdown_function(callback: $callback); // a test double stores the callback and runs it on demand
+}
 ```
 
-In an `InputFieldRenderer`: `$tag = parent::createHtmlTag(); $tag->addHtmlTagAttribute(…); return $tag;`.
+`NativeResponseSender` registers a shutdown function (runs after the response with PHP-FPM). `FileLogger` has a new
+last argument `responseSender:` (default `NativeResponseSender`; `Core` passes its own).
 
-## v4.50.0 (2026-10-08)
+### ⚠️ `CsrfTokenField::valueHasChanged()` returns `false`
 
-### ⚠️ `HtmlDataObject::$data` is replaced by `toTemplateData()`
+The CSRF field has no value of the user. `valueHasChanged()` returned `true` as soon as the token was posted, so a
+change check over all fields was always `true`. Before: own loops over `getAllFields()` that skip `CsrfTokenField`.
+After: `$form->hasChanges()`.
 
-`toTemplateData()` returns a new `stdClass` snapshot. Before: `$object->data->name`. After:
-`$object->toTemplateData()->name`. Set values with `addHtml()` / `addText()` / `addHtmlDataObjectsArray()` instead of
-writing to `$data`; in tests compare with `assertEquals`, not `assertSame`.
+### ⚠️ `DetailDataObject` takes `HtmlText`
 
-### ⚠️ Added data objects are copied
+The label was trusted HTML and never escaped. Name and value are `HtmlText` now; `isHtml:` is removed.
 
-`addDataObject()` and `addHtmlDataObjectsArray()` store a copy of the child. Fill the child before adding it; later
-changes of the child no longer change the parent.
+```php
+// before
+new DetailDataObject(name: 'Customer', value: $userInput, isHtml: false);
+// after
+new DetailDataObject(name: HtmlText::fromText(text: 'Customer'), value: HtmlText::fromText(text: $userInput));
+```
+
+### ⚠️ `TableItem` holds scalars and `NULL` only
+
+`TableItem::$data` is `array<string, bool|float|int|string|null>`. A row with an array or an object throws an
+`UnexpectedValueException` when it is created (before: when a cell was rendered). `getRawValue()` returns
+`bool|float|int|string|null` instead of `mixed`. Keep arrays in your own data and render them with a `CallbackColumn`.
+
+### ⚠️ `SearchState`: `checkFilter()` and `checkMultiFilter()` are removed
+
+Use the methods for `FormOptions`. A filter needs its options as `FormOptions` (the same object as the form field).
+The `<fieldName>ID` input of `checkMultiFilter()` is gone; add such a key to the options or read it yourself.
+
+```php
+// before
+$level = $searchState->checkFilter(array: ['a' => 'A'], fieldName: 'level', default: 'a');
+$groups = $searchState->checkMultiFilter(array: [1 => 'One'], fieldName: 'groups'); // list<int|string>
+// after
+$level = $searchState->checkOptionsFilter(formOptions: $levels, fieldName: 'level', default: 'a');
+$groups = $searchState->checkIntMultiOptionsFilter(formOptions: $groupOptions, fieldName: 'groups'); // list<int>
+```
+
+### ⚠️ `FormOptions::$data` is private
+
+Before: `array_keys($formOptions->data)`. After: `$formOptions->getKeys()` (strings) or `getItems()`.
+
+### ⚠️ `AuthResultEnum::render()` is removed
+
+```php
+// before
+$authResult->render();
+// after (German; AuthResultMessages::english() for English)
+$authResult->label(messages: new AuthResultMessages())->render();
+```
+
+### ⚠️ `SmartTable`: the text properties are removed
+
+`noDataHtml`, `totalAmountMessageOneResult` and `totalAmountMessageNumResults` are no longer public properties. Set the
+texts with `TableMessages`. A subclass that needs another no-data HTML overrides `getNoDataHtml()`.
+
+```php
+// before
+$table->noDataHtml = '<p>Nothing here.</p>';
+// after
+$table = new SmartTable(..., messages: new TableMessages(noData: 'Nothing here.'));
+```
+
+### ⚠️ `TableItem::getScalarValue()` is removed
+
+Use `getRawValue()` (it returned the same).
+
+### ⚠️ `HttpResponse::createHtmlResponse()` and `createResponseFromString()` take no `clock:`
+
+The argument was unused since v4.59.0. Remove `clock:` from these calls (`createFileResponse()` keeps it).
+
+### New
+
+- Composer autoload (PSR-4) for yuf: PHPStan and PHPUnit of projects no longer need `scanDirectories` or a yuf path in
+  the test bootstrap; remove them ([docs/testing.md](docs/testing.md)). Applications are unchanged:
+  `Core::fromEnvironment()` still loads yuf with `actra/autoloader`.
+- `DbRow::getStringList(column:, separator: ',')`: `list<string>`, `[]` for `NULL` and `''`, empty parts skipped, not
+  trimmed ([docs/database.md](docs/database.md)).
+- `DbQuery::selectRowsFromDb(db:, offset:, rowCount:)`: `selectFromDb()` with `list<DbRow>`.
+- `PathVars::list()` (all trimmed values in order) and `count()` ([docs/views.md](docs/views.md)).
+- `SecretTokenHash::tryFrom(hash:)`: `null` instead of an exception for another format.
+- `StringUtils::randomFromAlphabet(length:, alphabet:)`: secure random string of the given (multibyte) characters.
+- `Session::getStringList()`, `getStringMap()` and `getStruct(key:, map:)` (maps an array to a value object); `null`
+  for a missing key or another shape ([docs/session-and-login.md](docs/session-and-login.md)).
+- `Authenticator::verifyPassword()` and `precheck()` (public) and `verifyCredentials()` / `logInVerifiedUser()`
+  (protected): the checks of a login without logging in, for a password form with a second step, and for token
+  requests. `doLogin()` behaves as before; `logAuthResult()` stays protected
+  ([docs/session-and-login.md](docs/session-and-login.md)).
+- `RouteCollection(loginPath:)`: a request of a page that needs a login is redirected to the login page with
+  `?returnTo=<requested URI>`; `LoginRedirect::findReturnPath()` reads the validated target (local paths only).
+  `UnauthorizedAccessRightException::$isNotLoggedIn` tells "no user" from "no right". Without a login path nothing
+  changes ([docs/views.md](docs/views.md)).
+- `ResponseSender::afterResponse(callback:)`, see above ([docs/views.md](docs/views.md)).
+- `FormOptions::addIntItem(key:, htmlText:)` for integer keys (ids); `getKeys()` / `getItems()` (`list<FormOption>`)
+  give the keys as strings, `FormOptions::toIntKey()`.
+- `SingleOptionsField::getValueAsInt()`, `MultiOptionsField::getIntValues()` / `getAddedIntValues()` /
+  `getRemovedIntValues()`; an `UnexpectedValueException` for a key that is no integer ([docs/forms.md](docs/forms.md)).
+- `SearchState::checkOptionsFilter()`, `checkIntOptionsFilter()`, `checkMultiOptionsFilter()`,
+  `checkIntMultiOptionsFilter()` take the `FormOptions` of the field (keys as strings or integers, never mixed).
+- `Form::hasChanges()`, `PasswordField::setMinLength()` (text `FormMessages::$passwordTooShort`), `EqualsFieldRule`
+  (password confirmation).
+- `CompactFieldRenderer` and `Form::useCompactFieldRenderer()`: label and control in
+  `<div class="form-compact-field">` for search and filter forms (style it in the project's CSS).
+- `DbResultTable::exportCsv(fileName:)`: CSV download of all rows with the current filter and sorting, `NULL` as `''`.
+- `TableMessages` (`messages:` of `SmartTable`, `DbResultTable`, `TableHelper`): German default, `english()`.
+- `DateColumn::useLocale(language:, dateStyle:, timeStyle:)` with `DateStyleEnum` (`IntlDateFormatter`).
+- `AuthResultEnum::label(messages:)` with `AuthResultMessages` (German default, `english()`).
+- `NavigationItemCollection::has(navKey:)`; `Core::prepareHttpResponse(navigationProvider:)` and
+  `ViewContext::getNavigation()` build the navigation per request ([docs/views.md](docs/views.md)).
+- `DbRow::getScalar(column:)`: the value as fetched.
+- `CsvFile::pushDownloadAndExit()` removes its temporary file with `ResponseSender::afterResponse()`.

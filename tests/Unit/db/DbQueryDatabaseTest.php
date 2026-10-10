@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\db;
 
 use actra\yuf\db\DbQuery;
+use actra\yuf\db\DbRow;
 use actra\yuf\tests\Double\db\SqliteDatabase;
 use PHPUnit\Framework\TestCase;
 
@@ -26,6 +27,27 @@ final class DbQueryDatabaseTest extends TestCase
         $rows = $dbQuery->selectFromDb(db: SqliteDatabase::create(), offset: 1, rowCount: 2);
 
         $this->assertSame(['Ben', 'Anna'], array_column(array: $rows, column_key: 'name'));
+    }
+
+    public function testSelectRowsFromDbReturnsTypedRowsOfTheRequestedPage(): void
+    {
+        $dbQuery = DbQuery::createFromSqlQuery(query: 'SELECT id, name FROM users WHERE id > ?', parameters: [0]);
+        $dbQuery->addOrderPart(column: 'name', ascending: false);
+
+        $rows = $dbQuery->selectRowsFromDb(db: SqliteDatabase::create(), offset: 1, rowCount: 2);
+
+        $this->assertContainsOnlyInstancesOf(DbRow::class, $rows);
+        $this->assertSame(
+            ['Ben', 'Anna'],
+            array_map(callback: fn(DbRow $row): string => $row->getString(column: 'name'), array: $rows),
+        );
+    }
+
+    public function testSelectRowsFromDbOfAnEmptyResultIsAnEmptyList(): void
+    {
+        $dbQuery = DbQuery::createFromSqlQuery(query: 'SELECT id FROM users WHERE id > ?', parameters: [100]);
+
+        $this->assertSame([], $dbQuery->selectRowsFromDb(db: SqliteDatabase::create(), offset: 0, rowCount: 10));
     }
 
     public function testAddedPartsAreAppliedWithBoundValues(): void

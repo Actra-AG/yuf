@@ -392,6 +392,25 @@ final class DbQuery
         );
     }
 
+    /**
+     * Like selectFromDb(), but typed rows (see `FrameworkDb::selectRows()`).
+     *
+     * @return list<DbRow>
+     * @throws DbRuntimeException
+     */
+    public function selectRowsFromDb(FrameworkDb $db, int $offset, int $rowCount): array
+    {
+        $dbQueryData = $this->getDbQueryData(
+            offset: $offset,
+            rowCount: $rowCount,
+        );
+
+        return $db->selectRows(
+            sql: $dbQueryData->query,
+            parameters: $dbQueryData->params,
+        );
+    }
+
     public function getDbQueryData(int $offset, int $rowCount): DbQueryData
     {
         $queryParts = [

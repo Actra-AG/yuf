@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\session;
 
+use Closure;
 use InvalidArgumentException;
 
 /**
@@ -19,7 +20,8 @@ use InvalidArgumentException;
  *
  * Values are strings, numbers, booleans, `null` and arrays of these, nested as deep as needed (no objects, so
  * nothing is (un)serialized with surprises; `set()` checks arrays recursively, the PHPDoc alias cannot express it). The
- * typed getters return `null` for a missing key or a value of another type and never write.
+ * typed getters return `null` for a missing key or a value of another type or shape (`getStringList()`,
+ * `getStringMap()`, `getStruct()` for arrays) and never write.
  * The key `yuf` belongs to yuf (see `SessionSectionEnum`).
  *
  * @phpstan-type SessionValue string|int|float|bool|array<array-key, mixed>|null
@@ -69,6 +71,67 @@ final readonly class Session
         $value = $this->storage->get(key: $key);
 
         return is_array(value: $value) ? $value : null;
+    }
+
+    /**
+     * Only a list (keys 0, 1, 2, … in order) whose values are all strings; `[]` is a valid list.
+     *
+     * @return ?list<string>
+     */
+    public function getStringList(string $key): ?array
+    {
+        $value = $this->getArray(key: $key);
+        if ($value === null || !array_is_list(array: $value)) {
+            return null;
+        }
+        $strings = [];
+        foreach ($value as $item) {
+            if (!is_string(value: $item)) {
+                return null;
+            }
+            $strings[] = $item;
+        }
+
+        return $strings;
+    }
+
+    /**
+     * Only an array whose keys and values are all strings (numeric string keys like `'1'` are integers in PHP and
+     * make the value invalid); `[]` is a valid map.
+     *
+     * @return ?array<string, string>
+     */
+    public function getStringMap(string $key): ?array
+    {
+        $value = $this->getArray(key: $key);
+        if ($value === null) {
+            return null;
+        }
+        $map = [];
+        foreach ($value as $itemKey => $item) {
+            if (!is_string(value: $itemKey) || !is_string(value: $item)) {
+                return null;
+            }
+            $map[$itemKey] = $item;
+        }
+
+        return $map;
+    }
+
+    /**
+     * Maps a stored array to a value object, e.g. `fn(array $data): ?Cart => Cart::fromSessionArray(data: $data)`. The
+     * mapper narrows the untyped array and returns `null` for an invalid shape.
+     *
+     * @template T
+     * @param Closure(array<array-key, mixed>): ?T $map
+     *
+     * @return ?T `null` if the key is missing or the value is no array, otherwise the result of the mapper
+     */
+    public function getStruct(string $key, Closure $map): mixed
+    {
+        $value = $this->getArray(key: $key);
+
+        return $value === null ? null : $map($value);
     }
 
     /**

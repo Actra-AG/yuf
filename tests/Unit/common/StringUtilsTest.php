@@ -342,4 +342,46 @@ final class StringUtilsTest extends TestCase
         $this->assertSame(5, mb_strlen(string: StringUtils::generateSalt(length: 5)));
         $this->assertSame('', StringUtils::generateSalt(length: 0));
     }
+
+    public function testRandomFromAlphabetHasTheLengthAndOnlyTheCharacters(): void
+    {
+        $string = StringUtils::randomFromAlphabet(length: 200, alphabet: 'ab');
+
+        $this->assertSame(200, mb_strlen(string: $string));
+        $this->assertMatchesRegularExpression('/^[ab]+$/D', $string);
+    }
+
+    public function testRandomFromAlphabetIsMultibyteSafe(): void
+    {
+        $string = StringUtils::randomFromAlphabet(length: 100, alphabet: 'äö€');
+
+        $this->assertSame(100, mb_strlen(string: $string));
+        $this->assertSame([], array_diff(mb_str_split(string: $string), ['ä', 'ö', '€']));
+    }
+
+    public function testRandomFromAlphabetOfOneLength(): void
+    {
+        $this->assertSame(1, mb_strlen(string: StringUtils::randomFromAlphabet(length: 1, alphabet: 'xy')));
+    }
+
+    /**
+     * @return iterable<string, array{int, string}>
+     */
+    public static function invalidAlphabetArguments(): iterable
+    {
+        yield 'zero length' => [0, 'ab'];
+        yield 'negative length' => [-1, 'ab'];
+        yield 'empty alphabet' => [5, ''];
+        yield 'one character' => [5, 'a'];
+        yield 'one distinct character' => [5, 'aaa'];
+        yield 'one multibyte character' => [5, 'üüü'];
+    }
+
+    #[DataProvider('invalidAlphabetArguments')]
+    public function testRandomFromAlphabetRejectsInvalidArguments(int $length, string $alphabet): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        StringUtils::randomFromAlphabet(length: $length, alphabet: $alphabet);
+    }
 }

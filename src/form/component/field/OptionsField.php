@@ -13,6 +13,7 @@ use actra\yuf\form\component\FormField;
 use actra\yuf\form\FormOptions;
 use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\html\HtmlText;
+use UnexpectedValueException;
 
 /**
  * A field whose value is one or several keys of its `FormOptions`: `SingleOptionsField` (one key) or
@@ -68,6 +69,23 @@ abstract class OptionsField extends FormField
     {
         $this->rejectInput(
             errorMessage: str_replace(search: '[field]', replace: $this->name, subject: $this->messages->invalidOption),
+        );
+    }
+
+    /**
+     * The key as integer: strictly integer-formatted only (same rules as `DbRow::getInt()`), for the options that
+     * were added with `FormOptions::addIntItem()`.
+     *
+     * @throws UnexpectedValueException If the key is not an integer (the options are not integer ids).
+     */
+    final protected function keyToInt(string $key): int
+    {
+        return FormOptions::toIntKey(key: $key) ?? throw new UnexpectedValueException(
+            message: 'The key "' . (
+                strlen(string: $key) > 40 ? substr(string: $key, offset: 0, length: 40) . '...' : $key
+            )
+            . '" of field ' . $this->name . ' is not an integer or out of the integer range. Use getValueAsString() '
+            . 'or getValues() for options with text keys.',
         );
     }
 }

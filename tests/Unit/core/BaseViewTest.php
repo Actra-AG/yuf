@@ -94,6 +94,33 @@ final class BaseViewTest extends TestCase
         );
     }
 
+    public function testRequiredAccessRightsWithoutUserMarkTheExceptionAsNotLoggedIn(): void
+    {
+        try {
+            new ConfigurableTestView(
+                context: ViewContextFactory::create(),
+                requiredAccessRights: AccessRightCollection::createFromStringArray(input: ['admin']),
+            );
+            self::fail('The view must throw.');
+        } catch (UnauthorizedAccessRightException $exception) {
+            $this->assertTrue($exception->isNotLoggedIn);
+        }
+    }
+
+    public function testRequiredAccessRightsWithoutMatchingRightDoNotMarkTheExceptionAsNotLoggedIn(): void
+    {
+        try {
+            new ConfigurableTestView(
+                context: ViewContextFactory::create(),
+                authUser: TestAuthUser::create(accessRights: ['editor']),
+                requiredAccessRights: AccessRightCollection::createFromStringArray(input: ['admin']),
+            );
+            self::fail('The view must throw.');
+        } catch (UnauthorizedAccessRightException $exception) {
+            $this->assertFalse($exception->isNotLoggedIn);
+        }
+    }
+
     public function testRequiredAccessRightsWithoutMatchingRightThrow(): void
     {
         $this->expectException(UnauthorizedAccessRightException::class);

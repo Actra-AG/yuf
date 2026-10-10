@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 return [
     'defaultErrorReporting' => E_ALL,
     'defaultTimeZone' => 'Europe/Zurich',

@@ -78,4 +78,14 @@ final class RecordingAuthenticator extends Authenticator
     {
         return $this->doLogin(authMethod: AuthMethodEnum::OTP, userName: $userName, passwordToCheck: null);
     }
+
+    public function verify(AuthMethodEnum $authMethod, string $userName, ?string $password): AuthResultEnum|AuthUser
+    {
+        return $this->verifyCredentials(authMethod: $authMethod, userName: $userName, password: $password);
+    }
+
+    public function loginVerified(AuthMethodEnum $authMethod, AuthUser $authUser, string $userName): bool
+    {
+        return $this->logInVerifiedUser(authMethod: $authMethod, authUser: $authUser, userName: $userName);
+    }
 }

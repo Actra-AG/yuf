@@ -41,7 +41,7 @@ final class OptionsColumn extends AbstractTableColumn
     #[Override]
     protected function renderCellValue(TableItem $tableItem): string
     {
-        $value = $tableItem->getScalarValue(name: $this->identifier);
+        $value = $tableItem->getRawValue(name: $this->identifier);
         if (
             (is_int(value: $value) || is_string(value: $value))
             && array_key_exists(key: $value, array: $this->options)

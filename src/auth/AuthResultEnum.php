@@ -28,23 +28,28 @@ enum AuthResultEnum: int
     case SUCCESSFUL_OTP_LOGIN = 13;
     case SUCCESSFUL_MICROSOFT_LOGIN = 14;
 
-    public function render(): string
+    /**
+     * The text of the result in the texts of the given messages (plain text, encoded when rendered).
+     */
+    public function label(AuthResultMessages $messages): HtmlText
     {
-        return (match ($this) {
-            AuthResultEnum::UNDEFINED => HtmlText::fromHtml(html: 'Unbekannt'),
-            AuthResultEnum::SUCCESSFUL_PASSWORD_LOGIN => HtmlText::fromHtml(html: 'Passwort-Anmeldung'),
-            AuthResultEnum::ERROR_NO_EMAIL_ADDRESS => HtmlText::fromHtml(html: 'Keine E-Mail-Adresse'),
-            AuthResultEnum::ERROR_NO_PASSWORD => HtmlText::fromHtml(html: 'Kein Passwort'),
-            AuthResultEnum::ERROR_UNKNOWN_USER_NAME => HtmlText::fromHtml(html: 'Ungültige E-Mail-Adresse'),
-            AuthResultEnum::ERROR_INACTIVE => HtmlText::fromHtml(html: 'Zugang inaktiv'),
-            AuthResultEnum::ERROR_IP_NOT_ALLOWED => HtmlText::fromHtml(html: 'IP-Adresse nicht erlaubt'),
-            AuthResultEnum::ERROR_OUT_TRIED => HtmlText::fromHtml(html: 'Zu viele fehlerhafte Versuche'),
-            AuthResultEnum::ERROR_WRONG_PASSWORD => HtmlText::fromHtml(html: 'Falsches Passwort'),
-            AuthResultEnum::SUCCESSFUL_SSO_LOGIN => HtmlText::fromHtml(html: 'SSO-Anmeldung'),
-            AuthResultEnum::ERROR_NO_PASSWORD_LOGIN_ACTIVE => HtmlText::fromHtml(html: 'Passwort-Anmeldung inaktiv'),
-            AuthResultEnum::FAILED_SSO_LOGIN => HtmlText::fromHtml(html: 'SSO fehlgeschlagen'),
-            AuthResultEnum::SUCCESSFUL_OTP_LOGIN => HtmlText::fromHtml(html: 'OTP-Anmeldung'),
-            AuthResultEnum::SUCCESSFUL_MICROSOFT_LOGIN => HtmlText::fromHtml(html: 'Microsoft-Anmeldung'),
-        })->render();
+        return HtmlText::fromText(
+            text: match ($this) {
+                AuthResultEnum::UNDEFINED => $messages->undefined,
+                AuthResultEnum::SUCCESSFUL_PASSWORD_LOGIN => $messages->successfulPasswordLogin,
+                AuthResultEnum::ERROR_NO_EMAIL_ADDRESS => $messages->errorNoEmailAddress,
+                AuthResultEnum::ERROR_NO_PASSWORD => $messages->errorNoPassword,
+                AuthResultEnum::ERROR_UNKNOWN_USER_NAME => $messages->errorUnknownUserName,
+                AuthResultEnum::ERROR_INACTIVE => $messages->errorInactive,
+                AuthResultEnum::ERROR_IP_NOT_ALLOWED => $messages->errorIpNotAllowed,
+                AuthResultEnum::ERROR_OUT_TRIED => $messages->errorOutTried,
+                AuthResultEnum::ERROR_WRONG_PASSWORD => $messages->errorWrongPassword,
+                AuthResultEnum::SUCCESSFUL_SSO_LOGIN => $messages->successfulSsoLogin,
+                AuthResultEnum::ERROR_NO_PASSWORD_LOGIN_ACTIVE => $messages->errorNoPasswordLoginActive,
+                AuthResultEnum::FAILED_SSO_LOGIN => $messages->failedSsoLogin,
+                AuthResultEnum::SUCCESSFUL_OTP_LOGIN => $messages->successfulOtpLogin,
+                AuthResultEnum::SUCCESSFUL_MICROSOFT_LOGIN => $messages->successfulMicrosoftLogin,
+            },
+        );
     }
 }

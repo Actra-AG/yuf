@@ -30,13 +30,14 @@ final class TestAuthUser extends AuthUser
         int $wrongPasswordAttempts = 0,
         array $ipWhitelist = [],
         ?Password $password = null,
+        bool $hasPassword = true,
     ): TestAuthUser {
         return new TestAuthUser(
             id: 1,
             isActive: $isActive,
             wrongPasswordAttempts: $wrongPasswordAttempts,
             accessRightCollection: AccessRightCollection::createFromStringArray(input: $accessRights),
-            password: $password ?? Password::generateNew(rawPassword: 'test'),
+            password: $hasPassword ? $password ?? Password::generateNew(rawPassword: 'test') : null,
             ipWhitelist: $ipWhitelist,
         );
     }

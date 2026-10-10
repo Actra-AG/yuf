@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
+use InvalidArgumentException;
 use LogicException;
 
 final class RouteCollection
@@ -18,9 +19,17 @@ final class RouteCollection
 
     /**
      * @param list<Route> $routes
+     * @param ?string $loginPath Local path of the login page (`/login/`, may have a query): a request of a view with
+     *     required access rights without a user is redirected there, with the requested URI as return target
+     *     (`LoginRedirect`). `null`: the request is answered with the error page 401.
+     *
+     * @throws InvalidArgumentException if the login path is no local path
      */
-    public function __construct(array $routes = [])
+    public function __construct(array $routes = [], public readonly ?string $loginPath = null)
     {
+        if ($loginPath !== null && !LoginRedirect::isLocalPath(uri: $loginPath)) {
+            throw new InvalidArgumentException(message: 'The login path must be a local path starting with "/"');
+        }
         foreach ($routes as $item) {
             $this->addRoute(route: $item);
         }

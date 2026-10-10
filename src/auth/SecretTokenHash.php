@@ -36,11 +36,24 @@ final readonly class SecretTokenHash
      */
     public function __construct(public string $hash)
     {
-        if (preg_match(pattern: SecretTokenHash::HASH_PATTERN, subject: $hash) !== 1) {
+        if (!SecretTokenHash::isValidHash(hash: $hash)) {
             throw new InvalidArgumentException(
                 message: 'A secret token hash must consist of 64 lowercase hexadecimal characters.',
             );
         }
+    }
+
+    /**
+     * Like the constructor, but `null` instead of an exception for a value of another format (e.g. from the database).
+     */
+    public static function tryFrom(string $hash): ?SecretTokenHash
+    {
+        return SecretTokenHash::isValidHash(hash: $hash) ? new SecretTokenHash(hash: $hash) : null;
+    }
+
+    private static function isValidHash(string $hash): bool
+    {
+        return preg_match(pattern: SecretTokenHash::HASH_PATTERN, subject: $hash) === 1;
     }
 
     /**

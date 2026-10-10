@@ -11,10 +11,13 @@ namespace actra\yuf\common;
 
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\InputSourceEnum;
+use actra\yuf\form\FormOptions;
 use actra\yuf\session\Session;
 use actra\yuf\session\SessionSectionEnum;
+use Closure;
 use DateMalformedStringException;
 use DateTime;
+use UnexpectedValueException;
 
 /**
  * Search forms: remembers the values of the search fields of a user in the session. The SQL conditions of the search
@@ -102,15 +105,62 @@ final class SearchState
     }
 
     /**
-     * @param array<array-key, mixed> $array The allowed values as keys
+     * A filter with one of the keys of `FormOptions`: the input of this request if it is an option, else the
+     * remembered key, else the default. The keys stay strings, `''` means no filter.
      */
-    public function checkFilter(array $array, string $fieldName, string $default = ''): string
+    public function checkOptionsFilter(FormOptions $formOptions, string $fieldName, string $default = ''): string
     {
-        $storedValue = $this->readStoredString(field: $fieldName);
-        $value = $this->isSearchRequested() ? $default : $storedValue ?? $default;
-        $userInput = $this->readString(fieldName: $fieldName);
-        if ($userInput !== null && array_key_exists(key: $userInput, array: $array)) {
-            $value = $userInput;
+        return $this->checkKnownKey(
+            isKnown: static fn(string $key): bool => $formOptions->exists(key: $key),
+            fieldName: $fieldName,
+            default: $default,
+        );
+    }
+
+    /**
+     * Like `checkOptionsFilter()` for options with integer keys (`FormOptions::addIntItem()`): `null` means no
+     * filter.
+     *
+     * @throws UnexpectedValueException If the options have a key that is not an integer.
+     */
+    public function checkIntOptionsFilter(FormOptions $formOptions, string $fieldName, ?int $default = null): ?int
+    {
+        $key = $this->checkOptionsFilter(
+            formOptions: $formOptions,
+            fieldName: $fieldName,
+            default: $default === null ? '' : (string) $default,
+        );
+
+        return $key === '' ? null : SearchState::keyToInt(key: $key, fieldName: $fieldName);
+    }
+
+    /**
+     * A filter with several keys of `FormOptions`: the chosen keys as strings in the order of the options (the default
+     * first). Remembered keys that are not an option any more are dropped.
+     *
+     * @param list<string> $default
+     *
+     * @return list<string>
+     */
+    public function checkMultiOptionsFilter(FormOptions $formOptions, string $fieldName, array $default = []): array
+    {
+        $storedValue = $this->readStoredList(field: $fieldName);
+        $isSearchRequested = $this->isSearchRequested();
+        $value = $isSearchRequested ? $default : $this->knownStrings(
+            keys: $storedValue ?? $default,
+            formOptions: $formOptions,
+        );
+        if ($isSearchRequested) {
+            $userInput = $this->readArray(fieldName: $fieldName) ?? [];
+            foreach ($formOptions->getKeys() as $key) {
+                if (in_array(needle: $key, haystack: $userInput, strict: true) && !in_array(
+                    needle: $key,
+                    haystack: $value,
+                    strict: true,
+                )) {
+                    $value[] = $key;
+                }
+            }
         }
         $this->storeIfChanged(field: $fieldName, value: $value, storedValue: $storedValue ?? $default);
 
@@ -118,27 +168,62 @@ final class SearchState
     }
 
     /**
-     * @param array<array-key, mixed> $array The allowed values as keys
-     * @param list<int|string> $default
+     * Like `checkMultiOptionsFilter()` for options with integer keys (`FormOptions::addIntItem()`).
      *
-     * @return list<int|string> The chosen keys (a posted value of `<fieldName>ID` is added as string)
+     * @param list<int> $default
+     *
+     * @return list<int>
+     * @throws UnexpectedValueException If the options have a key that is not an integer.
      */
-    public function checkMultiFilter(array $array, string $fieldName, array $default = []): array
+    public function checkIntMultiOptionsFilter(FormOptions $formOptions, string $fieldName, array $default = []): array
     {
-        $storedValue = $this->readStoredList(field: $fieldName);
-        $isSearchRequested = $this->isSearchRequested();
-        $value = $isSearchRequested ? $default : $storedValue ?? $default;
-        if ($isSearchRequested) {
-            foreach ($array as $key => $val) {
-                $userInput = $this->readArray(fieldName: $fieldName);
-                if ($userInput !== null && in_array(needle: (string) $key, haystack: $userInput, strict: true)) {
-                    $value[] = $key;
-                }
+        $keys = $this->checkMultiOptionsFilter(
+            formOptions: $formOptions,
+            fieldName: $fieldName,
+            default: array_map(callback: static fn(int $key): string => (string) $key, array: $default),
+        );
+
+        return array_map(
+            callback: static fn(string $key): int => SearchState::keyToInt(key: $key, fieldName: $fieldName),
+            array: $keys,
+        );
+    }
+
+    /**
+     * @param list<int|string> $keys
+     *
+     * @return list<string> The keys that are an option, as strings
+     */
+    private function knownStrings(array $keys, FormOptions $formOptions): array
+    {
+        $known = [];
+        foreach ($keys as $key) {
+            if ($formOptions->exists(key: (string) $key)) {
+                $known[] = (string) $key;
             }
-            $requestedValue = $this->readString(fieldName: $fieldName . 'ID');
-            if ($requestedValue !== null) {
-                $value[] = $requestedValue;
-            }
+        }
+
+        return $known;
+    }
+
+    private static function keyToInt(string $key, string $fieldName): int
+    {
+        return FormOptions::toIntKey(key: $key) ?? throw new UnexpectedValueException(
+            message: 'The option "' . $key . '" of the search field ' . $fieldName . ' is not an integer. Add the '
+            . 'options with FormOptions::addIntItem() or use checkOptionsFilter() for text keys.',
+        );
+    }
+
+    /**
+     * @param Closure(string): bool $isKnown
+     */
+    private function checkKnownKey(Closure $isKnown, string $fieldName, string $default): string
+    {
+        $storedValue = $this->readStoredString(field: $fieldName);
+        $value = $this->isSearchRequested() ? $default : $storedValue ?? $default;
+        $userInput = $this->readString(fieldName: $fieldName);
+        if ($userInput !== null && $isKnown($userInput)) {
+            $value = $userInput;
         }
         $this->storeIfChanged(field: $fieldName, value: $value, storedValue: $storedValue ?? $default);
 

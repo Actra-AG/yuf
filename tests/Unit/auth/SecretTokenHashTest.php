@@ -98,6 +98,19 @@ final class SecretTokenHashTest extends TestCase
         new SecretTokenHash(hash: $hash);
     }
 
+    public function testTryFromAcceptsAValidHash(): void
+    {
+        $hash = SecretTokenHash::fromSecret(secret: 'secret')->hash;
+
+        $this->assertSame($hash, SecretTokenHash::tryFrom(hash: $hash)?->hash);
+    }
+
+    #[DataProvider('invalidHashProvider')]
+    public function testTryFromReturnsNullForAnInvalidHash(string $hash): void
+    {
+        $this->assertNull(SecretTokenHash::tryFrom(hash: $hash));
+    }
+
     public function testComparisonIsDoneOnEqualLengthHashes(): void
     {
         // A secret of any length is hashed first, so hash_equals() always compares two 64 character strings

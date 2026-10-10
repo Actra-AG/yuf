@@ -14,7 +14,7 @@ namespace actra\yuf\form;
  * `FormMessages::german()` has the German texts (Sie-form, Swiss spelling). Pass it to `Form(messages: ...)`.
  *
  * Placeholders: `[field]` in `invalidOption`, `[max]` in `tooManyFiles`, `[fileName]` in `duplicateFile`,
- * `[maxSize]` in `fileExceedsMaxSize`.
+ * `[maxSize]` in `fileExceedsMaxSize`, `[min]` in `passwordTooShort`.
  */
 final readonly class FormMessages
 {
@@ -37,6 +37,7 @@ final readonly class FormMessages
         public string $fileTypeNotAllowed = 'The type of the file is not allowed:',
         public string $tooManyFiles = 'Only [max] file(s) allowed.',
         public string $duplicateFile = 'A file named "[fileName]" has already been uploaded.',
+        public string $passwordTooShort = 'The password must have at least [min] characters.',
     ) {}
 
     public static function german(): FormMessages
@@ -60,6 +61,7 @@ final readonly class FormMessages
             fileTypeNotAllowed: 'Der Dateityp ist nicht erlaubt:',
             tooManyFiles: 'Nur [max] Datei(en) möglich.',
             duplicateFile: 'Es wurde bereits eine Datei mit dem Dateinamen "[fileName]" hochgeladen.',
+            passwordTooShort: 'Das Passwort muss mindestens [min] Zeichen lang sein.',
         );
     }
 }

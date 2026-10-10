@@ -26,6 +26,7 @@ use actra\yuf\core\ViewFactory;
 use actra\yuf\core\ViewMap;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\form\FormContext;
+use actra\yuf\layout\NavigationItemCollection;
 use actra\yuf\security\CspNonce;
 use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\session\ArraySessionStorage;
@@ -92,6 +93,9 @@ final class ContentHandlerTest extends TestCase
         return $requestHandler->resolveRoute();
     }
 
+    /**
+     * @param ?Closure(ViewContext): NavigationItemCollection $navigationProvider
+     */
     private function processRequest(
         ContentHandler $handler,
         Route $route,
@@ -100,6 +104,7 @@ final class ContentHandlerTest extends TestCase
         ?AbstractSessionHandler $sessionHandler = null,
         ?FormContext $formContext = null,
         ?ResponseSender $responseSender = null,
+        ?Closure $navigationProvider = null,
     ): void {
         $httpRequest ??= HttpRequestFactory::create();
         $handler->processRequest(
@@ -116,6 +121,7 @@ final class ContentHandlerTest extends TestCase
             copyright: '2020-2026',
             robots: 'noindex',
             responseSender: $responseSender ?? new RecordingResponseSender(),
+            navigationProvider: $navigationProvider,
         );
     }
 
@@ -278,6 +284,54 @@ final class ContentHandlerTest extends TestCase
         $this->assertSame($formContext, $viewContext->formContext);
         $this->assertSame($responseSender, $viewContext->responseSender);
         $this->assertSame($handler, $viewContext->content);
+    }
+
+    public function testProcessRequestPassesTheNavigationProviderToTheViewContext(): void
+    {
+        $viewContext = null;
+        $route = $this->createRoute(
+            viewFactory: new ViewMap()->add(
+                fileTitle: 'sample',
+                create: function (ViewContext $context) use (&$viewContext): BaseView {
+                    $viewContext = $context;
+
+                    return new TestView(context: $context);
+                },
+            ),
+        );
+
+        $this->processRequest(
+            handler: new ContentHandler(contentType: ContentType::createHtml(), cspNonce: CspNonce::create()),
+            route: $route,
+            navigationProvider: static fn(ViewContext $context): NavigationItemCollection
+                => new NavigationItemCollection(),
+        );
+
+        $this->assertInstanceOf(ViewContext::class, $viewContext);
+        $this->assertNotNull($viewContext->getNavigation());
+    }
+
+    public function testProcessRequestWithoutNavigationProviderHasNoNavigation(): void
+    {
+        $viewContext = null;
+        $route = $this->createRoute(
+            viewFactory: new ViewMap()->add(
+                fileTitle: 'sample',
+                create: function (ViewContext $context) use (&$viewContext): BaseView {
+                    $viewContext = $context;
+
+                    return new TestView(context: $context);
+                },
+            ),
+        );
+
+        $this->processRequest(
+            handler: new ContentHandler(contentType: ContentType::createHtml(), cspNonce: CspNonce::create()),
+            route: $route,
+        );
+
+        $this->assertInstanceOf(ViewContext::class, $viewContext);
+        $this->assertNull($viewContext->getNavigation());
     }
 
     public function testProcessRequestWithoutSessionHasNoAuthSession(): void

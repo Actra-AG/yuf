@@ -16,17 +16,29 @@ use stdClass;
 use UnexpectedValueException;
 
 /**
- * One row of a table: the values by column name, as fetched from the database or given by the application.
+ * One row of a table: the values by column name, as fetched from the database or given by the application. A value is
+ * a scalar or `null` (what a database row holds); this keeps every cell renderable and exportable (CSV).
  */
 final readonly class TableItem
 {
-    /** @var array<string, mixed> The values of any data source (a row of the database holds scalars and null) */
+    /** @var array<string, bool|float|int|string|null> */
     public array $data;
 
+    /**
+     * @throws UnexpectedValueException If a property is an array or an object
+     */
     public function __construct(stdClass $dataObject)
     {
-        /** @var array<string, mixed> $data Property names of a fetched row are its column names */
-        $data = get_object_vars(object: $dataObject);
+        $data = [];
+        foreach (get_object_vars(object: $dataObject) as $name => $value) {
+            if ($value !== null && !is_scalar(value: $value)) {
+                throw new UnexpectedValueException(
+                    message: 'Column "' . $name . '" holds a ' . get_debug_type(value: $value)
+                    . ', but a table row holds scalars and NULL only. Render other values with a CallbackColumn.',
+                );
+            }
+            $data[(string) $name] = $value;
+        }
         $this->data = $data;
     }
 
@@ -39,11 +51,11 @@ final readonly class TableItem
     }
 
     /**
-     * Untyped value as fetched from the database. Prefer the typed getters of `getRow()`.
+     * The value of a column as the database delivers it (a scalar or NULL). Prefer the typed getters of `getRow()`.
      *
      * @throws InvalidArgumentException If the row has no such column
      */
-    public function getRawValue(string $name): mixed
+    public function getRawValue(string $name): bool|float|int|string|null
     {
         if (!array_key_exists(key: $name, array: $this->data)) {
             throw new InvalidArgumentException(
@@ -58,29 +70,11 @@ final readonly class TableItem
     }
 
     /**
-     * The value of a column that holds a scalar or NULL, as the database delivers them.
-     *
-     * @throws UnexpectedValueException If the value is an array or an object
-     */
-    public function getScalarValue(string $name): bool|float|int|string|null
-    {
-        $value = $this->getRawValue(name: $name);
-        if ($value === null || is_scalar(value: $value)) {
-            return $value;
-        }
-
-        throw new UnexpectedValueException(
-            message: 'Column "' . $name . '" holds a ' . get_debug_type(value: $value)
-            . ', which cannot be rendered. Use a CallbackColumn to render it.',
-        );
-    }
-
-    /**
      * The value as HTML text: encoded, NULL is empty.
      */
     public function renderValue(string $name, bool $renderNewLines = false): string
     {
-        $value = $this->getScalarValue(name: $name);
+        $value = $this->getRawValue(name: $name);
         if ($value === null) {
             return '';
         }

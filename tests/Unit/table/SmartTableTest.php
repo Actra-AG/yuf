@@ -16,6 +16,7 @@ use actra\yuf\table\renderer\TableHeadRenderer;
 use actra\yuf\table\table\SmartTable;
 use actra\yuf\table\TableItem;
 use actra\yuf\table\TableItemCollection;
+use actra\yuf\table\TableMessages;
 use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
@@ -100,22 +101,18 @@ final class SmartTableTest extends TestCase
     public function testTextsAndTemplatesCanBeReplaced(): void
     {
         $table = SmartTableTest::createTable();
-        $table->noDataHtml = '<i>none</i>';
-        $this->assertSame('<i>none</i>', $table->render());
-
         $table->addDataItem(tableItem: new TableItem(dataObject: (object) ['a' => 'x', 'b' => 1]));
         $table->addDataItem(tableItem: new TableItem(dataObject: (object) ['a' => 'y', 'b' => 2]));
         $table->addDataItem(tableItem: new TableItem(dataObject: (object) ['a' => 'z', 'b' => 3]));
         $table->addCssClass(className: 'wide');
         $table->fullHtml = SmartTable::TOTAL_AMOUNT . SmartTable::TABLE;
         $table->totalAmountHtml = '<b>' . SmartTable::TOTAL_AMOUNT_MESSAGE_PLACEHOLDER . '</b>';
-        $table->totalAmountMessageNumResults = SmartTable::AMOUNT . ' rows';
         $table->tableHtml = SmartTable::TABLE_BODY . '|' . SmartTable::TABLE_HEADER;
         $table->oddRowHtml = '<tr class="odd">' . SmartTable::CELLS . '</tr>';
         $table->evenRowHtml = '<tr class="even">' . SmartTable::CELLS . '</tr>';
 
         $this->assertSame(
-            '<b>3 rows</b><table class="table wide">' . "\n"
+            '<b>Es wurden <strong>3</strong> Resultate gefunden.</b><table class="table wide">' . "\n"
             . '<tr class="odd"><td>x</td>' . "\n" . '<td>1</td></tr>' . "\n"
             . '<tr class="even"><td>y</td>' . "\n" . '<td>2</td></tr>' . "\n"
             . '<tr class="odd"><td>z</td>' . "\n" . '<td>3</td></tr>'
@@ -126,6 +123,61 @@ final class SmartTableTest extends TestCase
             . '</table>',
             $table->render(),
         );
+    }
+
+    public function testMessagesChangeTheTexts(): void
+    {
+        $table = new SmartTable(
+            identifier: 'items',
+            tableHeadRenderer: new TableHeadRenderer(),
+            tableItemCollection: new TableItemCollection(),
+            messages: new TableMessages(
+                noData: 'No <entries> found.',
+                oneResult: 'Found [amount] result.',
+                numResults: '[amount] results & more',
+            ),
+        );
+        $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'a', label: 'A'));
+        $this->assertSame('<p class="no-entry">No &lt;entries&gt; found.</p>', $table->render());
+
+        $table->addDataItem(tableItem: new TableItem(dataObject: (object) ['a' => 'x']));
+        $this->assertStringContainsString(
+            '<p class="search-result">Found <strong>1</strong> result.</p>',
+            $table->render(),
+        );
+
+        $table->addDataItem(tableItem: new TableItem(dataObject: (object) ['a' => 'y']));
+        $this->assertStringContainsString(
+            '<p class="search-result"><strong>2</strong> results &amp; more</p>',
+            $table->render(),
+        );
+    }
+
+    public function testEnglishMessages(): void
+    {
+        $table = new SmartTable(
+            identifier: 'items',
+            tableHeadRenderer: new TableHeadRenderer(),
+            tableItemCollection: new TableItemCollection(),
+            messages: TableMessages::english(),
+        );
+        $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'a', label: 'A'));
+        $this->assertSame('<p class="no-entry">No entries found.</p>', $table->render());
+
+        $table->addDataItem(tableItem: new TableItem(dataObject: (object) ['a' => 'x']));
+        $this->assertStringContainsString('<strong>1</strong> result found.', $table->render());
+    }
+
+    public function testDefaultMessagesAreGerman(): void
+    {
+        $table = SmartTableTest::createTable();
+
+        $this->assertSame('<p class="no-entry">Es wurden keine Einträge gefunden.</p>', $table->render());
+
+        $table->addDataItem(tableItem: new TableItem(dataObject: (object) ['a' => 'x', 'b' => 1]));
+        $this->assertStringContainsString('Es wurde <strong>1</strong> Resultat gefunden.', $table->render());
+        $table->addDataItem(tableItem: new TableItem(dataObject: (object) ['a' => 'y', 'b' => 2]));
+        $this->assertStringContainsString('Es wurden <strong>2</strong> Resultate gefunden.', $table->render());
     }
 
     public function testColumnsKeepTheirOrderAndKnowTheirTable(): void

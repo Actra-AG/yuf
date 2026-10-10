@@ -33,6 +33,77 @@ final class DbRowTest extends TestCase
         new DbRow(values: [])->getString(column: 'nope');
     }
 
+    public function testScalarGivesTheValueAsFetched(): void
+    {
+        $row = new DbRow(values: ['i' => 1, 's' => 'a', 'f' => 1.5, 'b' => false, 'n' => null]);
+
+        $this->assertSame(1, $row->getScalar(column: 'i'));
+        $this->assertSame('a', $row->getScalar(column: 's'));
+        $this->assertSame(1.5, $row->getScalar(column: 'f'));
+        $this->assertFalse($row->getScalar(column: 'b'));
+        $this->assertNull($row->getScalar(column: 'n'));
+    }
+
+    public function testScalarRejectsNonScalarsAndMissingColumns(): void
+    {
+        $row = new DbRow(values: ['list' => [1]]);
+
+        $this->expectException(DbRowValueException::class);
+        $this->expectExceptionMessageIsOrContains('has the type array, but expected scalar or NULL');
+        $row->getScalar(column: 'list');
+    }
+
+    public function testScalarOfAMissingColumnThrows(): void
+    {
+        $this->expectException(DbRowValueException::class);
+        $this->expectExceptionMessageIsOrContains('Column "nope" does not exist');
+        new DbRow(values: [])->getScalar(column: 'nope');
+    }
+
+    /**
+     * @return iterable<string, array{?string, list<string>}>
+     */
+    public static function stringLists(): iterable
+    {
+        yield 'null' => [null, []];
+        yield 'empty' => ['', []];
+        yield 'one' => ['read', ['read']];
+        yield 'several' => ['read,write,admin', ['read', 'write', 'admin']];
+        yield 'empty parts skipped' => [',read,,write,', ['read', 'write']];
+        yield 'only separators' => [',,', []];
+        yield 'whitespace is kept' => ['a, b', ['a', ' b']];
+        yield 'whitespace only part is kept' => ['a, ,b', ['a', ' ', 'b']];
+        yield 'zero is a value' => ['0', ['0']];
+    }
+
+    /**
+     * @param list<string> $expected
+     */
+    #[DataProvider('stringLists')]
+    public function testStringListSplitsAtTheDefaultSeparator(?string $value, array $expected): void
+    {
+        $this->assertSame($expected, new DbRow(values: ['rights' => $value])->getStringList(column: 'rights'));
+    }
+
+    public function testStringListWithOtherSeparator(): void
+    {
+        $row = new DbRow(values: ['tags' => 'a;b,c;;d']);
+
+        $this->assertSame(['a', 'b,c', 'd'], $row->getStringList(column: 'tags', separator: ';'));
+    }
+
+    public function testStringListRejectsNonStrings(): void
+    {
+        $this->expectException(DbRowValueException::class);
+        new DbRow(values: ['n' => 5])->getStringList(column: 'n');
+    }
+
+    public function testStringListOfAMissingColumnThrows(): void
+    {
+        $this->expectException(DbRowValueException::class);
+        new DbRow(values: [])->getStringList(column: 'nope');
+    }
+
     public function testNullInNonNullableGetterThrows(): void
     {
         $row = new DbRow(values: ['c' => null]);

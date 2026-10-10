@@ -13,6 +13,7 @@ use actra\yuf\clock\FixedClock;
 use actra\yuf\core\FileLogger;
 use actra\yuf\mailer\MailerException;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\core\RecordingResponseSender;
 use actra\yuf\tests\Double\mailer\CapturingMailer;
 use actra\yuf\tests\Double\mailer\FailingMailer;
 use actra\yuf\tests\Double\mailer\RecordingMailFunction;
@@ -451,5 +452,45 @@ final class FileLoggerTest extends TestCase
         $this->assertFileExists($this->logDirectory . 'ticket_' . hash(algo: 'sha256', data: 'deferred') . '.txt');
         $this->assertTrue($logger->lastIssueIsNew());
         $this->assertSame([], $mailFunction->calls);
+    }
+
+    public function testMailOfANewIssueIsHandedToTheResponseSender(): void
+    {
+        $mailFunction = new RecordingMailFunction();
+        $responseSender = new RecordingResponseSender();
+        $logger = new FileLogger(
+            logEmailRecipient: 'admin@example.com',
+            logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(),
+            mailer: null,
+            mailFunction: $mailFunction,
+            responseSender: $responseSender,
+        );
+
+        $logger->logMessage(message: 'deferred');
+
+        $callbacksBefore = $responseSender->countAfterResponseCallbacks();
+        $mailsBefore = count(value: $mailFunction->calls);
+        $responseSender->runAfterResponseCallbacks();
+        $mailsAfter = count(value: $mailFunction->calls);
+
+        $this->assertSame([1, 0, 1], [$callbacksBefore, $mailsBefore, $mailsAfter]);
+    }
+
+    public function testNoMailIsHandedToTheResponseSenderForAKnownIssue(): void
+    {
+        $responseSender = new RecordingResponseSender();
+        $logger = new FileLogger(
+            logEmailRecipient: 'admin@example.com',
+            logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(),
+            mailer: null,
+            mailFunction: new RecordingMailFunction(),
+            responseSender: $responseSender,
+        );
+        $logger->logMessage(message: 'again');
+        $logger->logMessage(message: 'again');
+
+        $this->assertSame(1, $responseSender->countAfterResponseCallbacks());
     }
 }

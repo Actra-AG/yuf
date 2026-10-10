@@ -143,6 +143,22 @@ final class PathVarsTest extends TestCase
         $this->assertNull($pathVars->get(nr: 2));
     }
 
+    public function testListReturnsTheTrimmedValuesInOrder(): void
+    {
+        $pathVars = new PathVars(values: [1 => ' 12 ', 0 => 'subscription', 2 => 'x']);
+
+        $this->assertSame(['subscription', '12', 'x'], $pathVars->list());
+        $this->assertSame(3, $pathVars->count());
+    }
+
+    public function testNoValuesGiveAnEmptyList(): void
+    {
+        $pathVars = new PathVars(values: []);
+
+        $this->assertSame([], $pathVars->list());
+        $this->assertSame(0, $pathVars->count());
+    }
+
     private function pathVarsWith(string $value): PathVars
     {
         return new PathVars(values: ['subscription', $value]);

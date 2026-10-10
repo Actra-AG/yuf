@@ -19,11 +19,13 @@ use actra\yuf\core\PathVars;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\core\Route;
 use actra\yuf\core\ViewContext;
+use actra\yuf\layout\NavigationItemCollection;
 use actra\yuf\security\CspNonce;
 use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\session\Session;
 use actra\yuf\tests\Double\form\FormContextFactory;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
+use Closure;
 
 /**
  * Builds a ViewContext without a RequestHandler, for the given request or a default one.
@@ -32,6 +34,7 @@ final class ViewContextFactory
 {
     /**
      * @param list<string> $pathVars
+     * @param ?Closure(ViewContext): NavigationItemCollection $navigationProvider
      */
     public static function create(
         string $fileTitle = 'index',
@@ -44,6 +47,7 @@ final class ViewContextFactory
         ?Session $session = null,
         ?ResponseSender $responseSender = null,
         ?AbstractSessionHandler $sessionHandler = null,
+        ?Closure $navigationProvider = null,
     ): ViewContext {
         $httpRequest ??= HttpRequestFactory::create();
         $localeHandler = new LocaleHandler(language: null, availableLanguages: new LanguageCollection());
@@ -74,6 +78,7 @@ final class ViewContextFactory
                 localeHandler: $localeHandler,
             ),
             responseSender: $responseSender ?? new RecordingResponseSender(),
+            navigationProvider: $navigationProvider,
         );
     }
 }

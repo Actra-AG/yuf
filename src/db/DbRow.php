@@ -39,6 +39,25 @@ final readonly class DbRow
         return array_key_exists(key: $column, array: $this->values);
     }
 
+    /**
+     * The value as fetched, for code that passes it on unchanged (a CSV export): a scalar or `NULL`.
+     *
+     * @throws DbRowValueException If the column does not exist or does not hold a scalar
+     */
+    public function getScalar(string $column): bool|float|int|string|null
+    {
+        $value = $this->value(column: $column);
+        if ($value === null || is_scalar(value: $value)) {
+            return $value;
+        }
+
+        throw DbRowValueException::wrongType(
+            column: $column,
+            expectedType: 'scalar or NULL',
+            actualType: get_debug_type(value: $value),
+        );
+    }
+
     public function getString(string $column): string
     {
         return $this->getNullableString(column: $column) ?? throw DbRowValueException::unexpectedNull(
@@ -58,6 +77,30 @@ final readonly class DbRow
             column: $column,
             expectedType: 'string',
             actualType: get_debug_type(value: $value),
+        );
+    }
+
+    /**
+     * Splits a string column like `'read,write'` at the separator: `[]` for `NULL` and `''`, empty parts are skipped.
+     * Like `getString()`, it does not trim: `'a, b'` gives `['a', ' b']`, and a part of spaces stays (trim in the
+     * database or use another separator if the data has spaces).
+     *
+     * @param non-empty-string $separator
+     *
+     * @return list<string>
+     */
+    public function getStringList(string $column, string $separator = ','): array
+    {
+        $value = $this->getNullableString(column: $column);
+        if ($value === null) {
+            return [];
+        }
+
+        return array_values(
+            array: array_filter(
+                array: explode(separator: $separator, string: $value),
+                callback: static fn(string $part): bool => $part !== '',
+            ),
         );
     }
 

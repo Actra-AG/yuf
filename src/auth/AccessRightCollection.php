@@ -10,13 +10,10 @@ declare(strict_types=1);
 namespace actra\yuf\auth;
 
 /**
- * The access rights of a user or the rights a view requires. Rights are free strings of the project; the only right
- * yuf knows is `ACCESS_DO_PASSWORD_LOGIN`.
+ * The access rights of a user or the rights a view requires. Rights are free strings of the project, yuf knows none.
  */
 final class AccessRightCollection
 {
-    public const string ACCESS_DO_PASSWORD_LOGIN = 'doPasswordLogin';
-
     /** @var list<string> */
     private array $accessRights = [];
 
@@ -28,12 +25,18 @@ final class AccessRightCollection
     }
 
     /**
+     * Empty strings are no rights and are skipped (a user without rights, e.g. from an empty database column, gets an
+     * empty collection).
+     *
      * @param list<string> $input
      */
     public static function createFromStringArray(array $input): AccessRightCollection
     {
         $accessRightCollection = new AccessRightCollection();
         foreach ($input as $value) {
+            if ($value === '') {
+                continue;
+            }
             $accessRightCollection->add(accessRight: $value);
         }
 

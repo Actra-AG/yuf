@@ -31,6 +31,21 @@ final class AccessRightCollectionTest extends TestCase
         $this->assertSame(['read', 'write', 'read'], $collection->listAccessRights());
     }
 
+    public function testCollectionFromOnlyAnEmptyStringIsEmpty(): void
+    {
+        $collection = AccessRightCollection::createFromStringArray(input: ['']);
+
+        $this->assertTrue($collection->isEmpty());
+        $this->assertSame([], $collection->listAccessRights());
+    }
+
+    public function testCollectionFromStringsSkipsEmptyStrings(): void
+    {
+        $collection = AccessRightCollection::createFromStringArray(input: ['a', '', 'b']);
+
+        $this->assertSame(['a', 'b'], $collection->listAccessRights());
+    }
+
     public function testRightsCanBeAdded(): void
     {
         $collection = AccessRightCollection::createEmpty();

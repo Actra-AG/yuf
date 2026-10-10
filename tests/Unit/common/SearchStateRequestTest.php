@@ -11,6 +11,8 @@ namespace actra\yuf\tests\Unit\common;
 
 use actra\yuf\common\SearchState;
 use actra\yuf\core\InputSourceEnum;
+use actra\yuf\form\FormOptions;
+use actra\yuf\html\HtmlText;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
@@ -57,6 +59,19 @@ final class SearchStateRequestTest extends TestCase
             valueSource: $source,
             session: $this->session,
         );
+    }
+
+    /**
+     * @param array<int|string, string> $items
+     */
+    private static function options(array $items): FormOptions
+    {
+        $formOptions = new FormOptions();
+        foreach ($items as $key => $html) {
+            $formOptions->addItem(key: (string) $key, htmlText: HtmlText::fromHtml(html: $html));
+        }
+
+        return $formOptions;
     }
 
     public function testStringTakesTheDefaultWithoutInput(): void
@@ -112,31 +127,34 @@ final class SearchStateRequestTest extends TestCase
 
     public function testFilterOnlyAcceptsKnownKeys(): void
     {
-        $options = ['a' => 'A', 'b' => 'B'];
+        $options = SearchStateRequestTest::options(items: ['a' => 'A', 'b' => 'B']);
 
-        $this->assertSame('b', $this->createHelper(post: ['f' => 'b'])->checkFilter(array: $options, fieldName: 'f'));
-        $this->assertSame('b', $this->createHelper(post: ['f' => 'x'])->checkFilter(array: $options, fieldName: 'f'));
+        $known = $this->createHelper(post: ['f' => 'b'])->checkOptionsFilter(formOptions: $options, fieldName: 'f');
+        $unknown = $this->createHelper(post: ['f' => 'x'])->checkOptionsFilter(formOptions: $options, fieldName: 'f');
+
+        $this->assertSame('b', $known);
+        $this->assertSame('b', $unknown); // the unknown key is ignored, the remembered one stays
     }
 
     public function testMultiFilterCollectsTheCheckedKeysOfASearchRequest(): void
     {
-        $options = ['1' => 'One', '2' => 'Two', '3' => 'Three'];
-        $helper = $this->createHelper(query: ['find' => ''], post: ['groups' => ['1', '3', '9'], 'groupsID' => '7']);
+        $options = SearchStateRequestTest::options(items: ['1' => 'One', '2' => 'Two', '3' => 'Three']);
+        $helper = $this->createHelper(query: ['find' => ''], post: ['groups' => ['1', '3', '9']]);
 
-        $groups = $helper->checkMultiFilter(array: $options, fieldName: 'groups');
+        $groups = $helper->checkMultiOptionsFilter(formOptions: $options, fieldName: 'groups');
 
-        $this->assertSame([1, 3, '7'], $groups);
+        $this->assertSame(['1', '3'], $groups);
     }
 
     public function testMultiFilterIgnoresTheInputOfARequestWithoutFindOrReset(): void
     {
-        $options = ['1' => 'One'];
+        $options = SearchStateRequestTest::options(items: ['1' => 'One']);
 
         $helper = $this->createHelper(post: ['groups' => ['1']]);
 
-        $groups = $helper->checkMultiFilter(array: $options, fieldName: 'groups', default: [5]);
+        $groups = $helper->checkMultiOptionsFilter(formOptions: $options, fieldName: 'groups', default: ['5']);
 
-        $this->assertSame([5], $groups);
+        $this->assertSame([], $groups);
     }
 
     public function testDateRangeIsClampedToTheRangeAndKept(): void

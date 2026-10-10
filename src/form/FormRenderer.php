@@ -16,6 +16,40 @@ use actra\yuf\html\HtmlText;
 
 abstract class FormRenderer
 {
+    /**
+     * The `<label>` of a field: for the field name, hidden visually (not for screen readers) if the field renders no
+     * label, with the required marker and the label info.
+     */
+    public static function createLabelTag(FormField $formField): HtmlTag
+    {
+        $labelAttributes = [HtmlTagAttribute::fromText(name: 'for', text: $formField->name)];
+        if (!$formField->renderLabel) {
+            $labelAttributes[] = HtmlTagAttribute::fromText(name: 'class', text: 'visuallyhidden');
+        }
+
+        $labelTag = new HtmlTag(name: 'label', selfClosing: false, htmlTagAttributes: $labelAttributes);
+        $labelTag->addText(htmlText: $formField->label);
+
+        if ($formField->isRequired() && $formField->renderRequiredAbbr) {
+            $abbrTag = new HtmlTag(name: 'span', selfClosing: false, htmlTagAttributes: [
+                HtmlTagAttribute::fromText(name: 'class', text: 'required'),
+            ]);
+            $abbrTag->addText(htmlText: HtmlText::fromHtml(html: '*'));
+            $labelTag->addTag(htmlTag: $abbrTag);
+        }
+
+        $labelInfoText = $formField->labelInfoText;
+        if ($labelInfoText !== null) {
+            $labelInfoTag = new HtmlTag(name: 'i', selfClosing: false, htmlTagAttributes: [
+                HtmlTagAttribute::fromText(name: 'class', text: 'label-info'),
+            ]);
+            $labelInfoTag->addText(htmlText: $labelInfoText);
+            $labelTag->addTag(htmlTag: $labelInfoTag);
+        }
+
+        return $labelTag;
+    }
+
     public static function addErrorsToParentHtmlTag(
         FormComponent $formComponentWithErrors,
         HtmlTag $parentHtmlTag,

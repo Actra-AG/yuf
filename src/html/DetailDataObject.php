@@ -10,26 +10,17 @@ declare(strict_types=1);
 namespace actra\yuf\html;
 
 /**
- * A label with a value for detail lists. The label is trusted HTML and is never escaped; the value is escaped unless
- * `$isHtml` is `true`.
+ * A label with a value for detail lists. Both are `HtmlText`: plain text (`HtmlText::fromText()`) is escaped, trusted
+ * HTML (`HtmlText::fromHtml()`) stays as it is.
  */
 final class DetailDataObject extends HtmlDataObject
 {
-    /**
-     * @param string $name Trusted HTML, stored as it is
-     * @param string $value Plain text (escaped here) or, with `$isHtml`, trusted HTML
-     */
     public function __construct(
-        string $name,
-        string $value,
-        bool $isHtml,
+        HtmlText $name,
+        HtmlText $value,
     ) {
         parent::__construct();
-        $this->addHtml(propertyName: 'name', html: $name);
-        if ($isHtml) {
-            $this->addHtml(propertyName: 'value', html: $value);
-        } else {
-            $this->addText(propertyName: 'value', text: $value);
-        }
+        $this->addHtml(propertyName: 'name', html: $name->render());
+        $this->addHtml(propertyName: 'value', html: $value->render());
     }
 }

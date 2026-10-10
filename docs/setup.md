@@ -45,7 +45,8 @@ Own keys of a project (flat, e.g. `'mailer.hostname'`) are read from `$core->env
   compiled again; or set `'checkTemplateChanges' => true`.
 - The classes of yuf and of `app/` are loaded by `actra/autoloader`. Its cache (`autoloader.php` in the cache directory,
   the paths of the loaded classes) works like a class map: keep it between requests. `composer install --no-dev
-  --optimize-autoloader` only covers the Composer packages.
+  --optimize-autoloader` only covers the Composer packages. yuf's Composer autoload (PSR-4) is for tools and tests;
+  an application that includes `vendor/autoload.php` as well loads each class only once.
 - Optional: `opcache.preload` with a script that loads the classes of yuf and your application.
 - With PHP-FPM, yuf calls `fastcgi_finish_request()` after the response is sent: destructors and shutdown functions run
   after the client has the response. Nothing can be output afterwards, and the session is already closed (see

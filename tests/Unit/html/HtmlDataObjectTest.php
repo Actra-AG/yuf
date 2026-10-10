@@ -171,19 +171,25 @@ final class HtmlDataObjectTest extends TestCase
         $this->assertSame('b', $object->toTemplateData()->name);
     }
 
-    public function testDetailDataObjectWithText(): void
+    public function testDetailDataObjectEscapesPlainText(): void
     {
-        $detail = new DetailDataObject(name: '<i>Label</i>', value: '<b>&</b>', isHtml: false);
+        $detail = new DetailDataObject(
+            name: HtmlText::fromText(text: '<i>Label</i> & "Co"'),
+            value: HtmlText::fromText(text: '<b>&</b>'),
+        );
 
-        $this->assertSame('<i>Label</i>', $detail->toTemplateData()->name);
+        $this->assertSame('&lt;i&gt;Label&lt;/i&gt; &amp; &quot;Co&quot;', $detail->toTemplateData()->name);
         $this->assertSame('&lt;b&gt;&amp;&lt;/b&gt;', $detail->toTemplateData()->value);
     }
 
-    public function testDetailDataObjectWithHtml(): void
+    public function testDetailDataObjectKeepsTrustedHtml(): void
     {
-        $detail = new DetailDataObject(name: 'Label', value: '<b>&amp;</b>', isHtml: true);
+        $detail = new DetailDataObject(
+            name: HtmlText::fromHtml(html: '<i>Label</i>'),
+            value: HtmlText::fromHtml(html: '<b>&amp;</b>'),
+        );
 
-        $this->assertSame('Label', $detail->toTemplateData()->name);
+        $this->assertSame('<i>Label</i>', $detail->toTemplateData()->name);
         $this->assertSame('<b>&amp;</b>', $detail->toTemplateData()->value);
     }
 

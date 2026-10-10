@@ -38,6 +38,7 @@ final class FormMessagesTest extends TestCase
         $this->assertSame('The type of the file is not allowed:', $messages->fileTypeNotAllowed);
         $this->assertSame('Only [max] file(s) allowed.', $messages->tooManyFiles);
         $this->assertSame('A file named "[fileName]" has already been uploaded.', $messages->duplicateFile);
+        $this->assertSame('The password must have at least [min] characters.', $messages->passwordTooShort);
     }
 
     public function testGermanTexts(): void
@@ -71,6 +72,7 @@ final class FormMessagesTest extends TestCase
             'Es wurde bereits eine Datei mit dem Dateinamen "[fileName]" hochgeladen.',
             $messages->duplicateFile,
         );
+        $this->assertSame('Das Passwort muss mindestens [min] Zeichen lang sein.', $messages->passwordTooShort);
     }
 
     public function testGermanHasNoEnglishDefaultText(): void

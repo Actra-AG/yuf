@@ -37,6 +37,15 @@ final class NavigationItemCollection
     }
 
     /**
+     * Whether this level has an item with the key (the children of an item are not searched), whatever the access
+     * rights are.
+     */
+    public function has(string $navKey): bool
+    {
+        return array_key_exists(key: $navKey, array: $this->items);
+    }
+
+    /**
      * The data of the items the user may see, and remembers in `$isActive` whether one of them is the active item.
      */
     public function prepareForRenderer(

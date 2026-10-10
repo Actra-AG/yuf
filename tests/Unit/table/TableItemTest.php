@@ -15,6 +15,7 @@ use actra\yuf\tests\Double\db\StatusEnum;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
+use stdClass;
 use UnexpectedValueException;
 
 final class TableItemTest extends TestCase
@@ -87,11 +88,30 @@ final class TableItemTest extends TestCase
         $this->assertSame(['ID' => 7, 'text' => "<b>A & B</b>\n\"C\"", 'empty' => null], $tableItem->data);
     }
 
-    public function testRenderValueOfNonScalarThrows(): void
+    public function testNonScalarValueIsRejectedWhenTheRowIsCreated(): void
     {
         $this->expectException(UnexpectedValueException::class);
-        $this->expectExceptionMessageIsOrContains('Column "list" holds a array');
-        TableItemTest::tableItem(values: ['list' => [1]])->renderValue(name: 'list');
+        $this->expectExceptionMessageIsOrContains('Column "list" holds a array, but a table row holds scalars');
+        TableItemTest::tableItem(values: ['ID' => 1, 'list' => [1]]);
+    }
+
+    public function testObjectValueIsRejectedWhenTheRowIsCreated(): void
+    {
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessageIsOrContains('Column "created" holds a DateTimeImmutable');
+        TableItemTest::tableItem(values: ['created' => new DateTimeImmutable(datetime: '2026-10-05')]);
+    }
+
+    public function testNumericColumnNamesCanBeRead(): void
+    {
+        $dataObject = new stdClass();
+        $dataObject->{'0'} = 'a';
+        $dataObject->{'1'} = 'b';
+
+        $tableItem = new TableItem(dataObject: $dataObject);
+
+        $this->assertSame('a', $tableItem->getRawValue(name: '0'));
+        $this->assertSame('b', $tableItem->renderValue(name: '1'));
     }
 
     public function testMissingColumnOfRawValueNamesTheColumns(): void
@@ -101,15 +121,15 @@ final class TableItemTest extends TestCase
         TableItemTest::tableItem(values: ['ID' => 1, 'name' => 'x'])->getRawValue(name: 'nope');
     }
 
-    public function testScalarValue(): void
+    public function testRawValueIsTheScalarOfTheColumn(): void
     {
         $tableItem = TableItemTest::tableItem(values: ['i' => 1, 's' => 'a', 'n' => null, 'f' => 1.5, 'b' => false]);
 
-        $this->assertSame(1, $tableItem->getScalarValue(name: 'i'));
-        $this->assertSame('a', $tableItem->getScalarValue(name: 's'));
-        $this->assertNull($tableItem->getScalarValue(name: 'n'));
-        $this->assertSame(1.5, $tableItem->getScalarValue(name: 'f'));
-        $this->assertFalse($tableItem->getScalarValue(name: 'b'));
+        $this->assertSame(1, $tableItem->getRawValue(name: 'i'));
+        $this->assertSame('a', $tableItem->getRawValue(name: 's'));
+        $this->assertNull($tableItem->getRawValue(name: 'n'));
+        $this->assertSame(1.5, $tableItem->getRawValue(name: 'f'));
+        $this->assertFalse($tableItem->getRawValue(name: 'b'));
     }
 
     /**

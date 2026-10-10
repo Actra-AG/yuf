@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit;
 
 use actra\yuf\Core;
+use actra\yuf\core\BaseView;
 use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpStatusCodeEnum;
@@ -19,9 +20,12 @@ use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\ProtocolEnum;
 use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
+use actra\yuf\core\ViewContext;
+use actra\yuf\core\ViewMap;
 use actra\yuf\exception\ExceptionHandler;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\html\HtmlReplacementCollection;
+use actra\yuf\layout\NavigationItemCollection;
 use actra\yuf\security\CspPolicySettings;
 use actra\yuf\session\SessionPreferredLanguage;
 use actra\yuf\template\TemplateData;
@@ -29,6 +33,7 @@ use actra\yuf\tests\Double\core\CoreWorkDirectory;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\core\RecordingLogger;
 use actra\yuf\tests\Double\core\RecordingResponseSender;
+use actra\yuf\tests\Double\core\TestView;
 use actra\yuf\tests\Double\session\NonStartingSessionHandler;
 use actra\yuf\tests\Double\template\NamedTag;
 use InvalidArgumentException;
@@ -182,6 +187,37 @@ final class CoreTest extends TestCase
         $this->assertNull($core->sessionHandler);
         $this->assertNotNull($core->cspPolicySettings);
         $this->assertTrue($this->isExceptionHandlerRegistered());
+    }
+
+    public function testPrepareHttpResponseGivesTheNavigationProviderToTheViews(): void
+    {
+        $navigation = null;
+        $route = new Route(
+            path: '/',
+            viewDirectory: $this->workDirectory->viewDirectory,
+            viewClassPrefix: 'actra\\yuf\\tests\\Double',
+            viewGroup: 'frontend',
+            defaultFileName: 'sample.html',
+            defaultContentType: ContentType::createHtml(),
+            viewFactory: new ViewMap()->add(
+                fileTitle: 'sample',
+                create: static function (ViewContext $context) use (&$navigation): BaseView {
+                    $navigation = $context->getNavigation();
+
+                    return new TestView(context: $context);
+                },
+            ),
+        );
+
+        $this->createCore()->prepareHttpResponse(
+            logger: new RecordingLogger(),
+            routeCollection: new RouteCollection(routes: [$route]),
+            individualSessionHandler: false,
+            navigationProvider: static fn(ViewContext $context): NavigationItemCollection
+                => new NavigationItemCollection(),
+        );
+
+        $this->assertInstanceOf(NavigationItemCollection::class, $navigation);
     }
 
     public function testPrepareHttpResponseWithoutCspPolicy(): void

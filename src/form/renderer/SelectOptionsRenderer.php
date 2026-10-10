@@ -11,6 +11,7 @@ namespace actra\yuf\form\renderer;
 
 use actra\yuf\form\component\field\MultiSelectOptionsField;
 use actra\yuf\form\component\field\SelectOptionsField;
+use actra\yuf\form\FormOption;
 use actra\yuf\form\FormRenderer;
 use actra\yuf\html\HtmlTag;
 use actra\yuf\html\HtmlTagAttribute;
@@ -72,27 +73,27 @@ final class SelectOptionsRenderer extends FormRenderer
                 ),
             );
         }
-        $options = $selectOptionsField->formOptions->data;
+        $options = $selectOptionsField->formOptions->getItems();
         if (
             $selectOptionsField->renderEmptyValueOption
-            && !array_key_exists(key: '', array: $options)
+            && !$selectOptionsField->formOptions->exists(key: '')
         ) {
-            $options = ['' => $selectOptionsField->emptyValueLabel] + $options;
+            array_unshift($options, new FormOption(key: '', htmlText: $selectOptionsField->emptyValueLabel));
         }
-        foreach ($options as $key => $htmlText) {
+        foreach ($options as $option) {
             $optionTag = new HtmlTag(
                 name: 'option',
                 selfClosing: false,
             );
             $optionTag->addHtmlTagAttribute(
-                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'value', text: (string) $key),
+                htmlTagAttribute: HtmlTagAttribute::fromText(name: 'value', text: $option->key),
             );
-            if ($selectOptionsField->isSelected(optionKey: (string) $key)) {
+            if ($selectOptionsField->isSelected(optionKey: $option->key)) {
                 $optionTag->addHtmlTagAttribute(
                     htmlTagAttribute: HtmlTagAttribute::fromName(name: 'selected'),
                 );
             }
-            $optionTag->addText(htmlText: $htmlText);
+            $optionTag->addText(htmlText: $option->htmlText);
             $selectTag->addTag(htmlTag: $optionTag);
         }
         return $selectTag;

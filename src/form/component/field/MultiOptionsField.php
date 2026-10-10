@@ -19,6 +19,7 @@ use actra\yuf\html\HtmlText;
 use LogicException;
 use Override;
 use TypeError;
+use UnexpectedValueException;
 
 /**
  * An options field with a list of selected keys (`name[]` is posted). The empty value is `[]`; empty keys (`''`) are
@@ -62,6 +63,26 @@ abstract class MultiOptionsField extends OptionsField
     public function getValues(): array
     {
         return $this->values;
+    }
+
+    /**
+     * The selected keys as integers, in their stored order. For options added with `FormOptions::addIntItem()`.
+     *
+     * @return list<int>
+     * @throws UnexpectedValueException If a selected key is not an integer.
+     */
+    public function getIntValues(): array
+    {
+        return $this->toIntList(keys: $this->values);
+    }
+
+    /**
+     * @param list<string> $keys
+     * @return list<int>
+     */
+    private function toIntList(array $keys): array
+    {
+        return array_map(callback: fn(string $key): int => $this->keyToInt(key: $key), array: $keys);
     }
 
     /**
@@ -145,6 +166,24 @@ abstract class MultiOptionsField extends OptionsField
                 callback: fn(string $key): bool => !in_array(needle: $key, haystack: $this->values, strict: true),
             ),
         );
+    }
+
+    /**
+     * @return list<int>
+     * @throws UnexpectedValueException If an added key is not an integer.
+     */
+    public function getAddedIntValues(): array
+    {
+        return $this->toIntList(keys: $this->getAddedValues());
+    }
+
+    /**
+     * @return list<int>
+     * @throws UnexpectedValueException If a removed key is not an integer.
+     */
+    public function getRemovedIntValues(): array
+    {
+        return $this->toIntList(keys: $this->getRemovedValues());
     }
 
     /**

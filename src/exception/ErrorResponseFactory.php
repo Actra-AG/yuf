@@ -9,8 +9,6 @@ declare(strict_types=1);
 
 namespace actra\yuf\exception;
 
-use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
@@ -31,7 +29,6 @@ final readonly class ErrorResponseFactory
         private HttpRequest $httpRequest,
         private ?CspPolicySettings $cspPolicySettings,
         private string $cspNonce,
-        private Clock $clock = new SystemClock(),
     ) {}
 
     /**
@@ -59,7 +56,6 @@ final readonly class ErrorResponseFactory
                 )->content,
                 contentType: $contentType,
                 httpRequest: $this->httpRequest,
-                clock: $this->clock,
             ),
             ErrorOutputFormatEnum::TEXT => HttpResponse::createResponseFromString(
                 httpStatusCode: $httpStatusCode,
@@ -70,7 +66,6 @@ final readonly class ErrorResponseFactory
                 )->content,
                 contentType: $contentType,
                 httpRequest: $this->httpRequest,
-                clock: $this->clock,
             ),
             ErrorOutputFormatEnum::HTML => HttpResponse::createHtmlResponse(
                 httpStatusCode: $httpStatusCode,
@@ -78,7 +73,6 @@ final readonly class ErrorResponseFactory
                 cspPolicySettings: $this->cspPolicySettings,
                 nonce: $this->cspNonce,
                 httpRequest: $this->httpRequest,
-                clock: $this->clock,
                 languageCode: $languageCode,
             ),
         };

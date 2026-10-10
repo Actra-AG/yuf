@@ -258,4 +258,16 @@ final class CsrfTokenFieldValueTest extends TestCase
         $field->render();
         $this->assertSame(1, $source->calls);
     }
+
+    public function testValueHasChangedIsFalseBeforeAndAfterThePostedToken(): void
+    {
+        $field = $this->createField();
+        $this->assertFalse($field->valueHasChanged());
+
+        $this->validate(field: $field, data: ['csrftoken' => 'expected-token']);
+        $this->assertFalse($field->valueHasChanged());
+
+        $this->validate(field: $field, data: ['csrftoken' => 'wrong']);
+        $this->assertFalse($field->valueHasChanged());
+    }
 }

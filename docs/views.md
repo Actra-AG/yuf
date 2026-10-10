@@ -49,6 +49,53 @@ Every view receives the `ViewContext` of the request and passes it to `BaseView:
 
 `BaseView::getHtmlDocument()` and `getJsonRequestBody()` give the HTML document and the JSON request body.
 
+### Navigation per request
+
+A navigation is a `NavigationItemCollection` of `NavigationItem`s (`has(navKey:)` tells whether a level has a key).
+Build it per request, not once per process: pass a provider to `Core::prepareHttpResponse()`; it gets the
+`ViewContext` of each request (route, language, login) and returns the collection. Views read it with
+`$this->context->getNavigation()`, which calls the provider on the first use of the request (`null` without
+provider: nothing changes for projects that build their navigation themselves).
+
+```php
+$core->prepareHttpResponse(
+    routeCollection: $routes,
+    navigationProvider: static function (ViewContext $context): NavigationItemCollection {
+        $navigation = new NavigationItemCollection();
+        $navigation->addItem(navigationItem: new NavigationItem(
+            navKey: 'home',
+            href: $context->route->path,
+            svgPath: '…',
+            title: 'Home',
+            requiredAccessRights: AccessRightCollection::createEmpty(),
+        ));
+
+        return $navigation;
+    },
+);
+```
+
+### Required access rights and the login page
+
+A view passes `requiredAccessRights` and the `AuthUser` (or `null`) to `BaseView::__construct()`; without a user or
+without one of the rights it throws an `UnauthorizedAccessRightException` (answered with the page `unauthorized.html`,
+status 401). `$isNotLoggedIn` of the exception tells "no user" from "user without the right".
+
+Give the `RouteCollection` a login path to send visitors without a login to the login page instead:
+
+```php
+new RouteCollection(routes: [...], loginPath: '/de/login.html');
+```
+
+A `GET` request of an HTML page whose view threw the exception with `isNotLoggedIn` is answered with a redirect (303)
+to `<loginPath>?returnTo=<requested URI, URL-encoded>`. A user without the right, a POST or JSON request and the login
+page itself still get the 401 (no lost form data, no loop); without a login path nothing changes. The login path must
+be a local path (`/…`, no host, no `//`); the constructor throws otherwise.
+
+After the login, the login page redirects to `LoginRedirect::findReturnPath(httpRequest: $httpRequest)`: the validated
+`returnTo` target, `null` if it is missing or no local path (`//example.com`, `https://…`, `/\example.com`, control
+characters), then redirect to the default page. Never redirect to the raw query value (open redirect).
+
 ## The request
 
 `HttpRequest` is an immutable snapshot of the request, created once by `Core` (`$core->httpRequest`,
@@ -95,6 +142,7 @@ $page = $this->getPathVarAsInt(nr: 3) ?? 1;       // ?int, null if missing or no
 ```
 
 Integers are strict: optional minus and digits only; values outside the integer range are not an integer.
+`$this->context->pathVars` (`PathVars`) also gives `list(): list<string>` (all trimmed values in order) and `count()`.
 
 ## JSON endpoints
 
@@ -129,3 +177,15 @@ public function execute(): void
   assets without personal data (`/css/styles.min.css?v=20260922`) add `isPublic: true, isImmutable: true`.
 - `sendAndExit()` closes a started session before the content is sent, so a download does not block other requests of
   the user. Write the session before.
+
+### After the response
+
+`$this->context->responseSender->afterResponse(callback: …)` runs a closure after the response was sent: the client
+does not wait for a mail, a log entry or a cleanup (with PHP-FPM; other SAPIs run it at the end of the script). The
+session is closed by then, so the callback must not write it, and it has to catch and log its own failures. A test
+double of `ResponseSender` stores the callbacks and runs them when the test asks (see `RecordingResponseSender` in
+`tests/Double/core/`).
+
+```php
+$this->context->responseSender->afterResponse(callback: fn() => $mailer->sendResetLink(user: $user));
+```

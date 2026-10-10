@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
+use Closure;
 use Override;
 
 /**
@@ -47,6 +48,16 @@ final class NativeResponseSender implements ResponseSender
             fastcgi_finish_request();
         }
         exit;
+    }
+
+    /**
+     * Registers the callback as shutdown function: PHP runs it after `exit`, which is after `fastcgi_finish_request()`
+     * (see `send()`). Not unit tested (the shutdown functions of the test process).
+     */
+    #[Override]
+    public function afterResponse(Closure $callback): void
+    {
+        register_shutdown_function(callback: $callback);
     }
 
     /**

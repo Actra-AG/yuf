@@ -9,13 +9,16 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\exception;
 
+use actra\yuf\auth\UnauthorizedAccessRightException;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentType;
+use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\Language;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\RequestHandler;
+use actra\yuf\core\RequestMethodEnum;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
@@ -84,13 +87,14 @@ final class ExceptionHandlerTest extends TestCase
         ?string $errorDocsDirectory = null,
         LanguageCollection $availableLanguages = new LanguageCollection(),
         ?ResponseSender $responseSender = null,
+        ?HttpRequest $httpRequest = null,
     ): ExceptionHandlerContext {
         return ExceptionHandlerContextFactory::create(
             logger: $this->logger,
             cacheDirectory: $this->workDirectory->cacheDirectory,
             isDebug: $isDebug,
             cspPolicySettings: $cspPolicySettings,
-            httpRequest: HttpRequestFactory::create(
+            httpRequest: $httpRequest ?? HttpRequestFactory::create(
                 queryParameters: ['id' => '7'],
                 postParameters: ['name' => 'Anna <b>'],
             ),
@@ -314,6 +318,7 @@ final class ExceptionHandlerTest extends TestCase
         string $requestUri = '/en/nope.html',
         ?Language $language = null,
         ?Language $otherLanguage = null,
+        ?string $loginPath = null,
     ): RequestHandler {
         $language ??= new Language(code: 'en', locale: 'C');
         $languages = [$language];
@@ -339,7 +344,7 @@ final class ExceptionHandlerTest extends TestCase
 
         return new RequestHandler(
             httpRequest: HttpRequestFactory::create(uri: $requestUri),
-            routeCollection: new RouteCollection(routes: $routes),
+            routeCollection: new RouteCollection(routes: $routes, loginPath: $loginPath),
             availableLanguages: new LanguageCollection(languages: $languages),
             allowedDomains: ['example.com'],
             session: null,
@@ -382,6 +387,123 @@ final class ExceptionHandlerTest extends TestCase
         $this->assertSame(HttpStatusCodeEnum::HTTP_UNAUTHORIZED, $response->httpStatusCode);
         $this->assertStringContainsString('<h1>Unauthorized page</h1>', self::content(response: $response));
         $this->assertStringContainsString('class="body-unauthorized"', self::content(response: $response));
+    }
+
+    public function testMissingAccessRightWithoutLoginPathIsAnsweredWithTheUnauthorizedPage(): void
+    {
+        $handler = $this->register();
+        $handler->setRequestHandler(requestHandler: $this->createRequestHandler());
+
+        $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_UNAUTHORIZED, $response->httpStatusCode);
+        $this->assertStringContainsString('<h1>Unauthorized page</h1>', self::content(response: $response));
+    }
+
+    private function createLoginRedirectHandler(
+        string $uri = '/en/secret.html?id=7',
+        RequestMethodEnum $method = RequestMethodEnum::GET,
+        ?string $loginPath = '/en/login.html',
+        bool $isDebug = false,
+        ?ContentType $contentType = null,
+    ): ExceptionHandler {
+        $httpRequest = HttpRequestFactory::create(uri: $uri, method: $method);
+        $handler = $this->register(context: $this->createContext(isDebug: $isDebug, httpRequest: $httpRequest));
+        $handler->setRequestHandler(
+            requestHandler: new RequestHandler(
+                httpRequest: $httpRequest,
+                routeCollection: new RouteCollection(loginPath: $loginPath),
+                availableLanguages: new LanguageCollection(),
+                allowedDomains: ['example.com'],
+                session: null,
+            ),
+        );
+        if ($contentType !== null) {
+            $handler->setContentHandler(
+                contentHandler: new ContentHandler(
+                    contentType: $contentType,
+                    cspNonce: new CspNonce(value: ExceptionHandlerContextFactory::NONCE),
+                ),
+            );
+        }
+
+        return $handler;
+    }
+
+    public function testNotLoggedInUserIsRedirectedToTheLoginPathWithTheRequestedUri(): void
+    {
+        $handler = $this->createLoginRedirectHandler();
+
+        $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_SEE_OTHER, $response->httpStatusCode);
+        $this->assertSame(
+            'https://example.com/en/login.html?returnTo=%2Fen%2Fsecret.html%3Fid%3D7',
+            $response->getHeader(key: 'Location'),
+        );
+    }
+
+    public function testRedirectToTheLoginPathAlsoHappensInDebugMode(): void
+    {
+        $handler = $this->createLoginRedirectHandler(isDebug: true);
+
+        $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_SEE_OTHER, $response->httpStatusCode);
+    }
+
+    public function testLoggedInUserWithoutTheRightGetsTheUnauthorizedPage(): void
+    {
+        $handler = $this->createLoginRedirectHandler();
+
+        $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException());
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_UNAUTHORIZED, $response->httpStatusCode);
+    }
+
+    public function testOtherUnauthorizedExceptionsAreNotRedirected(): void
+    {
+        $handler = $this->createLoginRedirectHandler();
+
+        $response = $handler->createResponse(throwable: new UnauthorizedException());
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_UNAUTHORIZED, $response->httpStatusCode);
+    }
+
+    public function testRequestWithoutLoginPathIsNotRedirected(): void
+    {
+        $handler = $this->createLoginRedirectHandler(loginPath: null);
+
+        $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_UNAUTHORIZED, $response->httpStatusCode);
+    }
+
+    public function testPostRequestIsNotRedirected(): void
+    {
+        $handler = $this->createLoginRedirectHandler(method: RequestMethodEnum::POST);
+
+        $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_UNAUTHORIZED, $response->httpStatusCode);
+    }
+
+    public function testJsonRequestIsNotRedirected(): void
+    {
+        $handler = $this->createLoginRedirectHandler(contentType: ContentType::createJson());
+
+        $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_UNAUTHORIZED, $response->httpStatusCode);
+    }
+
+    public function testTheLoginPathItselfIsNotRedirected(): void
+    {
+        $handler = $this->createLoginRedirectHandler(uri: '/en/login.html?returnTo=%2Fen%2Fx');
+
+        $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_UNAUTHORIZED, $response->httpStatusCode);
     }
 
     public function testOtherExceptionsAreAnsweredWithTheDefaultPage(): void
