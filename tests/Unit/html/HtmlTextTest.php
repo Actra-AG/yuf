@@ -45,4 +45,22 @@ final class HtmlTextTest extends TestCase
     {
         $this->assertSame($expected, HtmlText::fromTextWithLineBreaks(text: $text)->render());
     }
+
+    public function testSanitizedHtmlKeepsAllowedTagsOnly(): void
+    {
+        $this->assertSame(
+            '<p><strong>a</strong></p>b',
+            HtmlText::fromSanitizedHtml(html: '<p onclick="x()"><strong>a</strong></p><div>b<script>c</script></div>')
+                ->render(),
+        );
+    }
+
+    public function testSanitizedHtmlTakesAnAllowlist(): void
+    {
+        $this->assertSame(
+            '<a href="https://example.com">a</a>b',
+            HtmlText::fromSanitizedHtml(html: '<a href="https://example.com">a</a><p>b</p>', allowedTags: ['a' => ['href']])
+                ->render(),
+        );
+    }
 }

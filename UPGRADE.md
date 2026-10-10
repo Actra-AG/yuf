@@ -4,6 +4,12 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v5.3.0 (2026-10-10)
+
+- New `HtmlText::fromSanitizedHtml(html:, allowedTags:)` and `HtmlSanitizer::sanitize()`: HTML from an external source
+  reduced to an allowlist of tags and attributes, without scripts, event handlers, styles and (by default) URLs
+  ([docs/templates.md](docs/templates.md)).
+
 ## v5.2.1 (2026-10-10)
 
 - Fix: a search filter can be reset to "all" again. `SearchState::checkOptionsFilter()` and

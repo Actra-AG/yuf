@@ -51,6 +51,12 @@ test the truthiness; any other `against` is compared as string with strings, num
   built by your own code and output it as it is. Never pass user data to `addHtml()`.
 - Plain text with line breaks (e.g. a comment of a user): `HtmlText::fromTextWithLineBreaks(text: $comment)` escapes it
   and turns the line breaks into `<br>`; pass it with `addHtmlText()` (`HtmlReplacementCollection`, `HtmlDataObject`).
+- HTML from an external source (e.g. product texts of an API): `HtmlText::fromSanitizedHtml(html: $html)` keeps only
+  `p`, `br`, `ul`, `ol`, `li`, `strong`, `b`, `em`, `i`, `sub`, `sup` and tables (with `colspan`/`rowspan`). Other
+  elements are unwrapped (their text is kept), `script`, `style` and `template` are removed with their content, all
+  other attributes are dropped. Pass your own allowlist with `allowedTags: ['a' => ['href'], 'p' => []]`; URL
+  attributes (`href`, `src`, …) keep only http, https, mailto, tel and relative URLs. `HtmlSanitizer::sanitize()`
+  returns the sanitized string (e.g. to store it).
 - Language texts and non-`.html` snippets are output as they are.
 - Escaping is for HTML text and quoted attributes. Values in `<script>` or `<style>` are not escaped for these
   contexts: use `data-*` attributes or JSON prepared by the view.

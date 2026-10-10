@@ -48,6 +48,18 @@ final class HtmlText extends HtmlElement
         return new HtmlText(content: nl2br(string: HtmlEncoder::encode(value: $text), use_xhtml: false), isHtml: true);
     }
 
+    /**
+     * @param string $html HTML from an external source (e.g. product texts of an API), reduced to the allowlist
+     * @param array<string, list<string>> $allowedTags Lowercase tag name => allowed attribute names, see
+     *     {@see HtmlSanitizer::sanitize()}
+     */
+    public static function fromSanitizedHtml(
+        string $html,
+        array $allowedTags = HtmlSanitizer::DEFAULT_ALLOWED_TAGS,
+    ): HtmlText {
+        return new HtmlText(content: HtmlSanitizer::sanitize(html: $html, allowedTags: $allowedTags), isHtml: true);
+    }
+
     #[Override]
     public function render(): string
     {
