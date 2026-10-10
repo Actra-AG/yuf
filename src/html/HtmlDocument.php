@@ -15,6 +15,7 @@ use actra\yuf\security\CsrfHiddenFieldRenderer;
 use actra\yuf\security\CsrfTokenSource;
 use actra\yuf\template\TemplateData;
 use actra\yuf\template\TemplateEngine;
+use LogicException;
 use OutOfBoundsException;
 use RuntimeException;
 
@@ -34,6 +35,7 @@ final class HtmlDocument
     public string $contentFileName;
     /** @var array<int, string> */
     private array $activeHtmlIds = [];
+    private ?string $fixedContentFilePath = null;
 
     public function __construct(
         private readonly HtmlDocumentSettings $settings,
@@ -59,6 +61,23 @@ final class HtmlDocument
             html: static fn(): string => CsrfHiddenFieldRenderer::render(csrfTokenSource: $csrfTokenSource),
         );
         $this->replacements->addText(identifier: 'requestedFileName', text: $settings->fileName);
+    }
+
+    /**
+     * Renders this content file instead of the one found by `contentFileDirectory`, the file group of the request
+     * and `contentFileName` (which are then ignored), e.g. for a template shipped with a library. Calling it again
+     * replaces the path.
+     *
+     * @param string $filePath Absolute path set by code, never from the request
+     *
+     * @throws LogicException if the file does not exist
+     */
+    public function useContentFile(string $filePath): void
+    {
+        if (!is_file(filename: $filePath)) {
+            throw new LogicException(message: 'The content file does not exist: ' . $filePath);
+        }
+        $this->fixedContentFilePath = $filePath;
     }
 
     public function setActiveHtmlId(int $key, string $val): void
@@ -126,6 +145,9 @@ final class HtmlDocument
 
     private function findContentFile(): string
     {
+        if ($this->fixedContentFilePath !== null) {
+            return $this->fixedContentFilePath;
+        }
         $fileGroup = $this->settings->fileGroup;
         // The group and the title come from the request, the content file name is set by the view
         if (

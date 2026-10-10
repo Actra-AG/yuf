@@ -18,6 +18,7 @@ use actra\yuf\tests\Double\security\CountingCsrfTokenSource;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
 use actra\yuf\tests\Double\template\TemplateWorkDirectory;
+use LogicException;
 use OutOfBoundsException;
 use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -322,6 +323,85 @@ final class HtmlDocumentTest extends TestCase
         $document = $this->createDocument(fileTitle: 'a..b', fileGroup: 'group');
 
         $this->assertSame('dots', $document->render());
+    }
+
+    private function writeLibraryContent(string $source): string
+    {
+        $directory = $this->workDirectory->templateDirectory . 'library/confirmation/';
+        mkdir(directory: $directory, recursive: true);
+        file_put_contents(filename: $directory . 'confirmation.html', data: $source);
+
+        return $directory . 'confirmation.html';
+    }
+
+    public function testFixedContentFileWithoutFileGroup(): void
+    {
+        $this->writeContent(name: 'fixed.html', source: 'fixed');
+        $document = $this->createDocument();
+        $document->useContentFile(filePath: $this->viewDirectory . 'html/fixed.html');
+
+        $this->assertSame('fixed', $document->render());
+    }
+
+    public function testFixedContentFileIgnoresTheFileGroup(): void
+    {
+        $this->writeContent(name: 'fixed.html', source: 'fixed');
+        $this->writeContent(name: 'group/fixed.html', source: 'grouped');
+        $document = $this->createDocument(fileGroup: 'group');
+        $document->useContentFile(filePath: $this->viewDirectory . 'html/fixed.html');
+
+        $this->assertSame('fixed', $document->render());
+    }
+
+    public function testFixedContentFileOutsideTheViewDirectory(): void
+    {
+        $filePath = $this->writeLibraryContent(source: 'library');
+        $this->writeTemplate(name: 'default', source: 'default:<tst:loadSubTpl tplfile="{this}"/>');
+        $document = $this->createDocument(fileTitle: 'subscriptionCancel', fileGroup: 'shop');
+        $document->useContentFile(filePath: $filePath);
+
+        $this->assertSame('default:library', $document->render());
+    }
+
+    public function testFixedContentFileIgnoresContentFileDirectoryAndName(): void
+    {
+        $this->writeContent(name: 'page.html', source: 'page');
+        $filePath = $this->writeLibraryContent(source: 'library');
+        $document = $this->createDocument();
+        $document->useContentFile(filePath: $filePath);
+        $document->contentFileDirectory = $this->viewDirectory . 'html/';
+        $document->contentFileName = 'page.html';
+
+        $this->assertSame('library', $document->render());
+    }
+
+    public function testFixedContentFileCanBeReplaced(): void
+    {
+        $this->writeContent(name: 'first.html', source: 'first');
+        $this->writeContent(name: 'second.html', source: 'second');
+        $document = $this->createDocument();
+        $document->useContentFile(filePath: $this->viewDirectory . 'html/first.html');
+        $document->useContentFile(filePath: $this->viewDirectory . 'html/second.html');
+
+        $this->assertSame('second', $document->render());
+    }
+
+    public function testMissingFixedContentFileThrows(): void
+    {
+        $filePath = $this->viewDirectory . 'html/missing.html';
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIs('The content file does not exist: ' . $filePath);
+        $this->createDocument()->useContentFile(filePath: $filePath);
+    }
+
+    public function testThisIsTheFixedContentFilePath(): void
+    {
+        $filePath = $this->writeLibraryContent(source: "{tst:text value='this'}");
+        $document = $this->createDocument(fileGroup: 'group');
+        $document->useContentFile(filePath: $filePath);
+
+        $this->assertSame($filePath, $document->render());
     }
 
     public function testActiveHtmlIds(): void

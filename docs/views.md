@@ -49,6 +49,18 @@ Every view receives the `ViewContext` of the request and passes it to `BaseView:
 
 `BaseView::getHtmlDocument()` and `getJsonRequestBody()` give the HTML document and the JSON request body.
 
+### Content file
+
+`HtmlDocument` renders the content file `contentFileDirectory` (default `<viewDirectory>html/`) + `[<fileGroup>/]` +
+`contentFileName` (default `<fileTitle>.html`) inside the template `templateDirectory` + `templateName` + `.html`
+(without template: the content file alone). For templates shipped with a library, on routes with and without file
+groups, a view sets the full path; the file group of the request is not added, a missing file throws a
+`LogicException`:
+
+```php
+$htmlDocument->useContentFile(filePath: __DIR__ . '/../html/confirmation.html');
+```
+
 ### Navigation per request
 
 A navigation is a `NavigationItemCollection` of `NavigationItem`s (`has(navKey:)` tells whether a level has a key).
