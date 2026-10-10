@@ -43,10 +43,12 @@ Own keys of a project (flat, e.g. `'mailer.hostname'`) are read from `$core->env
 - Without `debug`, compiled templates are used without comparing them with the templates (no file checks per render,
   `checkTemplateChanges` follows `debug`). Delete `app/cache/v*/` on every deployment, else changed templates are not
   compiled again; or set `'checkTemplateChanges' => true`.
-- The classes of yuf and of `app/` are loaded by `actra/autoloader`. Its cache (`autoloader.php` in the cache directory,
-  the paths of the loaded classes) works like a class map: keep it between requests. `composer install --no-dev
-  --optimize-autoloader` only covers the Composer packages. yuf's Composer autoload (PSR-4) is for tools and tests;
-  an application that includes `vendor/autoload.php` as well loads each class only once.
+- Who loads the classes: an application that includes `vendor/autoload.php` before `fromEnvironment()` (needed as soon
+  as it uses other Composer packages) loads yuf through Composer, which registers its loader first; `actra/autoloader`
+  then loads only the classes of `app/`. Without `vendor/autoload.php`, `actra/autoloader` loads yuf as well. Each
+  class is loaded once either way. Deploy with `composer install --no-dev --optimize-autoloader` (a class map instead
+  of file lookups). The cache of `actra/autoloader` (`autoloader.php` in the cache directory, the paths of the loaded
+  classes) works like a class map: keep it between requests.
 - Optional: `opcache.preload` with a script that loads the classes of yuf and your application.
 - With PHP-FPM, yuf calls `fastcgi_finish_request()` after the response is sent: destructors and shutdown functions run
   after the client has the response. Nothing can be output afterwards, and the session is already closed (see

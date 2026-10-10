@@ -4,6 +4,12 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v5.0.2 (2026-10-10)
+
+- Docs: the v5.0.0 entry "Applications are unchanged" was wrong for applications that include `vendor/autoload.php`
+  before `Core::fromEnvironment()`: Composer loads yuf there, `actra/autoloader` only the classes of `app/`. It works
+  as is; deploy with `composer install --no-dev --optimize-autoloader` ([docs/setup.md](docs/setup.md)).
+
 ## v5.0.1 (2026-10-10)
 
 - Security: a password login refused for the IP whitelist, `checkLoginCredentials()`, an inactive or a locked-out

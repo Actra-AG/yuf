@@ -1,7 +1,8 @@
 # yuf
 
 **yuf** (pronounced "[jʌf]" or "[jʊf]") is a smart, fast and lightweight PHP framework. Its only dependency is
-[actra/autoloader](https://github.com/Actra-AG/autoloader), which loads all classes of yuf.
+[actra/autoloader](https://github.com/Actra-AG/autoloader), which loads yuf in applications without Composer's
+autoloader.
 
 - Routing, views, JSON endpoints and an immutable request object
 - Template engine with escaping by default and own tags

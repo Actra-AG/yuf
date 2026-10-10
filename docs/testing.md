@@ -3,8 +3,8 @@
 ## PHPStan and PHPUnit
 
 yuf has a Composer autoload configuration (PSR-4, since v5.0.0): PHPStan and PHPUnit find its classes through
-`vendor/autoload.php`, no `scanDirectories` and no yuf path in the test bootstrap are needed. In the application,
-`Core::fromEnvironment()` still loads them with `actra/autoloader`.
+`vendor/autoload.php`, no `scanDirectories` and no yuf path in the test bootstrap are needed. Who loads yuf in the
+application: see [setup.md](setup.md).
 
 The bootstrap (e.g. `tests/bootstrap.php`) loads the Composer autoloader. Projects whose own classes have no Composer
 autoload register `actra/autoloader` for them; delete its cache file first, so no stale class paths remain after files
