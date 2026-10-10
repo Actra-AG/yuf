@@ -49,6 +49,8 @@ test the truthiness; any other `against` is compared as string with strings, num
   `htmlspecialchars()`.
 - `addText()` / `HtmlText::fromText()` take plain text (escaped once), `addHtml()` / `HtmlText::fromHtml()` take HTML
   built by your own code and output it as it is. Never pass user data to `addHtml()`.
+- Plain text with line breaks (e.g. a comment of a user): `HtmlText::fromTextWithLineBreaks(text: $comment)` escapes it
+  and turns the line breaks into `<br>`; pass it with `addHtmlText()` (`HtmlReplacementCollection`, `HtmlDataObject`).
 - Language texts and non-`.html` snippets are output as they are.
 - Escaping is for HTML text and quoted attributes. Values in `<script>` or `<style>` are not escaped for these
   contexts: use `data-*` attributes or JSON prepared by the view.

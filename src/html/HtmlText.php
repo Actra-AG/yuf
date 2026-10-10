@@ -39,6 +39,15 @@ final class HtmlText extends HtmlElement
         return new HtmlText(content: $text, isHtml: false);
     }
 
+    /**
+     * @param string $text Plain text (e.g. a comment of a user): escaped, and the line breaks (`\n`, `\r\n`, `\r`)
+     *     become `<br>`
+     */
+    public static function fromTextWithLineBreaks(string $text): HtmlText
+    {
+        return new HtmlText(content: nl2br(string: HtmlEncoder::encode(value: $text), use_xhtml: false), isHtml: true);
+    }
+
     #[Override]
     public function render(): string
     {

@@ -39,6 +39,16 @@ final class HtmlDataObjectTest extends TestCase
         $this->assertNull($object->toTemplateData()->name);
     }
 
+    public function testHtmlTextIsRendered(): void
+    {
+        $object = new HtmlDataObject();
+        $object->addHtmlText(propertyName: 'comment', htmlText: HtmlText::fromTextWithLineBreaks(text: "a & b\nc"));
+        $object->addHtmlText(propertyName: 'none', htmlText: null);
+
+        $this->assertSame("a &amp; b<br>\nc", $object->toTemplateData()->comment);
+        $this->assertNull($object->toTemplateData()->none);
+    }
+
     public function testHtmlIsStoredAsItIs(): void
     {
         $object = new HtmlDataObject();

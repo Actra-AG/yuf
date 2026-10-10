@@ -52,6 +52,14 @@ class HtmlDataObject
     }
 
     /**
+     * @param HtmlText|null $htmlText Rendered here (plain text escaped, HTML as it is)
+     */
+    public function addHtmlText(string $propertyName, ?HtmlText $htmlText): void
+    {
+        $this->values[$propertyName] = $htmlText?->render();
+    }
+
+    /**
      * Stores a copy of the data object as it is now.
      */
     public function addDataObject(string $propertyName, ?HtmlDataObject $htmlDataObject): void
