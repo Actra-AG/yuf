@@ -4,6 +4,11 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v6.0.1 (2026-10-11)
+
+- The search help of the table filter (`tableFilter.html`) no longer lists `%` as a wildcard: `%` is searched
+  literally, only `*` is a wildcard.
+
 ## v6.0.0 (2026-10-10)
 
 Security release: fixes in routing, login, Microsoft login, forms, uploads, file responses, mail, tables and logging.
