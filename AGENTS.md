@@ -24,8 +24,9 @@ This project follows the Actra coding standard, installed as development depende
 - Zero runtime dependencies; development dependencies are `actra/coding-standard` and PHPUnit only.
 - All classes are loaded by Composer (PSR-4: `autoload` for `src/`, `autoload-dev` for `tests/` and the example's
   `app\` classes).
-- yuf ships no JavaScript and no CSS. No frontend review: changes of the HTML output are API changes and get an
-  `UPGRADE.md` entry.
+- yuf ships no JavaScript and no CSS. Its generated HTML keeps the look of existing output (coding standard,
+  versioning.md section 4): new markup only as opt-in; any other change of existing markup only with the frontend
+  developer and a ⚠️ `UPGRADE.md` entry with before/after.
 - Example app: `example/` (https://yuf.ddev.site/, uses the sources of `src/`).
 - Skeleton project: `../yuf-skeleton` (https://github.com/Actra-AG/yuf-skeleton).
 

@@ -88,7 +88,7 @@ final class FieldFrameMarkupTest extends TestCase
         $form->addField(formField: new TextField(name: 'q', label: HtmlText::fromHtml(html: 'Search')));
 
         $this->assertSame(
-            '<form method="post" action="?search"><div class="form-compact-field"><label for="q">Search</label>'
+            '<form method="post" action="?search"><div><label for="q">Search</label>'
             . '<input type="text" name="q" id="q" value=""></div></form>',
             $form->render(),
         );
@@ -108,7 +108,7 @@ final class FieldFrameMarkupTest extends TestCase
         $form->validate(input: FormInput::fromArray(data: ['q' => ''], query: ['search' => '']));
 
         $this->assertSame(
-            '<form method="post" action="?search"><div class="form-compact-field has-error">'
+            '<form method="post" action="?search"><div class="has-error">'
             . '<label for="q" class="visuallyhidden">Search<span class="required">*</span></label>'
             . '<input type="text" name="q" id="q" value="" aria-invalid="true" aria-describedby="q-error">'
             . '<div class="form-input-error" id="q-error" role="alert" aria-live="assertive">Required</div>'
@@ -135,7 +135,7 @@ final class FieldFrameMarkupTest extends TestCase
         $form->addField(formField: new TextField(name: 'b', label: HtmlText::fromHtml(html: 'B')));
 
         $this->assertSame(
-            '<form method="post" action="?search"><div class="form-compact-field"><label for="a">A</label>'
+            '<form method="post" action="?search"><div><label for="a">A</label>'
             . '<input type="text" name="a" id="a" value=""></div><dl><dt><label for="b">B</label></dt>'
             . '<dd><input type="text" name="b" id="b" value=""></dd></dl></form>',
             $form->render(),
@@ -160,7 +160,7 @@ final class FieldFrameMarkupTest extends TestCase
         $html = $form->render();
 
         $this->assertStringContainsString(
-            '<div class="form-compact-field"><label for="level">Level</label><select',
+            '<div><label for="level">Level</label><select',
             $html,
         );
         $this->assertStringContainsString('<option value="7" selected>Seven</option>', $html);

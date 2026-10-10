@@ -16,8 +16,8 @@ use actra\yuf\html\HtmlTagAttribute;
 use Override;
 
 /**
- * Renders a field as its label followed by its control in one `<div class="form-compact-field">` (`has-error` is
- * added for a field with errors), for search and filter forms. Unlike `DefinitionListRenderer` there is no `<dl>`,
+ * Renders a field as its label followed by its control in one plain `<div>` (`class="has-error"` only for a field
+ * with errors), for search and filter forms. Unlike `DefinitionListRenderer` there is no `<dl>`,
  * `<dt>` and `<dd>`, no additional column and no extra container for the control. Errors and the field info are
  * rendered after the control as usual, only when the field has them (the control refers to them with
  * `aria-describedby`).
@@ -32,14 +32,13 @@ final class CompactFieldRenderer extends FormRenderer
     public function createHtmlTag(): HtmlTag
     {
         $formField = $this->formField;
-        $divTag = new HtmlTag(name: 'div', selfClosing: false, htmlTagAttributes: [
-            HtmlTagAttribute::fromText(
-                name: 'class',
-                text: $formField->hasErrors(withChildElements: true)
-                    ? 'form-compact-field has-error'
-                    : 'form-compact-field',
-            ),
-        ]);
+        $divTag = new HtmlTag(
+            name: 'div',
+            selfClosing: false,
+            htmlTagAttributes: $formField->hasErrors(withChildElements: true)
+                ? [HtmlTagAttribute::fromText(name: 'class', text: 'has-error')]
+                : [],
+        );
         $divTag->addTag(htmlTag: FormRenderer::createLabelTag(formField: $formField));
         $divTag->addTag(htmlTag: $formField->getDefaultRenderer()->createHtmlTag());
         FormRenderer::addErrorsToParentHtmlTag(formComponentWithErrors: $formField, parentHtmlTag: $divTag);

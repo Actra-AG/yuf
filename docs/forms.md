@@ -131,8 +131,8 @@ $confirm->addRule(formRule: new EqualsFieldRule(otherField: $password, errorMess
 
 The default frame of a field is a definition list (`<dl><dt>label</dt><dd>control</dd></dl>`).
 `Form::useCompactFieldRenderer()` renders the fields without renderer of their own with `CompactFieldRenderer`:
-`<div class="form-compact-field">` with the label and the control (plus errors and field info, only if there are
-some; `has-error` is added to the div).
+a plain `<div>` with the label and the control (plus errors and field info, only if there are some; then the div has
+`class="has-error"`).
 For one field, call `$field->setRenderer(renderer: new CompactFieldRenderer(formField: $field))`. Meant for search and
 filter forms.
 
