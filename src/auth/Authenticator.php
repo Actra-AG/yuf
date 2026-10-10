@@ -259,6 +259,11 @@ abstract class Authenticator
     ): ?AuthResultEnum {
         $stateRejection = $this->findStateRejection(authUser: $authUser, attempt: $attempt);
         if ($stateRejection !== null) {
+            if ($passwordToCheck !== null) {
+                // Costs the time of a verification, so the answer time does not tell that the user exists
+                Password::spendVerificationTime(rawPassword: $passwordToCheck);
+            }
+
             return $stateRejection;
         }
         if ($passwordToCheck === null) {

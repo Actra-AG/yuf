@@ -308,6 +308,41 @@ final class AuthenticatorTest extends TestCase
         $this->assertSame(0, $authUser->increaseCalls);
     }
 
+    /**
+     * @return array<string, array{TestAuthUser, bool}>
+     */
+    public static function stateRejectionProvider(): array
+    {
+        return [
+            'IP not allowed' => [TestAuthUser::create(accessRights: [], ipWhitelist: ['198.51.100.0/24']), true],
+            'check of the project' => [TestAuthUser::create(accessRights: []), false],
+            'inactive' => [TestAuthUser::create(accessRights: [], isActive: false), true],
+            'out tried' => [TestAuthUser::create(accessRights: [], wrongPasswordAttempts: 3), true],
+        ];
+    }
+
+    /**
+     * Regression: a state rejection answered without hashing told by its answer time that the user exists. The time
+     * is compared with a verification measured in the same run (the rejection without it takes far less than half).
+     */
+    #[DataProvider('stateRejectionProvider')]
+    public function testStateRejectionOfAPasswordLoginTakesTheTimeOfAVerification(
+        TestAuthUser $authUser,
+        bool $credentialsAreValid,
+    ): void {
+        $authenticator = $this->createAuthenticator(authUser: $authUser, credentialsAreValid: $credentialsAreValid);
+        $verificationStart = hrtime(as_number: true);
+        Password::spendVerificationTime(rawPassword: 'test');
+        $verificationTime = hrtime(as_number: true) - $verificationStart;
+
+        $rejectionStart = hrtime(as_number: true);
+        $result = $authenticator->passwordLogin(userName: 'user', inputPassword: 'test');
+        $rejectionTime = hrtime(as_number: true) - $rejectionStart;
+
+        $this->assertFalse($result);
+        $this->assertGreaterThan($verificationTime / 2, $rejectionTime);
+    }
+
     public function testIpAddressInsideTheWhitelistCanLogIn(): void
     {
         $authUser = TestAuthUser::create(
