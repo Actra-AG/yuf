@@ -9,8 +9,10 @@ declare(strict_types=1);
 
 namespace actra\yuf\core;
 
+use BackedEnum;
 use DateTimeZone;
 use Exception;
+use ReflectionEnum;
 use UnexpectedValueException;
 
 /**
@@ -19,8 +21,8 @@ use UnexpectedValueException;
  * host names), `logEmailRecipient` (string, may be empty), `debug` (bool), `robots` (string) and
  * `checkTemplateChanges` (bool, optional, default: the value of `debug`) are typed properties.
  * All keys of the file (also the own keys of a project, used as given, e.g. `mailer.hostname`) are read with
- * `getString()`, `getInt()`, `getBool()` and `getStringList()`, which throw an `UnexpectedValueException` for a
- * missing key or a wrong type.
+ * `getString()`, `getInt()`, `getBool()`, `getStringList()` and `getEnum()` (a backed enum by its value), which throw
+ * an `UnexpectedValueException` for a missing key, a wrong type or an unknown enum value.
  */
 final readonly class EnvironmentSettings
 {
@@ -104,6 +106,39 @@ final readonly class EnvironmentSettings
     public function getStringList(string $key): array
     {
         return EnvironmentSettings::readStringList(values: $this->values, key: $key);
+    }
+
+    /**
+     * The case of a backed enum by its value, read like `getString()` or `getInt()` by the backing type of the enum
+     * (e.g. `'mailer.encryption' => 'starttls'` for `SmtpEncryptionEnum`).
+     *
+     * @template T of BackedEnum
+     *
+     * @param class-string<T> $enumClass
+     *
+     * @return T
+     *
+     * @throws UnexpectedValueException if the key is missing, the value has the wrong type or is no value of the enum
+     */
+    public function getEnum(string $key, string $enumClass): BackedEnum
+    {
+        $value = new ReflectionEnum(objectOrClass: $enumClass)->getBackingType()?->getName() === 'int'
+            ? EnvironmentSettings::readInteger(values: $this->values, key: $key)
+            : EnvironmentSettings::readString(values: $this->values, key: $key);
+        $case = $enumClass::tryFrom(value: $value);
+        if ($case === null) {
+            throw new UnexpectedValueException(
+                message: 'The environment setting "' . $key . '" must be one of ' . implode(
+                    separator: ', ',
+                    array: array_map(
+                        callback: static fn(BackedEnum $allowedCase): string => (string) $allowedCase->value,
+                        array: $enumClass::cases(),
+                    ),
+                ) . ', not "' . $value . '".',
+            );
+        }
+
+        return $case;
     }
 
     private static function createMissingException(string $key, string $expectedType): UnexpectedValueException

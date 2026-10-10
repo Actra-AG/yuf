@@ -11,18 +11,19 @@ namespace actra\yuf\mailer;
 
 /**
  * How `SmtpMailer` encrypts the connection to the SMTP server. The certificate of the server is always verified
- * (certificate chain and host name, TLS 1.2 or newer); there is never a fallback to plain text.
+ * (certificate chain and host name, TLS 1.2 or newer); there is never a fallback to plain text. The values are the
+ * ones of the environment file (`EnvironmentSettings::getEnum()`).
  */
-enum SmtpEncryptionEnum
+enum SmtpEncryptionEnum: string
 {
     /** Plain connection, encrypted with `STARTTLS` before the credentials are sent (port 587) */
-    case STARTTLS;
+    case STARTTLS = 'starttls';
 
     /** Encrypted from the first byte (SMTPS, port 465), no `STARTTLS` */
-    case IMPLICIT_TLS;
+    case IMPLICIT_TLS = 'implicit_tls';
 
     /** No encryption: only for a server on the same host (loopback), `SmtpMailer` refuses AUTH to any other host */
-    case NONE;
+    case NONE = 'none';
 
     public function getDefaultPort(): int
     {

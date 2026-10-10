@@ -10,6 +10,9 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\core;
 
 use actra\yuf\core\EnvironmentSettings;
+use actra\yuf\mailer\SmtpEncryptionEnum;
+use actra\yuf\tests\Double\db\LevelEnum;
+use actra\yuf\tests\Double\db\StatusEnum;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use UnexpectedValueException;
@@ -238,5 +241,67 @@ final class EnvironmentSettingsTest extends TestCase
         $this->expectException(UnexpectedValueException::class);
 
         EnvironmentSettings::fromArray(values: $this->createValues(['checkTemplateChanges' => 'no']));
+    }
+
+    public function testEnumsAreReadByTheirBackingValue(): void
+    {
+        $settings = EnvironmentSettings::fromArray(values: $this->createValues([
+            'mailer.encryption' => 'implicit_tls',
+            'status' => 'blocked',
+            'level' => 2,
+        ]));
+
+        $this->assertSame(
+            SmtpEncryptionEnum::IMPLICIT_TLS,
+            $settings->getEnum(key: 'mailer.encryption', enumClass: SmtpEncryptionEnum::class),
+        );
+        $this->assertSame(StatusEnum::Blocked, $settings->getEnum(key: 'status', enumClass: StatusEnum::class));
+        $this->assertSame(LevelEnum::High, $settings->getEnum(key: 'level', enumClass: LevelEnum::class));
+    }
+
+    /**
+     * @return iterable<string, array{string, mixed, class-string<\BackedEnum>, string}>
+     */
+    public static function invalidEnumProvider(): iterable
+    {
+        yield 'missing key' => ['other', 'x', StatusEnum::class, 'The environment settings miss "status" (string).'];
+        yield 'bool for a string enum' => [
+            'status',
+            true,
+            StatusEnum::class,
+            'The environment setting "status" must be string, bool given.',
+        ];
+        yield 'string for an int enum' => [
+            'status',
+            '1',
+            LevelEnum::class,
+            'The environment setting "status" must be int, string given.',
+        ];
+        yield 'unknown string value' => [
+            'status',
+            'tls',
+            StatusEnum::class,
+            'The environment setting "status" must be one of active, blocked, not "tls".',
+        ];
+        yield 'unknown int value' => [
+            'status',
+            3,
+            LevelEnum::class,
+            'The environment setting "status" must be one of 1, 2, not "3".',
+        ];
+    }
+
+    /**
+     * @param class-string<\BackedEnum> $enumClass
+     */
+    #[DataProvider('invalidEnumProvider')]
+    public function testInvalidEnumThrows(string $key, mixed $value, string $enumClass, string $message): void
+    {
+        $settings = EnvironmentSettings::fromArray(values: $this->createValues([$key => $value]));
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessageIs($message);
+
+        $settings->getEnum(key: 'status', enumClass: $enumClass);
     }
 }

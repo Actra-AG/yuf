@@ -34,6 +34,34 @@ $mailer = new SmtpMailer(
 );
 ```
 
+### Configuration in .env.php
+
+Read the settings of the mailer from the environment file ([setup.md](setup.md#environment-settings)), the encryption
+with `getEnum()`: `'implicit_tls'` for port 465, `'none'` only for a server on the same host. Without `mailer.port`
+the default port of the encryption applies.
+
+```php
+// .env.php
+'mailer.hostname' => 'smtp.example.com',
+'mailer.port' => 587, // optional
+'mailer.username' => 'mailer@example.com',
+'mailer.password' => '…',
+'mailer.encryption' => 'starttls', // 'implicit_tls', 'none'
+```
+
+```php
+$environmentSettings = $core->environmentSettings;
+$mailer = new SmtpMailer(
+    serverAddress: $core->httpRequest->getServerAddress(),
+    hostName: $environmentSettings->getString(key: 'mailer.hostname'),
+    smtpUserName: $environmentSettings->getString(key: 'mailer.username'),
+    smtpPassword: $environmentSettings->getString(key: 'mailer.password'),
+    serverNameCache: $core->fileCache,
+    encryption: $environmentSettings->getEnum(key: 'mailer.encryption', enumClass: SmtpEncryptionEnum::class),
+    port: $environmentSettings->has(key: 'mailer.port') ? $environmentSettings->getInt(key: 'mailer.port') : null,
+);
+```
+
 ## Addresses
 
 `MailerAddress` (all recipients, sender, `From`, `Reply-To`) and `ValidatedEmailAddress` (the form's email field)

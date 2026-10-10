@@ -35,8 +35,9 @@ key if a setting is missing or has the wrong type:
 | `checkTemplateChanges`  | `bool`         | Optional, default `debug`: compile changed templates |
 
 Own keys of a project (flat, e.g. `'mailer.hostname'`) are read from `$core->environmentSettings` with `getString()`,
-`getInt()`, `getBool()` and `getStringList()` (`has()` tells if a key exists); a missing key or a wrong type throws an
-`UnexpectedValueException`. Pass the values to your own settings class instead of reading them statically.
+`getInt()`, `getBool()`, `getStringList()` and `getEnum(key:, enumClass:)` (a backed enum by its value, e.g.
+`'mailer.encryption' => 'starttls'` for `SmtpEncryptionEnum`); `has()` tells if a key exists. A missing key, a wrong
+type or an unknown enum value throws an `UnexpectedValueException`. Pass the values to your own settings class instead of reading them statically.
 
 ## Host and client IP address
 

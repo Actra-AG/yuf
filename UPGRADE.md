@@ -4,6 +4,15 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v6.1.0 (2026-10-11)
+
+- New `EnvironmentSettings::getEnum(key:, enumClass:)` reads a backed enum from `.env.php` (`UnexpectedValueException`
+  for a missing key, a wrong type or an unknown value). `SmtpEncryptionEnum` is backed by strings (`'starttls'`,
+  `'implicit_tls'`, `'none'`): configure the mailer with
+  `encryption: $core->environmentSettings->getEnum(key: 'mailer.encryption', enumClass: SmtpEncryptionEnum::class)`
+  and `'mailer.encryption' => 'starttls'` in `.env.php`, instead of an own mapping ([docs/mail.md](docs/mail.md)).
+- Fix: the table filter renders no line break after its closing `</div>` again (added by v6.0.1).
+
 ## v6.0.1 (2026-10-11)
 
 - The search help of the table filter (`tableFilter.html`) no longer lists `%` as a wildcard: `%` is searched
