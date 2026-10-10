@@ -53,42 +53,75 @@ final class TableColumnRenderingTest extends TestCase
      */
     public static function columnProvider(): array
     {
-        $dateColumnWithEmptyText = new DateColumn(identifier: 'emptyDate', label: 'Date');
+        $dateColumnWithEmptyText = new DateColumn(identifier: 'emptyDate', label: HtmlText::fromHtml(html: 'Date'));
         $dateColumnWithEmptyText->setEmptyValueText(htmlText: HtmlText::fromHtml(html: '-'));
-        $dateFormatColumn = new DateColumn(identifier: 'created', label: 'Date');
+        $dateFormatColumn = new DateColumn(identifier: 'created', label: HtmlText::fromHtml(html: 'Date'));
         $dateFormatColumn->format = 'd.m.Y';
-        $defaultColumnWithoutNewLines = new DefaultColumn(identifier: 'name', label: 'Name');
+        $defaultColumnWithoutNewLines = new DefaultColumn(identifier: 'name', label: HtmlText::fromHtml(html: 'Name'));
         $defaultColumnWithoutNewLines->renderNewLines = false;
-        $cssColumn = new DefaultColumn(identifier: 'ID', label: 'ID');
+        $cssColumn = new DefaultColumn(identifier: 'ID', label: HtmlText::fromHtml(html: 'ID'));
         $cssColumn->addCellCssClass(className: 'number');
 
         return [
             'default' => [
-                new DefaultColumn(identifier: 'name', label: 'Name'),
-                "<td>&lt;b&gt;Müller &amp; Co&lt;/b&gt;<br />\n\"Zürich\"</td>",
+                new DefaultColumn(identifier: 'name', label: HtmlText::fromHtml(html: 'Name')),
+                "<td>&lt;b&gt;Müller &amp; Co&lt;/b&gt;<br />\n&quot;Zürich&quot;</td>",
             ],
             'default without new lines' => [
                 $defaultColumnWithoutNewLines,
-                "<td>&lt;b&gt;Müller &amp; Co&lt;/b&gt;\n\"Zürich\"</td>",
+                "<td>&lt;b&gt;Müller &amp; Co&lt;/b&gt;\n&quot;Zürich&quot;</td>",
             ],
-            'default int' => [new DefaultColumn(identifier: 'ID', label: 'ID'), '<td>42</td>'],
-            'default null' => [new DefaultColumn(identifier: 'nothing', label: 'Nothing'), '<td></td>'],
+            'default int' => [new DefaultColumn(
+                identifier: 'ID',
+                label: HtmlText::fromHtml(html: 'ID'),
+            ), '<td>42</td>'],
+            'default null' => [new DefaultColumn(
+                identifier: 'nothing',
+                label: HtmlText::fromHtml(html: 'Nothing'),
+            ), '<td></td>'],
             'default with css class' => [$cssColumn, '<td class="number">42</td>'],
-            'date' => [new DateColumn(identifier: 'created', label: 'Date'), '<td>05.10.2026 08:30:00</td>'],
+            'date' => [new DateColumn(
+                identifier: 'created',
+                label: HtmlText::fromHtml(html: 'Date'),
+            ), '<td>05.10.2026 08:30:00</td>'],
             'date format' => [$dateFormatColumn, '<td>05.10.2026</td>'],
-            'date empty' => [new DateColumn(identifier: 'emptyDate', label: 'Date'), '<td></td>'],
-            'date null' => [new DateColumn(identifier: 'nothing', label: 'Date'), '<td></td>'],
+            'date empty' => [new DateColumn(
+                identifier: 'emptyDate',
+                label: HtmlText::fromHtml(html: 'Date'),
+            ), '<td></td>'],
+            'date null' => [new DateColumn(
+                identifier: 'nothing',
+                label: HtmlText::fromHtml(html: 'Date'),
+            ), '<td></td>'],
             'date empty text' => [$dateColumnWithEmptyText, '<td>-</td>'],
-            'boolean true' => [new BooleanColumn(identifier: 'active', label: 'Active'), '<td>Ja</td>'],
-            'boolean false' => [new BooleanColumn(identifier: 'inactive', label: 'Active'), '<td>Nein</td>'],
-            'boolean null' => [new BooleanColumn(identifier: 'nothing', label: 'Active'), '<td></td>'],
-            'boolean other' => [new BooleanColumn(identifier: 'flagText', label: 'Active'), '<td>maybe</td>'],
-            'file size' => [new FileSizeColumn(identifier: 'size', label: 'Size'), '<td>1.5 KB</td>'],
-            'file size null' => [new FileSizeColumn(identifier: 'nothing', label: 'Size'), '<td></td>'],
+            'boolean true' => [new BooleanColumn(
+                identifier: 'active',
+                label: HtmlText::fromHtml(html: 'Active'),
+            ), '<td>Ja</td>'],
+            'boolean false' => [new BooleanColumn(
+                identifier: 'inactive',
+                label: HtmlText::fromHtml(html: 'Active'),
+            ), '<td>Nein</td>'],
+            'boolean null' => [new BooleanColumn(
+                identifier: 'nothing',
+                label: HtmlText::fromHtml(html: 'Active'),
+            ), '<td></td>'],
+            'boolean other' => [new BooleanColumn(
+                identifier: 'flagText',
+                label: HtmlText::fromHtml(html: 'Active'),
+            ), '<td>maybe</td>'],
+            'file size' => [new FileSizeColumn(
+                identifier: 'size',
+                label: HtmlText::fromHtml(html: 'Size'),
+            ), '<td>1.5 KB</td>'],
+            'file size null' => [new FileSizeColumn(
+                identifier: 'nothing',
+                label: HtmlText::fromHtml(html: 'Size'),
+            ), '<td></td>'],
             'options known' => [
                 new OptionsColumn(
                     identifier: 'status',
-                    label: 'Status',
+                    label: HtmlText::fromHtml(html: 'Status'),
                     options: ['blocked' => 'Gesperrt'],
                     isSortable: false,
                 ),
@@ -97,20 +130,20 @@ final class TableColumnRenderingTest extends TestCase
             'options unknown' => [
                 new OptionsColumn(
                     identifier: 'unknownStatus',
-                    label: 'Status',
+                    label: HtmlText::fromHtml(html: 'Status'),
                     options: ['blocked' => 'Gesperrt'],
                     isSortable: false,
                 ),
                 '<td>deleted</td>',
             ],
             'strip html tags' => [
-                new StripHtmlTagsColumn(identifier: 'html', label: 'Text'),
+                new StripHtmlTagsColumn(identifier: 'html', label: HtmlText::fromHtml(html: 'Text')),
                 '<td>Text &amp; more</td>',
             ],
             'callback raw' => [
                 new CallbackColumn(
                     identifier: 'cb',
-                    label: 'Callback',
+                    label: HtmlText::fromHtml(html: 'Callback'),
                     callbackFunction: fn(TableItem $tableItem): string => '#' . $tableItem->renderValue(name: 'ID'),
                 ),
                 '<td>#42</td>',
@@ -118,7 +151,7 @@ final class TableColumnRenderingTest extends TestCase
             'callback typed' => [
                 new CallbackColumn(
                     identifier: 'cb',
-                    label: 'Callback',
+                    label: HtmlText::fromHtml(html: 'Callback'),
                     callbackFunction: fn(TableItem $tableItem): string => (string) (
                         $tableItem->getRow()->getInt(column: 'ID') * 2
                     ),
@@ -145,11 +178,65 @@ final class TableColumnRenderingTest extends TestCase
 
         $this->assertSame(
             '<td class="td-action"><div class="td-action-group">'
-            . '<a href="edit/42/?n=&lt;b&gt;Müller &amp; Co&lt;/b&gt;' . "\n"
-            . '&quot;Zürich&quot;" class="edit">Bearbeiten</a>'
+            . '<a href="edit/42/?n=' . rawurlencode(string: "<b>Müller & Co</b>\n\"Zürich\"")
+            . '" class="edit">Bearbeiten</a>'
             . "\n" . '<a href="delete/42/" class="delete">Löschen</a></div></td>',
             $actionsColumn->renderCell(tableItem: TableColumnRenderingTest::model()),
         );
+    }
+
+    public function testActionsColumnEncodesValuesInLinkTargetsForUrls(): void
+    {
+        $actionsColumn = new ActionsColumn();
+        $actionsColumn->addEditActionLink(linkTarget: 'edit/[ID]/?n=[name]&x=1');
+
+        $this->assertSame(
+            '<td class="td-action"><a href="edit/42/?n=' . rawurlencode(string: "<b>Müller & Co</b>\n\"Zürich\"")
+            . '&x=1" class="edit">Bearbeiten</a></td>',
+            $actionsColumn->renderCell(tableItem: TableColumnRenderingTest::model()),
+        );
+    }
+
+    public function testActionsColumnValueWithUrlCharactersStaysOneParameter(): void
+    {
+        $actionsColumn = new ActionsColumn();
+        $actionsColumn->addDeleteLink(linkTarget: 'delete/?id=[name]');
+
+        $this->assertSame(
+            '<td class="td-action"><a href="delete/?id=a%26b%3D1%2F..%23x" class="delete">Löschen</a></td>',
+            $actionsColumn->renderCell(
+                tableItem: new TableItem(dataObject: (object) ['name' => 'a&b=1/..#x']),
+            ),
+        );
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function linkTargetWithLeadingPlaceholderProvider(): array
+    {
+        return [
+            'placeholder' => ['[name]'],
+            'placeholder and path' => ['[name]/edit/'],
+            'leading space' => [' [name]'],
+            'leading control characters' => ["\t\n [name]x"],
+        ];
+    }
+
+    #[DataProvider('linkTargetWithLeadingPlaceholderProvider')]
+    public function testActionsColumnRejectsEditTargetStartingWithPlaceholder(string $linkTarget): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new ActionsColumn()->addEditActionLink(linkTarget: $linkTarget);
+    }
+
+    #[DataProvider('linkTargetWithLeadingPlaceholderProvider')]
+    public function testActionsColumnRejectsDeleteTargetStartingWithPlaceholder(string $linkTarget): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new ActionsColumn()->addDeleteLink(linkTarget: $linkTarget);
     }
 
     public function testActionsColumnHidesDeleteLinkByRawValue(): void
@@ -165,7 +252,11 @@ final class TableColumnRenderingTest extends TestCase
 
     public function testActionsColumnWithOneLinkHasNoGroup(): void
     {
-        $actionsColumn = new ActionsColumn(identifier: 'actions', label: 'Actions', cellCssClass: 'actions');
+        $actionsColumn = new ActionsColumn(
+            identifier: 'actions',
+            label: HtmlText::fromHtml(html: 'Actions'),
+            cellCssClass: 'actions',
+        );
         $actionsColumn->addEditActionLink(linkTarget: 'edit/[ID]/', label: 'Edit');
 
         $this->assertSame(
@@ -209,7 +300,7 @@ final class TableColumnRenderingTest extends TestCase
 
     public function testSortableColumnGetsItsCssClass(): void
     {
-        $defaultColumn = new DefaultColumn(identifier: 'ID', label: 'ID', isSortable: true);
+        $defaultColumn = new DefaultColumn(identifier: 'ID', label: HtmlText::fromHtml(html: 'ID'), isSortable: true);
         $defaultColumn->addColumnCssClass(className: 'number');
         $defaultColumn->addColumnCssClass(className: 'sort');
 
@@ -278,19 +369,34 @@ final class TableColumnRenderingTest extends TestCase
 
         $this->assertSame(
             '<td>&lt;b&gt;A&lt;/b&gt; &amp; "x"</td>',
-            new OptionsColumn(identifier: 'k', label: 'K', options: $options, isSortable: false)->renderCell(
+            new OptionsColumn(
+                identifier: 'k',
+                label: HtmlText::fromHtml(html: 'K'),
+                options: $options,
+                isSortable: false,
+            )->renderCell(
                 tableItem: TableColumnRenderingTest::item(values: ['k' => 'a']),
             ),
         );
         $this->assertSame(
             '<td><b>B</b></td>',
-            new OptionsColumn(identifier: 'k', label: 'K', options: $options, isSortable: false)->renderCell(
+            new OptionsColumn(
+                identifier: 'k',
+                label: HtmlText::fromHtml(html: 'K'),
+                options: $options,
+                isSortable: false,
+            )->renderCell(
                 tableItem: TableColumnRenderingTest::item(values: ['k' => 'b']),
             ),
         );
         $this->assertSame(
             '<td>Seven</td>',
-            new OptionsColumn(identifier: 'k', label: 'K', options: $options, isSortable: false)->renderCell(
+            new OptionsColumn(
+                identifier: 'k',
+                label: HtmlText::fromHtml(html: 'K'),
+                options: $options,
+                isSortable: false,
+            )->renderCell(
                 tableItem: TableColumnRenderingTest::item(values: ['k' => '7']),
             ),
             'a numeric string finds the integer key',
@@ -299,7 +405,12 @@ final class TableColumnRenderingTest extends TestCase
 
     public function testOptionsColumnRendersOtherTypesAsText(): void
     {
-        $column = new OptionsColumn(identifier: 'k', label: 'K', options: ['1' => 'One'], isSortable: false);
+        $column = new OptionsColumn(
+            identifier: 'k',
+            label: HtmlText::fromHtml(html: 'K'),
+            options: ['1' => 'One'],
+            isSortable: false,
+        );
 
         $this->assertSame(
             '<td>1.5</td>',
@@ -317,7 +428,7 @@ final class TableColumnRenderingTest extends TestCase
 
     public function testFileSizeColumnTakesNumericStrings(): void
     {
-        $column = new FileSizeColumn(identifier: 'size', label: 'Size');
+        $column = new FileSizeColumn(identifier: 'size', label: HtmlText::fromHtml(html: 'Size'));
 
         $this->assertSame(
             '<td>1.5 KB</td>',
@@ -333,14 +444,14 @@ final class TableColumnRenderingTest extends TestCase
     {
         $this->expectException(UnexpectedValueException::class);
         $this->expectExceptionMessageIsOrContains('Column "size" holds a string, which is no size in bytes.');
-        new FileSizeColumn(identifier: 'size', label: 'Size')->renderCell(
+        new FileSizeColumn(identifier: 'size', label: HtmlText::fromHtml(html: 'Size'))->renderCell(
             tableItem: TableColumnRenderingTest::item(values: ['size' => 'big']),
         );
     }
 
     public function testStripHtmlTagsColumnOfNullAndNumbers(): void
     {
-        $column = new StripHtmlTagsColumn(identifier: 'v', label: 'V');
+        $column = new StripHtmlTagsColumn(identifier: 'v', label: HtmlText::fromHtml(html: 'V'));
 
         $this->assertSame(
             '<td></td>',
@@ -356,7 +467,7 @@ final class TableColumnRenderingTest extends TestCase
     {
         $this->expectException(UnexpectedValueException::class);
         $this->expectExceptionMessageIsOrContains('Column "created" does not hold a date');
-        new DateColumn(identifier: 'created', label: 'Date')->renderCell(
+        new DateColumn(identifier: 'created', label: HtmlText::fromHtml(html: 'Date'))->renderCell(
             tableItem: TableColumnRenderingTest::item(values: ['created' => 'yesterday-ish']),
         );
     }
@@ -385,7 +496,7 @@ final class TableColumnRenderingTest extends TestCase
         DateStyleEnum $timeStyle,
         string $expected,
     ): void {
-        $column = new DateColumn(identifier: 'created', label: 'Date');
+        $column = new DateColumn(identifier: 'created', label: HtmlText::fromHtml(html: 'Date'));
         $column->useLocale(language: $language, dateStyle: $dateStyle, timeStyle: $timeStyle);
 
         $this->assertSame(
@@ -398,7 +509,7 @@ final class TableColumnRenderingTest extends TestCase
 
     public function testLocalizedDateColumnKeepsTheEmptyHandlingAndTheTimeZoneOfTheValue(): void
     {
-        $column = new DateColumn(identifier: 'created', label: 'Date');
+        $column = new DateColumn(identifier: 'created', label: HtmlText::fromHtml(html: 'Date'));
         $column->setEmptyValueText(htmlText: HtmlText::fromHtml(html: '-'));
         $column->useLocale(language: new Language(code: 'de', locale: 'de_CH'));
 
@@ -416,7 +527,7 @@ final class TableColumnRenderingTest extends TestCase
 
     public function testLocalizedDateColumnRejectsAnInvalidDate(): void
     {
-        $column = new DateColumn(identifier: 'created', label: 'Date');
+        $column = new DateColumn(identifier: 'created', label: HtmlText::fromHtml(html: 'Date'));
         $column->useLocale(language: new Language(code: 'de', locale: 'de_CH'));
 
         $this->expectException(UnexpectedValueException::class);
@@ -427,7 +538,7 @@ final class TableColumnRenderingTest extends TestCase
     public function testLocalizedDateColumnNeedsADateOrATimeStyle(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        new DateColumn(identifier: 'created', label: 'Date')->useLocale(
+        new DateColumn(identifier: 'created', label: HtmlText::fromHtml(html: 'Date'))->useLocale(
             language: new Language(code: 'de', locale: 'de_CH'),
             dateStyle: DateStyleEnum::NONE,
             timeStyle: DateStyleEnum::NONE,
@@ -438,7 +549,7 @@ final class TableColumnRenderingTest extends TestCase
     {
         $column = new CallbackColumn(
             identifier: 'cb',
-            label: 'Callback',
+            label: HtmlText::fromHtml(html: 'Callback'),
             callbackFunction: static fn(TableItem $tableItem): string => '<b>'
                 . $tableItem->renderValue(name: 'name') . '</b>',
         );

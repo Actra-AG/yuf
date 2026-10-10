@@ -14,6 +14,7 @@ use actra\yuf\clock\FixedClock;
 use actra\yuf\exception\UnauthorizedException;
 use actra\yuf\tests\Double\auth\FakeKeySetSource;
 use actra\yuf\tests\Double\auth\TestJwtIssuer;
+use actra\yuf\tests\Double\clock\AdjustableClock;
 use DateTimeImmutable;
 use Override;
 use PHPUnit\Framework\TestCase;
@@ -139,6 +140,45 @@ final class CachedKeySetTest extends TestCase
         $this->expectExceptionMessageIs('Unknown key ID');
 
         $this->createKeySet(source: $source)->getKey(keyId: 'other');
+    }
+
+    public function testFailedDownloadWithoutCacheIsNotRepeatedWithinTheRefreshInterval(): void
+    {
+        $source = new FakeKeySetSource(json: '<html>error</html>');
+        $clock = new AdjustableClock(now: new DateTimeImmutable(datetime: '@' . CachedKeySetTest::NOW));
+        $keySet = new CachedKeySet(cacheFilePath: $this->cacheFilePath, source: $source, clock: $clock);
+        $outcomes = [];
+
+        foreach ([0, 10, 289, 1] as $secondsToWait) {
+            $clock->advanceSeconds(seconds: $secondsToWait);
+            try {
+                $keySet->getKey(keyId: 'key1');
+            } catch (RuntimeException|UnauthorizedException $exception) {
+                $outcomes[] = $exception::class;
+            }
+        }
+
+        // Two attempts: the first, and the one after the interval (300 seconds after the first)
+        $this->assertSame(2, $source->downloads);
+        $this->assertSame(
+            [
+                UnauthorizedException::class,
+                RuntimeException::class,
+                RuntimeException::class,
+                UnauthorizedException::class,
+            ],
+            $outcomes,
+        );
+        $this->assertFileDoesNotExist($this->cacheFilePath);
+    }
+
+    public function testSuccessfulDownloadLeavesOnlyTheCacheFile(): void
+    {
+        $source = new FakeKeySetSource(json: $this->issuer->createKeySetJson());
+
+        $this->createKeySet(source: $source)->getKey(keyId: 'key1');
+
+        $this->assertSame([$this->cacheFilePath], glob(pattern: $this->directory . DIRECTORY_SEPARATOR . '*'));
     }
 
     public function testMissingCacheDirectoryIsReported(): void

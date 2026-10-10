@@ -277,8 +277,9 @@ final class Core
 
     /**
      * Prepares the response of the request: a redirect to HTTPS for a request without SSL (303, nothing else is set
-     * up for it), else the response of the matching route. Registers the exception handler, so call it once, as the
-     * last statement of the front controller before sending the response.
+     * up for it; a host that is not in `allowedDomains` gets a 404 without redirect), else the response of the
+     * matching route. Registers the exception handler, so call it once, as the last statement of the front controller
+     * before sending the response.
      *
      * The session is not started here, only when the route, the view or a form uses it. A session that was started is
      * written and closed after the view, before the response is built: later writes (destructors, shutdown functions)
@@ -306,6 +307,18 @@ final class Core
             throw new LogicException(message: 'The HttpResponse is already prepared');
         }
         if (!$this->httpRequest->isSsl()) {
+            // The Host header is only used for the redirect after it was checked: an unknown host gets a 404
+            if (!in_array(
+                needle: $this->httpRequest->getHost(),
+                haystack: $this->allowedDomains,
+                strict: true,
+            )) {
+                $this->httpResponse = HttpResponse::createStatusResponse(
+                    httpStatusCode: HttpStatusCodeEnum::HTTP_NOT_FOUND,
+                );
+
+                return $this->httpResponse;
+            }
             // Nothing else is needed for the redirect: no session, no exception handler
             $this->httpResponse = HttpResponse::createRedirectResponse(
                 relativeOrAbsoluteUri: $this->httpRequest->getUrl(protocol: ProtocolEnum::HTTPS),

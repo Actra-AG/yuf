@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\table\column;
 
+use actra\yuf\html\HtmlText;
 use actra\yuf\table\TableItem;
 use Closure;
 use Override;
@@ -26,7 +27,7 @@ final class CallbackColumn extends AbstractTableColumn
      */
     public function __construct(
         string $identifier,
-        string $label,
+        HtmlText $label,
         callable $callbackFunction,
         bool $isSortable = false,
         bool $sortAscendingByDefault = true,

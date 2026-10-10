@@ -44,20 +44,20 @@ $core->prepareHttpResponse(routeCollection: $routes)->sendAndExit();
 
 See [.env.example.php](.env.example.php), [index.example.php](index.example.php) and the documentation:
 
-- [Setup](docs/setup.md): entry point, environment settings, production, error log
+- [Setup](docs/setup.md): entry point, environment settings, production (host, client IP, PHP settings), error log
 - [Views and requests](docs/views.md): views, request, path variables, JSON endpoints
 - [Session and login](docs/session-and-login.md): session, login, passwords, secret tokens
 - [Templates](docs/templates.md): syntax, escaping, snippets and tables, own tags
 - [Forms](docs/forms.md): typed values, rules, spam protection, uploads, extension points
 - [Database](docs/database.md): connection, typed rows, query builder, boolean search
-- [Mail](docs/mail.md): SMTP and Microsoft 365
+- [Mail](docs/mail.md): SMTP (STARTTLS or implicit TLS) and Microsoft 365
 - [Phone numbers](docs/phone-numbers.md): parsing, formats, validation
 - [Testing](docs/testing.md): PHPStan and PHPUnit in projects using yuf, test objects, clock
 
 ## Upgrading
 
 Read [UPGRADE.md](UPGRADE.md) before `composer update`: minor versions may contain breaking changes (marked ⚠️).
-Libraries that use yuf require it with `~5.0.0` (minor version locked).
+Libraries that use yuf require it with `~6.0.0` (minor version locked).
 
 ## Contributing
 

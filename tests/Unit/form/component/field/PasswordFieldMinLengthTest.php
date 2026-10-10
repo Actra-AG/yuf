@@ -62,7 +62,12 @@ final class PasswordFieldMinLengthTest extends TestCase
 
     public function testMessageIsTakenFromTheMessagesOfTheForm(): void
     {
-        $form = new Form(context: FormContextFactory::create(), name: 'set', messages: FormMessages::german());
+        $form = new Form(
+            context: FormContextFactory::create(),
+            name: 'set',
+            messages: FormMessages::german(),
+            csrfProtection: false,
+        );
         $field = $this->createField();
         $field->setMinLength(minLength: 12);
         $form->addField(formField: $field);

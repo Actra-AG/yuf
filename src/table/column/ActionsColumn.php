@@ -10,20 +10,23 @@ declare(strict_types=1);
 namespace actra\yuf\table\column;
 
 use actra\yuf\html\HtmlEncoder;
+use actra\yuf\html\HtmlText;
 use actra\yuf\table\TableItem;
+use InvalidArgumentException;
 use Override;
 
 /**
- * Links per row, e.g. to edit or delete it. `[column]` in a link is replaced by the HTML encoded value of that column
- * of the row. Link targets and individual links (`linkHtml`) are HTML of the application (never user input) and output
- * as they are; labels are text and encoded.
+ * Links per row, e.g. to edit or delete it. `[column]` in a link is replaced by the value of that column of the row:
+ * URL encoded in the target of the edit and delete link, HTML encoded in individual links (`linkHtml`). Link targets
+ * and individual links are HTML of the application (never user input) and output as they are, a link target must not
+ * start with a placeholder (the value could become the scheme of the URL); labels are text and encoded.
  */
 final class ActionsColumn extends AbstractTableColumn
 {
     public const string EDIT = 'edit';
     public const string DELETE = 'delete';
 
-    /** @var array<string, string> */
+    /** @var array<string, string|array{target: string, label: string, cssClass: string}> */
     private array $actionLinks = [];
     private ?string $hideDeleteLinkField = null;
     private ?string $hideDeleteLinkValue = null;
@@ -31,12 +34,12 @@ final class ActionsColumn extends AbstractTableColumn
 
     public function __construct(
         string $identifier = 'actions',
-        string $label = '',
+        ?HtmlText $label = null,
         string $cellCssClass = 'td-action',
     ) {
         parent::__construct(
             identifier: $identifier,
-            label: $label,
+            label: $label ?? HtmlText::fromText(text: ''),
         );
         $this->addCellCssClass(className: $cellCssClass);
     }
@@ -51,16 +54,26 @@ final class ActionsColumn extends AbstractTableColumn
         $this->actionLinks[$identifier] = $linkHtml;
     }
 
+    /**
+     * @param string $linkTarget Relative or absolute URL, `[column]` is replaced by the URL encoded value; must not
+     *     start with a placeholder
+     *
+     * @throws InvalidArgumentException If the target starts with a placeholder
+     */
     public function addEditActionLink(
         string $linkTarget,
         string $label = 'Bearbeiten',
     ): void {
-        $this->actionLinks[ActionsColumn::EDIT] = '<a href="' . $linkTarget . '" class="edit">'
-            . HtmlEncoder::encodeKeepQuotes(value: $label) . '</a>';
+        ActionsColumn::assertTargetDoesNotStartWithPlaceholder(linkTarget: $linkTarget);
+        $this->actionLinks[ActionsColumn::EDIT] = ['target' => $linkTarget, 'label' => $label, 'cssClass' => 'edit'];
     }
 
     /**
+     * @param string $linkTarget Relative or absolute URL, `[column]` is replaced by the URL encoded value; must not
+     *     start with a placeholder
      * @param ?string $hideField The column to compare to hide the link (as text), together with `$hideValue`
+     *
+     * @throws InvalidArgumentException If the target starts with a placeholder
      */
     public function addDeleteLink(
         string $linkTarget,
@@ -68,8 +81,12 @@ final class ActionsColumn extends AbstractTableColumn
         ?string $hideField = null,
         ?string $hideValue = null,
     ): void {
-        $this->actionLinks[ActionsColumn::DELETE] = '<a href="' . $linkTarget . '" class="delete">'
-            . HtmlEncoder::encodeKeepQuotes(value: $label) . '</a>';
+        ActionsColumn::assertTargetDoesNotStartWithPlaceholder(linkTarget: $linkTarget);
+        $this->actionLinks[ActionsColumn::DELETE] = [
+            'target' => $linkTarget,
+            'label' => $label,
+            'cssClass' => 'delete',
+        ];
         $this->hideDeleteLinkField = $hideField;
         $this->hideDeleteLinkValue = $hideValue;
     }
@@ -85,19 +102,39 @@ final class ActionsColumn extends AbstractTableColumn
             return '';
         }
         // One pass over every link: a value is never searched for placeholders again
-        $replacements = [];
+        $htmlReplacements = [];
+        $urlReplacements = [];
         foreach ($tableItem->data as $key => $value) {
-            $replacements['[' . $key . ']'] = HtmlEncoder::encode(value: $value);
+            $htmlReplacements['[' . $key . ']'] = HtmlEncoder::encode(value: $value);
+            $urlReplacements['[' . $key . ']'] = rawurlencode(string: (string) $value);
         }
+        $linksHtml = [];
         foreach ($actionLinks as $key => $link) {
-            $actionLinks[$key] = strtr(string: $link, from: $replacements);
+            if (is_string(value: $link)) {
+                $linksHtml[$key] = strtr(string: $link, from: $htmlReplacements);
+                continue;
+            }
+            $linksHtml[$key] = '<a href="' . strtr(string: $link['target'], from: $urlReplacements) . '" class="'
+                . $link['cssClass'] . '">'
+                . strtr(string: HtmlEncoder::encodeKeepQuotes(value: $link['label']), from: $htmlReplacements) . '</a>';
         }
-        $html = implode(separator: PHP_EOL, array: $actionLinks);
-        if (count(value: $actionLinks) === 1) {
+        $html = implode(separator: PHP_EOL, array: $linksHtml);
+        if (count(value: $linksHtml) === 1) {
             return $html;
         }
 
         return '<div class="' . $this->tdActionGroupClass . '">' . $html . '</div>';
+    }
+
+    private static function assertTargetDoesNotStartWithPlaceholder(string $linkTarget): void
+    {
+        // Browsers ignore leading control characters and spaces of a URL
+        if (preg_match(pattern: '/^[\x00-\x20]*\[/', subject: $linkTarget) === 1) {
+            throw new InvalidArgumentException(
+                message: 'The link target "' . $linkTarget . '" starts with a placeholder: a value could become the'
+                . ' scheme of the URL. Start the target with a fixed path.',
+            );
+        }
     }
 
     private function isDeleteLinkHidden(TableItem $tableItem): bool

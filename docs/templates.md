@@ -97,6 +97,14 @@ $html = $snippet->render(templateEngine: $this->context->templateEngine);
   left out; every other column needs a column of its identifier in the query. The rows are read and written one by one
   and the temporary file is removed after the response. Call it before the table renders anything (e.g. for a request
   with `?export`); tests pass `responseSender:` (`RecordingResponseSender`) and read the file of the response.
+- The label of a column and the title of a `NavigationItem` are an `HtmlText`: `HtmlText::fromText()` is escaped when
+  rendered, `HtmlText::fromHtml()` is trusted HTML of the application. The CSV export writes the label as plain text.
+- `ActionsColumn`: `[column]` in the target of the edit and delete link is replaced by the URL-encoded value, in an
+  individual link (`linkHtml`) by the HTML-encoded value. A target must not start with a placeholder (an
+  `InvalidArgumentException` at construction): a value could become the scheme of the URL.
+- A stored sort column (session) is only used if it is a sortable column of the table; otherwise the default sorting
+  applies. `TextFilterField` and `SearchQueryBuilder::createSqlFilters()` take column names (`name`, `table.name`,
+  `` `table`.`name` ``), no SQL expressions.
 - `DateColumn` writes `d.m.Y H:i:s` (`$format`). `useLocale(language: $language, dateStyle: DateStyleEnum::MEDIUM,
   timeStyle: DateStyleEnum::SHORT)` writes it the way the locale of the language does (`IntlDateFormatter`, e.g.
   `05.10.2026, 08:30` for `de_CH`); `DateStyleEnum::NONE` as time style gives the date only. Month names and the

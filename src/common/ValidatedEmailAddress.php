@@ -11,7 +11,8 @@ namespace actra\yuf\common;
 
 /**
  * An email address, normalized (no invisible characters, lower case, punycode domain) and checked for its syntax;
- * on request also for a domain that can receive mail.
+ * on request also for a domain that can receive mail. Spaces, tabs and line breaks (c&p errors) are removed; any other
+ * control character (below 0x20, 0x7F) and a quoted local part are rejected.
  */
 final class ValidatedEmailAddress
 {
@@ -36,7 +37,12 @@ final class ValidatedEmailAddress
         $sanitizedValue = mb_strtolower(
             string: ValidatedEmailAddress::removeInvalidWhitespaces(emailAddress: $emailAddress),
         );
-        $result = ValidatedEmailAddress::validateSyntax(input: $sanitizedValue);
+        $result = preg_match(pattern: '/[\x00-\x1F\x7F]/', subject: $sanitizedValue) === 1
+            ? new EmailAddressError(
+                code: EmailAddressErrorEnum::CONTROL_CHARACTERS,
+                message: 'The email address contains a control character.',
+            )
+            : ValidatedEmailAddress::validateSyntax(input: $sanitizedValue);
         if ($result instanceof EmailAddressError) {
             $this->isValidSyntax = false;
             $this->validatedValue = '';
@@ -80,20 +86,19 @@ final class ValidatedEmailAddress
      */
     private static function removeInvalidWhitespaces(string $emailAddress): string
     {
-        return trim(
-            string: str_replace(
-                search: [
-                    ' ',
-                    "\t",
-                    "\n",
-                    "\r",
-                    '&#8203;',
-                    "\xE2\x80\x8C",
-                    "\xE2\x80\x8B", // https://stackoverflow.com/questions/22600235/remove-unicode-zero-width-space-php
-                ],
-                replace: '',
-                subject: $emailAddress,
-            ),
+        // No trim(): it would also remove NUL and vertical tab at the edges, which must be rejected
+        return str_replace(
+            search: [
+                ' ',
+                "\t",
+                "\n",
+                "\r",
+                '&#8203;',
+                "\xE2\x80\x8C",
+                "\xE2\x80\x8B", // https://stackoverflow.com/questions/22600235/remove-unicode-zero-width-space-php
+            ],
+            replace: '',
+            subject: $emailAddress,
         );
     }
 

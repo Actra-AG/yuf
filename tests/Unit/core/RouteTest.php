@@ -15,6 +15,7 @@ use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\Route;
 use Override;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 final class RouteTest extends TestCase
 {
@@ -92,6 +93,25 @@ final class RouteTest extends TestCase
         $route->loadLocalizedText(fileTitle: '', localeHandler: $localeHandler);
 
         $this->assertSame(['global' => 'G'], $localeHandler->getAllText());
+    }
+
+    public function testLoadLocalizedTextDoesNotLoadAFileOutsideOfTheLanguageDirectory(): void
+    {
+        file_put_contents(
+            filename: $this->viewDirectory . 'frontend/language/outside.lang.php',
+            data: "<?php\n\$txt = ['outside' => 'O'];\n",
+        );
+        $english = new Language(code: 'en', locale: 'en_US.UTF-8');
+        $route = new Route(path: '/', viewDirectory: $this->viewDirectory, viewGroup: 'frontend', language: $english);
+        $localeHandler = $this->createLocaleHandler(language: $english);
+
+        $this->expectException(RuntimeException::class);
+
+        try {
+            $route->loadLocalizedText(fileTitle: '../outside', localeHandler: $localeHandler);
+        } finally {
+            unlink(filename: $this->viewDirectory . 'frontend/language/outside.lang.php');
+        }
     }
 
     public function testLoadLocalizedTextIgnoresAMissingFile(): void

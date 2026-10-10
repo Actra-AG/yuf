@@ -11,6 +11,7 @@ namespace actra\yuf\tests\Unit\table;
 
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\db\DbRowValueException;
+use actra\yuf\html\HtmlText;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\table\column\ActionsColumn;
@@ -49,17 +50,24 @@ final class DbResultTableCsvExportTest extends TestCase
             itemsPerPage: 2,
         );
         $table->addColumn(
-            abstractTableColumn: TableHelper::createDefaultColumn(identifier: 'id', label: 'Id', isSortable: true),
+            abstractTableColumn: TableHelper::createDefaultColumn(
+                identifier: 'id',
+                label: HtmlText::fromHtml(html: 'Id'),
+                isSortable: true,
+            ),
             isDefaultSortColumn: true,
         );
         $table->addColumn(
             abstractTableColumn: TableHelper::createDefaultColumn(
                 identifier: 'name',
-                label: 'Name &amp; <b>Title</b>',
+                label: HtmlText::fromHtml(html: 'Name &amp; <b>Title</b>'),
                 isSortable: true,
             ),
         );
-        $table->addColumn(abstractTableColumn: TableHelper::createDefaultColumn(identifier: 'age', label: 'Age'));
+        $table->addColumn(abstractTableColumn: TableHelper::createDefaultColumn(
+            identifier: 'age',
+            label: HtmlText::fromHtml(html: 'Age'),
+        ));
 
         return $table;
     }
@@ -77,7 +85,10 @@ final class DbResultTableCsvExportTest extends TestCase
         $response = $sender->sentResponse;
         $this->assertNotNull($response);
         $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $response->httpStatusCode);
-        $this->assertSame('attachment; filename="users.csv"', $response->getHeader(key: 'Content-Disposition'));
+        $this->assertStringStartsWith(
+            'attachment; filename="users.csv"',
+            (string) $response->getHeader(key: 'Content-Disposition'),
+        );
         $path = $response->getContentFilePath();
         $this->assertNotNull($path);
         $content = file_get_contents(filename: $path);
@@ -86,6 +97,21 @@ final class DbResultTableCsvExportTest extends TestCase
         $this->assertFileDoesNotExist($path);
 
         return $content;
+    }
+
+    public function testExportsTheTextOfALabelAsItIs(): void
+    {
+        $table = $this->createTable(sql: "SELECT id, name, age, 'x' AS extra FROM users");
+        $table->addColumn(
+            abstractTableColumn: TableHelper::createDefaultColumn(
+                identifier: 'extra',
+                label: HtmlText::fromText(text: 'A & <b>B</b>'),
+            ),
+        );
+
+        $content = $this->export(table: $table, sender: new RecordingResponseSender());
+
+        $this->assertStringContainsString(';"A & <b>B</b>"' . "\n", $content);
     }
 
     public function testExportsLabelsAndAllRowsNotOnlyTheCurrentPage(): void
@@ -142,7 +168,7 @@ final class DbResultTableCsvExportTest extends TestCase
         $table->addColumn(
             abstractTableColumn: new CallbackColumn(
                 identifier: 'computed',
-                label: 'Computed',
+                label: HtmlText::fromHtml(html: 'Computed'),
                 callbackFunction: static fn(): string => 'x',
             ),
         );

@@ -177,6 +177,7 @@ final class ToggleChildrenTest extends TestCase
             context: FormContextFactory::create(),
             name: 'toggleChildrenLaterForm',
             messages: FormMessages::german(),
+            csrfProtection: false,
         );
 
         $form->addField(formField: $toggle);
@@ -191,7 +192,7 @@ final class ToggleChildrenTest extends TestCase
 
     public function testChildrenGetTheFormOfTheToggleFieldWhenItIsAlreadyInTheForm(): void
     {
-        $form = new Form(context: FormContextFactory::create(), name: 'toggleChildrenEarlyForm');
+        $form = new Form(context: FormContextFactory::create(), name: 'toggleChildrenEarlyForm', csrfProtection: false);
         $toggle = $this->createToggle();
         $form->addField(formField: $toggle);
         $child = $this->createChild(name: 'childA');
@@ -204,7 +205,7 @@ final class ToggleChildrenTest extends TestCase
 
     public function testChildErrorsReachTheForm(): void
     {
-        $form = new Form(context: FormContextFactory::create(), name: 'toggleChildrenErrorForm');
+        $form = new Form(context: FormContextFactory::create(), name: 'toggleChildrenErrorForm', csrfProtection: false);
         $toggle = $this->createToggle(initialValue: 'a');
         $toggle->addChildField(mainOption: 'a', childField: $this->createChild(name: 'childA'));
         $form->addField(formField: $toggle);

@@ -11,6 +11,7 @@ namespace actra\yuf\tests\Unit\table;
 
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
+use actra\yuf\html\HtmlText;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\session\SessionSectionEnum;
@@ -65,12 +66,20 @@ final class DbResultTableSessionTest extends TestCase
             httpRequest: HttpRequestFactory::create(queryParameters: $query, postParameters: $post),
             session: $this->session,
         );
-        $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'id', label: 'Id', isSortable: true));
-        $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'name', label: 'Name', isSortable: true));
+        $table->addColumn(abstractTableColumn: new DefaultColumn(
+            identifier: 'id',
+            label: HtmlText::fromHtml(html: 'Id'),
+            isSortable: true,
+        ));
+        $table->addColumn(abstractTableColumn: new DefaultColumn(
+            identifier: 'name',
+            label: HtmlText::fromHtml(html: 'Name'),
+            isSortable: true,
+        ));
         $table->addColumn(
             abstractTableColumn: new DefaultColumn(
                 identifier: 'created',
-                label: 'Created',
+                label: HtmlText::fromHtml(html: 'Created'),
                 isSortable: true,
                 sortAscendingByDefault: false,
             ),
@@ -117,6 +126,32 @@ final class DbResultTableSessionTest extends TestCase
         string $identifier = DbResultTableSessionTest::ID,
     ): string {
         return $identifier . '|' . $column . '|' . $direction;
+    }
+
+    public function testStoredSortColumnThatIsNotSortableIsIgnored(): void
+    {
+        foreach (['unknown', 'age', 'id`; DROP'] as $storedColumn) {
+            $this->seedState(state: ['sortColumn' => $storedColumn, 'sortDirection' => 'DESC']);
+
+            $table = $this->request();
+
+            $this->assertSame('id', $table->getCurrentSortColumn(), $storedColumn);
+            $this->assertSame(TableSortDirectionEnum::ASC, $table->getCurrentSortDirection(), $storedColumn);
+        }
+    }
+
+    public function testStoredSortColumnThatIsNotSortableDoesNotReplaceTheOrderOfTheQuery(): void
+    {
+        $this->seedState(state: ['sortColumn' => 'unknown', 'sortDirection' => 'ASC']);
+        $table = $this->createTable(identifier: DbResultTableSessionTest::ID);
+        $table->dbQuery->addOrderPart(column: 'relevance');
+
+        $table->fillBySelectQuery();
+
+        $this->assertStringContainsString('ORDER BY `relevance` ASC, `id` ASC', $table->dbQuery->getDbQueryData(
+            offset: 0,
+            rowCount: 1,
+        )->query);
     }
 
     public function testStorageLayoutIsOneArrayPerTableInTheTablesSection(): void
@@ -174,7 +209,7 @@ final class DbResultTableSessionTest extends TestCase
         $table->addColumn(
             abstractTableColumn: new DefaultColumn(
                 identifier: 'score',
-                label: 'Score',
+                label: HtmlText::fromHtml(html: 'Score'),
                 isSortable: true,
                 sortAscendingByDefault: false,
             ),

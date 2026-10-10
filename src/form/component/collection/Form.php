@@ -29,13 +29,14 @@ use actra\yuf\form\settings\AutoCompleteEnum;
 use actra\yuf\form\spam\SpamCheckResultEnum;
 use actra\yuf\form\spam\SpamProtection;
 use actra\yuf\html\HtmlText;
-use actra\yuf\security\CsrfTokenSource;
 use LogicException;
 use Override;
 
 /**
  * The form names must be unique per page: the name is the sent indicator and the prefix of the field names.
- * A form without CSRF token source in its `FormContext` (no session) has no CSRF field and checks no token.
+ * A POST form is protected against CSRF: it has a CSRF field and `validate()` checks the token before it reads any
+ * other field. Without CSRF token source in its `FormContext` (no session) a POST form can only be created with
+ * `csrfProtection: false`; a GET form has no CSRF field.
  *
  * Extension point: a project form extends `Form`, adds its fields in the constructor and offers methods for the
  * validated values.
@@ -47,6 +48,7 @@ class Form extends FormCollection
     public private(set) array $cssClasses = [];
     private bool $renderRequiredAbbr = true;
     private bool $compactFields = false;
+    private ?CsrfTokenField $csrfTokenField = null;
     private ?SpamProtection $spamProtection = null;
     private ?TextField $honeypotField = null;
     private ?SpamRenderTimeField $renderTimeField = null;
@@ -60,15 +62,23 @@ class Form extends FormCollection
         ?string $individualSentIndicator = null,
         public readonly bool $disableClientValidation = false,
         public readonly FormMessages $messages = new FormMessages(),
+        public readonly bool $csrfProtection = true,
     ) {
         $this->sentIndicator = $individualSentIndicator === null ? $name : $individualSentIndicator;
         parent::__construct(name: $name);
 
         $csrfTokenSource = $context->csrfTokenSource;
         // A GET form must not change state and would put the token into the URL, so it has no CSRF token
-        if ($methodPost && $csrfTokenSource !== null) {
-            $this->addField(formField: new CsrfTokenField(tokenSource: $csrfTokenSource));
+        if (!$methodPost || !$csrfProtection) {
+            return;
         }
+        if ($csrfTokenSource === null) {
+            throw new LogicException(
+                message: 'Form ' . $name . ' is sent with POST, but the FormContext has no CSRF token source (no'
+                . ' session). Create the form with csrfProtection: false if it needs no CSRF protection.',
+            );
+        }
+        $this->addField(formField: $this->csrfTokenField = new CsrfTokenField(tokenSource: $csrfTokenSource));
     }
 
     public function addField(FormField $formField): void
@@ -79,13 +89,6 @@ class Form extends FormCollection
         $formField->messages = $this->messages;
         $formField->topFormComponent = $this;
         $this->addChildComponent(formComponent: $formField);
-    }
-
-    public function removeCsrfProtection(): void
-    {
-        if ($this->hasChildComponent(childComponentName: CsrfTokenSource::FIELD_NAME)) {
-            $this->removeChildComponent(childComponentName: CsrfTokenSource::FIELD_NAME);
-        }
     }
 
     /**
@@ -114,6 +117,7 @@ class Form extends FormCollection
                 name: $spamProtection->renderTimeName,
                 formName: $this->name,
                 spamCheck: $spamProtection->spamCheck,
+                sessionSource: $this->context->csrfTokenSource,
             ),
         );
     }
@@ -172,7 +176,9 @@ class Form extends FormCollection
     }
 
     /**
-     * Validates all fields with the request data if the form was sent.
+     * Validates all fields with the request data if the form was sent. A POST form checks the CSRF token first: with
+     * a missing or invalid token the form gets the CSRF error and nothing else of the request is read (no fields,
+     * listeners, uploads or spam check).
      *
      * @param ?FormInput $input The request data, by default the input of the request of the `FormContext` (the post
      *                          data or, for a GET form, the query string)
@@ -184,8 +190,14 @@ class Form extends FormCollection
             return false;
         }
 
+        if (!$this->isCsrfTokenValid(input: $input)) {
+            $this->addError(errorMessage: HtmlText::fromText(text: $this->messages->invalidCsrfToken));
+
+            return false;
+        }
+
         foreach ($this->childComponents as $formComponent) {
-            // The CSRF token is only checked if the other fields are valid (validateCsrf())
+            // The CSRF token has been checked above
             if (!$formComponent instanceof FormField || $formComponent instanceof CsrfTokenField) {
                 continue;
             }
@@ -193,9 +205,6 @@ class Form extends FormCollection
             $formComponent->validate(input: $input);
         }
         $this->validateSpamProtection();
-        if (!$this->hasErrors(withChildElements: true)) {
-            $this->validateCsrf(input: $input);
-        }
 
         if (
             $this->hasErrors(withChildElements: true)
@@ -225,8 +234,8 @@ class Form extends FormCollection
     }
 
     /**
-     * Runs only if the fields are valid, like `validateCsrf()`: fields with errors block the submission anyway, and the
-     * global error message stays the error of the form. The form is rendered again with a signed render time, so the
+     * Runs only if the fields are valid: fields with errors block the submission anyway, and the global error message
+     * stays the error of the form. The form is rendered again with a signed render time, so the
      * next submission is checked. Errors of the spam fields themselves (a manipulated value) do not count, as they are
      * not visible.
      */
@@ -250,6 +259,7 @@ class Form extends FormCollection
             honeypot: $this->honeypotField->getValueAsString(),
             signedRenderTime: $this->renderTimeField->getPostedValue(),
             emailAddress: $emailField?->getValueAsString(),
+            sessionBinding: $this->context->csrfTokenSource?->getToken(),
         );
         $errorMessage = match ($result) {
             SpamCheckResultEnum::OK => null,
@@ -262,19 +272,13 @@ class Form extends FormCollection
         }
     }
 
-    private function validateCsrf(FormInput $input): void
+    /**
+     * Checked through the field the constructor created, so removing the field from the form does not disable the
+     * check (the token is then never posted, and the form stays invalid).
+     */
+    private function isCsrfTokenValid(FormInput $input): bool
     {
-        if (!$this->hasChildComponent(childComponentName: CsrfTokenSource::FIELD_NAME)) {
-            // The Csrf protection has been disabled
-            return;
-        }
-        $csrfTokenField = $this->getField(name: CsrfTokenSource::FIELD_NAME);
-        if (!$csrfTokenField instanceof CsrfTokenField) {
-            return;
-        }
-        if (!$csrfTokenField->validate(input: $input)) {
-            $this->addError(errorMessage: HtmlText::fromText(text: $this->messages->invalidCsrfToken));
-        }
+        return $this->csrfTokenField === null || $this->csrfTokenField->validate(input: $input);
     }
 
     public function getField(string $name): FormField

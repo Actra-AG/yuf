@@ -32,7 +32,7 @@ final class FormContextTest extends TestCase
     {
         $context = new FormContext(httpRequest: HttpRequestFactory::create(), csrfTokenSource: null);
 
-        $form = new Form(context: $context, name: 'contact');
+        $form = new Form(context: $context, name: 'contact', csrfProtection: false);
 
         $this->assertSame($context, $form->context);
     }
@@ -48,10 +48,12 @@ final class FormContextTest extends TestCase
         $this->assertFalse(new Form(context: $context, name: 'get', methodPost: false)->hasField(name: 'csrftoken'));
     }
 
-    public function testFormWithoutATokenSourceHasNoCsrfField(): void
+    public function testFormWithoutATokenSourceHasNoCsrfFieldWithTheOptOut(): void
     {
         $context = new FormContext(httpRequest: HttpRequestFactory::create(), csrfTokenSource: null);
 
-        $this->assertFalse(new Form(context: $context, name: 'post')->hasField(name: 'csrftoken'));
+        $form = new Form(context: $context, name: 'post', csrfProtection: false);
+
+        $this->assertFalse($form->hasField(name: 'csrftoken'));
     }
 }

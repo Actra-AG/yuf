@@ -13,8 +13,8 @@ use SensitiveParameter;
 
 /**
  * Extension point: the user of a login, as the project loads it (a project class extends it and persists the changes
- * in the `db…()` methods). `Authenticator` reads the user, counts wrong passwords, upgrades outdated password hashes
- * and confirms a successful login through it.
+ * in the `db…()` methods). `Authenticator` reads the user, counts the password attempts, upgrades outdated password
+ * hashes and confirms a successful login through it.
  */
 abstract class AuthUser
 {
@@ -42,18 +42,62 @@ abstract class AuthUser
         return $this->accessRightCollection->hasOneOfAccessRights(accessRightCollection: $accessRightCollection);
     }
 
-    public function increaseWrongPasswordAttempts(): void
+    /**
+     * Counts a password attempt in the database before the password is checked. `false` if the user is locked out
+     * already (the limit is reached): the password must not be checked then. Several requests of one user cannot get
+     * more attempts than the limit, because the database decides (see `dbRegisterWrongPasswordAttempt()`). The
+     * attempt counts until `releaseWrongPasswordAttempt()` gives it back after the right password.
+     *
+     * The lock stays until the project sets a new password and resets the counter itself (e.g. with the new
+     * password): a successful login does not reset it.
+     */
+    public function registerWrongPasswordAttempt(int $maxAllowedWrongPasswordAttempts): bool
     {
-        $this->dbIncreaseWrongPasswordAttempts();
+        $isRegistered = $this->dbRegisterWrongPasswordAttempt(
+            maxAllowedWrongPasswordAttempts: $maxAllowedWrongPasswordAttempts,
+        );
+        if (!$isRegistered) {
+            $this->wrongPasswordAttempts = max($this->wrongPasswordAttempts, $maxAllowedWrongPasswordAttempts);
+
+            return false;
+        }
         $this->wrongPasswordAttempts++;
+
+        return true;
     }
 
-    abstract protected function dbIncreaseWrongPasswordAttempts(): void;
+    /**
+     * Gives back the attempt of `registerWrongPasswordAttempt()` after the right password (or the right second factor):
+     * the counter is as before the login.
+     */
+    public function releaseWrongPasswordAttempt(): void
+    {
+        $this->dbReleaseWrongPasswordAttempt();
+        $this->wrongPasswordAttempts = max(0, $this->wrongPasswordAttempts - 1);
+    }
 
+    /**
+     * Atomically counts one attempt, only if the user is below the limit, in one statement:
+     * `UPDATE users SET wrong_login_attempts = wrong_login_attempts + 1 WHERE id = ? AND wrong_login_attempts < ?`
+     * (the limit is the bound argument). Never read the counter first and write it afterwards: parallel requests would
+     * all pass the check.
+     *
+     * @return bool `true` if the attempt was counted (one row changed), `false` if the user reached the limit
+     */
+    abstract protected function dbRegisterWrongPasswordAttempt(int $maxAllowedWrongPasswordAttempts): bool;
+
+    /**
+     * Gives back one attempt, in one statement:
+     * `UPDATE users SET wrong_login_attempts = wrong_login_attempts - 1 WHERE id = ? AND wrong_login_attempts > 0`.
+     */
+    abstract protected function dbReleaseWrongPasswordAttempt(): void;
+
+    /**
+     * Does not reset the wrong password attempts: a user who guessed rightly after `N - 1` wrong attempts is not
+     * back at zero. Only a new password resets them (in the project's own code that sets it).
+     */
     public function confirmSuccessfulLogin(): int
     {
-        $this->wrongPasswordAttempts = 0;
-
         return $this->dbConfirmSuccessfulLogin();
     }
 

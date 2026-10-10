@@ -140,7 +140,11 @@ final class TableFilterSessionTest extends TestCase
             session: $this->session,
             tableFilter: $filter,
         );
-        $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'id', label: 'Id', isSortable: true));
+        $table->addColumn(abstractTableColumn: new DefaultColumn(
+            identifier: 'id',
+            label: HtmlText::fromHtml(html: 'Id'),
+            isSortable: true,
+        ));
         $table->fillBySelectQuery();
 
         return ['filter' => $filter, 'table' => $table, 'text' => $text, 'options' => $options, 'date' => $date];

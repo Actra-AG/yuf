@@ -133,14 +133,30 @@ final class TableFilterFieldsTest extends TestCase
             parentFilter: $filter,
             filterFieldIdentifier: 'name',
             label: HtmlText::fromHtml(html: 'Name'),
-            dataTableColumnReference: "users.name\n   ,  users.email",
+            dataTableColumnReference: 'users.name',
         );
         $field->checkInput();
 
         $condition = $field->getWhereCondition();
 
-        $this->assertSame('(users.name , users.email LIKE ? ESCAPE \'!\')', $condition->query);
+        $this->assertSame('(users.name LIKE ? ESCAPE \'!\')', $condition->query);
         $this->assertSame(['%ann%'], $condition->params);
+    }
+
+    public function testTextFieldRejectsAnSqlExpressionAsColumn(): void
+    {
+        $filter = $this->createFilter(post: ['f_name' => 'ann']);
+        $field = new TextFilterField(
+            parentFilter: $filter,
+            filterFieldIdentifier: 'name',
+            label: HtmlText::fromHtml(html: 'Name'),
+            dataTableColumnReference: "CONCAT(users.name, ' ', users.email)",
+        );
+        $field->checkInput();
+
+        $this->expectException(InvalidArgumentException::class);
+
+        $field->getWhereCondition();
     }
 
     public function testOptionsFieldRendersTheOptions(): void

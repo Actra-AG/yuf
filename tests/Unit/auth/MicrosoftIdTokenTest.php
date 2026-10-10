@@ -30,7 +30,8 @@ final class MicrosoftIdTokenTest extends TestCase
     private const int NOW = 1_800_000_000;
     private const string TENANT_ID = '11111111-2222-3333-4444-555555555555';
     private const string CLIENT_ID = 'client-id';
-    private const string NONCE = 'nonce-1';
+    private const string NONCE = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+    private const string OBJECT_ID = '99999999-8888-7777-6666-555555555555';
 
     private string $cacheDirectory;
     private TestJwtIssuer $issuer;
@@ -55,11 +56,91 @@ final class MicrosoftIdTokenTest extends TestCase
         rmdir(directory: $this->cacheDirectory);
     }
 
-    public function testValidTokenIsAcceptedAndNamesTheUser(): void
+    public function testValidTokenIsAcceptedAndNamesTheAccount(): void
     {
         $token = $this->createToken(jwt: $this->issuer->createJwt(payload: $this->createPayload()));
 
-        $this->assertSame('user@example.org', $token->getUserName());
+        $this->assertSame(MicrosoftIdTokenTest::OBJECT_ID, $token->getObjectId());
+        $this->assertSame(MicrosoftIdTokenTest::TENANT_ID, $token->getTenantId());
+        $this->assertSame('user@example.org', $token->getEmail());
+    }
+
+    public function testIdsAreReturnedInLowerCase(): void
+    {
+        $payload = ['oid' => '99999999-AAAA-7777-6666-555555555555'] + $this->createPayload();
+        $token = $this->createToken(jwt: $this->issuer->createJwt(payload: $payload));
+
+        $this->assertSame('99999999-aaaa-7777-6666-555555555555', $token->getObjectId());
+    }
+
+    /**
+     * @return iterable<string, array{mixed}>
+     */
+    public static function invalidObjectIdProvider(): iterable
+    {
+        yield 'empty' => [''];
+        yield 'no guid' => ['admin@example.org'];
+        yield 'too short' => ['99999999-8888-7777-6666-55555555555'];
+        yield 'with braces' => ['{99999999-8888-7777-6666-555555555555}'];
+        yield 'array' => [['99999999-8888-7777-6666-555555555555']];
+        yield 'number' => [42];
+    }
+
+    #[DataProvider('invalidObjectIdProvider')]
+    public function testTokenWithoutAGuidAsObjectIdIsRejected(mixed $objectId): void
+    {
+        $jwt = $this->issuer->createJwt(payload: ['oid' => $objectId] + $this->createPayload());
+
+        $this->assertRejected(jwt: $jwt, message: 'Missing or invalid oid');
+    }
+
+    public function testTokenWithoutObjectIdIsRejected(): void
+    {
+        $payload = $this->createPayload();
+        unset($payload['oid']);
+
+        $this->assertRejected(jwt: $this->issuer->createJwt(payload: $payload), message: 'Missing or invalid oid');
+    }
+
+    public function testTokenWithoutEmailHasNoEmail(): void
+    {
+        $payload = $this->createPayload();
+        unset($payload['email']);
+        $token = $this->createToken(jwt: $this->issuer->createJwt(payload: $payload));
+
+        $this->assertNull($token->getEmail());
+        $this->assertSame(MicrosoftIdTokenTest::OBJECT_ID, $token->getObjectId());
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function shortNonceProvider(): iterable
+    {
+        yield 'empty' => [''];
+        yield 'short' => ['nonce-1'];
+        yield '31 characters' => [str_repeat(string: 'a', times: 31)];
+    }
+
+    #[DataProvider('shortNonceProvider')]
+    public function testShortNonceIsRejectedEvenIfTheTokenHasTheSame(string $nonce): void
+    {
+        $jwt = $this->issuer->createJwt(payload: ['nonce' => $nonce] + $this->createPayload());
+
+        try {
+            $this->createToken(jwt: $jwt, ssoNonce: $nonce);
+            MicrosoftIdTokenTest::fail('The token was accepted.');
+        } catch (UnauthorizedException $exception) {
+            $this->assertSame('Invalid ssoNonce', $exception->getMessage());
+        }
+    }
+
+    public function testTokenWithoutNonceIsRejected(): void
+    {
+        $payload = $this->createPayload();
+        unset($payload['nonce']);
+
+        $this->assertRejected(jwt: $this->issuer->createJwt(payload: $payload), message: 'Invalid ssoNonce');
     }
 
     public function testTokenWithTamperedPayloadIsRejected(): void
@@ -206,6 +287,7 @@ final class MicrosoftIdTokenTest extends TestCase
             'tid' => MicrosoftIdTokenTest::TENANT_ID,
             'iss' => 'https://login.microsoftonline.com/' . MicrosoftIdTokenTest::TENANT_ID . '/v2.0',
             'nonce' => MicrosoftIdTokenTest::NONCE,
+            'oid' => MicrosoftIdTokenTest::OBJECT_ID,
             'email' => 'user@example.org',
         ];
     }
@@ -215,12 +297,15 @@ final class MicrosoftIdTokenTest extends TestCase
         file_put_contents(filename: $this->getKeyFilePath(), data: $json);
     }
 
-    private function createToken(string $jwt, ?JsonWebKeySetSource $keySetSource = null): MicrosoftIdToken
-    {
+    private function createToken(
+        string $jwt,
+        ?JsonWebKeySetSource $keySetSource = null,
+        string $ssoNonce = MicrosoftIdTokenTest::NONCE,
+    ): MicrosoftIdToken {
         return new MicrosoftIdToken(
             tenantId: MicrosoftIdTokenTest::TENANT_ID,
             clientId: MicrosoftIdTokenTest::CLIENT_ID,
-            ssoNonce: MicrosoftIdTokenTest::NONCE,
+            ssoNonce: $ssoNonce,
             jwtString: $jwt,
             cacheDirectory: $this->cacheDirectory,
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '@' . MicrosoftIdTokenTest::NOW)),
@@ -304,18 +389,6 @@ final class MicrosoftIdTokenTest extends TestCase
         );
     }
 
-    public function testTokenWithoutEmailHasNoUserName(): void
-    {
-        $payload = $this->createPayload();
-        unset($payload['email']);
-        $token = $this->createToken(jwt: $this->issuer->createJwt(payload: $payload));
-
-        $this->expectException(UnauthorizedException::class);
-        $this->expectExceptionMessageIs('Missing email');
-
-        $token->getUserName();
-    }
-
     public function testUnknownKeyIdIsDownloadedAndCached(): void
     {
         $issuer = new TestJwtIssuer(keyId: 'new-key');
@@ -326,7 +399,7 @@ final class MicrosoftIdTokenTest extends TestCase
             keySetSource: $keySetSource,
         );
 
-        $this->assertSame('user@example.org', $token->getUserName());
+        $this->assertSame(MicrosoftIdTokenTest::OBJECT_ID, $token->getObjectId());
         $this->assertSame(1, $keySetSource->downloads);
         $this->assertSame($issuer->createKeySetJson(), file_get_contents(filename: $this->getKeyFilePath()));
     }

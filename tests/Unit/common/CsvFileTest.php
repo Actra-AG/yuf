@@ -276,7 +276,10 @@ final class CsvFileTest extends TestCase
         );
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $sentResponse->httpStatusCode);
-        $this->assertSame('attachment; filename="export.csv"', $sentResponse->getHeader(key: 'Content-Disposition'));
+        $this->assertSame(
+            'attachment; filename="export.csv"; filename*=UTF-8\'\'export.csv',
+            $sentResponse->getHeader(key: 'Content-Disposition'),
+        );
         $path = $sentResponse->getContentFilePath();
         $this->assertNotNull($path);
         $this->assertSame("a\nb\n", file_get_contents(filename: $path));

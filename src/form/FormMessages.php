@@ -14,8 +14,8 @@ namespace actra\yuf\form;
  * `FormMessages::german()` has the German texts (Sie-form, Swiss spelling). Pass it to `Form(messages: ...)`.
  *
  * Placeholders: `[field]` in `invalidOption`, `[max]` in `tooManyFiles`, `[fileName]` in `duplicateFile`,
- * `[maxSize]` in `fileExceedsMaxSize`, `[min]` in `passwordTooShort`. `spamHoneypotFilled` names the label
- * `spamHoneypotLabel`: change both together.
+ * `[maxSize]` in `fileExceedsMaxSize`, `[min]` in `passwordTooShort`, `[max]` in `tooLong`. `spamHoneypotFilled` names
+ * the label `spamHoneypotLabel`: change both together.
  */
 final readonly class FormMessages
 {
@@ -43,6 +43,7 @@ final readonly class FormMessages
         public string $spamHoneypotFilled = 'Please leave the field labelled "For internal use only" empty.',
         public string $spamRetry = 'Please try again.',
         public string $spamRejectedEmailAddress = 'Please enter a valid e-mail address.',
+        public string $tooLong = 'The text must not be longer than [max] characters.',
     ) {}
 
     public static function german(): FormMessages
@@ -71,6 +72,7 @@ final readonly class FormMessages
             spamHoneypotFilled: 'Bitte lassen Sie das Feld mit der Bezeichnung "Nur für interne Zwecke" leer.',
             spamRetry: 'Bitte versuchen Sie es erneut.',
             spamRejectedEmailAddress: 'Bitte geben Sie eine gültige E-Mail-Adresse ein.',
+            tooLong: 'Der Text darf höchstens [max] Zeichen lang sein.',
         );
     }
 }

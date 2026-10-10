@@ -23,11 +23,14 @@ final readonly class AuthSession
 
     /**
      * Stores the login in the session and gives the session a new ID (the old session is deleted), so a session ID
-     * the user had before the login (session fixation) is worthless.
+     * the user had before the login (session fixation) is worthless. The CSRF token of the session is removed (a new
+     * one is created when it is needed), so a token the user had before the login is worthless too. Impersonation
+     * (a login with another auth session ID) is a login as well.
      */
     public function logIn(int $authSessionId): void
     {
         $this->session->regenerateId();
+        $this->session->setSection(section: SessionSectionEnum::CSRF, data: []);
         $this->session->setSection(
             section: SessionSectionEnum::AUTH,
             data: [

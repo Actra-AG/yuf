@@ -18,18 +18,11 @@ use SensitiveParameter;
  *
  * Passwords stored before v4.37.0 have a salt and a SHA-256 hash of salt and password. They are still verified
  * (`isLegacy()`), and `needsRehash()` tells the login to store a new hash after a successful login
- * (`AuthUser::rehashPassword()`).
+ * (`AuthUser::rehashPassword()`). Their verification costs the time of a current one.
  */
 final readonly class Password
 {
     private const string LEGACY_ALGORITHM = 'sha256';
-
-    /**
-     * A hash of a password nobody knows, so that a login for an unknown user costs as much time as one for a known
-     * user (see `spendVerificationTime()`).
-     */
-    private const string DUMMY_HASH = '$argon2id$v=19$m=65536,t=4,p=1$Mmd3OUcxQk5zVmZYYTgwZQ$'
-        . 'K6v54ycuTTWT4wrPpdwSs7gcb79z5hxsPq8RCyZ5cZE';
 
     public function __construct(public string $salt, public string $hash) {}
 
@@ -41,10 +34,15 @@ final readonly class Password
     public function isValid(#[SensitiveParameter] string $rawPassword): bool
     {
         if ($this->isLegacy()) {
-            return hash_equals(
+            $isValid = hash_equals(
                 known_string: $this->hash,
                 user_string: hash(algo: Password::LEGACY_ALGORITHM, data: $this->salt . $rawPassword),
             );
+            // The SHA-256 takes microseconds: the time of a verification is spent anyway, so the answer time does not
+            // tell the users with a legacy hash from the others
+            Password::spendVerificationTime(rawPassword: $rawPassword);
+
+            return $isValid;
         }
 
         return password_verify(password: $rawPassword, hash: $this->hash);
@@ -68,12 +66,13 @@ final readonly class Password
     }
 
     /**
-     * Does the work of a password verification and discards the result. Called when a login names a user that does
-     * not exist, so the response time does not tell which user names exist.
+     * Does the work of a password verification and discards the result: hashes with the algorithm and costs of
+     * `generateNew()`, which is what verifying a current hash costs (Argon2id, or `PASSWORD_DEFAULT` without Argon2).
+     * Called when a login names a user that does not exist, so the response time does not tell which user names exist.
      */
     public static function spendVerificationTime(#[SensitiveParameter] string $rawPassword): void
     {
-        password_verify(password: $rawPassword, hash: Password::DUMMY_HASH);
+        password_hash(password: $rawPassword, algo: Password::getAlgorithm());
     }
 
     private static function getAlgorithm(): string

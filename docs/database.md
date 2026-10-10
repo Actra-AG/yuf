@@ -81,7 +81,7 @@ Columns of a `DbResultTable` or `SmartTable` get each row as `TableItem`. `getRo
 ```php
 $dbResultTable->addColumn(abstractTableColumn: new CallbackColumn(
     identifier: 'path',
-    label: 'Pfad',
+    label: HtmlText::fromText(text: 'Pfad'),
     callbackFunction: fn(TableItem $tableItem): string => HtmlEncoder::encode(
         value: Category::getPath(id: $tableItem->getRow()->getInt(column: 'ID')),
     ),

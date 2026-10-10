@@ -53,7 +53,7 @@ final class RenderTwiceTest extends TestCase
 
     private function createForm(): Form
     {
-        $form = new Form(context: FormContextFactory::create(), name: 'twice');
+        $form = new Form(context: FormContextFactory::create(), name: 'twice', csrfProtection: false);
         $name = new TextField(name: 'customer', label: $this->text('Name'), requiredError: $this->text('Required'));
         $name->addError(errorMessage: $this->text('Wrong name'));
         $name->fieldInfo = $this->text('Info');

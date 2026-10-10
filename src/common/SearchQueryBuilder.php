@@ -43,12 +43,11 @@ final class SearchQueryBuilder
      * in quotes (\"…\" or '…') is searched as a whole, \"…\" without an operator for equality. "*" is a wildcard,
      * every other character (including "%" and "_") is searched literally.
      *
-     * @param array<string, string|int|float|null> $filterArr Column reference => search text. The column reference
-     *                                                         is a column name or an SQL expression (e.g.
-     *                                                         "CONCAT_WS(' ', a.firstName, a.lastName)") and must
-     *                                                         never contain user input.
+     * @param array<string, string|int|float|null> $filterArr Column => search text. The column is a column name like
+     *                                                         "name", "table.name" or "`table`.`name`" (checked like
+     *                                                         the columns of `createSqlSearch()`).
      *
-     * @throws InvalidArgumentException If a column reference is empty or contains a "?".
+     * @throws InvalidArgumentException If a column is not a valid column name.
      */
     public static function createSqlFilters(array $filterArr): DbQueryData
     {
@@ -77,10 +76,10 @@ final class SearchQueryBuilder
 
     private static function checkColumnExpression(string $column): string
     {
-        if ($column === '' || str_contains(haystack: $column, needle: '?')) {
+        if (preg_match(pattern: SearchQueryBuilder::FIELD_NAME_PATTERN, subject: $column) !== 1) {
             throw new InvalidArgumentException(
-                message: 'Invalid column reference "' . $column . '" for the filter. It must not be empty and must not'
-                . ' contain a "?", because it is not bound as a parameter.',
+                message: 'Invalid column name "' . $column . '" for the filter. Use column names like "name",'
+                . ' "table.name" or "`table`.`name`".',
             );
         }
 

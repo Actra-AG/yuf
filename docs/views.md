@@ -6,6 +6,11 @@ By default, the view of a request is the class `<viewClassPrefix>\view\<viewGrou
 (`ClassNameViewFactory`), created with `new $className(context: $context)`. Its class name is the file name (e.g.
 `welcome`), so it is lowercase: an allowed exception from PascalCase, to be documented in the project.
 
+The file title (the file name before the first `-` and the extension) and the file group come from the request path.
+`RequestHandler::resolveRoute()` answers with a 404 unless the file title only has letters, digits and `_` (it may be
+empty) and the file group consists of such names separated by `/` (no empty names, no `.`, no `..`). The class name
+and the language files are built from them, so a name with other characters (e.g. `-`) is not found.
+
 To pass further dependencies (e.g. a typed project context) to these views, give the `Route` a
 `ClassNameViewFactory` with a `create` closure. yuf still builds the class name and checks that the class exists and
 extends `BaseView`; the closure only creates the view:
@@ -46,7 +51,7 @@ Every view receives the `ViewContext` of the request and passes it to `BaseView:
 | `session`           | `?Session`, `null` without sessions (see [session-and-login.md](session-and-login.md)) |
 | `authSession`       | `AuthSession`                                                 |
 | `formContext`       | `FormContext` for forms (see [forms.md](forms.md))            |
-| `documentRoot`      | Document root of the web server, with a trailing slash (e.g. for uploads below it) |
+| `documentRoot`      | Document root of the web server, with a trailing slash (e.g. for public files below it) |
 
 `BaseView::getHtmlDocument()` and `getJsonRequestBody()` give the HTML document and the JSON request body.
 
@@ -79,7 +84,7 @@ $core->prepareHttpResponse(
             navKey: 'home',
             href: $context->route->path,
             svgPath: '…',
-            title: 'Home',
+            title: HtmlText::fromText(text: 'Home'),
             requiredAccessRights: AccessRightCollection::createEmpty(),
         ));
 
@@ -188,6 +193,11 @@ public function execute(): void
 - Files (`HttpResponse::createResponseFromFilePath()`, `FileHandler`) have an ETag and `Last-Modified`; a request with
   the current version gets `304 Not Modified`. `maxAge:` sets `max-age` (0: the browser asks every time). Versioned
   assets without personal data (`/css/styles.min.css?v=20260922`) add `isPublic: true, isImmutable: true`.
+- Every file response has `Content-Security-Policy: default-src 'none'; sandbox`. Without `forceDownload:` the content
+  type decides if the browser shows a file or downloads it (e.g. PNG is shown, CSV downloaded); `true` downloads every
+  file, `false` shows it. HTML, XHTML, XML, SVG and JavaScript files (by extension and content type) are always
+  downloaded, also with `forceDownload: false`. A download has `Content-Disposition: attachment` with the file name as
+  ASCII `filename` and UTF-8 `filename*`.
 - `sendAndExit()` closes a started session before the content is sent, so a download does not block other requests of
   the user. Write the session before.
 

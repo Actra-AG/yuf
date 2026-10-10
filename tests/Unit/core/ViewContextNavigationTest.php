@@ -11,6 +11,7 @@ namespace actra\yuf\tests\Unit\core;
 
 use actra\yuf\auth\AccessRightCollection;
 use actra\yuf\core\ViewContext;
+use actra\yuf\html\HtmlText;
 use actra\yuf\layout\NavigationItem;
 use actra\yuf\layout\NavigationItemCollection;
 use actra\yuf\tests\Double\core\ViewContextFactory;
@@ -30,7 +31,7 @@ final class ViewContextNavigationTest extends TestCase
                 navKey: $navKey,
                 href: '/' . $navKey . '/',
                 svgPath: 'M0 0',
-                title: $navKey,
+                title: HtmlText::fromText(text: $navKey),
                 requiredAccessRights: AccessRightCollection::createEmpty(),
             ),
         );

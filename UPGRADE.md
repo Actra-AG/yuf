@@ -4,6 +4,177 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v6.0.0 (2026-10-10)
+
+Security release: fixes in routing, login, Microsoft login, forms, uploads, file responses, mail, tables and logging.
+Several defaults change and are on without opt-out switches; read every ⚠️ entry.
+
+### ⚠️ Microsoft login: identity by object ID and tenant ID, nonce handled by yuf
+
+The user is identified by the claims `oid` and `tid` of the token, never by the email address.
+`MicrosoftIdToken::getUserName()`, `AuthWebToken::getUserName()` and `Authenticator::authWebTokenLogin()` are removed;
+new are `MicrosoftIdToken::getObjectId()`, `getTenantId()` (lower-case GUIDs) and `getEmail(): ?string` (display only).
+yuf creates the nonce and keeps it in its own short-lived cookie (`__Secure-yuf-sso-nonce`: `Secure`, `HttpOnly`,
+`SameSite=None`, path of the redirect URI, 10 minutes, used once); the session cookie is never downgraded
+(`AbstractSessionHandler::changeCookieSameSiteToNone()` is removed).
+
+- Implement `findAuthUserByMicrosoftAccount(string $objectId, string $tenantId): ?AuthUser` and store both GUIDs per
+  user. Link existing users explicitly (by an administrator or a migration script), never by matching the email
+  address ([docs/session-and-login.md](docs/session-and-login.md)).
+- `redirectToMicrosoftLogin(tenantId:, clientId:, redirectUri:)` and
+  `microsoftIdTokenLogin(tenantId:, clientId:, redirectUri:, microsoftIdToken:)` take no `ssoNonce` any more (pass the
+  same `redirectUri` to both); remove the nonce from the session of the project.
+- The constructor of `MicrosoftAuthenticator` has no `sessionHandler:` any more.
+- Start the login with a link (GET): the default CSP has `form-action 'self'` (see below), which blocks a form POST
+  that redirects to Microsoft.
+
+```php
+// Before
+$this->redirectToMicrosoftLogin(tenantId: $t, clientId: $c, redirectUri: $uri, ssoNonce: $nonce);
+$this->microsoftIdTokenLogin(tenantId: $t, clientId: $c, ssoNonce: $nonce, microsoftIdToken: $token);
+
+// After
+$this->redirectToMicrosoftLogin(tenantId: $t, clientId: $c, redirectUri: $uri);
+$this->microsoftIdTokenLogin(tenantId: $t, clientId: $c, redirectUri: $uri, microsoftIdToken: $token);
+```
+
+### ⚠️ Wrong passwords are counted before the check, a login does not reset the counter
+
+`AuthUser::increaseWrongPasswordAttempts()` and `dbIncreaseWrongPasswordAttempts()` are removed. `Authenticator` counts
+the attempt in the database before it checks the password and gives it back after the right one, so parallel requests
+cannot try more passwords than allowed. Implement the two new abstract methods of `AuthUser`, each as one statement:
+
+```php
+// true if one row changed; false: the limit is reached (the password is not checked)
+protected function dbRegisterWrongPasswordAttempt(int $maxAllowedWrongPasswordAttempts): bool
+// UPDATE user SET wrong_login_attempts = wrong_login_attempts + 1 WHERE id = ? AND wrong_login_attempts < ?
+
+protected function dbReleaseWrongPasswordAttempt(): void
+// UPDATE user SET wrong_login_attempts = wrong_login_attempts - 1 WHERE id = ? AND wrong_login_attempts > 0
+```
+
+`AuthUser::confirmSuccessfulLogin()` no longer resets the counter: remove `wrong_login_attempts = 0` from
+`dbConfirmSuccessfulLogin()`. The lock stays until the project sets a new password and resets the counter there. A
+second factor counts with `Authenticator::registerWrongPasswordAttempt()` / `releaseWrongPasswordAttempt()`.
+
+### ⚠️ Forms: CSRF checked first, required for POST forms
+
+- `Form::validate()` checks the CSRF token first: with a missing or invalid token the form gets only the CSRF error;
+  no field, listener, upload or spam check runs. The form is rendered with its initial values then.
+- A POST form without CSRF token source in its `FormContext` (no session) throws a `LogicException`. Pass
+  `csrfProtection: false` (new last argument of `Form`) if the form needs no protection. `Form::removeCsrfProtection()`
+  is removed. GET forms are not affected. Tests that post a form must send the token or use `csrfProtection: false`.
+
+```php
+// Before
+$form = new Form(context: $context, name: 'search');
+$form->removeCsrfProtection();
+
+// After
+$form = new Form(context: $context, name: 'search', csrfProtection: false);
+```
+
+### ⚠️ Forms: `maxLength` is validated, uploads need a directory, spam protection bound to the session
+
+- `maxLength:` of input fields is validated on the server (error text `FormMessages::$tooLong`, new last argument of
+  `FormMessages`, `[max]` is replaced). A `MaxLengthRule` of the project with the same or a smaller limit replaces the
+  built-in check. `MaxLengthRule::$maxLength` is public.
+- `SessionFileUploadStorage::forHttpRequest()` is removed; there is no default directory. Pass a directory outside
+  the document root: `new SessionFileUploadStorage(session: $session, rootDirectory: $directory)`. It is created with
+  mode 0700, stored files get 0600; a symbolic link or a directory of another user throws a `RuntimeException`.
+- `FileUploadStorage` has the new methods `issue(string $pointer): void` and `isIssued(string $pointer): bool`
+  (custom implementations and test doubles add them; `store()` and `clear()` ignore pointers that were not issued). A
+  `FileField` takes over a posted upload pointer only if it was issued in the same session (new session section
+  `uploadPointers`, `SessionSectionEnum::UPLOAD_POINTERS`).
+- The signed render time of the spam protection is bound to the session: `SpamCheck::signRenderTime()`, `check()` and
+  `isValidRenderTime()` have the new required argument `sessionBinding: ?string` (the CSRF token; `null` only without
+  session), `SpamRenderTimeField` the new argument `sessionSource:`. No change for forms that use
+  `Form::addSpamProtection()`; forms rendered before the update show the "try again" text once.
+
+### ⚠️ Routing, host and language files
+
+- `RequestHandler::resolveRoute()` answers 404 if the file title (the file name before the first `-` and the
+  extension) has other characters than letters, digits and `_`, or the file group (`${fileGroup}`) has other names
+  than letters, digits, `_` and `-` separated by `/`. Both name view classes, templates and language files.
+- `LocaleHandler::loadLanguageFile()` has the new required argument `languageDirectory:`; a file outside of it (after
+  resolving symbolic links) throws a `RuntimeException`.
+- A request over HTTP for a host that is not in `allowedDomains` gets a 404 instead of the redirect to HTTPS.
+  `HttpRequest::getHost()` is only trustworthy after this check ([docs/setup.md](docs/setup.md)).
+
+```php
+// Before
+$localeHandler->loadLanguageFile(filePath: $file);
+// After
+$localeHandler->loadLanguageFile(filePath: $file, languageDirectory: $directory);
+```
+
+### ⚠️ File responses and Content-Security-Policy
+
+- `HttpResponse::createResponseFromFilePath()`, `FileHandler::output()` and `CsvFile`: HTML, XHTML, XML, SVG and
+  JavaScript files (by extension or content type) are always sent as download, also with `forceDownload: false`. Every
+  file response has `Content-Security-Policy: default-src 'none'; sandbox`. `Content-Disposition` is
+  `attachment; filename="…"; filename*=UTF-8''…` (ASCII fallback, escaped). Serve such files with the web server if
+  they must be shown in the browser; tests that compare the header need the new format.
+- `FileHandler::output()` without `forceDownload:` lets the content type decide (`?bool $forceDownload = null`, e.g.
+  CSV is a download, PNG is shown; before: always shown). Pass `forceDownload: false` to keep showing such a file.
+- The default Content-Security-Policy has `form-action 'self'` (new argument `formAction:` of `CspPolicySettings`).
+  Forms that post to another origin (or a POST that redirects to one) need `formAction:`.
+
+### ⚠️ Mail
+
+- `SmtpMailer`: `useTls: bool` is replaced by `encryption: SmtpEncryptionEnum` (`STARTTLS`, the default;
+  `IMPLICIT_TLS` for port 465; `NONE`). `port:` is optional (default by the encryption: 587, 465 or 25). A user name
+  with `NONE` throws an `InvalidArgumentException` unless the host is `localhost`, `127.0.0.0/8` or `::1`.
+- `SmtpTransport::open()` has the new argument `bool $implicitTls` (own transports and test doubles); `enableTls()`
+  may throw a `MailerException`.
+- `MailerAddress` and `ValidatedEmailAddress` (the email field of forms) reject control characters and quoted local
+  parts (new `EmailAddressErrorEnum::CONTROL_CHARACTERS`).
+
+```php
+// Before
+new SmtpMailer(…, useTls: false);
+// After: STARTTLS is the default; without encryption only on the same host
+new SmtpMailer(…, encryption: SmtpEncryptionEnum::NONE);
+new SmtpMailer(…, encryption: SmtpEncryptionEnum::IMPLICIT_TLS); // port 465
+```
+
+### ⚠️ Tables and navigation
+
+- Column labels and navigation titles are `HtmlText`: `AbstractTableColumn` and its subclasses (`DefaultColumn`,
+  `DateColumn`, `BooleanColumn`, `FileSizeColumn`, `StripHtmlTagsColumn`, `CallbackColumn`, `OptionsColumn`),
+  `TableHelper::create*Column()` (`label:`) and `NavigationItem` (`title:`). Plain text: `HtmlText::fromText()`, HTML
+  of the application: `HtmlText::fromHtml()` (same output as before). The `label` and `title` properties are
+  `HtmlText`. `ActionsColumn` and `TableHelper::createActionsColumn()` take `?HtmlText $label = null`.
+- `ActionsColumn::addEditActionLink()` / `addDeleteLink()`: a link target must not start with a placeholder
+  (`InvalidArgumentException`); `[column]` values in these targets are URL-encoded (before: HTML-encoded only).
+- `SearchQueryBuilder::createSqlFilters()` and `TextFilterField` accept column names only (`name`, `table.name`,
+  `` `table`.`name` ``); an SQL expression throws an `InvalidArgumentException`. Search an expression through a column
+  of the query (`SELECT …, CONCAT(a, b) AS search`).
+- `TableItem::renderValue()` encodes quotes (`&quot;`, `&#039;`).
+
+```php
+// Before
+new DefaultColumn(identifier: 'name', label: 'Name');
+new NavigationItem(…, title: 'Users', …);
+// After
+new DefaultColumn(identifier: 'name', label: HtmlText::fromText(text: 'Name'));
+new NavigationItem(…, title: HtmlText::fromText(text: 'Users'), …);
+```
+
+### Changed defaults and other fixes
+
+- ⚠️ Default of `SessionSettings::$gcDivisor` is 1000 (garbage collection 1/1000, was 1/100000).
+- `.env.example.php` ships `'debug' => false`. In production keep `debug` false and set
+  `zend.exception_ignore_args=On`. The client IP is `REMOTE_ADDR` only: behind a reverse proxy, let the web server
+  set it (e.g. `mod_remoteip`) ([docs/setup.md](docs/setup.md)).
+- Security fixes without action: `AuthSession::logIn()` (and impersonation) removes the CSRF token of the session;
+  legacy SHA-256 passwords and unknown users take the time of a real verification; STARTTLS is refused if the server
+  sent data before the handshake; `LoginRedirect::isLocalPath()` also requires a URI that parses without scheme and
+  host; `DbResultTable` uses a stored sort column only if it is sortable in the table; `PhoneNumberField` encodes its
+  rendered value; logged request values and messages are escaped to one line, and the ticket of an exception no
+  longer depends on its message; `FileSessionHandler` understands `N;path` save paths; `CachedKeySet` throttles key
+  downloads also without cache.
+
 ## v5.7.0 (2026-10-10)
 
 - The spam protection (`Form::addSpamProtection()`) is checked only if the fields are valid: a submission with field

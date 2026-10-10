@@ -21,9 +21,11 @@ use SensitiveParameter;
  *
  * `$authResult` tells the project why a login failed (log, statistics). Show the user one and the same message for an
  * unknown user and a wrong password (and do not reveal a lock-out to anyone but the owner), otherwise the login tells
- * which user names exist. Wrong passwords are counted per user (`AuthUser::$wrongPasswordAttempts`); a user with
- * `$maxAllowedWrongPasswordAttempts` wrong attempts is locked out until the project resets the counter, even with
- * the right password.
+ * which user names exist. Password attempts are counted per user in the database before the password is checked and
+ * given back after the right one (`AuthUser::registerWrongPasswordAttempt()`), so parallel requests cannot try more
+ * passwords than allowed; a user with `$maxAllowedWrongPasswordAttempts` wrong attempts is locked out until the
+ * project resets the counter by setting a new password, even with the right password. A successful login does not
+ * reset the counter.
  */
 abstract class Authenticator
 {
@@ -193,9 +195,37 @@ abstract class Authenticator
     }
 
     /**
+     * Logs in the user an identity provider (a verified web token, see `AuthWebToken`) identified. The project finds
+     * the user by the stable identity of the token, never by a mutable claim such as an email address. An unknown
+     * identity is rejected and logged like an unknown user name; otherwise the checks of `logInVerifiedUser()` apply
+     * (IP whitelist, check of the project, inactive, lock-out).
+     *
+     * @param ?AuthUser $authUser The user of the identity, `null` if there is none
+     * @param string $identifier Written to the log of the attempt (the identity, e.g. the object ID of the provider)
+     *
+     * @throws LogicException if this authenticator rejected a user or logged one in already, or the user is already
+     *     logged in
+     */
+    protected function logInIdentifiedUser(AuthMethodEnum $authMethod, ?AuthUser $authUser, string $identifier): bool
+    {
+        if ($authUser === null) {
+            $this->assertNoLoginTried();
+            $this->reject(
+                authResult: AuthResultEnum::ERROR_UNKNOWN_USER_NAME,
+                attempt: $this->createAttempt(userName: $identifier),
+                userId: null,
+            );
+
+            return false;
+        }
+
+        return $this->logInVerifiedUser(authMethod: $authMethod, authUser: $authUser, userName: $identifier);
+    }
+
+    /**
      * @throws LogicException
      */
-    private function assertNoLoginTried(): void
+    protected function assertNoLoginTried(): void
     {
         if ($this->authResult !== AuthResultEnum::UNDEFINED) {
             throw new LogicException(message: 'It is not allowed to execute this method multiple times.');
@@ -276,13 +306,37 @@ abstract class Authenticator
 
             return AuthResultEnum::ERROR_NO_PASSWORD_LOGIN_ACTIVE;
         }
-        if (!$storedPassword->isValid(rawPassword: $passwordToCheck)) {
-            $authUser->increaseWrongPasswordAttempts();
+        // The attempt is counted in the database before the password is checked, so parallel requests cannot try more
+        // passwords than the limit allows; the right password gives it back
+        if (!$this->registerWrongPasswordAttempt(authUser: $authUser)) {
+            // Locked out by a parallel request: the password is not checked. Costs the time of a verification.
+            Password::spendVerificationTime(rawPassword: $passwordToCheck);
 
+            return AuthResultEnum::ERROR_OUT_TRIED;
+        }
+        if (!$storedPassword->isValid(rawPassword: $passwordToCheck)) {
             return AuthResultEnum::ERROR_WRONG_PASSWORD;
         }
+        $this->releaseWrongPasswordAttempt(authUser: $authUser);
 
         return null;
+    }
+
+    /**
+     * Counts a password attempt (or a wrong second factor) of the user before it is checked: `false` if the user
+     * reached `$maxAllowedWrongPasswordAttempts`, then do not check it. Call `releaseWrongPasswordAttempt()` after the
+     * right one (see `AuthUser::registerWrongPasswordAttempt()`).
+     */
+    protected function registerWrongPasswordAttempt(AuthUser $authUser): bool
+    {
+        return $authUser->registerWrongPasswordAttempt(
+            maxAllowedWrongPasswordAttempts: $this->maxAllowedWrongPasswordAttempts,
+        );
+    }
+
+    protected function releaseWrongPasswordAttempt(AuthUser $authUser): void
+    {
+        $authUser->releaseWrongPasswordAttempt();
     }
 
     /**
@@ -358,15 +412,4 @@ abstract class Authenticator
      * Additional check of the project (e.g. a second factor). Sets `$authResult` and returns `false` to refuse.
      */
     abstract protected function checkLoginCredentials(AuthUser $authUser): bool;
-
-    protected function authWebTokenLogin(
-        AuthMethodEnum $authMethod,
-        AuthWebToken $authWebToken,
-    ): bool {
-        return $this->doLogin(
-            authMethod: $authMethod,
-            userName: $authWebToken->getUserName(),
-            passwordToCheck: null,
-        );
-    }
 }

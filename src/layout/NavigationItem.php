@@ -11,11 +11,13 @@ namespace actra\yuf\layout;
 
 use actra\yuf\auth\AccessRightCollection;
 use actra\yuf\html\HtmlDataObject;
+use actra\yuf\html\HtmlText;
 use InvalidArgumentException;
 
 /**
- * An entry of the navigation of a page, with optional children. The texts (`title`, `svgPath`, the CSS classes) are
- * trusted HTML of the application and are output as they are, so never pass user data. `href` is checked.
+ * An entry of the navigation of a page, with optional children. The `title` is an `HtmlText` (`fromText()` encodes it);
+ * `svgPath` and the CSS classes are trusted HTML of the application and are output as they are, so never pass user
+ * data. `href` is checked.
  */
 final readonly class NavigationItem
 {
@@ -31,7 +33,7 @@ final readonly class NavigationItem
         public string $navKey,
         public string $href,
         public string $svgPath,
-        public string $title,
+        public HtmlText $title,
         public AccessRightCollection $requiredAccessRights,
         public ?NavigationItemCollection $childNavigation = null,
         public string $activeSubToggleClass = 'nav-main-sub-toggle active',
@@ -52,7 +54,7 @@ final readonly class NavigationItem
         $htmlDataObject->addHtml(propertyName: 'href', html: $this->href);
         $htmlDataObject->addHtml(propertyName: 'navKey', html: $this->navKey);
         $htmlDataObject->addHtml(propertyName: 'svgPath', html: $this->svgPath);
-        $htmlDataObject->addHtml(propertyName: 'title', html: $this->title);
+        $htmlDataObject->addHtmlText(propertyName: 'title', htmlText: $this->title);
         if ($childNavigation === null || !$hasChildren) {
             $htmlDataObject->addHtmlDataObjectsArray(propertyName: 'subNavigation', htmlDataObjectsArray: null);
             $htmlDataObject->addHtml(propertyName: 'cssClass', html: '');

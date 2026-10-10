@@ -16,13 +16,38 @@ use Override;
 
 final class TestAuthUser extends AuthUser
 {
-    public int $increaseCalls = 0;
+    public int $registerCalls = 0;
+    public int $releaseCalls = 0;
     public int $confirmCalls = 0;
     public ?Password $storedPassword = null;
 
     /**
+     * @param list<string> $ipWhitelist
+     */
+    private function __construct(
+        private readonly AttemptCounter $counter,
+        int $id,
+        bool $isActive,
+        int $wrongPasswordAttempts,
+        AccessRightCollection $accessRightCollection,
+        ?Password $password,
+        array $ipWhitelist,
+    ) {
+        parent::__construct(
+            id: $id,
+            isActive: $isActive,
+            wrongPasswordAttempts: $wrongPasswordAttempts,
+            accessRightCollection: $accessRightCollection,
+            password: $password,
+            ipWhitelist: $ipWhitelist,
+        );
+    }
+
+    /**
      * @param list<string> $accessRights
      * @param list<string> $ipWhitelist
+     * @param ?AttemptCounter $counter The counter of the "database" row; several users with the same counter are
+     *     the same user in parallel requests (default: an own counter that starts with `$wrongPasswordAttempts`)
      */
     public static function create(
         array $accessRights,
@@ -31,8 +56,10 @@ final class TestAuthUser extends AuthUser
         array $ipWhitelist = [],
         ?Password $password = null,
         bool $hasPassword = true,
+        ?AttemptCounter $counter = null,
     ): TestAuthUser {
         return new TestAuthUser(
+            counter: $counter ?? new AttemptCounter(value: $wrongPasswordAttempts),
             id: 1,
             isActive: $isActive,
             wrongPasswordAttempts: $wrongPasswordAttempts,
@@ -43,9 +70,25 @@ final class TestAuthUser extends AuthUser
     }
 
     #[Override]
-    protected function dbIncreaseWrongPasswordAttempts(): void
+    protected function dbRegisterWrongPasswordAttempt(int $maxAllowedWrongPasswordAttempts): bool
     {
-        $this->increaseCalls++;
+        $this->registerCalls++;
+        // The conditional UPDATE of the project
+        if ($this->counter->value >= $maxAllowedWrongPasswordAttempts) {
+            return false;
+        }
+        $this->counter->value++;
+
+        return true;
+    }
+
+    #[Override]
+    protected function dbReleaseWrongPasswordAttempt(): void
+    {
+        $this->releaseCalls++;
+        if ($this->counter->value > 0) {
+            $this->counter->value--;
+        }
     }
 
     #[Override]

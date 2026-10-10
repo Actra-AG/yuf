@@ -17,9 +17,9 @@ use RuntimeException;
 
 /**
  * The public keys of an identity provider, cached in a file. A key ID the cache does not know triggers a download,
- * but at most one per refresh interval, so a token with random key IDs cannot make the server download on every
- * request. A downloaded key set replaces the cache only if it parses (a broken download cannot lock everybody out);
- * the file is written atomically with mode 0600.
+ * but at most one per refresh interval (also while no cache exists, and after a download that failed), so a token with
+ * random key IDs cannot make the server download on every request. A downloaded key set replaces the cache only if it
+ * parses (a broken download cannot lock everybody out); the file is written atomically with mode 0600.
  *
  * @internal
  */
@@ -42,12 +42,19 @@ final readonly class CachedKeySet
         if ($cachedKeys !== null && array_key_exists(key: $keyId, array: $cachedKeys)) {
             return $cachedKeys[$keyId];
         }
-        if ($cachedKeys !== null && !$this->isRefreshAllowed()) {
-            throw new UnauthorizedException(message: 'Unknown key ID');
+        if (!$this->isRefreshAllowed(hasCache: $cachedKeys !== null)) {
+            if ($cachedKeys !== null) {
+                throw new UnauthorizedException(message: 'Unknown key ID');
+            }
+
+            throw new RuntimeException(message: 'The signing keys are not available: the last download is too recent.');
         }
+        // Before the download, so a failing download is not repeated by every request either
+        $this->markDownloadAttempt();
         $json = $this->source->download();
         $keys = JsonWebKeySetParser::parse(json: $json);
         $this->writeCache(json: $json);
+        $this->removeDownloadAttempt();
         if (!array_key_exists(key: $keyId, array: $keys)) {
             throw new UnauthorizedException(message: 'Unknown key ID');
         }
@@ -74,12 +81,43 @@ final readonly class CachedKeySet
         }
     }
 
-    private function isRefreshAllowed(): bool
+    /**
+     * The time of the last download: the cache file (a usable one), or the marker of an attempt that did not end with
+     * a new cache (the provider is not reachable, the answer is broken). Without either, a download is allowed.
+     */
+    private function isRefreshAllowed(bool $hasCache): bool
     {
-        $modified = filemtime(filename: $this->cacheFilePath);
+        $lastDownload = $hasCache ? filemtime(filename: $this->cacheFilePath) : false;
+        $lastAttempt = is_file(filename: $this->getMarkerPath()) ? filemtime(filename: $this->getMarkerPath()) : false;
+        $latest = max($lastDownload === false ? 0 : $lastDownload, $lastAttempt === false ? 0 : $lastAttempt);
 
-        return $modified === false
-            || $this->clock->now()->getTimestamp() - $modified >= $this->refreshIntervalInSeconds;
+        return $latest === 0 || $this->clock->now()->getTimestamp() - $latest >= $this->refreshIntervalInSeconds;
+    }
+
+    private function getMarkerPath(): string
+    {
+        return $this->cacheFilePath . '.attempt';
+    }
+
+    /**
+     * @throws RuntimeException
+     */
+    private function markDownloadAttempt(): void
+    {
+        $directory = dirname(path: $this->cacheFilePath);
+        if (!is_dir(filename: $directory)) {
+            throw new RuntimeException(message: 'The cache directory "' . $directory . '" does not exist.');
+        }
+        if (!touch(filename: $this->getMarkerPath(), mtime: $this->clock->now()->getTimestamp())) {
+            throw new RuntimeException(message: 'Cannot write in the cache directory "' . $directory . '".');
+        }
+    }
+
+    private function removeDownloadAttempt(): void
+    {
+        if (is_file(filename: $this->getMarkerPath())) {
+            unlink(filename: $this->getMarkerPath());
+        }
     }
 
     /**

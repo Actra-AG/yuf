@@ -64,20 +64,33 @@ final class StreamSmtpTransport implements SmtpTransport
         ];
     }
 
-    #[Override]
-    public function open(string $hostName, int $port, int $timeoutSeconds): void
+    /**
+     * The address of the stream socket: `tls://` with implicit TLS, otherwise `tcp://` (IPv6 in brackets).
+     */
+    public static function createAddress(string $hostName, int $port, bool $implicitTls): string
     {
-        $this->close();
-        $address = str_contains(haystack: $hostName, needle: ':') && !str_starts_with(haystack: $hostName, needle: '[')
+        $host = str_contains(haystack: $hostName, needle: ':') && !str_starts_with(haystack: $hostName, needle: '[')
             ? '[' . $hostName . ']'
             : $hostName;
+
+        return ($implicitTls ? 'tls://' : 'tcp://') . $host . ':' . $port;
+    }
+
+    #[Override]
+    public function open(string $hostName, int $port, int $timeoutSeconds, bool $implicitTls): void
+    {
+        $this->close();
         $errorCode = 0;
         $errorMessage = '';
         // A failed connection is reported as exception, not as warning
         set_error_handler(callback: static fn(): bool => true);
         try {
             $stream = stream_socket_client(
-                address: 'tcp://' . $address . ':' . $port,
+                address: StreamSmtpTransport::createAddress(
+                    hostName: $hostName,
+                    port: $port,
+                    implicitTls: $implicitTls,
+                ),
                 error_code: $errorCode,
                 error_message: $errorMessage,
                 timeout: $timeoutSeconds,
@@ -140,6 +153,13 @@ final class StreamSmtpTransport implements SmtpTransport
     {
         if ($this->stream === null) {
             return false;
+        }
+        // Bytes that arrived before the handshake (sent together with the answer to STARTTLS) are in the read buffer of
+        // the stream and would be returned as if they were encrypted
+        if (stream_get_meta_data(stream: $this->stream)['unread_bytes'] > 0) {
+            throw new MailerException(
+                message: 'The SMTP server sent data before the TLS handshake. Nothing was sent.',
+            );
         }
         // A failed handshake is reported by the return value, not as warning
         set_error_handler(callback: static fn(): bool => true);

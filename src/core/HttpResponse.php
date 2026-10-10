@@ -29,6 +29,34 @@ final class HttpResponse
     /** One year, independent of how long the response may be cached (max-age=0 would remove HSTS in the browser). */
     private const int HSTS_MAX_AGE = 31536000;
 
+    /** Sent with every file: no content of the file is loaded or run, the file has an opaque origin. */
+    private const string FILE_CONTENT_SECURITY_POLICY = "default-src 'none'; sandbox";
+
+    /** @var list<string> Extensions of files that are always downloaded */
+    private const array ACTIVE_CONTENT_EXTENSIONS = [
+        'html',
+        'htm',
+        'xhtml',
+        'shtml',
+        'xml',
+        'svg',
+        'svgz',
+        'js',
+        'mjs',
+    ];
+
+    /** @var list<string> Content types of files that are always downloaded */
+    private const array ACTIVE_CONTENT_MIME_TYPES = [
+        'text/html',
+        'application/xhtml+xml',
+        'image/svg+xml',
+        'text/xml',
+        'application/xml',
+        'text/javascript',
+        'application/javascript',
+        'application/x-javascript',
+    ];
+
     /** @var array<string, string> */
     private array $headers = [];
 
@@ -309,6 +337,8 @@ final class HttpResponse
     /**
      * A 404 response (only the status) if the path is no file, a 403 response if it is not readable.
      *
+     * @param ?bool $forceDownload `true`: always a download; `null`: by content type; `false`: shown. HTML, XHTML, XML,
+     *                             SVG and JavaScript files (by extension and content type) are always a download
      * @param int $maxAge Seconds the browser may use the file without asking again (`max-age`); 0: it asks every time
      * @param bool $isPublic Shared caches (proxies, CDN) may store the file too; only for files without personal data
      * @param bool $isImmutable The file never changes under this URL (a version in the URL, e.g. `?v=20260922`)
@@ -340,7 +370,9 @@ final class HttpResponse
         $fileName = $individualFileName ?? basename(path: $realPath);
         $extension = FileHandler::getExtension(filename: $fileName);
         $contentType = ContentType::createFromFileExtension(extension: $extension);
-        $forceDownload ??= $contentType->forceDownloadByDefault;
+        // What a browser could run as part of the site is never shown, whatever the caller asks for
+        $forceDownload = ($forceDownload ?? $contentType->forceDownloadByDefault)
+            || HttpResponse::isActiveContent(extension: $extension, mimeType: $contentType->mimeType->value);
         $eTag = HttpResponse::createETag(content: $lastModifiedTimeStamp . '-' . $fileSize . '-' . $realPath);
         $cacheControl = ($isPublic ? 'public' : 'private') . ', ' . ($maxAge > 0 ? 'max-age=' . $maxAge : 'no-cache')
             . ($isImmutable ? ', immutable' : '');
@@ -366,12 +398,56 @@ final class HttpResponse
         }
         if ($forceDownload) {
             $httpResponse->setHeader(key: 'Content-Description', val: 'File Transfer');
-            $httpResponse->setHeader(key: 'Content-Disposition', val: 'attachment; filename="' . $fileName . '"');
+            $httpResponse->setHeader(
+                key: 'Content-Disposition',
+                val: HttpResponse::createAttachmentDisposition(fileName: $fileName),
+            );
         }
         $httpResponse->setContentTypeAndSecurityHeaders(contentType: $contentType);
+        // A file is data: nothing it contains may be loaded or run, even if a browser shows it
+        $httpResponse->setHeader(key: 'Content-Security-Policy', val: HttpResponse::FILE_CONTENT_SECURITY_POLICY);
         $httpResponse->setHeader(key: 'Content-Length', val: (string) $fileSize);
 
         return $httpResponse;
+    }
+
+    /**
+     * Whether a browser would run the file as part of the site (HTML, XML, SVG, JavaScript), by extension or content
+     * type.
+     */
+    private static function isActiveContent(string $extension, string $mimeType): bool
+    {
+        return in_array(
+            needle: mb_strtolower(string: $extension),
+            haystack: HttpResponse::ACTIVE_CONTENT_EXTENSIONS,
+            strict: true,
+        ) || in_array(
+            needle: mb_strtolower(string: $mimeType),
+            haystack: HttpResponse::ACTIVE_CONTENT_MIME_TYPES,
+            strict: true,
+        );
+    }
+
+    /**
+     * The `Content-Disposition` value of a download (RFC 6266): `filename` is ASCII only (control characters removed,
+     * other characters replaced by "_", quotes and backslashes escaped), `filename*` has the real name (RFC 8187).
+     */
+    private static function createAttachmentDisposition(string $fileName): string
+    {
+        $fileName = preg_replace(pattern: '/[\x00-\x1F\x7F]/', replacement: '', subject: $fileName) ?? '';
+        $asciiName = preg_replace(pattern: '/[^\x20-\x7E]/u', replacement: '_', subject: $fileName)
+            ?? preg_replace(pattern: '/[^\x20-\x7E]/', replacement: '_', subject: $fileName)
+            ?? '';
+        if ($asciiName === '') {
+            $asciiName = 'download';
+        }
+        $disposition = 'attachment; filename="'
+            . str_replace(search: ['\\', '"'], replace: ['\\\\', '\\"'], subject: $asciiName) . '"';
+        if ($fileName !== '' && mb_check_encoding(value: $fileName, encoding: 'UTF-8')) {
+            $disposition .= "; filename*=UTF-8''" . rawurlencode(string: $fileName);
+        }
+
+        return $disposition;
     }
 
     private static function createETag(string $content): string

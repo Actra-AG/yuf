@@ -10,7 +10,8 @@ declare(strict_types=1);
 namespace actra\yuf\core;
 
 /**
- * Describes a request for the error log without secrets: the request line (without the query string), host, IP
+ * Describes a request for the error log without secrets (control characters of values are escaped, so a value stays
+ * on its line): the request line (without the query string), host, IP
  * address, user agent, referrer (without query string and fragment), a fixed list of server variables, the query
  * and post parameters with masked values, the names of the uploaded files and the names (never the values) of the
  * cookies.
@@ -139,7 +140,7 @@ final readonly class RequestLogFormatter
      */
     private function printValues(array $values): string
     {
-        return print_r(value: $values, return: true);
+        return print_r(value: $this->escapeValues(values: $values), return: true);
     }
 
     private function withoutQueryAndFragment(string $url): string
@@ -152,6 +153,43 @@ final readonly class RequestLogFormatter
      */
     private function singleLine(string $text): string
     {
-        return preg_replace(pattern: '/[\x00-\x1F\x7F]/', replacement: '?', subject: $text) ?? '';
+        return RequestLogFormatter::escapeControlCharacters(text: $text);
+    }
+
+    /**
+     * Writes line feed and carriage return as `\n` and `\r`, every other control character as `\x` and two hex digits
+     * (`\x1f`), so a value cannot break or forge the lines of the log.
+     */
+    public static function escapeControlCharacters(string $text): string
+    {
+        return preg_replace_callback(
+            pattern: '/[\x00-\x1F\x7F]/',
+            callback: static fn(array $match): string => match ($match[0]) {
+                "\n" => '\n',
+                "\r" => '\r',
+                default => '\x' . bin2hex(string: $match[0]),
+            },
+            subject: $text,
+        ) ?? '';
+    }
+
+    /**
+     * @param array<array-key, mixed> $values
+     *
+     * @return array<array-key, mixed>
+     */
+    private function escapeValues(array $values): array
+    {
+        $escaped = [];
+        foreach ($values as $name => $value) {
+            $escapedName = is_string(value: $name) ? RequestLogFormatter::escapeControlCharacters(text: $name) : $name;
+            $escaped[$escapedName] = match (true) {
+                is_array(value: $value) => $this->escapeValues(values: $value),
+                is_string(value: $value) => RequestLogFormatter::escapeControlCharacters(text: $value),
+                default => $value,
+            };
+        }
+
+        return $escaped;
     }
 }

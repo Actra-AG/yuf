@@ -25,7 +25,7 @@ final class OptionsColumn extends AbstractTableColumn
      */
     public function __construct(
         string $identifier,
-        string $label,
+        HtmlText $label,
         private readonly array $options,
         bool $isSortable,
         bool $sortAscendingByDefault = true,

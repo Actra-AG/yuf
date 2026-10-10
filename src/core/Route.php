@@ -52,14 +52,14 @@ final readonly class Route
         }
         $langGlobal = $dir . 'global.lang.php';
         if (file_exists(filename: $langGlobal)) {
-            $localeHandler->loadLanguageFile(filePath: $langGlobal);
+            $localeHandler->loadLanguageFile(filePath: $langGlobal, languageDirectory: $dir);
         }
         if ($fileTitle === '') {
             return;
         }
         $langFile = $dir . $fileTitle . '.lang.php';
         if (file_exists(filename: $langFile)) {
-            $localeHandler->loadLanguageFile(filePath: $langFile);
+            $localeHandler->loadLanguageFile(filePath: $langFile, languageDirectory: $dir);
         }
     }
 }

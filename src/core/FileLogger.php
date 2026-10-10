@@ -88,14 +88,16 @@ final class FileLogger implements Logger
     {
         $previousException = $throwable->getPrevious();
         $realException = $previousException ?? $throwable;
-        $message = $realException::class . ': (' . $realException->getCode() . ') "' . $realException->getMessage()
-            . '"' . PHP_EOL;
+        $message = $realException::class . ': (' . $realException->getCode() . ') "'
+            . RequestLogFormatter::escapeControlCharacters(text: $realException->getMessage()) . '"' . PHP_EOL;
         $message .= 'thrown in file: ' . $realException->getFile() . ' (Line: ' . $realException->getLine() . ')'
             . FileLogger::DOUBLE_NEW_LINE;
-        $hashableContent = $message;
         $message .= $realException->getTraceAsString();
 
-        // Don't use dynamic data ($traceLineArray['args']) from backtrace for hash-able content
+        // Same issue, same ticket: the hash covers where it happened (class, file, line, trace without arguments),
+        // never the message, which can contain request data and would create a ticket (and a mail) per value
+        $hashableContent = $realException::class . PHP_EOL . $realException->getFile() . PHP_EOL
+            . $realException->getLine() . PHP_EOL;
         foreach ($realException->getTrace() as $traceLineArray) {
             $hashableContent
                 .= (array_key_exists(key: 'file', array: $traceLineArray) ? $traceLineArray['file'] : '')
@@ -113,7 +115,7 @@ final class FileLogger implements Logger
     public function logMessage(string $message): void
     {
         $hash = hash(algo: 'sha256', data: $message);
-        $this->deliverMessage(hash: $hash, message: $message);
+        $this->deliverMessage(hash: $hash, message: RequestLogFormatter::escapeControlCharacters(text: $message));
     }
 
     /**

@@ -41,7 +41,8 @@ final readonly class FormInput
      * @param array<array-key, mixed> $data Posted (or GET) values; they win over `$files` with the same name
      * @param array<array-key, mixed> $files Uploaded files (`$_FILES`), read as input like the other values and as
      *                                       uploads (`getUploads()`); an entry named like a `$data` entry is no upload
-     * @param array<array-key, mixed> $query Query string (`$_GET`): the sent indicator and the CSRF token fallback
+     * @param array<array-key, mixed> $query Query string (`$_GET`): the sent indicator (`hasQueryKey()`); the CSRF
+     *                                       token is only read from `$data`
      */
     public static function fromArray(array $data, array $files = [], array $query = []): FormInput
     {

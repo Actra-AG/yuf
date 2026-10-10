@@ -54,6 +54,15 @@ final class AuthSessionTest extends TestCase
         );
     }
 
+    public function testLogInRemovesTheCsrfToken(): void
+    {
+        $this->session->setSection(section: SessionSectionEnum::CSRF, data: ['token' => 'old-token']);
+
+        $this->authSession->logIn(authSessionId: 5);
+
+        $this->assertSame([], $this->session->getSection(section: SessionSectionEnum::CSRF));
+    }
+
     public function testLogInRegeneratesTheSessionId(): void
     {
         $idBefore = $this->session->getId();

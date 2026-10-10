@@ -11,13 +11,16 @@ namespace actra\yuf\tests\Unit\auth;
 
 use actra\yuf\auth\AuthResultEnum;
 use actra\yuf\auth\AuthSession;
+use actra\yuf\auth\SsoNonceCookie;
+use actra\yuf\core\ResponseSender;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
+use actra\yuf\tests\Double\auth\RecordingSsoNonceCookieWriter;
 use actra\yuf\tests\Double\auth\TestAuthUser;
 use actra\yuf\tests\Double\auth\TestJwtIssuer;
 use actra\yuf\tests\Double\auth\TestMicrosoftAuthenticator;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
-use actra\yuf\tests\Double\session\NonStartingSessionHandler;
+use actra\yuf\tests\Double\core\RecordingResponseSender;
 use Override;
 use PHPUnit\Framework\TestCase;
 
@@ -29,11 +32,14 @@ final class MicrosoftAuthenticatorTest extends TestCase
 {
     private const string TENANT_ID = '11111111-2222-3333-4444-555555555555';
     private const string CLIENT_ID = 'client-id';
-    private const string NONCE = 'secret-nonce-1';
+    private const string NONCE = 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789';
+    private const string OBJECT_ID = '99999999-8888-7777-6666-555555555555';
+    private const string REDIRECT_URI = 'https://example.com/sso/callback';
 
     private string $directory;
     private TestJwtIssuer $issuer;
     private AuthSession $authSession;
+    private RecordingSsoNonceCookieWriter $cookieWriter;
 
     #[Override]
     protected function setUp(): void
@@ -49,6 +55,7 @@ final class MicrosoftAuthenticatorTest extends TestCase
             data: $this->issuer->createKeySetJson(),
         );
         $this->authSession = new AuthSession(session: new Session(storage: new ArraySessionStorage()));
+        $this->cookieWriter = new RecordingSsoNonceCookieWriter();
     }
 
     #[Override]
@@ -71,15 +78,21 @@ final class MicrosoftAuthenticatorTest extends TestCase
         rmdir(directory: $path);
     }
 
-    private function createAuthenticator(): TestMicrosoftAuthenticator
-    {
+    /**
+     * @param ?string $nonceCookie The nonce cookie of the request, `null` for none
+     */
+    private function createAuthenticator(
+        ?string $nonceCookie = MicrosoftAuthenticatorTest::NONCE,
+    ): TestMicrosoftAuthenticator {
         return new TestMicrosoftAuthenticator(
-            httpRequest: HttpRequestFactory::create(),
+            httpRequest: HttpRequestFactory::create(
+                cookies: $nonceCookie === null ? [] : [SsoNonceCookie::NAME => $nonceCookie],
+            ),
             authSession: $this->authSession,
-            sessionHandler: new NonStartingSessionHandler(),
             logDirectory: $this->directory . 'log' . DIRECTORY_SEPARATOR,
             cacheDirectory: $this->directory . 'cache',
             authUser: TestAuthUser::create(accessRights: []),
+            nonceCookieWriter: $this->cookieWriter,
         );
     }
 
@@ -98,39 +111,136 @@ final class MicrosoftAuthenticatorTest extends TestCase
             'tid' => MicrosoftAuthenticatorTest::TENANT_ID,
             'iss' => 'https://login.microsoftonline.com/' . MicrosoftAuthenticatorTest::TENANT_ID . '/v2.0',
             'nonce' => MicrosoftAuthenticatorTest::NONCE,
+            'oid' => MicrosoftAuthenticatorTest::OBJECT_ID,
             'email' => 'user@example.org',
         ]);
     }
 
-    public function testValidTokenLogsTheUserIn(): void
+    private function login(TestMicrosoftAuthenticator $authenticator, string $idToken): bool
+    {
+        return $authenticator->login(
+            tenantId: MicrosoftAuthenticatorTest::TENANT_ID,
+            clientId: MicrosoftAuthenticatorTest::CLIENT_ID,
+            redirectUri: MicrosoftAuthenticatorTest::REDIRECT_URI,
+            idToken: $idToken,
+        );
+    }
+
+    public function testValidTokenLogsTheUserInByObjectIdAndTenantId(): void
     {
         $authenticator = $this->createAuthenticator();
 
-        $loggedIn = $authenticator->login(
-            tenantId: MicrosoftAuthenticatorTest::TENANT_ID,
-            clientId: MicrosoftAuthenticatorTest::CLIENT_ID,
-            nonce: MicrosoftAuthenticatorTest::NONCE,
-            idToken: $this->createIdToken(),
-        );
+        $loggedIn = $this->login(authenticator: $authenticator, idToken: $this->createIdToken());
 
         $this->assertTrue($loggedIn);
         $this->assertSame(AuthResultEnum::SUCCESSFUL_MICROSOFT_LOGIN, $authenticator->authResult);
         $this->assertTrue($this->authSession->isLoggedIn());
+        $this->assertSame(
+            [[MicrosoftAuthenticatorTest::OBJECT_ID, MicrosoftAuthenticatorTest::TENANT_ID]],
+            $authenticator->lookups,
+        );
     }
 
-    public function testUnknownEmailAddressFailsTheLogin(): void
+    public function testEmailClaimDoesNotIdentifyTheUser(): void
     {
         $authenticator = $this->createAuthenticator();
-
-        $loggedIn = $authenticator->login(
-            tenantId: MicrosoftAuthenticatorTest::TENANT_ID,
-            clientId: MicrosoftAuthenticatorTest::CLIENT_ID,
-            nonce: MicrosoftAuthenticatorTest::NONCE,
-            idToken: $this->createIdToken(changes: ['email' => 'nobody@example.org']),
+        // The mail address of a known user, another account
+        $idToken = $this->createIdToken(
+            changes: ['oid' => '00000000-0000-0000-0000-000000000001', 'email' => 'user@example.org'],
         );
+
+        $loggedIn = $this->login(authenticator: $authenticator, idToken: $idToken);
 
         $this->assertFalse($loggedIn);
         $this->assertSame(AuthResultEnum::ERROR_UNKNOWN_USER_NAME, $authenticator->authResult);
+        $this->assertSame(
+            [['00000000-0000-0000-0000-000000000001', MicrosoftAuthenticatorTest::TENANT_ID]],
+            $authenticator->lookups,
+        );
+        $this->assertFalse($this->authSession->isLoggedIn());
+    }
+
+    public function testUnknownAccountIsLoggedLikeAnUnknownUser(): void
+    {
+        $authenticator = $this->createAuthenticator();
+
+        $loggedIn = $this->login(
+            authenticator: $authenticator,
+            idToken: $this->createIdToken(changes: ['oid' => '00000000-0000-0000-0000-000000000001']),
+        );
+
+        $this->assertFalse($loggedIn);
+        $this->assertSame([AuthResultEnum::ERROR_UNKNOWN_USER_NAME], $authenticator->loggedResults);
+    }
+
+    public function testNonceCookieIsDeletedOnSuccessOnTheCallbackPath(): void
+    {
+        $this->login(authenticator: $this->createAuthenticator(), idToken: $this->createIdToken());
+
+        $this->assertSame(
+            [['name' => SsoNonceCookie::NAME, 'path' => '/sso/callback']],
+            $this->cookieWriter->deletedCookies,
+        );
+    }
+
+    public function testNonceCookieIsDeletedWhenTheTokenDoesNotVerify(): void
+    {
+        $authenticator = $this->createAuthenticator();
+
+        $loggedIn = $this->login(
+            authenticator: $authenticator,
+            idToken: $this->createIdToken(changes: ['aud' => 'other-client']),
+        );
+
+        $this->assertFalse($loggedIn);
+        $this->assertCount(1, $this->cookieWriter->deletedCookies);
+    }
+
+    public function testTokenWithoutNonceCookieFailsTheLogin(): void
+    {
+        $authenticator = $this->createAuthenticator(nonceCookie: null);
+
+        $loggedIn = $this->login(authenticator: $authenticator, idToken: $this->createIdToken());
+
+        $this->assertFalse($loggedIn);
+        $this->assertSame(AuthResultEnum::FAILED_SSO_LOGIN, $authenticator->authResult);
+        $this->assertSame([], $authenticator->lookups);
+        $this->assertStringContainsString('Missing SSO nonce cookie', $this->readLog());
+    }
+
+    public function testTokenWithAnEmptyNonceAndNoCookieFailsTheLogin(): void
+    {
+        $authenticator = $this->createAuthenticator(nonceCookie: null);
+
+        $idToken = $this->createIdToken(changes: ['nonce' => '']);
+
+        $loggedIn = $this->login(authenticator: $authenticator, idToken: $idToken);
+
+        $this->assertFalse($loggedIn);
+        $this->assertFalse($this->authSession->isLoggedIn());
+    }
+
+    public function testTokenWithAnEmptyNonceAndAnEmptyCookieFailsTheLogin(): void
+    {
+        $authenticator = $this->createAuthenticator(nonceCookie: '');
+
+        $idToken = $this->createIdToken(changes: ['nonce' => '']);
+
+        $loggedIn = $this->login(authenticator: $authenticator, idToken: $idToken);
+
+        $this->assertFalse($loggedIn);
+        $this->assertFalse($this->authSession->isLoggedIn());
+    }
+
+    public function testTokenWithAnotherNonceThanTheCookieFailsTheLogin(): void
+    {
+        $authenticator = $this->createAuthenticator();
+        $idToken = $this->createIdToken(changes: ['nonce' => str_repeat(string: 'f', times: 64)]);
+
+        $loggedIn = $this->login(authenticator: $authenticator, idToken: $idToken);
+
+        $this->assertFalse($loggedIn);
+        $this->assertSame(AuthResultEnum::FAILED_SSO_LOGIN, $authenticator->authResult);
     }
 
     public function testTokenThatDoesNotVerifyFailsTheLoginAndIsLoggedWithoutTokenAndNonce(): void
@@ -138,12 +248,7 @@ final class MicrosoftAuthenticatorTest extends TestCase
         $authenticator = $this->createAuthenticator();
         $idToken = $this->createIdToken(changes: ['aud' => 'other-client']);
 
-        $loggedIn = $authenticator->login(
-            tenantId: MicrosoftAuthenticatorTest::TENANT_ID,
-            clientId: MicrosoftAuthenticatorTest::CLIENT_ID,
-            nonce: MicrosoftAuthenticatorTest::NONCE,
-            idToken: $idToken,
-        );
+        $loggedIn = $this->login(authenticator: $authenticator, idToken: $idToken);
 
         $this->assertFalse($loggedIn);
         $this->assertSame(AuthResultEnum::FAILED_SSO_LOGIN, $authenticator->authResult);
@@ -162,12 +267,54 @@ final class MicrosoftAuthenticatorTest extends TestCase
         $loggedIn = $authenticator->login(
             tenantId: '../etc',
             clientId: MicrosoftAuthenticatorTest::CLIENT_ID,
-            nonce: MicrosoftAuthenticatorTest::NONCE,
+            redirectUri: MicrosoftAuthenticatorTest::REDIRECT_URI,
             idToken: $this->createIdToken(),
         );
 
         $this->assertFalse($loggedIn);
         $this->assertSame(AuthResultEnum::FAILED_SSO_LOGIN, $authenticator->authResult);
+    }
+
+    public function testRedirectSendsTheNonceOnlyInTheCookieOfTheCallbackPathAndInTheRequest(): void
+    {
+        $authenticator = $this->createAuthenticator();
+
+        $response = RecordingResponseSender::capture(
+            action: fn(ResponseSender $sender) => $authenticator->redirect(
+                tenantId: MicrosoftAuthenticatorTest::TENANT_ID,
+                clientId: MicrosoftAuthenticatorTest::CLIENT_ID,
+                redirectUri: MicrosoftAuthenticatorTest::REDIRECT_URI,
+                responseSender: $sender,
+            ),
+        );
+
+        $this->assertCount(1, $this->cookieWriter->setCookies);
+        $cookie = $this->cookieWriter->setCookies[0];
+        $this->assertSame(SsoNonceCookie::NAME, $cookie['name']);
+        $this->assertSame('/sso/callback', $cookie['path']);
+        $this->assertSame(600, $cookie['maxAge']);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/D', $cookie['value']);
+        $location = $response->getHeader(key: 'Location');
+        $this->assertNotNull($location);
+        $this->assertStringContainsString('nonce=' . $cookie['value'], $location);
+    }
+
+    public function testRedirectCreatesANewNonceEveryTime(): void
+    {
+        for ($request = 0; $request < 2; $request++) {
+            RecordingResponseSender::capture(
+                action: fn(ResponseSender $sender) => $this->createAuthenticator()->redirect(
+                    tenantId: MicrosoftAuthenticatorTest::TENANT_ID,
+                    clientId: MicrosoftAuthenticatorTest::CLIENT_ID,
+                    redirectUri: MicrosoftAuthenticatorTest::REDIRECT_URI,
+                    responseSender: $sender,
+                ),
+            );
+        }
+
+        $values = array_column(array: $this->cookieWriter->setCookies, column_key: 'value');
+        $this->assertCount(2, $values);
+        $this->assertCount(2, array_unique(array: $values));
     }
 
     private function readLog(): string

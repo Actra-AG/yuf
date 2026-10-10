@@ -27,7 +27,7 @@ final class FieldFrameMarkupTest extends TestCase
 {
     private function createForm(): Form
     {
-        return new Form(context: FormContextFactory::create(), name: 'search');
+        return new Form(context: FormContextFactory::create(), name: 'search', csrfProtection: false);
     }
 
     public function testDefinitionListFrameOfAPlainField(): void

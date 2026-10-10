@@ -20,11 +20,19 @@ final readonly class LoginRedirect
 
     /**
      * Whether the URI is a local path: it starts with a single "/" and has no backslash, white space or control
-     * characters (a browser would turn `/\example.com` into `//example.com`).
+     * characters (a browser would turn `/\example.com` into `//example.com`). It must also parse as URI without
+     * scheme and host (`parse_url()`).
      */
     public static function isLocalPath(string $uri): bool
     {
-        return preg_match(pattern: '#^/(?![/\\\\])[^\\\\\\x00-\\x20\\x7f]*$#D', subject: $uri) === 1;
+        if (preg_match(pattern: '#^/(?![/\\\\])[^\\\\\\x00-\\x20\\x7f]*$#D', subject: $uri) !== 1) {
+            return false;
+        }
+        $parts = parse_url(url: $uri);
+
+        return $parts !== false
+            && !array_key_exists(key: 'scheme', array: $parts)
+            && !array_key_exists(key: 'host', array: $parts);
     }
 
     /**

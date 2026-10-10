@@ -78,6 +78,7 @@ final class ZipCodeFieldValueTest extends TestCase
             context: FormContextFactory::create(),
             name: 'zipGermanForm' . ZipCodeFieldValueTest::$formCounter++,
             messages: FormMessages::german(),
+            csrfProtection: false,
         );
         $field = $this->createField();
         $form->addField(formField: $field);

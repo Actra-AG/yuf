@@ -41,7 +41,7 @@ class TableHeadRenderer
     {
         return $this->renderHeadCell(
             columnCssClasses: $abstractTableColumn->columnCssClasses,
-            contentHtml: $abstractTableColumn->label,
+            contentHtml: $abstractTableColumn->label->render(),
         );
     }
 

@@ -4,8 +4,17 @@ Passwords, client secrets and tokens are never written to `$mailer->log` (`AUTH 
 
 ## SMTP
 
-`SmtpMailer` sends through an SMTP server. With `useTls: true` (default) the connection is encrypted with STARTTLS
-before the credentials are sent; a server without STARTTLS aborts the delivery. With a user name the mailer
+`SmtpMailer` sends through an SMTP server. `encryption:` (`SmtpEncryptionEnum`) sets how the connection is encrypted:
+
+- `STARTTLS` (default, port 587): the connection is encrypted with STARTTLS before the credentials are sent. A server
+  without STARTTLS, data that the server sent before the handshake, or a failed handshake aborts the delivery.
+- `IMPLICIT_TLS` (port 465): the connection is encrypted from the first byte (SMTPS), no STARTTLS.
+- `NONE` (port 25): no encryption. With a user name this is only accepted for a server on the same host (`localhost`,
+  `127.0.0.0/8`, `::1`): for any other host the constructor throws an `InvalidArgumentException`. Without a user
+  name no credentials are sent.
+
+`port:` defaults to the port of the encryption. The certificate chain and the host name are always verified, TLS 1.2
+or newer is required, and there is no fallback to plain text. With a user name the mailer
 authenticates with the method that the server announces in its `AUTH` line:
 
 - `PLAIN`, otherwise `LOGIN` (user name and `smtpPassword:`); a server that announces no method gets `LOGIN`.
@@ -24,6 +33,14 @@ $mailer = new SmtpMailer(
     oAuthTokenProvider: $tokenProvider, // your implementation of OAuthTokenProvider
 );
 ```
+
+## Addresses
+
+`MailerAddress` (all recipients, sender, `From`, `Reply-To`) and `ValidatedEmailAddress` (the form's email field)
+reject control characters (below 0x20 and 0x7F, e.g. NUL, tab, vertical tab, line breaks) and quoted local parts
+(`"a b"@example.com`). `MailerAddress` trims spaces, tabs and line breaks around the address; the domain is converted
+to punycode. `ValidatedEmailAddress` also removes spaces, tabs, line breaks and zero-width spaces inside a pasted
+address, but rejects every other control character (`EmailAddressErrorEnum::CONTROL_CHARACTERS`).
 
 ## Microsoft 365 (Graph API)
 

@@ -77,6 +77,24 @@ final class ValidatedEmailAddressTest extends TestCase
         yield 'ip address as domain' => ['a@123.123.123.123', EmailAddressErrorEnum::INVALID_SYNTAX];
         yield 'ip address in brackets' => ['a@[1.2.3.4]', EmailAddressErrorEnum::INVALID_CHARACTERS];
         yield 'quoted local part' => ['"a b"@example.com', EmailAddressErrorEnum::INVALID_CHARACTERS];
+        yield 'quoted local part without space' => ['"ab"@example.com', EmailAddressErrorEnum::INVALID_CHARACTERS];
+        yield 'quoted local part with angle brackets' => [
+            '"a<b>"@example.com',
+            EmailAddressErrorEnum::INVALID_CHARACTERS,
+        ];
+        yield 'quoted local part with a vertical tab' => [
+            "\"a\x0Bb\"@example.com",
+            EmailAddressErrorEnum::CONTROL_CHARACTERS,
+        ];
+        yield 'quoted local part with NUL' => ["\"a\x00b\"@example.com", EmailAddressErrorEnum::CONTROL_CHARACTERS];
+        yield 'NUL in the local part' => ["a\x00b@example.com", EmailAddressErrorEnum::CONTROL_CHARACTERS];
+        yield 'NUL at the end' => ["a@example.com\x00", EmailAddressErrorEnum::CONTROL_CHARACTERS];
+        yield 'NUL at the start' => ["\x00a@example.com", EmailAddressErrorEnum::CONTROL_CHARACTERS];
+        yield 'vertical tab at the start' => ["\x0Ba@example.com", EmailAddressErrorEnum::CONTROL_CHARACTERS];
+        yield 'vertical tab at the end' => ["a@example.com\x0B", EmailAddressErrorEnum::CONTROL_CHARACTERS];
+        yield 'form feed in the domain' => ["a@exam\x0Cple.com", EmailAddressErrorEnum::CONTROL_CHARACTERS];
+        yield 'escape character' => ["a\x1Bb@example.com", EmailAddressErrorEnum::CONTROL_CHARACTERS];
+        yield 'delete character' => ["a\x7Fb@example.com", EmailAddressErrorEnum::CONTROL_CHARACTERS];
         yield 'local part longer than 64 characters' => [
             str_repeat(string: 'a', times: 65) . '@example.com',
             EmailAddressErrorEnum::INVALID_SYNTAX,
@@ -110,6 +128,7 @@ final class ValidatedEmailAddressTest extends TestCase
         yield 'noDnsRecords' => ['noDnsRecords', EmailAddressErrorEnum::NO_DNS_RECORDS];
         yield 'fsockopen' => ['fsockopen', EmailAddressErrorEnum::FSOCKOPEN];
         yield 'notResolvable' => ['notResolvable', EmailAddressErrorEnum::NOT_RESOLVABLE];
+        yield 'controlCharacters' => ['controlCharacters', EmailAddressErrorEnum::CONTROL_CHARACTERS];
     }
 
     #[DataProvider('errorCodeProvider')]

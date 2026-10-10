@@ -52,7 +52,8 @@ final class FileField extends FormField
      *                                                 uploaded already. Placeholder [fileName]. Default:
      *                                                 `FormMessages::duplicateFile`
      * @param FileUploadStorage $storage Where the files are kept between the requests (the production one is
-     *                                   `SessionFileUploadStorage::forHttpRequest()`)
+     *                                   `SessionFileUploadStorage`, with a private directory outside the document
+     *                                   root)
      * @param list<UploadFileType> $allowedFileTypes The accepted kinds of files (at least one); everything else is
      *                                               rejected, e.g. `[UploadFileType::pdf(), UploadFileType::jpeg()]`
      * @param int $maxFileSize The maximal size of one file in bytes (more than 0, 10 MB by default)
@@ -84,6 +85,8 @@ final class FileField extends FormField
         $this->uniqueSessFileStorePointer = $this->sanitizePointer(
             pointer: $name . '__' . bin2hex(string: random_bytes(length: 16)),
         );
+        // Only pointers issued to the user are taken over from a request (`readPointer()`)
+        $this->storage->issue(pointer: $this->uniqueSessFileStorePointer);
         parent::__construct(
             name: $name,
             label: $label,
@@ -151,13 +154,18 @@ final class FileField extends FormField
     }
 
     /**
-     * Takes the pointer of the files from the form. If that value is tampered by a "black-hat hacker", he should just
-     * grab securely into an "empty bowl", therefore only a pointer with allowed characters is taken.
+     * Takes the pointer of the files from the form, but only a pointer that was issued to this user (the session): any
+     * other value (tampered, from another session, expired) is ignored and the field keeps its own new pointer, so it
+     * starts with an empty list of files.
      */
     private function readPointer(FormInput $input): void
     {
         $receivedPointer = trim(string: $input->getText(name: $this->name . '_UID') ?? '');
-        if ($receivedPointer !== '' && $this->sanitizePointer(pointer: $receivedPointer) === $receivedPointer) {
+        if (
+            $receivedPointer !== ''
+            && $this->sanitizePointer(pointer: $receivedPointer) === $receivedPointer
+            && $this->storage->isIssued(pointer: $receivedPointer)
+        ) {
             $this->uniqueSessFileStorePointer = $receivedPointer;
         }
     }

@@ -13,6 +13,7 @@ use actra\yuf\core\HttpRequest;
 use actra\yuf\core\RequestMethodEnum;
 use actra\yuf\db\DbQuery;
 use actra\yuf\db\FrameworkDb;
+use actra\yuf\html\HtmlText;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\session\SessionSectionEnum;
@@ -62,8 +63,16 @@ final class DbResultTableRequestTest extends TestCase
             httpRequest: $httpRequest,
             session: $this->session,
         );
-        $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'id', label: 'Id', isSortable: true));
-        $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'name', label: 'Name', isSortable: true));
+        $table->addColumn(abstractTableColumn: new DefaultColumn(
+            identifier: 'id',
+            label: HtmlText::fromHtml(html: 'Id'),
+            isSortable: true,
+        ));
+        $table->addColumn(abstractTableColumn: new DefaultColumn(
+            identifier: 'name',
+            label: HtmlText::fromHtml(html: 'Name'),
+            isSortable: true,
+        ));
 
         return $table;
     }

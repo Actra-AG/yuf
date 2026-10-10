@@ -19,6 +19,7 @@ enum EmailAddressErrorEnum: string
     case INVALID_DOMAIN_NAME = 'invalidDomainName';
     case INVALID_SYNTAX = 'invalidSyntax';
     case INVALID_CHARACTERS = 'invalidCharacters';
+    case CONTROL_CHARACTERS = 'controlCharacters';
     case DNS_GET_RECORD = 'dns_get_record';
     case NO_DNS_RECORDS = 'noDnsRecords';
     case FSOCKOPEN = 'fsockopen';

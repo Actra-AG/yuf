@@ -14,7 +14,7 @@ use Override;
 
 final class MaxLengthRule extends StringRule
 {
-    public function __construct(protected int $maxLength, HtmlText $errorMessage)
+    public function __construct(public int $maxLength, HtmlText $errorMessage)
     {
         parent::__construct(defaultErrorMessage: $errorMessage);
     }

@@ -16,7 +16,6 @@ use actra\yuf\form\upload\SessionFileUploadStorage;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\session\SessionSectionEnum;
-use actra\yuf\tests\Double\core\HttpRequestFactory;
 use DateTimeImmutable;
 use DirectoryIterator;
 use InvalidArgumentException;
@@ -279,16 +278,19 @@ final class SessionFileUploadStorageTest extends TestCase
         $other = $this->createStoredFile(pointer: 'other');
         $storage->save(pointer: 'ptr', files: [$file->getHash() => $file]);
 
+        $storage->issue(pointer: 'ptr');
         $storage->clear(pointer: 'ptr');
 
         $this->assertDirectoryDoesNotExist($this->rootDirectory . DIRECTORY_SEPARATOR . 'ptr');
-        $this->assertSame([], $this->storage->all());
+        $this->assertSame([], $this->session->getSection(section: SessionSectionEnum::UPLOADS));
         $this->assertFileExists($other->path);
     }
 
     public function testClearWithoutADirectoryDoesNothing(): void
     {
-        $this->createStorage()->clear(pointer: 'ptr');
+        $storage = $this->createStorage();
+        $storage->issue(pointer: 'ptr');
+        $storage->clear(pointer: 'ptr');
 
         $this->assertDirectoryExists($this->rootDirectory);
     }
@@ -398,62 +400,6 @@ final class SessionFileUploadStorageTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{string, string}>
-     */
-    public static function serverNameProvider(): iterable
-    {
-        yield 'host name' => ['example.test', 'example.test'];
-        yield 'with dash and digits' => ['www-1.example.test', 'www-1.example.test'];
-        yield 'path traversal' => ['../evil', '.._evil'];
-        yield 'slash' => ['a/b', 'a_b'];
-        yield 'only dots' => ['..', 'default'];
-        yield 'empty' => ['', 'default'];
-    }
-
-    #[DataProvider('serverNameProvider')]
-    public function testStorageOfTheRequestLivesInADirectoryNamedAfterTheSanitizedServerName(
-        string $serverName,
-        string $expectedDirectoryName,
-    ): void {
-        $directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $expectedDirectoryName . DIRECTORY_SEPARATOR . 'yufptr';
-        $existedBefore = is_dir(filename: dirname(path: $directory));
-        mkdir(directory: $directory, recursive: true);
-        $path = $directory . DIRECTORY_SEPARATOR . 'php1';
-        file_put_contents(filename: $path, data: 'x');
-
-        try {
-            $this->seedPointer(
-                pointer: 'yufptr',
-                value: [['name' => 'a', 'type' => 't', 'size' => 1, 'path' => $path]],
-            );
-
-            $this->assertCount(1, SessionFileUploadStorage::forHttpRequest(
-                session: $this->session,
-                httpRequest: HttpRequestFactory::create(serverName: $serverName),
-            )->load(pointer: 'yufptr'));
-        } finally {
-            unlink(filename: $path);
-            rmdir(directory: $directory);
-            if (!$existedBefore) {
-                rmdir(directory: dirname(path: $directory));
-            }
-        }
-    }
-
-    public function testStorageOfTheRequestWorksWithoutServerName(): void
-    {
-        $httpRequest = HttpRequestFactory::create(serverName: '');
-
-        $this->assertSame(
-            [],
-            SessionFileUploadStorage::forHttpRequest(
-                session: $this->session,
-                httpRequest: $httpRequest,
-            )->load(pointer: 'ptr'),
-        );
-    }
-
-    /**
      * Fix of v4.30.0: a pointer such as `table` or `csrftoken` overwrote the data of yuf (and `clear()` deleted it).
      */
     public function testPointerNamedLikeOtherSessionDataCannotCollideWithIt(): void
@@ -465,6 +411,7 @@ final class SessionFileUploadStorageTest extends TestCase
         $file = $this->createStoredFile(pointer: 'tables');
 
         $storage->save(pointer: 'tables', files: [$file->getHash() => $file]);
+        $storage->issue(pointer: 'tables');
         $storage->clear(pointer: 'tables');
 
         $this->assertSame(
@@ -494,5 +441,78 @@ final class SessionFileUploadStorageTest extends TestCase
         $this->createStorage()->load(pointer: 'ptr');
 
         $this->assertSame([], $this->storage->all());
+    }
+
+    public function testIssuedPointerIsRememberedInTheSession(): void
+    {
+        $storage = new SessionFileUploadStorage(
+            session: $this->session,
+            rootDirectory: $this->rootDirectory,
+            clock: new FixedClock(now: new DateTimeImmutable(datetime: '@1800000000')),
+        );
+
+        $storage->issue(pointer: 'ptr');
+
+        $this->assertTrue($storage->isIssued(pointer: 'ptr'));
+        $this->assertTrue($this->createStorage()->isIssued(pointer: 'ptr'));
+        $this->assertSame(
+            ['ptr' => 1_800_000_000],
+            $this->session->getSection(section: SessionSectionEnum::UPLOAD_POINTERS),
+        );
+    }
+
+    public function testPointerOfAnotherSessionIsNotIssued(): void
+    {
+        $this->createStorage()->issue(pointer: 'ptr');
+        $otherStorage = new SessionFileUploadStorage(
+            session: new Session(storage: new ArraySessionStorage()),
+            rootDirectory: $this->rootDirectory,
+        );
+
+        $this->assertFalse($otherStorage->isIssued(pointer: 'ptr'));
+    }
+
+    public function testUnknownPointerIsNotIssued(): void
+    {
+        $this->assertFalse($this->createStorage()->isIssued(pointer: 'ptr'));
+        $this->assertSame([], $this->storage->all());
+    }
+
+    public function testIssuingAnInvalidPointerIsRefused(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->createStorage()->issue(pointer: '../x');
+    }
+
+    public function testExpiredPointersAreForgottenWhenAnotherOneIsIssued(): void
+    {
+        $now = 1_800_000_000;
+        $twoDays = 60 * 60 * 24 * 2;
+        $this->session->setSection(
+            section: SessionSectionEnum::UPLOAD_POINTERS,
+            data: ['old' => $now - $twoDays - 1, 'recent' => $now - $twoDays],
+        );
+        $storage = new SessionFileUploadStorage(
+            session: $this->session,
+            rootDirectory: $this->rootDirectory,
+            clock: new FixedClock(now: new DateTimeImmutable(datetime: '@' . $now)),
+        );
+
+        $storage->issue(pointer: 'fresh');
+
+        $this->assertFalse($storage->isIssued(pointer: 'old'));
+        $this->assertTrue($storage->isIssued(pointer: 'recent'));
+        $this->assertTrue($storage->isIssued(pointer: 'fresh'));
+    }
+
+    public function testClearIgnoresAPointerThatWasNotIssuedInThisSession(): void
+    {
+        $foreignFile = $this->createStoredFile(pointer: 'foreign');
+        $storage = $this->createStorage();
+
+        $storage->clear(pointer: 'foreign');
+
+        $this->assertFileExists($foreignFile->path);
     }
 }

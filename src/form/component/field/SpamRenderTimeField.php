@@ -14,13 +14,15 @@ use actra\yuf\form\settings\InputTypeEnum;
 use actra\yuf\form\spam\SpamCheck;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
+use actra\yuf\security\CsrfTokenSource;
 use Override;
 
 /**
  * The hidden field with the signed render time of the spam protection (`Form::addSpamProtection()`). It renders the
  * posted value again if it is validly signed for the form and not expired (the form is rendered again after field
  * errors, the minimum time does not start again), otherwise the current time; the form checks the posted value with
- * the `SpamCheck`.
+ * the `SpamCheck`. The signature is bound to the session of the user (the token of `$sessionSource`, `null` without
+ * session).
  */
 final class SpamRenderTimeField extends InputField
 {
@@ -28,6 +30,7 @@ final class SpamRenderTimeField extends InputField
         string $name,
         private readonly string $formName,
         private readonly SpamCheck $spamCheck,
+        private readonly ?CsrfTokenSource $sessionSource,
     ) {
         parent::__construct(
             inputType: InputTypeEnum::HIDDEN,
@@ -66,9 +69,14 @@ final class SpamRenderTimeField extends InputField
     public function renderValue(): string
     {
         $postedValue = $this->getPostedValue();
-        $signedRenderTime = $this->spamCheck->isValidRenderTime(formName: $this->formName, signedRenderTime: $postedValue)
+        $sessionBinding = $this->sessionSource?->getToken();
+        $signedRenderTime = $this->spamCheck->isValidRenderTime(
+            formName: $this->formName,
+            signedRenderTime: $postedValue,
+            sessionBinding: $sessionBinding,
+        )
             ? $postedValue
-            : $this->spamCheck->signRenderTime(formName: $this->formName);
+            : $this->spamCheck->signRenderTime(formName: $this->formName, sessionBinding: $sessionBinding);
 
         return HtmlEncoder::encode(value: $signedRenderTime);
     }

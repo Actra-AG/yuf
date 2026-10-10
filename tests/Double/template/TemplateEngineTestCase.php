@@ -86,7 +86,10 @@ abstract class TemplateEngineTestCase extends TestCase
     private function createRenderer(array $ownTags): TemplateRenderer
     {
         $localeHandler = new LocaleHandler(language: null, availableLanguages: new LanguageCollection());
-        $localeHandler->loadLanguageFile(filePath: TemplateEngineTestCase::fixtureDirectory() . 'lang.lang.php');
+        $localeHandler->loadLanguageFile(
+            filePath: TemplateEngineTestCase::fixtureDirectory() . 'lang.lang.php',
+            languageDirectory: TemplateEngineTestCase::fixtureDirectory(),
+        );
 
         return new TemplateRenderer(
             snippetsDirectory: TemplateEngineTestCase::fixtureDirectory() . 'snippets/',

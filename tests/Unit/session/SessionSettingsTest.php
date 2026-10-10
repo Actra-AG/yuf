@@ -23,6 +23,8 @@ final class SessionSettingsTest extends TestCase
         $this->assertSame('', $settings->individualName);
         $this->assertSame(3600, $settings->maxLifeTime);
         $this->assertTrue($settings->isSameSiteStrict);
+        $this->assertSame(1, $settings->gcProbability);
+        $this->assertSame(1000, $settings->gcDivisor);
     }
 
     public function testSavePathIsKept(): void

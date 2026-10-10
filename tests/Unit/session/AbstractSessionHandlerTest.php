@@ -569,8 +569,7 @@ final class AbstractSessionHandlerTest extends TestCase
                 defaultSavePath: '/not/used',
             );
             $sessionHandler->ensureStarted();
-            $sessionHandler->changeCookieSameSiteToNone();
-            $none = session_get_cookie_params();
+            $strict = session_get_cookie_params();
             $sessionHandler->changeCookieSameSiteToLax();
             $lax = session_get_cookie_params();
             session_write_close();
@@ -578,8 +577,7 @@ final class AbstractSessionHandlerTest extends TestCase
             $this->removeSessionSavePath(savePath: $savePath);
         }
 
-        $this->assertSame('None', $none['samesite']);
-        $this->assertTrue($none['secure']);
+        $this->assertSame('Strict', $strict['samesite']);
         $this->assertSame('Lax', $lax['samesite']);
         $this->assertTrue($lax['secure']);
     }
@@ -733,7 +731,6 @@ final class AbstractSessionHandlerTest extends TestCase
                 defaultSavePath: '/not/used',
             );
             $sessionHandler->changeCookieSameSiteToLax();
-            $sessionHandler->changeCookieSameSiteToNone();
             $statusBefore = session_status();
             $isStartedBefore = $sessionHandler->isStarted();
             $sameSiteBefore = session_get_cookie_params()['samesite'];
@@ -845,7 +842,6 @@ final class AbstractSessionHandlerTest extends TestCase
                     fn() => $session->regenerateId(),
                     fn() => $sessionHandler->regenerateId(),
                     fn() => $sessionHandler->changeCookieSameSiteToLax(),
-                    fn() => $sessionHandler->changeCookieSameSiteToNone(),
                 ] as $change
             ) {
                 try {
@@ -865,7 +861,7 @@ final class AbstractSessionHandlerTest extends TestCase
         $this->assertStringContainsString('full', $stored);
         $this->assertSame('full', $read);
         $this->assertSame(AbstractSessionHandlerTest::COOKIE_SESSION_ID, $sessionId);
-        $this->assertCount(5, $failures);
+        $this->assertCount(4, $failures);
         foreach ($failures as $failure) {
             $this->assertSame('The session is closed: it cannot be changed any more.', $failure);
         }
@@ -1049,6 +1045,48 @@ final class AbstractSessionHandlerTest extends TestCase
      * Creates a save path with an existing session for the ID of the cookie and of the request input, so the strict
      * mode of PHP accepts both IDs.
      */
+    #[RunInSeparateProcess]
+    public function testLevelPrefixOfTheSavePathIsNotPartOfTheDirectory(): void
+    {
+        $directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-file-session-test-'
+            . bin2hex(string: random_bytes(length: 8));
+        // PHP does not create the subdirectories of "N;path" itself
+        mkdir(directory: $directory . DIRECTORY_SEPARATOR . '0', recursive: true);
+        $sessionFile = $directory . DIRECTORY_SEPARATOR . '0' . DIRECTORY_SEPARATOR . 'sess_'
+            . AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        file_put_contents(filename: $sessionFile, data: '');
+        $_COOKIE[AbstractSessionHandlerTest::SESSION_NAME] = AbstractSessionHandlerTest::COOKIE_SESSION_ID;
+        $junkDirectory = getcwd() . DIRECTORY_SEPARATOR . '1;';
+
+        try {
+            $sessionHandler = new FileSessionHandler(
+                httpRequest: HttpRequestFactory::create(
+                    cookies: [
+                        AbstractSessionHandlerTest::SESSION_NAME => AbstractSessionHandlerTest::COOKIE_SESSION_ID,
+                    ],
+                ),
+                sessionSettings: new SessionSettings(
+                    savePath: '1;' . $directory,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+            );
+            $sessionHandler->ensureStarted();
+            $sessionId = $sessionHandler->getId();
+            session_write_close();
+            $hasJunkDirectory = file_exists(filename: $junkDirectory);
+        } finally {
+            if (is_dir(filename: $junkDirectory)) {
+                $this->removeTree(path: $junkDirectory);
+            }
+            $this->removeTree(path: $directory);
+        }
+
+        $this->assertFalse($hasJunkDirectory, 'The level prefix was taken as a directory name.');
+        // The session of the cookie is found in the subdirectory, so it is kept
+        $this->assertSame(AbstractSessionHandlerTest::COOKIE_SESSION_ID, $sessionId);
+    }
+
     private function createSessionSavePath(): string
     {
         $savePath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-session-test-'
@@ -1069,5 +1107,18 @@ final class AbstractSessionHandlerTest extends TestCase
             unlink(filename: $sessionFilePath);
         }
         rmdir(directory: $savePath);
+    }
+
+    private function removeTree(string $path): void
+    {
+        $entries = scandir(directory: $path);
+        foreach ($entries === false ? [] : $entries as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+            $entryPath = $path . DIRECTORY_SEPARATOR . $entry;
+            is_dir(filename: $entryPath) ? $this->removeTree(path: $entryPath) : unlink(filename: $entryPath);
+        }
+        rmdir(directory: $path);
     }
 }

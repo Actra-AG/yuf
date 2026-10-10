@@ -20,13 +20,17 @@ use SensitiveParameter;
 /**
  * An ID token of the Microsoft identity platform (v2.0, `response_type=id_token`). The token is only accepted if
  * the algorithm is RS256 (a fixed value, never the one the token asks for), the signature matches a key of the tenant,
- * and `nbf`, `iat`, `exp`, `aud` (the client), `tid` (the tenant), `iss` (the v2.0 issuer of the tenant) and `nonce`
- * (the one of the login request) are right. The signing keys are cached in `$cacheDirectory`, one file per tenant.
+ * and `nbf`, `iat`, `exp`, `aud` (the client), `tid` (the tenant), `oid` (a GUID), `iss` (the v2.0 issuer of the
+ * tenant) and `nonce` (the one of the login request, at least 32 characters) are right. The signing keys are cached in
+ * `$cacheDirectory`, one file per tenant.
  */
 final class MicrosoftIdToken extends AuthWebToken
 {
     private const string ISSUER = 'https://login.microsoftonline.com/{tenantId}/v2.0';
     private const string ALGORITHM = 'RS256';
+    private const string GUID_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/Di';
+    /** A nonce of the login request is never shorter (`SsoNonceCookie` creates 64 characters) */
+    private const int MIN_NONCE_LENGTH = 32;
 
     private readonly CachedKeySet $keySet;
 
@@ -59,15 +63,32 @@ final class MicrosoftIdToken extends AuthWebToken
         parent::__construct(jwtString: $jwtString);
     }
 
-    #[Override]
-    public function getUserName(): string
+    /**
+     * The ID of the user object in the tenant (claim `oid`, a GUID in lower case): stable for the account and the only
+     * identity a login may be based on, together with `getTenantId()`.
+     */
+    public function getObjectId(): string
+    {
+        return strtolower(string: $this->readStringClaim(name: 'oid') ?? '');
+    }
+
+    /**
+     * The ID of the tenant (claim `tid`, a GUID in lower case), the one the token was verified for.
+     */
+    public function getTenantId(): string
+    {
+        return strtolower(string: $this->readStringClaim(name: 'tid') ?? '');
+    }
+
+    /**
+     * The email address claim, `null` if the token has none: for display only. The user can change it (tenant
+     * administrators and guests set any address) and Microsoft does not verify it, so never identify a user by it.
+     */
+    public function getEmail(): ?string
     {
         $email = $this->readStringClaim(name: 'email');
-        if ($email === null || $email === '') {
-            throw new UnauthorizedException(message: 'Missing email');
-        }
 
-        return $email;
+        return $email === null || $email === '' ? null : $email;
     }
 
     #[Override]
@@ -91,6 +112,11 @@ final class MicrosoftIdToken extends AuthWebToken
             expected: str_replace(search: '{tenantId}', replace: $this->tenantId, subject: MicrosoftIdToken::ISSUER),
             message: 'Missing or invalid iss',
         );
+        $this->assertGuidClaim(name: 'tid');
+        $this->assertGuidClaim(name: 'oid');
+        if (strlen(string: $this->ssoNonce) < MicrosoftIdToken::MIN_NONCE_LENGTH) {
+            throw new UnauthorizedException(message: 'Invalid ssoNonce');
+        }
         $this->assertClaim(name: 'nonce', expected: $this->ssoNonce, message: 'Invalid ssoNonce');
 
         return true;
@@ -121,6 +147,17 @@ final class MicrosoftIdToken extends AuthWebToken
         $value = $this->readStringClaim(name: $name);
         if ($value === null || !hash_equals(known_string: $expected, user_string: $value)) {
             throw new UnauthorizedException(message: $message);
+        }
+    }
+
+    /**
+     * @throws UnauthorizedException
+     */
+    private function assertGuidClaim(string $name): void
+    {
+        $value = $this->readStringClaim(name: $name);
+        if ($value === null || preg_match(pattern: MicrosoftIdToken::GUID_PATTERN, subject: $value) !== 1) {
+            throw new UnauthorizedException(message: 'Missing or invalid ' . $name);
         }
     }
 

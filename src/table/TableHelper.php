@@ -79,7 +79,7 @@ final class TableHelper
 
     public static function createActionsColumn(
         string $identifier,
-        string $label = '',
+        ?HtmlText $label = null,
         string $cellCssClass = 'action',
     ): ActionsColumn {
         return new ActionsColumn(
@@ -91,7 +91,7 @@ final class TableHelper
 
     public static function createDateColumn(
         string $identifier,
-        string $label,
+        HtmlText $label,
         bool $isSortable = false,
         bool $sortAscendingByDefault = true,
     ): DateColumn {
@@ -105,7 +105,7 @@ final class TableHelper
 
     public static function createDefaultColumn(
         string $identifier,
-        string $label,
+        HtmlText $label,
         bool $isSortable = false,
         bool $sortAscendingByDefault = true,
     ): DefaultColumn {
@@ -122,7 +122,7 @@ final class TableHelper
      */
     public static function createOptionsColumn(
         string $identifier,
-        string $label,
+        HtmlText $label,
         array $options,
         bool $isSortable,
         bool $sortAscendingByDefault = true,
@@ -141,7 +141,7 @@ final class TableHelper
      */
     public static function createCallbackColumn(
         string $identifier,
-        string $label,
+        HtmlText $label,
         callable $callbackFunction,
         bool $isSortable = false,
         bool $sortAscendingByDefault = true,

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\table;
 
+use actra\yuf\html\HtmlText;
 use actra\yuf\table\column\AbstractTableColumn;
 use actra\yuf\table\column\DefaultColumn;
 use actra\yuf\table\renderer\SortableTableHeadRenderer;
@@ -33,8 +34,14 @@ final class SmartTableTest extends TestCase
             tableHeadRenderer: $tableHeadRenderer ?? new TableHeadRenderer(),
             tableItemCollection: new TableItemCollection(),
         );
-        $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'a', label: 'A & B'));
-        $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'b', label: 'B'));
+        $table->addColumn(abstractTableColumn: new DefaultColumn(
+            identifier: 'a',
+            label: HtmlText::fromHtml(html: 'A & B'),
+        ));
+        $table->addColumn(abstractTableColumn: new DefaultColumn(
+            identifier: 'b',
+            label: HtmlText::fromHtml(html: 'B'),
+        ));
 
         return $table;
     }
@@ -46,6 +53,31 @@ final class SmartTableTest extends TestCase
         }
 
         return $table->columns[$identifier];
+    }
+
+    public function testLabelAsTextIsEncodedOnceAndLabelAsHtmlIsNot(): void
+    {
+        $table = SmartTableTest::createTable();
+        $table->addColumn(
+            abstractTableColumn: new DefaultColumn(
+                identifier: 'c',
+                label: HtmlText::fromText(text: 'C & <i>"D"</i>'),
+            ),
+        );
+        $table->addColumn(
+            abstractTableColumn: new DefaultColumn(
+                identifier: 'd',
+                label: HtmlText::fromHtml(html: 'D &amp; <i>E</i>'),
+            ),
+        );
+
+        $table->addDataItem(
+            tableItem: new TableItem(dataObject: (object) ['a' => '', 'b' => '', 'c' => '', 'd' => '']),
+        );
+        $html = $table->render();
+
+        $this->assertStringContainsString('<th scope="col">C &amp; &lt;i&gt;&quot;D&quot;&lt;/i&gt;</th>', $html);
+        $this->assertStringContainsString('<th scope="col">D &amp; <i>E</i></th>', $html);
     }
 
     public function testRendersHeadRowsAndTotalAmount(): void
@@ -139,7 +171,10 @@ final class SmartTableTest extends TestCase
                 numResults: '[amount] results & more',
             ),
         );
-        $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'a', label: 'A'));
+        $table->addColumn(abstractTableColumn: new DefaultColumn(
+            identifier: 'a',
+            label: HtmlText::fromHtml(html: 'A'),
+        ));
         $this->assertSame('<p class="no-entry">No &lt;entries&gt; found.</p>', $table->render());
 
         $table->addDataItem(tableItem: new TableItem(dataObject: (object) ['a' => 'x']));
@@ -163,7 +198,10 @@ final class SmartTableTest extends TestCase
             tableItemCollection: new TableItemCollection(),
             messages: TableMessages::english(),
         );
-        $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'a', label: 'A'));
+        $table->addColumn(abstractTableColumn: new DefaultColumn(
+            identifier: 'a',
+            label: HtmlText::fromHtml(html: 'A'),
+        ));
         $this->assertSame('<p class="no-entry">No entries found.</p>', $table->render());
 
         $table->addDataItem(tableItem: new TableItem(dataObject: (object) ['a' => 'x']));
@@ -196,7 +234,10 @@ final class SmartTableTest extends TestCase
 
         $this->expectException(LogicException::class);
         $this->expectExceptionMessageIsOrContains('There is already a column with the same identifier a');
-        $table->addColumn(abstractTableColumn: new DefaultColumn(identifier: 'a', label: 'Again'));
+        $table->addColumn(abstractTableColumn: new DefaultColumn(
+            identifier: 'a',
+            label: HtmlText::fromHtml(html: 'Again'),
+        ));
     }
 
     public function testHeadOfColumnsWithCssClassesAndWithoutScope(): void

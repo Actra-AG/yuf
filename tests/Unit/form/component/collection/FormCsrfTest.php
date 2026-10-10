@@ -10,11 +10,15 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\form\component\collection;
 
 use actra\yuf\form\component\collection\Form;
+use actra\yuf\form\component\field\FileField;
 use actra\yuf\form\component\field\TextField;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
+use actra\yuf\form\upload\UploadFileType;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\FormContextFactory;
+use actra\yuf\tests\Double\form\InMemoryFileUploadStorage;
+use actra\yuf\tests\Double\form\RecordingFieldListener;
 use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
 use PHPUnit\Framework\TestCase;
 
@@ -33,6 +37,7 @@ final class FormCsrfTest extends TestCase
         bool $methodPost = true,
         FormMessages $messages = new FormMessages(),
         ?HtmlText $globalErrorMessage = null,
+        bool $csrfProtection = true,
     ): Form {
         return new Form(
             context: FormContextFactory::create(csrfTokenSource: new InMemoryCsrfTokenSource(token: 'expected-token')),
@@ -40,6 +45,7 @@ final class FormCsrfTest extends TestCase
             globalErrorMessage: $globalErrorMessage,
             methodPost: $methodPost,
             messages: $messages,
+            csrfProtection: $csrfProtection,
         );
     }
 
@@ -121,23 +127,57 @@ final class FormCsrfTest extends TestCase
         $this->assertTrue($form->validate(input: FormInput::fromArray(data: $query, query: $query)));
     }
 
-    public function testTokenIsOnlyCheckedIfTheOtherFieldsAreValid(): void
+    public function testInvalidTokenIsCheckedFirstAndNoOtherFieldIsRead(): void
     {
         $form = $this->createForm();
         $form->addField(
-            formField: new TextField(
+            formField: $name = new TextField(
                 name: 'name',
                 label: HtmlText::fromHtml(html: 'Name'),
                 requiredError: HtmlText::fromHtml(html: 'Required'),
             ),
         );
+        $listener = new RecordingFieldListener();
+        $name->addListener(formFieldListener: $listener);
 
         $isValid = $this->send(form: $form, post: ['csrftoken' => 'wrong', 'name' => '']);
 
         $this->assertFalse($isValid);
-        $this->assertFalse($form->hasErrors(withChildElements: false));
-        $this->assertTrue($form->getField(name: 'name')->hasErrors(withChildElements: false));
-        $this->assertFalse($form->getField(name: 'csrftoken')->hasErrors(withChildElements: true));
+        $this->assertSame(1, $form->errorCollection->count());
+        $this->assertSame(FormCsrfTest::ENGLISH_MESSAGE, $form->errorCollection->getFirstError()->render());
+        $this->assertFalse($name->hasErrors(withChildElements: true));
+        $this->assertSame([], $listener->calls);
+    }
+
+    public function testMissingTokenReadsNoUploadAndNoRemoveRequest(): void
+    {
+        $storage = new InMemoryFileUploadStorage();
+        $form = $this->createForm();
+        $form->addField(
+            formField: $file = new FileField(
+                name: 'file',
+                label: HtmlText::fromHtml(html: 'File'),
+                storage: $storage,
+                allowedFileTypes: [UploadFileType::plainText()],
+            ),
+        );
+        $pointer = $file->uniqueSessFileStorePointer;
+
+        $isValid = $this->send(form: $form, post: ['file_UID' => $pointer, 'file_removeAttachment' => 'abc']);
+
+        $this->assertFalse($isValid);
+        $this->assertSame([], $file->getRemovedValues());
+        $this->assertSame(0, $storage->getExpiredRemovalCount());
+        $this->assertSame([], $storage->getSavedFiles(pointer: $pointer));
+    }
+
+    public function testRemovingTheCsrfFieldDoesNotDisableTheCheck(): void
+    {
+        $form = $this->createForm();
+        $form->removeField(name: 'csrftoken');
+
+        $this->assertFalse($this->send(form: $form, post: []));
+        $this->assertSame(FormCsrfTest::ENGLISH_MESSAGE, $form->errorCollection->getFirstError()->render());
     }
 
     public function testGlobalErrorMessageIsNotAddedForAnInvalidToken(): void
@@ -163,11 +203,11 @@ final class FormCsrfTest extends TestCase
         );
     }
 
-    public function testRemovedCsrfProtectionAcceptsAnyToken(): void
+    public function testFormWithoutCsrfProtectionAcceptsAnyToken(): void
     {
-        $form = $this->createForm();
-        $form->removeCsrfProtection();
+        $form = $this->createForm(csrfProtection: false);
 
+        $this->assertFalse($form->hasField(name: 'csrftoken'));
         $this->assertTrue($this->send(form: $form, post: []));
     }
 

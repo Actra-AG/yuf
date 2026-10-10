@@ -23,7 +23,10 @@ final class FakeSmtpTransport implements SmtpTransport
     /** @var list<string> the lines of the replies that are not read yet */
     private array $lines = [];
 
-    /** @var list<string> `open host:port`, `write <line>`, `tls`, `close` in the order they happened */
+    /**
+     * @var list<string> `open host:port` (`open tls host:port` with implicit TLS), `write <line>`, `tls`, `close` in
+     *                   the order they happened
+     */
     public private(set) array $events = [];
 
     /** @var list<int> */
@@ -48,9 +51,9 @@ final class FakeSmtpTransport implements SmtpTransport
     }
 
     #[Override]
-    public function open(string $hostName, int $port, int $timeoutSeconds): void
+    public function open(string $hostName, int $port, int $timeoutSeconds, bool $implicitTls): void
     {
-        $this->events[] = 'open ' . $hostName . ':' . $port;
+        $this->events[] = ($implicitTls ? 'open tls ' : 'open ') . $hostName . ':' . $port;
         if ($this->openFails) {
             throw new MailerException(message: 'Socket connection error: ' . $hostName);
         }

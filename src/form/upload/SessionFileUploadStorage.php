@@ -11,7 +11,6 @@ namespace actra\yuf\form\upload;
 
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
-use actra\yuf\core\HttpRequest;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\form\model\UploadInput;
 use actra\yuf\session\Session;
@@ -21,9 +20,11 @@ use InvalidArgumentException;
 use Override;
 
 /**
- * Keeps the uploaded files in a directory below the temp directory (one directory per pointer) and the list of the
- * files in the session (`yuf.uploads.<pointer>`, so a pointer cannot overwrite other session data). It is the only
- * form class that touches the session, the file system and the clock.
+ * Keeps the uploaded files in a private directory (`UploadDirectory`: one subdirectory per pointer, files 0600) and
+ * the list of the files in the session (`yuf.uploads.<pointer>`, so a pointer cannot overwrite other session data).
+ * A pointer is only valid in the session it was issued to (`issue()`, `yuf.uploadPointers`): files are stored and
+ * removed for such pointers only, so a pointer from a request of another session changes nothing. It is the only form
+ * class that touches the session, the file system and the clock.
  *
  * Not unit tested: `store()` needs a real upload (`is_uploaded_file()` and `move_uploaded_file()` refuse every other
  * file). Everything else is tested with a temp directory.
@@ -32,40 +33,47 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
 {
     private const int MAX_AGE_IN_SECONDS = 60 * 60 * 24 * 2;
 
+    private UploadDirectory $uploadDirectory;
+
     /**
      * @param Session $session Keeps the list of the files of every pointer (`ViewContext::$session`)
-     * @param string $rootDirectory The directory that contains one subdirectory per pointer (created when needed)
-     * @param Clock $clock Decides which directories are expired
+     * @param string $rootDirectory The directory that contains one subdirectory per pointer. Required, no default:
+     *                              choose a directory outside the document root that only the web server user can
+     *                              use (created with mode 0700 when needed; a symbolic link or a directory of another
+     *                              user is refused with a `RuntimeException`)
+     * @param Clock $clock Decides which directories and pointers are expired
      */
     public function __construct(
         private Session $session,
-        private string $rootDirectory,
+        string $rootDirectory,
         private Clock $clock = new SystemClock(),
-    ) {}
+    ) {
+        $this->uploadDirectory = new UploadDirectory(path: $rootDirectory);
+    }
 
-    /**
-     * The storage below `<temp directory>/<SERVER_NAME>`, as in yuf v3. Characters of the server name that are not
-     * allowed in a directory name are replaced (the name can be derived from the `Host` header).
-     */
-    public static function forHttpRequest(
-        Session $session,
-        HttpRequest $httpRequest,
-        Clock $clock = new SystemClock(),
-    ): SessionFileUploadStorage {
-        $directoryName = preg_replace(
-            pattern: '/[^a-zA-Z\d._-]/',
-            replacement: '_',
-            subject: $httpRequest->getServerName(),
-        ) ?? '';
-        if (trim(string: $directoryName, characters: '.') === '') {
-            $directoryName = 'default';
+    #[Override]
+    public function issue(string $pointer): void
+    {
+        $this->assertValidPointer(pointer: $pointer);
+        $now = $this->clock->now()->getTimestamp();
+        $oldestAllowedTime = $now - SessionFileUploadStorage::MAX_AGE_IN_SECONDS;
+        $issued = [];
+        $issuedPointers = $this->session->getSection(section: SessionSectionEnum::UPLOAD_POINTERS);
+        foreach ($issuedPointers as $issuedPointer => $issuedAt) {
+            if (is_int(value: $issuedAt) && $issuedAt >= $oldestAllowedTime) {
+                $issued[$issuedPointer] = $issuedAt;
+            }
         }
+        $issued[$pointer] = $now;
+        $this->session->setSection(section: SessionSectionEnum::UPLOAD_POINTERS, data: $issued);
+    }
 
-        return new SessionFileUploadStorage(
-            session: $session,
-            rootDirectory: sys_get_temp_dir() . DIRECTORY_SEPARATOR . $directoryName,
-            clock: $clock,
-        );
+    #[Override]
+    public function isIssued(string $pointer): bool
+    {
+        $issued = $this->session->getSection(section: SessionSectionEnum::UPLOAD_POINTERS);
+
+        return array_key_exists(key: $pointer, array: $issued) && is_int(value: $issued[$pointer]);
     }
 
     #[Override]
@@ -110,15 +118,12 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
     #[Override]
     public function store(string $pointer, UploadInput $upload, string $detectedType): ?UploadedFile
     {
-        if (!is_uploaded_file(filename: $upload->tmpName)) {
+        $this->assertValidPointer(pointer: $pointer);
+        if (!$this->isIssued(pointer: $pointer) || !is_uploaded_file(filename: $upload->tmpName)) {
             return null;
         }
-        $directory = $this->getPointerDirectory(pointer: $pointer);
         // Creates the root directory too, if it does not exist yet
-        if (!is_dir(filename: $directory) && !mkdir(directory: $directory, recursive: true)
-            && !is_dir(filename: $directory)) {
-            return null;
-        }
+        $directory = $this->uploadDirectory->createSubdirectory(name: $pointer);
         // The name of the stored file is made of the name PHP gave to the temporary file, never of the client name.
         // If it exists already, we add a counter and increment it until we get a "free" file name
         $counter = 0;
@@ -132,6 +137,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
         if (!move_uploaded_file(from: $upload->tmpName, to: $path)) {
             return null;
         }
+        $this->uploadDirectory->protectFile(path: $path);
 
         return new UploadedFile(name: $upload->name, type: $detectedType, size: $upload->size, path: $path);
     }
@@ -147,8 +153,12 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
     #[Override]
     public function clear(string $pointer): void
     {
+        $this->assertValidPointer(pointer: $pointer);
+        if (!$this->isIssued(pointer: $pointer)) {
+            return;
+        }
         $directory = $this->getPointerDirectory(pointer: $pointer);
-        if (is_dir(filename: $directory)) {
+        if ($this->uploadDirectory->exists() && is_dir(filename: $directory)) {
             $this->removeDirectory(path: $directory);
         }
         $uploads = $this->session->getSection(section: SessionSectionEnum::UPLOADS);
@@ -159,12 +169,12 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
     #[Override]
     public function removeExpired(): void
     {
-        if (!is_dir(filename: $this->rootDirectory)) {
+        if (!$this->uploadDirectory->exists()) {
             return;
         }
         $oldestAllowedTime = $this->clock->now()->getTimestamp() - SessionFileUploadStorage::MAX_AGE_IN_SECONDS;
         /** @var DirectoryIterator $item */
-        foreach (new DirectoryIterator(directory: $this->rootDirectory) as $item) {
+        foreach (new DirectoryIterator(directory: $this->uploadDirectory->path) as $item) {
             if (!$item->isDot() && $item->isDir() && $item->getMTime() < $oldestAllowedTime) {
                 $this->removeDirectory(path: $item->getPathname());
             }
@@ -185,12 +195,12 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
     {
         $this->assertValidPointer(pointer: $pointer);
 
-        return $this->rootDirectory . DIRECTORY_SEPARATOR . $pointer;
+        return $this->uploadDirectory->path . DIRECTORY_SEPARATOR . $pointer;
     }
 
     private function isInsideRootDirectory(string $path): bool
     {
-        return str_starts_with(haystack: $path, needle: $this->rootDirectory . DIRECTORY_SEPARATOR)
+        return str_starts_with(haystack: $path, needle: $this->uploadDirectory->path . DIRECTORY_SEPARATOR)
             && !in_array(needle: '..', haystack: explode(separator: DIRECTORY_SEPARATOR, string: $path), strict: true);
     }
 

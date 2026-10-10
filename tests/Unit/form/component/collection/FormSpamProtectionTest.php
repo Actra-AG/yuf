@@ -50,6 +50,7 @@ final class FormSpamProtectionTest extends TestCase
             name: 'contact',
             globalErrorMessage: $globalErrorMessage,
             messages: $messages,
+            csrfProtection: $withCsrf,
         );
         $form->addField(
             formField: $emailField = new EmailField(
@@ -78,13 +79,13 @@ final class FormSpamProtectionTest extends TestCase
         return new FixedClock(now: new DateTimeImmutable(datetime: '@' . $timestamp));
     }
 
-    private static function signedRenderTime(): string
+    private static function signedRenderTime(?string $sessionBinding = null): string
     {
         return new SpamCheck(
             clock: FormSpamProtectionTest::clockAt(timestamp: FormSpamProtectionTest::RENDERED_AT),
             secret: FormSpamProtectionTest::SECRET,
             rejectedEmailAddresses: [],
-        )->signRenderTime(formName: 'contact');
+        )->signRenderTime(formName: 'contact', sessionBinding: $sessionBinding);
     }
 
     /**
@@ -98,12 +99,12 @@ final class FormSpamProtectionTest extends TestCase
     /**
      * @return array<string, string>
      */
-    private static function validPost(): array
+    private static function validPost(?string $sessionBinding = null): array
     {
         return [
             'email' => 'customer@example.com',
             'internal' => '',
-            'timestamp' => FormSpamProtectionTest::signedRenderTime(),
+            'timestamp' => FormSpamProtectionTest::signedRenderTime(sessionBinding: $sessionBinding),
             'csrftoken' => 'expected-token',
         ];
     }
@@ -119,7 +120,33 @@ final class FormSpamProtectionTest extends TestCase
     {
         $form = $this->createForm(now: FormSpamProtectionTest::RENDERED_AT + 10, withCsrf: true);
 
-        $this->assertTrue($this->send(form: $form, post: FormSpamProtectionTest::validPost()));
+        $this->assertTrue(
+            $this->send(form: $form, post: FormSpamProtectionTest::validPost(sessionBinding: 'expected-token')),
+        );
+    }
+
+    public function testRenderTimeOfAnotherSessionIsRejected(): void
+    {
+        $form = $this->createForm(
+            now: FormSpamProtectionTest::RENDERED_AT + 10,
+            messages: FormMessages::german(),
+            withCsrf: true,
+        );
+
+        $isValid = $this->send(form: $form, post: FormSpamProtectionTest::validPost(sessionBinding: 'other-token'));
+
+        $this->assertFalse($isValid);
+        $this->assertSame('Bitte versuchen Sie es erneut.', $form->errorCollection->getFirstError()->render());
+    }
+
+    public function testRenderedTimeIsBoundToTheSessionOfTheForm(): void
+    {
+        $form = $this->createForm(now: FormSpamProtectionTest::RENDERED_AT, withCsrf: true);
+
+        $html = $form->render();
+
+        $signed = FormSpamProtectionTest::signedRenderTime(sessionBinding: 'expected-token');
+        $this->assertStringContainsString('<input type="hidden" name="timestamp" value="' . $signed . '">', $html);
     }
 
     public function testFilledHoneypotIsAnErrorOfTheForm(): void
@@ -278,7 +305,7 @@ final class FormSpamProtectionTest extends TestCase
             clock: FormSpamProtectionTest::clockAt(timestamp: $now),
             secret: FormSpamProtectionTest::SECRET,
             rejectedEmailAddresses: [],
-        )->signRenderTime(formName: 'contact');
+        )->signRenderTime(formName: 'contact', sessionBinding: null);
         $this->assertStringContainsString('value="' . $currentTime . '"', $html);
         $this->assertStringNotContainsString('posted', $html);
     }
@@ -286,7 +313,12 @@ final class FormSpamProtectionTest extends TestCase
     public function testMarkupIsTheMarkupOfTheFieldsProjectsAddThemselves(): void
     {
         $protected = $this->createForm(now: FormSpamProtectionTest::RENDERED_AT, messages: FormMessages::german());
-        $own = new Form(context: FormContextFactory::create(), name: 'contact', messages: FormMessages::german());
+        $own = new Form(
+            context: FormContextFactory::create(),
+            name: 'contact',
+            messages: FormMessages::german(),
+            csrfProtection: false,
+        );
         $own->addField(
             formField: new EmailField(
                 name: 'email',

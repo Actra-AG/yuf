@@ -35,6 +35,8 @@ final class LoginRedirectTest extends TestCase
         yield 'carriage return' => ["/a\rb", false];
         yield 'tab' => ["/\texample.com", false];
         yield 'space' => ['/a b', false];
+        yield 'port-like segment' => ['/x:80', false];
+        yield 'port only' => ['/:80', false];
         yield 'nul' => ["/a\0b", false];
     }
 

@@ -34,8 +34,9 @@ namespace actra\yuf\mailer;
 /**
  * An address of a message with its kind and an optional display name.
  *
- * The address is trimmed and lower cased, the domain is punycode encoded. Line breaks and everything that is not a
- * valid address are rejected, so an address can neither start a new header nor add an SMTP command.
+ * The address is trimmed (spaces, tabs, line breaks) and lower cased, the domain is punycode encoded. Control
+ * characters (below 0x20, 0x7F), quoted local parts and everything that is not a valid address are rejected, so an
+ * address can neither start a new header nor add an SMTP command.
  */
 final readonly class MailerAddress
 {
@@ -48,7 +49,7 @@ final readonly class MailerAddress
         string $inputEmail,
         string $inputName,
     ) {
-        $inputEmail = mb_strtolower(string: trim(string: $inputEmail));
+        $inputEmail = mb_strtolower(string: trim(string: $inputEmail, characters: " \t\r\n"));
         $atPosition = strrpos(haystack: $inputEmail, needle: '@');
         if ($atPosition === false) {
             throw new MailerException(message: 'Missing @-sign in the ' . $mailerAddressKindEnum->value . ' address.');
@@ -165,8 +166,11 @@ final readonly class MailerAddress
 
     private static function isValid(string $address): bool
     {
-        // Line breaks are valid in RFC 5322, but not in RFC 5321 (SMTP)
-        if (strpbrk(string: $address, characters: MailerConstants::CRLF) !== false) {
+        // Control characters (line breaks are valid in RFC 5322, but not in RFC 5321, SMTP) and quoted local parts
+        if (
+            preg_match(pattern: '/[\x00-\x1F\x7F]/', subject: $address) === 1
+            || str_contains(haystack: $address, needle: '"')
+        ) {
             return false;
         }
 

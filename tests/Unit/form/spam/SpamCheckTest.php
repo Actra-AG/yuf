@@ -40,7 +40,7 @@ final class SpamCheckTest extends TestCase
     private static function signedRenderTime(string $formName = 'contact', string $secret = SpamCheckTest::SECRET): string
     {
         return SpamCheckTest::createCheck(now: SpamCheckTest::RENDERED_AT, secret: $secret)
-            ->signRenderTime(formName: $formName);
+            ->signRenderTime(formName: $formName, sessionBinding: null);
     }
 
     public function testSignedRenderTimeIsTheTimestampWithItsSignature(): void
@@ -71,6 +71,7 @@ final class SpamCheckTest extends TestCase
             honeypot: '',
             signedRenderTime: SpamCheckTest::signedRenderTime(),
             emailAddress: 'customer@example.com',
+            sessionBinding: null,
         );
 
         $this->assertSame($expected, $result);
@@ -93,6 +94,7 @@ final class SpamCheckTest extends TestCase
                 honeypot: '',
                 signedRenderTime: SpamCheckTest::signedRenderTime(),
                 emailAddress: null,
+                sessionBinding: null,
             ),
         );
     }
@@ -131,6 +133,7 @@ final class SpamCheckTest extends TestCase
             honeypot: '',
             signedRenderTime: $signedRenderTime,
             emailAddress: null,
+            sessionBinding: null,
         );
 
         $this->assertSame(SpamCheckResultEnum::EXPIRED, $result);
@@ -143,6 +146,7 @@ final class SpamCheckTest extends TestCase
             honeypot: 'https://spam.example',
             signedRenderTime: SpamCheckTest::signedRenderTime(),
             emailAddress: 'customer@example.com',
+            sessionBinding: null,
         );
 
         $this->assertSame(SpamCheckResultEnum::HONEYPOT_FILLED, $result);
@@ -176,6 +180,7 @@ final class SpamCheckTest extends TestCase
             honeypot: '',
             signedRenderTime: SpamCheckTest::signedRenderTime(),
             emailAddress: $emailAddress,
+            sessionBinding: null,
         );
 
         $this->assertSame($expected, $result);
@@ -184,7 +189,13 @@ final class SpamCheckTest extends TestCase
     public function testRejectedEmailAddressIsCheckedFirst(): void
     {
         $result = SpamCheckTest::createCheck(now: SpamCheckTest::RENDERED_AT, rejectedEmailAddresses: ['a@example.com'])
-            ->check(formName: 'contact', honeypot: 'x', signedRenderTime: '', emailAddress: 'a@example.com');
+            ->check(
+                formName: 'contact',
+                honeypot: 'x',
+                signedRenderTime: '',
+                emailAddress: 'a@example.com',
+                sessionBinding: null,
+            );
 
         $this->assertSame(SpamCheckResultEnum::REJECTED_EMAIL_ADDRESS, $result);
     }
@@ -192,7 +203,7 @@ final class SpamCheckTest extends TestCase
     public function testHoneypotIsCheckedBeforeTheRenderTime(): void
     {
         $result = SpamCheckTest::createCheck(now: SpamCheckTest::RENDERED_AT)
-            ->check(formName: 'contact', honeypot: 'x', signedRenderTime: '', emailAddress: null);
+            ->check(formName: 'contact', honeypot: 'x', signedRenderTime: '', emailAddress: null, sessionBinding: null);
 
         $this->assertSame(SpamCheckResultEnum::HONEYPOT_FILLED, $result);
     }
@@ -221,6 +232,67 @@ final class SpamCheckTest extends TestCase
             rejectedEmailAddresses: [],
             minSeconds: $minSeconds,
             maxSeconds: $maxSeconds,
+        );
+    }
+
+    public function testRenderTimeSignedForOneSessionIsExpiredInAnotherSession(): void
+    {
+        $signed = SpamCheckTest::createCheck(now: SpamCheckTest::RENDERED_AT)
+            ->signRenderTime(formName: 'contact', sessionBinding: 'session-a');
+        $check = SpamCheckTest::createCheck(now: SpamCheckTest::RENDERED_AT + 10);
+
+        $sameSession = $check->check(
+            formName: 'contact',
+            honeypot: '',
+            signedRenderTime: $signed,
+            emailAddress: null,
+            sessionBinding: 'session-a',
+        );
+        $otherSession = $check->check(
+            formName: 'contact',
+            honeypot: '',
+            signedRenderTime: $signed,
+            emailAddress: null,
+            sessionBinding: 'session-b',
+        );
+        $withoutSession = $check->check(
+            formName: 'contact',
+            honeypot: '',
+            signedRenderTime: $signed,
+            emailAddress: null,
+            sessionBinding: null,
+        );
+
+        $this->assertSame(SpamCheckResultEnum::OK, $sameSession);
+        $this->assertSame(SpamCheckResultEnum::EXPIRED, $otherSession);
+        $this->assertSame(SpamCheckResultEnum::EXPIRED, $withoutSession);
+    }
+
+    public function testRenderTimeSignedWithoutSessionIsExpiredInASession(): void
+    {
+        $signed = SpamCheckTest::signedRenderTime();
+
+        $result = SpamCheckTest::createCheck(now: SpamCheckTest::RENDERED_AT + 10)->check(
+            formName: 'contact',
+            honeypot: '',
+            signedRenderTime: $signed,
+            emailAddress: null,
+            sessionBinding: 'session-a',
+        );
+
+        $this->assertSame(SpamCheckResultEnum::EXPIRED, $result);
+    }
+
+    public function testValidRenderTimeIsCheckedForTheSessionToo(): void
+    {
+        $check = SpamCheckTest::createCheck(now: SpamCheckTest::RENDERED_AT + 10);
+        $signed = $check->signRenderTime(formName: 'contact', sessionBinding: 'session-a');
+
+        $this->assertTrue(
+            $check->isValidRenderTime(formName: 'contact', signedRenderTime: $signed, sessionBinding: 'session-a'),
+        );
+        $this->assertFalse(
+            $check->isValidRenderTime(formName: 'contact', signedRenderTime: $signed, sessionBinding: 'session-b'),
         );
     }
 }

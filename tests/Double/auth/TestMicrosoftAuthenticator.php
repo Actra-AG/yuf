@@ -14,7 +14,7 @@ use actra\yuf\auth\AuthSession;
 use actra\yuf\auth\AuthUser;
 use actra\yuf\auth\MicrosoftAuthenticator;
 use actra\yuf\core\HttpRequest;
-use actra\yuf\session\AbstractSessionHandler;
+use actra\yuf\core\ResponseSender;
 use Override;
 
 /**
@@ -24,39 +24,68 @@ final class TestMicrosoftAuthenticator extends MicrosoftAuthenticator
 {
     /** @var list<AuthResultEnum> */
     public array $loggedResults = [];
+    /** @var list<list<string>> */
+    public array $lookups = [];
 
     public function __construct(
         HttpRequest $httpRequest,
         AuthSession $authSession,
-        AbstractSessionHandler $sessionHandler,
         string $logDirectory,
         string $cacheDirectory,
         private readonly ?AuthUser $authUser,
+        RecordingSsoNonceCookieWriter $nonceCookieWriter,
+        private readonly string $knownObjectId = '99999999-8888-7777-6666-555555555555',
+        private readonly string $knownTenantId = '11111111-2222-3333-4444-555555555555',
     ) {
         parent::__construct(
             httpRequest: $httpRequest,
             authSession: $authSession,
             maxAllowedWrongPasswordAttempts: 3,
-            sessionHandler: $sessionHandler,
             logDirectory: $logDirectory,
             cacheDirectory: $cacheDirectory,
+            nonceCookieWriter: $nonceCookieWriter,
         );
     }
 
-    public function login(string $tenantId, string $clientId, string $nonce, string $idToken): bool
+    public function login(string $tenantId, string $clientId, string $redirectUri, string $idToken): bool
     {
         return $this->microsoftIdTokenLogin(
             tenantId: $tenantId,
             clientId: $clientId,
-            ssoNonce: $nonce,
+            redirectUri: $redirectUri,
             microsoftIdToken: $idToken,
         );
+    }
+
+    public function redirect(
+        string $tenantId,
+        string $clientId,
+        string $redirectUri,
+        ResponseSender $responseSender,
+    ): never {
+        $this->redirectToMicrosoftLogin(
+            tenantId: $tenantId,
+            clientId: $clientId,
+            redirectUri: $redirectUri,
+            responseSender: $responseSender,
+        );
+    }
+
+    #[Override]
+    protected function findAuthUserByMicrosoftAccount(string $objectId, string $tenantId): ?AuthUser
+    {
+        $this->lookups[] = [$objectId, $tenantId];
+
+        return $objectId === $this->knownObjectId && $tenantId === $this->knownTenantId ? $this->authUser : null;
     }
 
     #[Override]
     protected function createAuthUserByUserName(string $userName): ?AuthUser
     {
-        return $userName === 'user@example.org' ? $this->authUser : null;
+        // The email address of a token is never used to find a user
+        $this->lookups[] = [$userName];
+
+        return null;
     }
 
     #[Override]

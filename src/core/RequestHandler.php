@@ -68,7 +68,13 @@ final class RequestHandler
     /**
      * Finds the route of the request and everything that depends on it.
      *
-     * @throws NotFoundException if the domain is not allowed, the path is invalid or no route matches
+     * The file title (the file name before the first "-" and the extension; empty for a route without file name) may
+     * only contain letters, digits and "_", the file group names of letters, digits, "_" and "-" separated by "/" (no
+     * empty names, no "." or ".."): otherwise the request is not found. Both come from the request path and name view
+     * classes, templates and language files.
+     *
+     * @throws NotFoundException if the domain is not allowed, the path is invalid, the file title or the file group
+     *                           is not a name, or no route matches
      * @throws LogicException if called twice
      */
     public function resolveRoute(): ResolvedRoute
@@ -117,6 +123,16 @@ final class RequestHandler
                 |> (fn($x) => str_replace(search: '__DASH__', replace: '-', subject: $x));
         $this->fileName = $fileName;
         if ($route->acceptedExtension !== null && $fileExtension !== $route->acceptedExtension) {
+            throw new NotFoundException();
+        }
+        // Both name view classes and language files: only names, never a path
+        if (preg_match(pattern: '/^[A-Za-z0-9_]*$/D', subject: $pathVars[0]) !== 1) {
+            throw new NotFoundException();
+        }
+        if ($fileGroup !== null && preg_match(
+            pattern: '/^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/D',
+            subject: $fileGroup,
+        ) !== 1) {
             throw new NotFoundException();
         }
 

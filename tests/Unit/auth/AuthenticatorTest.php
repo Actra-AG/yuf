@@ -15,6 +15,7 @@ use actra\yuf\auth\AuthSession;
 use actra\yuf\auth\Password;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
+use actra\yuf\tests\Double\auth\AttemptCounter;
 use actra\yuf\tests\Double\auth\RecordingAuthenticator;
 use actra\yuf\tests\Double\auth\TestAuthUser;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
@@ -193,7 +194,7 @@ final class AuthenticatorTest extends TestCase
         $this->assertFalse($authenticator->passwordLogin(userName: 'user', inputPassword: 'wrong'));
 
         $this->assertSame(AuthResultEnum::ERROR_WRONG_PASSWORD, $authenticator->authResult);
-        $this->assertSame(1, $authUser->increaseCalls);
+        $this->assertSame(1, $authUser->registerCalls);
         $this->assertSame(1, $authUser->wrongPasswordAttempts);
         $this->assertSame(0, $authUser->confirmCalls);
         $this->assertFalse($this->authSession->isLoggedIn());
@@ -203,18 +204,68 @@ final class AuthenticatorTest extends TestCase
         );
     }
 
-    public function testSuccessfulLoginResetsTheWrongPasswordAttempts(): void
+    public function testSuccessfulLoginKeepsTheWrongPasswordAttemptsAndGivesBackItsOwn(): void
     {
-        $authUser = TestAuthUser::create(
-            accessRights: [],
-            wrongPasswordAttempts: 2,
-        );
+        $counter = new AttemptCounter(value: 2);
+        $authUser = TestAuthUser::create(accessRights: [], wrongPasswordAttempts: 2, counter: $counter);
         $authenticator = $this->createAuthenticator(authUser: $authUser);
 
         $this->assertTrue($authenticator->passwordLogin(userName: 'user', inputPassword: 'test'));
 
-        $this->assertSame(0, $authUser->wrongPasswordAttempts);
+        $this->assertSame(2, $authUser->wrongPasswordAttempts);
+        $this->assertSame(2, $counter->value);
+        $this->assertSame(1, $authUser->registerCalls);
+        $this->assertSame(1, $authUser->releaseCalls);
         $this->assertSame(1, $authUser->confirmCalls);
+    }
+
+    /**
+     * The password attempt is counted before the password is checked: parallel requests that loaded the user before
+     * any of them counted (the counter is the database row they share) get as many guesses as the limit.
+     */
+    public function testParallelRequestsCannotTryMorePasswordsThanTheLimit(): void
+    {
+        $counter = new AttemptCounter();
+        $requests = [];
+        for ($index = 0; $index < 10; $index++) {
+            $requests[] = $this->createAuthenticator(
+                authUser: TestAuthUser::create(accessRights: [], counter: $counter),
+            );
+        }
+
+        $results = [];
+        foreach ($requests as $authenticator) {
+            $authenticator->passwordLogin(userName: 'user', inputPassword: 'wrong');
+            $results[] = $authenticator->authResult;
+        }
+
+        $this->assertSame(3, $counter->value);
+        $counts = array_count_values(
+            array: array_map(array: $results, callback: static fn(AuthResultEnum $result): string => $result->name),
+        );
+        $this->assertSame(
+            [AuthResultEnum::ERROR_WRONG_PASSWORD->name => 3, AuthResultEnum::ERROR_OUT_TRIED->name => 7],
+            $counts,
+        );
+    }
+
+    public function testLockedOutByAParallelRequestIsRefusedEvenWithTheRightPassword(): void
+    {
+        $counter = new AttemptCounter(value: 2);
+        // Both requests loaded the user with two attempts
+        $first = $this->createAuthenticator(
+            authUser: TestAuthUser::create(accessRights: [], wrongPasswordAttempts: 2, counter: $counter),
+        );
+        $secondUser = TestAuthUser::create(accessRights: [], wrongPasswordAttempts: 2, counter: $counter);
+        $second = $this->createAuthenticator(authUser: $secondUser);
+
+        $first->passwordLogin(userName: 'user', inputPassword: 'wrong');
+        $isLoggedIn = $second->passwordLogin(userName: 'user', inputPassword: 'test');
+
+        $this->assertFalse($isLoggedIn);
+        $this->assertSame(AuthResultEnum::ERROR_OUT_TRIED, $second->authResult);
+        $this->assertSame(0, $secondUser->confirmCalls);
+        $this->assertFalse($this->authSession->isLoggedIn());
     }
 
     public function testUserWithTooManyWrongAttemptsIsLockedOutEvenWithTheRightPassword(): void
@@ -228,7 +279,7 @@ final class AuthenticatorTest extends TestCase
         $this->assertFalse($authenticator->passwordLogin(userName: 'user', inputPassword: 'test'));
 
         $this->assertSame(AuthResultEnum::ERROR_OUT_TRIED, $authenticator->authResult);
-        $this->assertSame(0, $authUser->increaseCalls);
+        $this->assertSame(0, $authUser->registerCalls);
         $this->assertFalse($this->authSession->isLoggedIn());
     }
 
@@ -255,7 +306,7 @@ final class AuthenticatorTest extends TestCase
         $this->assertFalse($authenticator->passwordLogin(userName: 'user', inputPassword: 'test'));
 
         $this->assertSame(AuthResultEnum::ERROR_INACTIVE, $authenticator->authResult);
-        $this->assertSame(0, $authUser->increaseCalls);
+        $this->assertSame(0, $authUser->registerCalls);
     }
 
     public function testUserWithoutAnyRightsCanLogInWithTheirPassword(): void
@@ -305,7 +356,7 @@ final class AuthenticatorTest extends TestCase
         $this->assertFalse($authenticator->passwordLogin(userName: 'user', inputPassword: 'test'));
 
         $this->assertSame(AuthResultEnum::ERROR_IP_NOT_ALLOWED, $authenticator->authResult);
-        $this->assertSame(0, $authUser->increaseCalls);
+        $this->assertSame(0, $authUser->registerCalls);
     }
 
     /**
@@ -466,7 +517,7 @@ final class AuthenticatorTest extends TestCase
         $this->assertFalse($authenticator->passwordLogin(userName: 'user', inputPassword: 'wrong'));
 
         $this->assertSame(AuthResultEnum::ERROR_NO_PASSWORD_LOGIN_ACTIVE, $authenticator->authResult);
-        $this->assertSame(0, $authUser->increaseCalls);
+        $this->assertSame(0, $authUser->registerCalls);
         $this->assertSame(1, $authUser->wrongPasswordAttempts);
         $this->assertNull($authUser->storedPassword);
         $this->assertNull($authUser->password);
@@ -608,7 +659,7 @@ final class AuthenticatorTest extends TestCase
 
         $this->assertSame(AuthResultEnum::ERROR_WRONG_PASSWORD, $result);
         $this->assertSame(AuthResultEnum::ERROR_WRONG_PASSWORD, $authenticator->authResult);
-        $this->assertSame(1, $authUser->increaseCalls);
+        $this->assertSame(1, $authUser->registerCalls);
         $this->assertSame(
             AuthResultEnum::ERROR_WRONG_PASSWORD,
             $this->getFirstLoggedResult(authenticator: $authenticator),
@@ -708,7 +759,7 @@ final class AuthenticatorTest extends TestCase
 
         $this->assertSame([], $authenticator->loggedResults);
         $this->assertSame(AuthResultEnum::UNDEFINED, $authenticator->authResult);
-        $this->assertSame(0, $authUser->increaseCalls);
+        $this->assertSame(0, $authUser->registerCalls);
         $this->assertFalse($this->authSession->isLoggedIn());
     }
 
@@ -748,7 +799,7 @@ final class AuthenticatorTest extends TestCase
 
         $this->assertSame($expected, $authenticator->authResult);
         $this->assertSame($expected, $this->getFirstLoggedResult(authenticator: $authenticator));
-        $this->assertSame(0, $authUser === null ? 0 : $authUser->increaseCalls);
+        $this->assertSame(0, $authUser === null ? 0 : $authUser->registerCalls);
     }
 
     public function testPrecheckTwiceAfterARejectionThrows(): void
@@ -772,7 +823,7 @@ final class AuthenticatorTest extends TestCase
 
         $this->assertTrue($this->authSession->isLoggedIn());
         $this->assertSame(AuthResultEnum::SUCCESSFUL_OTP_LOGIN, $authenticator->authResult);
-        $this->assertSame(0, $authUser->wrongPasswordAttempts);
+        $this->assertSame(2, $authUser->wrongPasswordAttempts);
         $this->assertSame(1, $authUser->confirmCalls);
         $this->assertSame(
             [

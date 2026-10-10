@@ -115,6 +115,7 @@ final class AttributeEscapingTest extends TestCase
             context: FormContextFactory::create(),
             name: 'f',
             individualSentIndicator: 'a&b',
+            csrfProtection: false,
         );
         $form->addCssClass(className: 'c"d');
 

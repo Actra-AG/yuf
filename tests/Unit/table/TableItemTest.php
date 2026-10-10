@@ -79,13 +79,20 @@ final class TableItemTest extends TestCase
 
         $this->assertSame(7, $tableItem->getRawValue(name: 'ID'));
         $this->assertSame('7', $tableItem->renderValue(name: 'ID'));
-        $this->assertSame("&lt;b&gt;A &amp; B&lt;/b&gt;\n\"C\"", $tableItem->renderValue(name: 'text'));
+        $this->assertSame("&lt;b&gt;A &amp; B&lt;/b&gt;\n&quot;C&quot;", $tableItem->renderValue(name: 'text'));
         $this->assertSame(
-            "&lt;b&gt;A &amp; B&lt;/b&gt;<br />\n\"C\"",
+            "&lt;b&gt;A &amp; B&lt;/b&gt;<br />\n&quot;C&quot;",
             $tableItem->renderValue(name: 'text', renderNewLines: true),
         );
         $this->assertSame('', $tableItem->renderValue(name: 'empty'));
         $this->assertSame(['ID' => 7, 'text' => "<b>A & B</b>\n\"C\"", 'empty' => null], $tableItem->data);
+    }
+
+    public function testQuotesAreEncodedSoTheValueIsSafeInAttributesToo(): void
+    {
+        $tableItem = TableItemTest::tableItem(values: ['text' => "\"x\" onclick='y'"]);
+
+        $this->assertSame('&quot;x&quot; onclick=&#039;y&#039;', $tableItem->renderValue(name: 'text'));
     }
 
     public function testNonScalarValueIsRejectedWhenTheRowIsCreated(): void

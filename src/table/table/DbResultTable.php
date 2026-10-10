@@ -185,7 +185,7 @@ class DbResultTable extends SmartTable
             headersList: array_values(
                 array: array_map(
                     callback: static fn(AbstractTableColumn $column): string => html_entity_decode(
-                        string: strip_tags(string: $column->label),
+                        string: strip_tags(string: $column->label->render()),
                         flags: ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5,
                         encoding: 'UTF-8',
                     ),
@@ -308,8 +308,16 @@ class DbResultTable extends SmartTable
     private function getStoredSortColumn(): ?string
     {
         $storedSortColumn = $this->state->get(identifier: $this->identifier, index: DbResultTable::SORT_COLUMN_KEY);
+        if ($storedSortColumn === null || $storedSortColumn === '') {
+            return null;
+        }
 
-        return $storedSortColumn === '' ? null : $storedSortColumn;
+        // The session is not trusted: only a sortable column of this table is used, otherwise the default applies
+        return array_any(
+            $this->columns,
+            static fn(AbstractTableColumn $column): bool => $column->isSortable
+                && $column->identifier === $storedSortColumn,
+        ) ? $storedSortColumn : null;
     }
 
     private function getDefaultSortColumn(): ?AbstractTableColumn

@@ -88,16 +88,16 @@ final class SearchQueryBuilderFilterTest extends TestCase
         $this->assertSame($expectedParameters, $data->params);
     }
 
-    public function testCreateSQLFiltersCombinesColumnsAndAcceptsExpressions(): void
+    public function testCreateSQLFiltersCombinesColumns(): void
     {
         $data = SearchQueryBuilder::createSqlFilters(filterArr: [
-            "CONCAT_WS(' ', a.firstName, a.lastName)" => 'haas',
+            'a.firstName' => 'haas',
             'b.city' => '',
             'b.zip' => 80,
         ]);
 
         $this->assertSame(
-            "(CONCAT_WS(' ', a.firstName, a.lastName)" . SearchQueryBuilderFilterTest::LIKE . ') AND (b.zip'
+            '(a.firstName' . SearchQueryBuilderFilterTest::LIKE . ') AND (b.zip'
             . SearchQueryBuilderFilterTest::LIKE . ')',
             $data->query,
         );
@@ -112,6 +112,11 @@ final class SearchQueryBuilderFilterTest extends TestCase
         return [
             'empty' => [' '],
             'placeholder' => ['IF(a = ?, b, c)'],
+            'expression' => ["CONCAT_WS(' ', a.firstName, a.lastName)"],
+            'injection' => ['a OR 1=1'],
+            'backtick injection' => ['`a` OR 1=1'],
+            'line break inside' => ["na\nme"],
+            'four parts' => ['a.b.c.d'],
         ];
     }
 
@@ -133,7 +138,7 @@ final class SearchQueryBuilderFilterTest extends TestCase
             'percent is literal' => ['50%', [3]],
             'underscore is literal' => ['a_b', [4]],
             'star is a wildcard' => ['5*0', [3, 5]],
-            'expression column' => ['haas zürich', [1, 2]],
+            'combined column' => ['haas zürich', [1, 2]],
             'operators' => ['haas -kapelle', [2]],
             'equal' => ['"Haas zürich"', [2]],
         ];
@@ -152,9 +157,11 @@ final class SearchQueryBuilderFilterTest extends TestCase
             statement: "INSERT INTO item (id, name, city) VALUES (1, '?Haas Kapelle', 'Bern'), (2, 'Haas', 'zürich'),"
             . " (3, '50% Rabatt', ''), (4, 'a_b', ''), (5, '500', ''), (6, 'axb', '')",
         );
-        $dbQuery = DbQuery::createFromSqlQuery(query: 'SELECT id FROM item');
+        $dbQuery = DbQuery::createFromSqlQuery(
+            query: "SELECT id FROM (SELECT id, name || ' ' || city AS search FROM item) AS item",
+        );
         $dbQuery->addOrderPart(column: 'id');
-        $data = SearchQueryBuilder::createSqlFilters(filterArr: ["name || ' ' || city" => $value]);
+        $data = SearchQueryBuilder::createSqlFilters(filterArr: ['search' => $value]);
         $dbQuery->addWherePart(wherePart: $data->query, parameters: $data->params);
         $queryData = $dbQuery->getDbQueryData(offset: 0, rowCount: 100);
 

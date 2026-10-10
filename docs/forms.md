@@ -111,6 +111,13 @@ They remember keys as strings and drop remembered keys that are not an option an
 option of the field, e.g. `individualEmptyValueLabel`) resets `checkOptionsFilter()` to `''` and
 `checkIntOptionsFilter()` to `null` (no filter).
 
+## Maximum length
+
+`maxLength:` of the input fields (`TextField`, `EmailField`, `IntegerField`, `PasswordField`, ...) is rendered as
+`maxlength` attribute and validated on the server (number of characters of the text; message `FormMessages::$tooLong`,
+`[max]` is replaced). A `MaxLengthRule` of the project with the same or a smaller limit replaces that check, so the user
+gets one error. `TextAreaField` has no `maxLength:`; add a `MaxLengthRule`.
+
 ## Changes and password rules
 
 `Form::hasChanges()` is `true` if any field (also the child fields of toggle fields) differs from its initial value.
@@ -171,6 +178,18 @@ $isValid = $form->validate(input: FormInput::fromHttpRequest(httpRequest: $httpR
 $isValid = $form->validate(input: FormInput::fromArray(data: ['customer' => 'Ann'], query: ['order' => '']));
 ```
 
+## CSRF protection
+
+A POST form has a CSRF field, and `validate()` checks the token first: with a missing or invalid token the form gets the
+error `FormMessages::$invalidCsrfToken` and nothing else of the request is read (no field is validated, no listener
+runs, no upload is stored or removed). A GET form has no token. Without session (`individualSessionHandler: false`) the
+`FormContext` has no token source and a POST form throws a `LogicException` when it is created, unless the project opts
+out explicitly:
+
+```php
+new Form(context: $context, name: 'search', csrfProtection: false); // only for forms without session
+```
+
 ## Spam protection
 
 Public forms (contact, order, sign-up) add a honeypot and a signed render time where the fields should be rendered,
@@ -191,17 +210,19 @@ $form->addSpamProtection(spamProtection: new SpamProtection(
 - `validate()` fails with an error of the form if the e-mail address is rejected (case-insensitive), the honeypot is
   filled or the form is submitted less than 3 or more than 3600 seconds after rendering (`minSeconds:`,
   `maxSeconds:`). The render time is signed with the secret and the form name (HMAC-SHA256); a missing, unsigned or
-  manipulated value counts as expired. The texts are `spamRejectedEmailAddress`, `spamHoneypotFilled` and `spamRetry`
-  of `FormMessages`.
-- The rules are checked only if the other fields are valid (like the CSRF token): with field errors the form shows them
+  manipulated value counts as expired. The signature is bound to the session of the user (the CSRF token source of the
+  `FormContext`), so a render time of another session is expired too. The texts are `spamRejectedEmailAddress`,
+  `spamHoneypotFilled` and `spamRetry` of `FormMessages`.
+- The rules are checked only if the other fields are valid: with field errors the form shows them
   and `globalErrorMessage`, not a spam text. A form rendered again keeps a validly signed, not expired posted render
   time (a visitor who corrects a field is not too fast); otherwise it renders the current time.
-- `SpamCheck` has the rules without the form, e.g. for tests with a `FixedClock`.
+- `SpamCheck` has the rules without the form, e.g. for tests with a `FixedClock`; `sessionBinding:` is the session
+  value (the CSRF token), `null` only without session.
 
 ## File uploads
 
-`FileField` needs a `FileUploadStorage` (in production `SessionFileUploadStorage::forHttpRequest(session:,
-httpRequest:)`) and the allow-list `allowedFileTypes:` (`UploadFileType::pdf()`, `jpeg()`, `png()`, `gif()`, `webp()`,
+`FileField` needs a `FileUploadStorage` (in production `new SessionFileUploadStorage(session:, rootDirectory:)`) and the
+allow-list `allowedFileTypes:` (`UploadFileType::pdf()`, `jpeg()`, `png()`, `gif()`, `webp()`,
 `plainText()`, `csv()`, `docx()`, `xlsx()`, `pptx()`, `zip()`, or `new UploadFileType(mimeTypes:, extensions:)`; no SVG,
 it can carry scripts).
 
@@ -209,6 +230,13 @@ Every upload is checked before it is stored: `maxFileSize:` (bytes, 10 MB by def
 from the file content (`finfo`, never taken from the client) and has to fit the extension of the file name.
 `UploadedFile::$type` is the detected type. `FileFieldRenderer` renders an `accept` attribute with the allowed
 extensions.
+
+The upload directory `rootDirectory:` is a required argument: choose a directory outside the document root that only
+the user of the web server can use (e.g. below the `var/` directory of the project). It is created with mode 0700
+(directories 0700, stored files 0600, whatever the umask is); a root that is a symbolic link or belongs to another user
+is refused with a `RuntimeException`. The pointer of the uploaded files is issued to the session when the field is
+created; a posted pointer that was not issued to the session (or expired) is ignored and the field starts with an empty
+list, so files of other users cannot be read, added to or removed.
 
 ## Extending the form classes
 

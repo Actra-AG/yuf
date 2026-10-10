@@ -64,6 +64,20 @@ final class MailerAddressTest extends TestCase
         yield 'carriage return in the local part' => ["from@example.com\rBcc: x@example.com"];
         yield 'invalid idn domain' => ["a@a\u{00AD}b ü.example"];
         yield 'line break in the domain' => ["to@example\r\n.com"];
+        yield 'quoted local part' => ['"ab"@example.com'];
+        yield 'quoted local part with angle brackets' => ['"a<b>"@example.com'];
+        yield 'quoted local part with escaped quote' => ['"a\\"b"@example.com'];
+        yield 'quoted local part with a vertical tab' => ["\"a\x0Bb\"@example.com"];
+        yield 'quoted local part with NUL' => ["\"a\x00b\"@example.com"];
+        yield 'NUL in the local part' => ["a\x00b@example.com"];
+        yield 'NUL at the end' => ["a@example.com\x00"];
+        yield 'NUL at the start' => ["\x00a@example.com"];
+        yield 'vertical tab at the start' => ["\x0Ba@example.com"];
+        yield 'vertical tab at the end' => ["a@example.com\x0B"];
+        yield 'form feed in the domain' => ["a@exam\x0Cple.com"];
+        yield 'escape character in the local part' => ["a\x1Bb@example.com"];
+        yield 'delete character in the local part' => ["a\x7Fb@example.com"];
+        yield 'tab in the local part' => ["a\tb@example.com"];
     }
 
     #[DataProvider('invalidAddressProvider')]

@@ -48,7 +48,7 @@ final class StreamSmtpTransportTest extends TestCase
     public function testReadsLinesAndWritesLinesWithLineBreak(): void
     {
         $transport = new StreamSmtpTransport();
-        $transport->open(hostName: '127.0.0.1', port: $this->port, timeoutSeconds: 5);
+        $transport->open(hostName: '127.0.0.1', port: $this->port, timeoutSeconds: 5, implicitTls: false);
         $peer = $this->accept();
         fwrite(stream: $peer, data: "250-first\r\n250 second\r\n");
 
@@ -66,7 +66,7 @@ final class StreamSmtpTransportTest extends TestCase
     public function testLineLongerThanTheBufferIsReadInParts(): void
     {
         $transport = new StreamSmtpTransport();
-        $transport->open(hostName: '127.0.0.1', port: $this->port, timeoutSeconds: 5);
+        $transport->open(hostName: '127.0.0.1', port: $this->port, timeoutSeconds: 5, implicitTls: false);
         $peer = $this->accept();
         fwrite(stream: $peer, data: str_repeat(string: 'a', times: 600) . "\r\n");
 
@@ -78,7 +78,7 @@ final class StreamSmtpTransportTest extends TestCase
     public function testClosedConnectionReadsNull(): void
     {
         $transport = new StreamSmtpTransport();
-        $transport->open(hostName: '127.0.0.1', port: $this->port, timeoutSeconds: 5);
+        $transport->open(hostName: '127.0.0.1', port: $this->port, timeoutSeconds: 5, implicitTls: false);
         fclose(stream: $this->accept());
 
         $this->assertNull($transport->readLine(timeoutSeconds: 5));
@@ -89,7 +89,7 @@ final class StreamSmtpTransportTest extends TestCase
     public function testSilentServerIsATimeout(): void
     {
         $transport = new StreamSmtpTransport();
-        $transport->open(hostName: '127.0.0.1', port: $this->port, timeoutSeconds: 5);
+        $transport->open(hostName: '127.0.0.1', port: $this->port, timeoutSeconds: 5, implicitTls: false);
         $peer = $this->accept();
 
         try {
@@ -110,7 +110,7 @@ final class StreamSmtpTransportTest extends TestCase
         $transport = new StreamSmtpTransport();
 
         try {
-            $transport->open(hostName: '127.0.0.1', port: $port, timeoutSeconds: 5);
+            $transport->open(hostName: '127.0.0.1', port: $port, timeoutSeconds: 5, implicitTls: false);
             StreamSmtpTransportTest::fail('The connection must fail.');
         } catch (MailerException $exception) {
             $this->assertStringStartsWith('Socket connection error: 127.0.0.1 (', $exception->getMessage());
@@ -138,11 +138,64 @@ final class StreamSmtpTransportTest extends TestCase
     public function testTlsHandshakeWithAServerWithoutTlsFails(): void
     {
         $transport = new StreamSmtpTransport();
-        $transport->open(hostName: '127.0.0.1', port: $this->port, timeoutSeconds: 5);
+        $transport->open(hostName: '127.0.0.1', port: $this->port, timeoutSeconds: 5, implicitTls: false);
         fclose(stream: $this->accept());
 
         $this->assertFalse($transport->enableTls());
         $transport->close();
+    }
+
+    public function testBytesBeforeTheTlsHandshakeAreRefused(): void
+    {
+        $transport = new StreamSmtpTransport();
+        $transport->open(hostName: '127.0.0.1', port: $this->port, timeoutSeconds: 5, implicitTls: false);
+        $peer = $this->accept();
+        // The answer to STARTTLS and, in the same packet, a reply that was sent before the handshake
+        fwrite(stream: $peer, data: "220 go ahead\r\n250-injected\r\n250 AUTH PLAIN\r\n");
+        $this->assertSame("220 go ahead\r\n", $transport->readLine(timeoutSeconds: 5));
+
+        try {
+            $transport->enableTls();
+            StreamSmtpTransportTest::fail('The handshake must be refused.');
+        } catch (MailerException $exception) {
+            $this->assertStringContainsString('before the TLS handshake', $exception->getMessage());
+        } finally {
+            fclose(stream: $peer);
+            $transport->close();
+        }
+    }
+
+    public function testImplicitTlsWithAServerWithoutTlsFails(): void
+    {
+        $transport = new StreamSmtpTransport();
+
+        try {
+            $transport->open(hostName: '127.0.0.1', port: $this->port, timeoutSeconds: 1, implicitTls: true);
+            StreamSmtpTransportTest::fail('The connection must fail.');
+        } catch (MailerException $exception) {
+            $this->assertStringStartsWith('Socket connection error: 127.0.0.1 (', $exception->getMessage());
+        }
+        $this->assertFalse($transport->isOpen());
+    }
+
+    public function testAddressOfTheConnection(): void
+    {
+        $this->assertSame(
+            'tcp://smtp.example.com:587',
+            StreamSmtpTransport::createAddress(hostName: 'smtp.example.com', port: 587, implicitTls: false),
+        );
+        $this->assertSame(
+            'tls://smtp.example.com:465',
+            StreamSmtpTransport::createAddress(hostName: 'smtp.example.com', port: 465, implicitTls: true),
+        );
+        $this->assertSame(
+            'tls://[::1]:465',
+            StreamSmtpTransport::createAddress(hostName: '::1', port: 465, implicitTls: true),
+        );
+        $this->assertSame(
+            'tcp://[::1]:25',
+            StreamSmtpTransport::createAddress(hostName: '[::1]', port: 25, implicitTls: false),
+        );
     }
 
     public function testCertificateAndHostNameAreVerified(): void

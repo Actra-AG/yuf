@@ -152,6 +152,46 @@ final class PasswordTest extends TestCase
         $this->expectNotToPerformAssertions();
     }
 
+    public function testLegacyVerificationTakesAsLongAsAVerificationOfAnArgon2idHash(): void
+    {
+        $legacy = $this->createLegacyPassword(rawPassword: 'secret');
+        $current = Password::generateNew(rawPassword: 'secret');
+
+        $currentTime = $this->measureSeconds(action: static fn(): bool => $current->isValid(rawPassword: 'secret'));
+        $legacyTime = $this->measureSeconds(action: static fn(): bool => $legacy->isValid(rawPassword: 'secret'));
+
+        // A legacy hash alone takes microseconds: the answer must not tell a legacy user from the others
+        $this->assertGreaterThan($currentTime / 2, $legacyTime);
+    }
+
+    public function testVerificationTimeForAnUnknownUserIsThatOfAVerification(): void
+    {
+        $current = Password::generateNew(rawPassword: 'secret');
+
+        $currentTime = $this->measureSeconds(action: static fn(): bool => $current->isValid(rawPassword: 'secret'));
+        $spentTime = $this->measureSeconds(
+            action: static function (): bool {
+                Password::spendVerificationTime(rawPassword: 'secret');
+
+                return true;
+            },
+        );
+
+        $this->assertGreaterThan($currentTime / 2, $spentTime);
+        $this->assertLessThan($currentTime * 4, $spentTime);
+    }
+
+    /**
+     * @param callable(): bool $action
+     */
+    private function measureSeconds(callable $action): float
+    {
+        $start = hrtime(as_number: true);
+        $action();
+
+        return (hrtime(as_number: true) - $start) / 1_000_000_000;
+    }
+
     private function createLegacyPassword(string $rawPassword): Password
     {
         return new Password(

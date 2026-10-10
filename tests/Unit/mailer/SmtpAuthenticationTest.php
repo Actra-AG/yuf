@@ -14,6 +14,7 @@ use actra\yuf\mailer\FixedServerNameResolver;
 use actra\yuf\mailer\MailerException;
 use actra\yuf\mailer\OAuthTokenProvider;
 use actra\yuf\mailer\SmtpAuthMethodEnum;
+use actra\yuf\mailer\SmtpEncryptionEnum;
 use actra\yuf\mailer\SmtpMailer;
 use actra\yuf\mailer\TextMail;
 use actra\yuf\tests\Double\mailer\FakeSmtpTransport;
@@ -98,7 +99,13 @@ final class SmtpAuthenticationTest extends TestCase
             ],
         );
 
-        $this->mail()->send(abstractMailer: $this->mailer(transport: $transport, userName: 'user', useTls: true));
+        $this->mail()->send(
+            abstractMailer: $this->mailer(
+                transport: $transport,
+                userName: 'user',
+                encryption: SmtpEncryptionEnum::STARTTLS,
+            ),
+        );
 
         $this->assertContains('AUTH PLAIN ' . SmtpAuthenticationTest::PLAIN_PAYLOAD, $transport->writtenLines());
         $this->assertNotContains('AUTH LOGIN', $transport->writtenLines());
@@ -406,18 +413,20 @@ final class SmtpAuthenticationTest extends TestCase
     private function mailer(
         FakeSmtpTransport $transport,
         string $userName,
-        bool $useTls = false,
+        SmtpEncryptionEnum $encryption = SmtpEncryptionEnum::NONE,
+        ?string $hostName = null,
         ?SmtpAuthMethodEnum $authMethod = null,
         ?OAuthTokenProvider $tokenProvider = null,
     ): SmtpMailer {
         return new SmtpMailer(
             serverAddress: '192.0.2.1',
-            hostName: 'smtp.example.com',
+            hostName: $hostName
+                ?? ($userName !== '' && $encryption === SmtpEncryptionEnum::NONE ? 'localhost' : 'smtp.example.com'),
             smtpUserName: $userName,
             smtpPassword: SmtpAuthenticationTest::PASSWORD,
             serverNameCache: null,
             port: 587,
-            useTls: $useTls,
+            encryption: $encryption,
             transport: $transport,
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-10-08 12:00:00 UTC')),
             mimeIdGenerator: new FixedMimeIdGenerator(),

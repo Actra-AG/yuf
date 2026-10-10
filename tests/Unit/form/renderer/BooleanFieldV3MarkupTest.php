@@ -119,7 +119,7 @@ final class BooleanFieldV3MarkupTest extends TestCase
         string $expected,
     ): void {
         $formName = 'booleanMarkupForm' . BooleanFieldV3MarkupTest::$formCounter++;
-        $form = new Form(context: FormContextFactory::create(), name: $formName);
+        $form = new Form(context: FormContextFactory::create(), name: $formName, csrfProtection: false);
         $field = new BooleanField(
             name: 'bo',
             label: HtmlText::fromHtml(html: 'L'),

@@ -160,6 +160,7 @@ final class SelectOptionsFieldValueTest extends TestCase
             context: FormContextFactory::create(),
             name: 'selectEmptyLabelForm',
             messages: new FormMessages(selectEmptyOption: 'Choose'),
+            csrfProtection: false,
         );
         $field = $this->createField(requiredError: HtmlText::fromHtml(html: 'Required'));
         $this->assertSame('-- Please select --', $field->emptyValueLabel->render());

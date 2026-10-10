@@ -521,25 +521,6 @@ abstract class AbstractSessionHandler extends SessionHandler implements SessionU
      */
     public function changeCookieSameSiteToLax(): void
     {
-        $this->changeCookieSameSite(sameSite: 'Lax');
-    }
-
-    /**
-     * For the return of an identity provider (form post from another site): the cookie must be sent along. Does
-     * nothing if the session was not started in this request.
-     *
-     * @throws LogicException if the session is closed (its cookie is sent already)
-     */
-    public function changeCookieSameSiteToNone(): void
-    {
-        $this->changeCookieSameSite(sameSite: 'None');
-    }
-
-    /**
-     * @param 'Lax'|'None' $sameSite
-     */
-    private function changeCookieSameSite(string $sameSite): void
-    {
         if (!$this->isStarted) {
             return;
         }
@@ -548,7 +529,7 @@ abstract class AbstractSessionHandler extends SessionHandler implements SessionU
             // Prevent from "Session cookie parameters cannot be changed when a session is active" exception
             session_write_close();
         }
-        session_set_cookie_params(['samesite' => $sameSite]);
+        session_set_cookie_params(['samesite' => 'Lax']);
         session_start();
     }
 }

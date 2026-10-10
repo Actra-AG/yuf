@@ -61,8 +61,8 @@ final class CspPolicySettingsTest extends TestCase
         $this->assertSame(
             "default-src 'self' data: https://www.example.com; style-src 'self' 'nonce-abc'; font-src 'self'; "
             . "img-src 'self' data: https://www.example.com; object-src 'none'; "
-            . "script-src 'strict-dynamic' 'nonce-abc'; connect-src 'none'; base-uri 'self'; frame-src 'none'; "
-            . "frame-ancestors 'none';",
+            . "script-src 'strict-dynamic' 'nonce-abc'; connect-src 'none'; base-uri 'self'; form-action 'self'; "
+            . "frame-src 'none'; frame-ancestors 'none';",
             $policy,
         );
     }
@@ -109,6 +109,7 @@ final class CspPolicySettingsTest extends TestCase
             scriptSrc: '',
             connectSrc: '',
             baseUri: '',
+            formAction: '',
             frameSrc: '',
             frameAncestors: '',
             mediaSrc: 'https://media.example.com',
@@ -130,6 +131,7 @@ final class CspPolicySettingsTest extends TestCase
             scriptSrc: '',
             connectSrc: '',
             baseUri: '',
+            formAction: '',
             frameSrc: '',
             frameAncestors: '',
         );
@@ -176,5 +178,15 @@ final class CspPolicySettingsTest extends TestCase
         );
 
         $this->assertStringStartsWith('default-src https://[2001:db8::1]:8443;', $policy);
+    }
+
+    public function testFormActionCanBeChanged(): void
+    {
+        $policy = new CspPolicySettings(formAction: "'self' https://login.example.com")->getHttpHeaderDataString(
+            nonce: 'abc',
+            httpRequest: HttpRequestFactory::create(),
+        );
+
+        $this->assertStringContainsString("form-action 'self' https://login.example.com;", $policy);
     }
 }

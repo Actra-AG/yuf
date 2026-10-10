@@ -448,6 +448,24 @@ final class CoreTest extends TestCase
         $this->assertFalse($this->isExceptionHandlerRegistered());
     }
 
+    public function testPrepareHttpResponseDoesNotRedirectAnInsecureRequestOfAnUnknownHost(): void
+    {
+        $core = $this->createCore(
+            httpRequest: HttpRequestFactory::create(
+                host: 'evil.example',
+                protocol: ProtocolEnum::HTTP,
+                port: 80,
+                uri: '/page.html',
+            ),
+        );
+
+        $httpResponse = $core->prepareHttpResponse();
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $httpResponse->httpStatusCode);
+        $this->assertNull($httpResponse->getHeader(key: 'Location'));
+        $this->assertNull($httpResponse->getContentString());
+    }
+
     public function testPrepareHttpResponseRedirectsWithoutAnyRoute(): void
     {
         $httpResponse = $this->createCore(

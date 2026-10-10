@@ -46,10 +46,12 @@ use SensitiveParameter;
  * not used), otherwise `PLAIN` before `LOGIN`. A server that announces no methods at all gets `LOGIN` (or `XOAUTH2`
  * with a token provider). A fixed method that the server does not announce aborts the delivery.
  *
- * With `$useTls` the connection is encrypted with STARTTLS before the credentials are sent; the certificate of the
- * server must be valid for `$hostName`, TLS 1.2 or newer is required, and a server without STARTTLS or a failed
- * handshake aborts the delivery (there is no fallback to plain text). Without `$useTls` everything, also the
- * password, goes over the network unencrypted: only for a server on the same host.
+ * `$encryption` (default `STARTTLS`): the connection is encrypted with STARTTLS (port 587) or from the first byte
+ * (`IMPLICIT_TLS`, port 465) before the credentials are sent; the certificate of the server must be valid for
+ * `$hostName`, TLS 1.2 or newer is required, and a server without STARTTLS, data before the handshake or a failed
+ * handshake aborts the delivery (there is no fallback to plain text). With `NONE` everything goes over the network
+ * unencrypted: a user name is then only accepted for a server on the same host (`localhost`, `127.0.0.0/8`, `::1`),
+ * otherwise the constructor throws.
  */
 final class SmtpMailer extends AbstractMailer
 {
@@ -69,10 +71,13 @@ final class SmtpMailer extends AbstractMailer
     /** @var list<string> The lines of the last delivery: the answers and the commands, without credentials */
     public private(set) array $log = [];
 
+    private readonly int $port;
+
     /**
      * @param ?FileCache $serverNameCache Keeps the host name of the server (reverse DNS, used in `EHLO` and the
      *                                    message IDs) for a day: `$core->fileCache`; `null` looks it up per mailer
      * @param ?ServerNameResolver $serverNameResolver Default: reverse DNS with the `serverNameCache`
+     * @param ?int $port Default: that of the encryption (STARTTLS 587, IMPLICIT_TLS 465, NONE 25)
      */
     public function __construct(
         string $serverAddress,
@@ -81,8 +86,8 @@ final class SmtpMailer extends AbstractMailer
         #[SensitiveParameter]
         private readonly string $smtpPassword,
         ?FileCache $serverNameCache,
-        private readonly int $port = 587,
-        private readonly bool $useTls = true,
+        private readonly SmtpEncryptionEnum $encryption = SmtpEncryptionEnum::STARTTLS,
+        ?int $port = null,
         private readonly SmtpTransport $transport = new StreamSmtpTransport(),
         Clock $clock = new SystemClock(),
         MimeIdGenerator $mimeIdGenerator = new RandomMimeIdGenerator(),
@@ -90,8 +95,20 @@ final class SmtpMailer extends AbstractMailer
         private readonly ?SmtpAuthMethodEnum $authMethod = null,
         private readonly ?OAuthTokenProvider $oAuthTokenProvider = null,
     ) {
+        $port ??= $encryption->getDefaultPort();
+        $this->port = $port;
         if (preg_match(pattern: '/^[A-Za-z0-9._:\[\]-]+$/D', subject: $hostName) !== 1) {
             throw new InvalidArgumentException(message: 'Invalid SMTP host name: use a host name or an IP address.');
+        }
+        if (
+            $smtpUserName !== ''
+            && $encryption === SmtpEncryptionEnum::NONE
+            && !SmtpMailer::isLoopback(hostName: $hostName)
+        ) {
+            throw new InvalidArgumentException(
+                message: 'The credentials must not be sent without encryption to ' . $hostName
+                    . ': use SmtpEncryptionEnum::STARTTLS or IMPLICIT_TLS (without encryption only for localhost).',
+            );
         }
         if ($port < 1 || $port > 65535) {
             throw new InvalidArgumentException(message: 'Invalid SMTP port ' . $port . ': use 1 to 65535.');
@@ -150,6 +167,7 @@ final class SmtpMailer extends AbstractMailer
             hostName: $this->hostName,
             port: $this->port,
             timeoutSeconds: SmtpMailer::CONNECT_TIMEOUT,
+            implicitTls: $this->encryption === SmtpEncryptionEnum::IMPLICIT_TLS,
         );
         try {
             $this->deliver(abstractMail: $abstractMail, mailMimeHeader: $mailMimeHeader, mailMimeBody: $mailMimeBody);
@@ -169,7 +187,7 @@ final class SmtpMailer extends AbstractMailer
             description: 'the connection',
         );
         $capabilities = $this->ehlo();
-        if ($this->useTls) {
+        if ($this->encryption === SmtpEncryptionEnum::STARTTLS) {
             $this->startTls();
             $capabilities = $this->ehlo();
         }
@@ -204,6 +222,26 @@ final class SmtpMailer extends AbstractMailer
             timeoutSeconds: SmtpMailer::QUIT_TIMEOUT,
             description: 'QUIT',
         );
+    }
+
+    /**
+     * Whether the host is the same machine: `localhost`, an address of 127.0.0.0/8 or `::1`.
+     */
+    private static function isLoopback(string $hostName): bool
+    {
+        $host = strtolower(string: trim(string: $hostName, characters: '[]'));
+        if ($host === 'localhost') {
+            return true;
+        }
+        $packed = inet_pton(ip: $host);
+        if ($packed === false) {
+            return false;
+        }
+
+        return match (strlen(string: $packed)) {
+            4 => ord(character: $packed[0]) === 127,
+            default => $packed === inet_pton(ip: '::1'),
+        };
     }
 
     private function ehlo(): SmtpCapabilities

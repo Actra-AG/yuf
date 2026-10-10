@@ -38,6 +38,7 @@ final readonly class CspPolicySettings
         private string $scriptSrc = "'strict-dynamic'",
         private string $connectSrc = "'none'",
         private string $baseUri = "'self'",
+        private string $formAction = "'self'",
         private string $frameSrc = "'none'",
         private string $frameAncestors = "'none'",
     ) {}
@@ -54,6 +55,7 @@ final readonly class CspPolicySettings
             'script-src' => CspPolicySettings::addNonce(sources: $this->scriptSrc, nonce: $nonce),
             'connect-src' => $this->connectSrc,
             'base-uri' => $this->baseUri,
+            'form-action' => $this->formAction,
             'frame-src' => $this->frameSrc,
             'frame-ancestors' => $this->frameAncestors,
         ];

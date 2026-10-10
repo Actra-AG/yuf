@@ -37,9 +37,12 @@ namespace actra\yuf\mailer;
 interface SmtpTransport
 {
     /**
-     * @throws MailerException if the connection cannot be opened
+     * @param bool $implicitTls whether the connection is encrypted from the first byte (SMTPS): the handshake is part
+     *                          of opening, the certificate must be valid for `$hostName`
+     *
+     * @throws MailerException if the connection cannot be opened (or the TLS handshake fails)
      */
-    public function open(string $hostName, int $port, int $timeoutSeconds): void;
+    public function open(string $hostName, int $port, int $timeoutSeconds, bool $implicitTls): void;
 
     public function isOpen(): bool;
 
@@ -62,6 +65,8 @@ interface SmtpTransport
      * name of `open()`.
      *
      * @return bool whether the connection is encrypted now
+     *
+     * @throws MailerException if the server sent data before the handshake (it would be read as if it was encrypted)
      */
     public function enableTls(): bool;
 

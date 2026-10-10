@@ -18,6 +18,7 @@ use actra\yuf\core\RouteCollection;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use LogicException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -369,5 +370,81 @@ final class RequestHandlerTest extends TestCase
         $this->assertSame($german, $resolved->language);
         $this->assertSame('x.html', $handler->fileName);
         $this->assertSame('/de/', $handler->getLanguageRoot());
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function invalidFileNameProvider(): iterable
+    {
+        yield 'parent directories' => ['/shop/../../../evil/x.html'];
+        yield 'parent directory in the title' => ['/shop/..%2f..%2fevil%2fx.html'];
+        yield 'slash in the title' => ['/shop/a/b.html'];
+        yield 'backslash' => ['/shop/a\\b.html'];
+        yield 'null byte' => ['/shop/a%00b.html'];
+        yield 'space' => ['/shop/a b.html'];
+    }
+
+    #[DataProvider('invalidFileNameProvider')]
+    public function testAFileTitleOutsideOfLettersDigitsAndUnderscoreIsNotFound(string $requestUri): void
+    {
+        $handler = $this->createRequestHandler(
+            requestUri: $requestUri,
+            routeCollection: new RouteCollection(routes: [$this->createRoute(path: '/shop/${fileName}')]),
+        );
+
+        $this->expectException(NotFoundException::class);
+
+        $handler->resolveRoute();
+    }
+
+    public function testAValidFileTitleWithPathVariablesIsResolved(): void
+    {
+        $handler = $this->createRequestHandler(
+            requestUri: '/shop/Detail_2-12-x.html',
+            routeCollection: new RouteCollection(routes: [$this->createRoute(path: '/shop/${fileName}')]),
+        );
+
+        $this->assertSame('Detail_2', $handler->resolveRoute()->fileTitle);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function invalidFileGroupProvider(): iterable
+    {
+        yield 'parent directory' => ['/shop/../x/index.html'];
+        yield 'parent directory at the end' => ['/shop/a/../index.html'];
+        yield 'encoded parent directory' => ['/shop/..%2f..%2fx/index.html'];
+        yield 'dot segment' => ['/shop/./index.html'];
+        yield 'backslash' => ['/shop/a\\b/index.html'];
+        yield 'empty group' => ['/shop//index.html'];
+    }
+
+    #[DataProvider('invalidFileGroupProvider')]
+    public function testAFileGroupWithOtherThanNamesIsNotFound(string $requestUri): void
+    {
+        $handler = $this->createRequestHandler(
+            requestUri: $requestUri,
+            routeCollection: new RouteCollection(
+                routes: [$this->createRoute(path: '/shop/${fileGroup}/${fileName}')],
+            ),
+        );
+
+        $this->expectException(NotFoundException::class);
+
+        $handler->resolveRoute();
+    }
+
+    public function testAFileGroupWithSeveralNamesIsResolved(): void
+    {
+        $handler = $this->createRequestHandler(
+            requestUri: '/shop/a_b/C-1/index.html',
+            routeCollection: new RouteCollection(
+                routes: [$this->createRoute(path: '/shop/${fileGroup}/${fileName}')],
+            ),
+        );
+
+        $this->assertSame('a_b/C-1', $handler->resolveRoute()->fileGroup);
     }
 }

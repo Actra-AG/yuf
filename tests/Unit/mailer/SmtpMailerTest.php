@@ -13,12 +13,14 @@ use actra\yuf\clock\FixedClock;
 use actra\yuf\mailer\FixedServerNameResolver;
 use actra\yuf\mailer\MailerEncodingEnum;
 use actra\yuf\mailer\MailerException;
+use actra\yuf\mailer\SmtpEncryptionEnum;
 use actra\yuf\mailer\SmtpMailer;
 use actra\yuf\mailer\TextMail;
 use actra\yuf\tests\Double\mailer\FakeSmtpTransport;
 use actra\yuf\tests\Double\mailer\FixedMimeIdGenerator;
 use DateTimeImmutable;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -40,7 +42,7 @@ final class SmtpMailerTest extends TestCase
 
         $this->assertSame(
             [
-                'open smtp.example.com:587',
+                'open localhost:587',
                 'write EHLO mail.example.com',
                 'write AUTH LOGIN',
                 'write dXNlcg==',
@@ -108,7 +110,7 @@ final class SmtpMailerTest extends TestCase
                 ...array_slice(array: SmtpMailerTest::replies(authenticated: false), offset: 2),
             ],
         );
-        $mailer = $this->mailer(transport: $transport, userName: 'user', useTls: true);
+        $mailer = $this->mailer(transport: $transport, userName: 'user', encryption: SmtpEncryptionEnum::STARTTLS);
 
         $this->mail()->send(abstractMailer: $mailer);
 
@@ -134,7 +136,7 @@ final class SmtpMailerTest extends TestCase
             replies: ["220 mx ready\r\n", "250 mx\r\n", "220 go ahead\r\n"],
             tlsSucceeds: false,
         );
-        $mailer = $this->mailer(transport: $transport, userName: 'user', useTls: true);
+        $mailer = $this->mailer(transport: $transport, userName: 'user', encryption: SmtpEncryptionEnum::STARTTLS);
 
         try {
             $this->mail()->send(abstractMailer: $mailer);
@@ -154,7 +156,7 @@ final class SmtpMailerTest extends TestCase
         $transport = new FakeSmtpTransport(
             replies: ["220 mx ready\r\n", "250 mx\r\n", "502 5.5.1 command not implemented\r\n"],
         );
-        $mailer = $this->mailer(transport: $transport, userName: 'user', useTls: true);
+        $mailer = $this->mailer(transport: $transport, userName: 'user', encryption: SmtpEncryptionEnum::STARTTLS);
 
         try {
             $this->mail()->send(abstractMailer: $mailer);
@@ -274,7 +276,7 @@ final class SmtpMailerTest extends TestCase
             smtpUserName: '',
             smtpPassword: '',
             serverNameCache: null,
-            useTls: false,
+            encryption: SmtpEncryptionEnum::NONE,
             transport: $transport,
             mimeIdGenerator: new FixedMimeIdGenerator(),
             serverNameResolver: new FixedServerNameResolver(
@@ -347,6 +349,170 @@ final class SmtpMailerTest extends TestCase
         $this->assertSame([300, 10, 300, 300, 300, 300, 120, 600, 60], $transport->readTimeouts);
     }
 
+    public function testImplicitTlsConnectsEncryptedAndSendsNoStartTls(): void
+    {
+        $transport = new FakeSmtpTransport(
+            replies: [
+                "220 mx ready\r\n",
+                "250-mx\r\n250 AUTH LOGIN\r\n",
+                "334 VXNlcm5hbWU6\r\n",
+                "334 UGFzc3dvcmQ6\r\n",
+                "235 ok\r\n",
+                ...array_slice(array: SmtpMailerTest::replies(authenticated: false), offset: 2),
+            ],
+        );
+        $mailer = $this->mailer(
+            transport: $transport,
+            userName: 'user',
+            encryption: SmtpEncryptionEnum::IMPLICIT_TLS,
+            port: 465,
+        );
+
+        $this->mail()->send(abstractMailer: $mailer);
+
+        $this->assertSame(
+            ['open tls smtp.example.com:465', 'write EHLO mail.example.com', 'write AUTH LOGIN'],
+            array_slice(array: $transport->events, offset: 0, length: 3),
+        );
+        $this->assertNotContains('tls', $transport->events);
+        $this->assertNotContains('write STARTTLS', $transport->events);
+    }
+
+    public function testDefaultsAreStartTlsOnPort587(): void
+    {
+        $transport = new FakeSmtpTransport(replies: ["220 mx ready\r\n", "250 STARTTLS\r\n", "502 no\r\n"]);
+        $mailer = new SmtpMailer(
+            serverAddress: '192.0.2.1',
+            hostName: 'smtp.example.com',
+            smtpUserName: 'user',
+            smtpPassword: SmtpMailerTest::PASSWORD,
+            serverNameCache: null,
+            transport: $transport,
+            mimeIdGenerator: new FixedMimeIdGenerator(),
+            serverNameResolver: new FixedServerNameResolver(),
+        );
+
+        try {
+            $this->mail()->send(abstractMailer: $mailer);
+        } catch (MailerException) {
+            // Only the start of the dialogue is of interest
+        }
+
+        $this->assertSame(
+            ['open smtp.example.com:587', 'write EHLO mail.example.com', 'write STARTTLS'],
+            array_slice(array: $transport->events, offset: 0, length: 3),
+        );
+    }
+
+    public function testImplicitTlsUsesPort465ByDefault(): void
+    {
+        $transport = new FakeSmtpTransport(replies: ["421 bye\r\n"]);
+        $mailer = new SmtpMailer(
+            serverAddress: '192.0.2.1',
+            hostName: 'smtp.example.com',
+            smtpUserName: 'user',
+            smtpPassword: SmtpMailerTest::PASSWORD,
+            serverNameCache: null,
+            encryption: SmtpEncryptionEnum::IMPLICIT_TLS,
+            transport: $transport,
+            mimeIdGenerator: new FixedMimeIdGenerator(),
+            serverNameResolver: new FixedServerNameResolver(),
+        );
+
+        try {
+            $this->mail()->send(abstractMailer: $mailer);
+        } catch (MailerException) {
+            // Only the connection is of interest
+        }
+
+        $this->assertSame('open tls smtp.example.com:465', $transport->events[0] ?? '');
+    }
+
+    public function testAuthenticationWithoutEncryptionIsRefusedForARemoteServer(): void
+    {
+        $this->expectExceptionMessageIs(
+            'The credentials must not be sent without encryption to smtp.example.com: use SmtpEncryptionEnum::STARTTLS'
+            . ' or IMPLICIT_TLS (without encryption only for localhost).',
+        );
+
+        $this->mailer(
+            transport: new FakeSmtpTransport(replies: []),
+            userName: 'user',
+            encryption: SmtpEncryptionEnum::NONE,
+            hostName: 'smtp.example.com',
+        );
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function loopbackHostProvider(): iterable
+    {
+        yield 'localhost' => ['localhost'];
+        yield 'localhost upper case' => ['LOCALHOST'];
+        yield 'IPv4 loopback' => ['127.0.0.1'];
+        yield 'other IPv4 loopback address' => ['127.12.0.5'];
+        yield 'IPv6 loopback' => ['::1'];
+        yield 'IPv6 loopback in brackets' => ['[::1]'];
+        yield 'IPv6 loopback long form' => ['0:0:0:0:0:0:0:1'];
+    }
+
+    #[DataProvider('loopbackHostProvider')]
+    public function testAuthenticationWithoutEncryptionIsAllowedOnLoopback(string $hostName): void
+    {
+        $mailer = $this->mailer(
+            transport: new FakeSmtpTransport(replies: []),
+            userName: 'user',
+            encryption: SmtpEncryptionEnum::NONE,
+            hostName: $hostName,
+        );
+
+        $this->assertSame([], $mailer->log);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function remoteHostProvider(): iterable
+    {
+        yield 'name' => ['smtp.example.com'];
+        yield 'name that starts with localhost' => ['localhost.example.com'];
+        yield 'name that looks like a loopback address' => ['127.0.0.1.example.com'];
+        yield 'public IPv4' => ['192.0.2.1'];
+        yield 'any address' => ['0.0.0.0'];
+        yield 'IPv4 address next to the loopback range' => ['128.0.0.1'];
+        yield 'IPv6 address' => ['2001:db8::1'];
+        yield 'IPv4 mapped IPv6 address of a remote server' => ['::ffff:192.0.2.1'];
+    }
+
+    #[DataProvider('remoteHostProvider')]
+    public function testAuthenticationWithoutEncryptionIsRefusedOnOtherHosts(string $hostName): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->mailer(
+            transport: new FakeSmtpTransport(replies: []),
+            userName: 'user',
+            encryption: SmtpEncryptionEnum::NONE,
+            hostName: $hostName,
+        );
+    }
+
+    public function testDeliveryWithoutAuthenticationNeedsNoEncryption(): void
+    {
+        $transport = new FakeSmtpTransport(replies: SmtpMailerTest::replies(authenticated: false));
+        $mailer = $this->mailer(
+            transport: $transport,
+            userName: '',
+            encryption: SmtpEncryptionEnum::NONE,
+            hostName: 'smtp.example.com',
+        );
+
+        $this->mail()->send(abstractMailer: $mailer);
+
+        $this->assertSame('open smtp.example.com:587', $transport->events[0] ?? '');
+    }
+
     public function testInvalidHostNameIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
@@ -384,16 +550,26 @@ final class SmtpMailerTest extends TestCase
         $this->assertSame(998, $mailer->getMaxLineLength());
     }
 
-    private function mailer(FakeSmtpTransport $transport, string $userName, bool $useTls = false): SmtpMailer
-    {
+    private function mailer(
+        FakeSmtpTransport $transport,
+        string $userName,
+        SmtpEncryptionEnum $encryption = SmtpEncryptionEnum::NONE,
+        ?string $hostName = null,
+        int $port = 587,
+    ): SmtpMailer {
+        // Credentials without encryption are only allowed for the same host
+        $defaultHostName = $userName !== '' && $encryption === SmtpEncryptionEnum::NONE
+            ? 'localhost'
+            : 'smtp.example.com';
+
         return new SmtpMailer(
             serverAddress: '192.0.2.1',
-            hostName: 'smtp.example.com',
+            hostName: $hostName ?? $defaultHostName,
             smtpUserName: $userName,
             smtpPassword: SmtpMailerTest::PASSWORD,
             serverNameCache: null,
-            port: 587,
-            useTls: $useTls,
+            port: $port,
+            encryption: $encryption,
             transport: $transport,
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-10-08 12:00:00 UTC')),
             mimeIdGenerator: new FixedMimeIdGenerator(),

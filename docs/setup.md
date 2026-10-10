@@ -15,7 +15,8 @@ $core->prepareHttpResponse(routeCollection: $routes)->sendAndExit();
 
 `fromEnvironment()` does everything global, once per process: it registers the error handler, reads the environment
 file, sets `error_reporting()` and the time zone, creates the directories and the request from the PHP
-globals. A request without HTTPS gets the redirect to HTTPS as response of `prepareHttpResponse()`. Tests build `Core`
+globals. A request without HTTPS gets the redirect to HTTPS as response of `prepareHttpResponse()`, but only for a
+host of `allowedDomains` (an unknown host gets a 404 without redirect). Tests build `Core`
 without globals (see [testing.md](testing.md)).
 
 ## Environment settings
@@ -29,13 +30,24 @@ key if a setting is missing or has the wrong type:
 | `defaultTimeZone`       | `string`       | PHP time zone, e.g. `Europe/Zurich`                  |
 | `allowedDomains`        | `list<string>` | Host names the application answers to (else 404)     |
 | `logEmailRecipient`     | `string`       | Mail address of new errors, empty for no mails       |
-| `debug`                 | `bool`         | Shows the debug page for errors                      |
+| `debug`                 | `bool`         | Shows the debug page for errors; `false` in production |
 | `robots`                | `string`       | Content of the `robots` meta tag                     |
 | `checkTemplateChanges`  | `bool`         | Optional, default `debug`: compile changed templates |
 
 Own keys of a project (flat, e.g. `'mailer.hostname'`) are read from `$core->environmentSettings` with `getString()`,
 `getInt()`, `getBool()` and `getStringList()` (`has()` tells if a key exists); a missing key or a wrong type throws an
 `UnexpectedValueException`. Pass the values to your own settings class instead of reading them statically.
+
+## Host and client IP address
+
+- The host of a request (`HttpRequest::getHost()`, the `Host` header) is sent by the client and only trustworthy after
+  the domain check against `allowedDomains`. `Core` does it first, before the redirect to HTTPS and before the route is
+  resolved; absolute URLs (redirects, links) use the host of the request, so a site with several domains lists all of
+  them in `allowedDomains`. Do not use `getHost()` for security decisions in code that runs before `Core`.
+- The client IP address (`HttpRequest::getRemoteAddress()`) is `REMOTE_ADDR` only: yuf never reads `X-Forwarded-For`
+  or similar headers, a client could send them. Behind a reverse proxy or load balancer, configure the web server so
+  that `REMOTE_ADDR` is the client address of the trusted proxy (Apache `mod_remoteip` with `RemoteIPHeader` and
+  `RemoteIPInternalProxy`, nginx `ngx_http_realip_module` with `set_real_ip_from` and `real_ip_header`).
 
 ## Production
 
@@ -44,6 +56,9 @@ Own keys of a project (flat, e.g. `'mailer.hostname'`) are read from `$core->env
 - Without `debug`, compiled templates are used without comparing them with the templates (no file checks per render,
   `checkTemplateChanges` follows `debug`). Delete `app/cache/v*/` on every deployment, else changed templates are not
   compiled again; or set `'checkTemplateChanges' => true`.
+- `zend.exception_ignore_args=On` (the default of the `php.ini-production`): the stack traces of exceptions then carry
+  no arguments (passwords, tokens) into the error log and the tickets.
+- `debug` is `false`: the error pages show no details of the exception.
 - Deploy with `composer install --no-dev --optimize-autoloader`: Composer's class map finds every class with one array
   lookup (and still finds classes added later by their PSR-4 path).
 - Optional: `opcache.preload` with a script that loads the classes of yuf and your application.
@@ -57,7 +72,10 @@ Own keys of a project (flat, e.g. `'mailer.hostname'`) are read from `$core->env
 mailed to `logEmailRecipient`). The entry describes the request without secrets: request line without query string,
 host, IP address, user agent, referrer without query string, a fixed list of server variables, query and post
 parameters, uploaded files (name, type, size) and the cookie *names*. Values of parameters whose name contains
-`password`, `token`, `secret`, `csrf`, `key` or `auth` (case-insensitive, at any depth) are replaced by `***`.
+`password`, `token`, `secret`, `csrf`, `key` or `auth` (case-insensitive, at any depth) are replaced by `***`. Control
+characters of logged values and messages (line feed, carriage return, ...) are written as `\n`, `\r` or `\xNN`, so a
+value cannot forge lines of the log. A ticket is one distinct issue: its hash covers the exception class, file, line
+and trace, not the message.
 
 By default, new issues are mailed with PHP's `mail()`. To send them with `SmtpMailer` or `GraphMailer`
 (see [mail.md](mail.md)), pass a `FileLogger` with a mailer and a sender address:

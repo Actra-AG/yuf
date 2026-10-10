@@ -15,8 +15,9 @@ use SensitiveParameter;
 
 /**
  * The spam rules of a public form, without the form: a rejected e-mail address, a filled honeypot and the time between
- * rendering and submitting. The render time is signed (HMAC-SHA256 with the secret and the form name), so it cannot be
- * forged or taken from another form; a missing, unsigned or manipulated value counts as expired.
+ * rendering and submitting. The render time is signed (HMAC-SHA256 with the secret, the form name and a value that is
+ * bound to the session of the user), so it cannot be forged, taken from another form or used in another session; a
+ * missing, unsigned or manipulated value counts as expired.
  */
 final readonly class SpamCheck
 {
@@ -61,23 +62,32 @@ final readonly class SpamCheck
 
     /**
      * The current time with its signature (`<timestamp>.<signature>`), the value of the hidden field.
+     *
+     * @param ?string $sessionBinding A value that is secret and specific to the session of the user (the CSRF token);
+     *                                `null` only without session
      */
-    public function signRenderTime(string $formName): string
+    public function signRenderTime(string $formName, ?string $sessionBinding): string
     {
         $timestamp = (string) $this->clock->now()->getTimestamp();
 
-        return $timestamp . '.' . $this->createSignature(formName: $formName, timestamp: $timestamp);
+        return $timestamp . '.' . $this->createSignature(
+            formName: $formName,
+            timestamp: $timestamp,
+            sessionBinding: $sessionBinding,
+        );
     }
 
     /**
      * @param string $signedRenderTime The posted value of `signRenderTime()`
      * @param ?string $emailAddress The posted e-mail address; `null` if the form has none
+     * @param ?string $sessionBinding The value of `signRenderTime()`'s argument of the current session
      */
     public function check(
         string $formName,
         string $honeypot,
         string $signedRenderTime,
         ?string $emailAddress,
+        ?string $sessionBinding,
     ): SpamCheckResultEnum {
         if (
             $emailAddress !== null
@@ -92,7 +102,11 @@ final readonly class SpamCheck
         if ($honeypot !== '') {
             return SpamCheckResultEnum::HONEYPOT_FILLED;
         }
-        $renderedAt = $this->parseRenderTime(formName: $formName, signedRenderTime: $signedRenderTime);
+        $renderedAt = $this->parseRenderTime(
+            formName: $formName,
+            signedRenderTime: $signedRenderTime,
+            sessionBinding: $sessionBinding,
+        );
         if ($renderedAt === null) {
             return SpamCheckResultEnum::EXPIRED;
         }
@@ -109,10 +123,15 @@ final readonly class SpamCheck
      * rendered again after field errors keeps such a render time, so the minimum time does not start again.
      *
      * @param string $signedRenderTime The posted value of `signRenderTime()`
+     * @param ?string $sessionBinding The binding value of the current session
      */
-    public function isValidRenderTime(string $formName, string $signedRenderTime): bool
+    public function isValidRenderTime(string $formName, string $signedRenderTime, ?string $sessionBinding): bool
     {
-        $renderedAt = $this->parseRenderTime(formName: $formName, signedRenderTime: $signedRenderTime);
+        $renderedAt = $this->parseRenderTime(
+            formName: $formName,
+            signedRenderTime: $signedRenderTime,
+            sessionBinding: $sessionBinding,
+        );
 
         return $renderedAt !== null && $this->clock->now()->getTimestamp() - $renderedAt <= $this->maxSeconds;
     }
@@ -120,7 +139,7 @@ final readonly class SpamCheck
     /**
      * @return ?int The timestamp of a validly signed render time; `null` if it is missing, unsigned or manipulated
      */
-    private function parseRenderTime(string $formName, string $signedRenderTime): ?int
+    private function parseRenderTime(string $formName, string $signedRenderTime, ?string $sessionBinding): ?int
     {
         // At most 12 digits, so the timestamp fits into an int
         if (
@@ -128,16 +147,21 @@ final readonly class SpamCheck
         ) {
             return null;
         }
-        $signature = $this->createSignature(formName: $formName, timestamp: $matches[1]);
+        $signature = $this->createSignature(
+            formName: $formName,
+            timestamp: $matches[1],
+            sessionBinding: $sessionBinding,
+        );
 
         return hash_equals(known_string: $signature, user_string: $matches[2]) ? (int) $matches[1] : null;
     }
 
-    private function createSignature(string $formName, string $timestamp): string
+    private function createSignature(string $formName, string $timestamp, ?string $sessionBinding): string
     {
+        // JSON keeps the parts apart, so no value can shift into another one
         return hash_hmac(
             algo: SpamCheck::HASH_ALGORITHM,
-            data: $formName . '|' . $timestamp,
+            data: json_encode(value: [$formName, $timestamp, $sessionBinding], flags: JSON_THROW_ON_ERROR),
             key: $this->secret,
         );
     }

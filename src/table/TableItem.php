@@ -81,7 +81,7 @@ final readonly class TableItem
 
         if ($renderNewLines) {
             return nl2br(
-                string: HtmlEncoder::encodeKeepQuotes(
+                string: HtmlEncoder::encode(
                     value: str_replace(
                         search: '<br>',
                         replace: PHP_EOL,
@@ -91,6 +91,6 @@ final readonly class TableItem
             );
         }
 
-        return HtmlEncoder::encodeKeepQuotes(value: $value);
+        return HtmlEncoder::encode(value: $value);
     }
 }

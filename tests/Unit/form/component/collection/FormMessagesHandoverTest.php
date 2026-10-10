@@ -34,7 +34,7 @@ final class FormMessagesHandoverTest extends TestCase
 
     public function testFormWithoutMessagesGivesEnglishDefaults(): void
     {
-        $form = new Form(context: FormContextFactory::create(), name: 'handoverDefaultForm');
+        $form = new Form(context: FormContextFactory::create(), name: 'handoverDefaultForm', csrfProtection: false);
         $field = $this->createField();
 
         $form->addField(formField: $field);
@@ -48,6 +48,7 @@ final class FormMessagesHandoverTest extends TestCase
             context: FormContextFactory::create(),
             name: 'handoverGermanForm',
             messages: FormMessages::german(),
+            csrfProtection: false,
         );
         $field = $this->createField();
 
@@ -66,6 +67,7 @@ final class FormMessagesHandoverTest extends TestCase
             context: FormContextFactory::create(),
             name: 'handoverCustomForm',
             messages: new FormMessages(invalidInput: 'Nope.'),
+            csrfProtection: false,
         );
         $field = $this->createField();
 

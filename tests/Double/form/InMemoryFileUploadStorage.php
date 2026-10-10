@@ -33,11 +33,24 @@ final class InMemoryFileUploadStorage implements FileUploadStorage
     private int $expiredRemovalCount = 0;
     private int $counter = 0;
     private bool $failStoring = false;
+    /** @var array<string, true> */
+    private array $issuedPointers = [];
 
     /**
-     * Puts files into the storage as if an earlier request had uploaded them.
+     * Puts files into the storage as if an earlier request had uploaded them (the pointer counts as issued).
      */
     public function preload(string $pointer, UploadedFile ...$files): void
+    {
+        $this->issuedPointers[$pointer] = true;
+        foreach ($files as $file) {
+            $this->filesByPointer[$pointer][$file->getHash()] = $file;
+        }
+    }
+
+    /**
+     * Puts files into the storage for a pointer that was not issued to the user (a pointer of another session).
+     */
+    public function preloadWithoutIssuing(string $pointer, UploadedFile ...$files): void
     {
         foreach ($files as $file) {
             $this->filesByPointer[$pointer][$file->getHash()] = $file;
@@ -55,6 +68,18 @@ final class InMemoryFileUploadStorage implements FileUploadStorage
     public function failStoring(): void
     {
         $this->failStoring = true;
+    }
+
+    #[Override]
+    public function issue(string $pointer): void
+    {
+        $this->issuedPointers[$pointer] = true;
+    }
+
+    #[Override]
+    public function isIssued(string $pointer): bool
+    {
+        return array_key_exists(key: $pointer, array: $this->issuedPointers);
     }
 
     #[Override]

@@ -128,6 +128,7 @@ final class RadioOptionsFieldValueTest extends TestCase
             context: FormContextFactory::create(),
             name: 'radioGermanForm',
             messages: FormMessages::german(),
+            csrfProtection: false,
         );
         $field = $this->createField();
         $form->addField(formField: $field);
@@ -160,6 +161,7 @@ final class RadioOptionsFieldValueTest extends TestCase
             context: FormContextFactory::create(),
             name: 'radioCustomForm',
             messages: new FormMessages(invalidOption: 'Bad option in [field]!'),
+            csrfProtection: false,
         );
         $field = $this->createField();
         $form->addField(formField: $field);

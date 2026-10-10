@@ -75,11 +75,15 @@ final readonly class FileHandler
     }
 
     /**
-     * Sends the file and ends the script.
+     * Sends the file and ends the script. A file that a browser would run as part of the site (HTML, XML, SVG,
+     * JavaScript) is always a download.
+     *
+     * @param ?bool $forceDownload `null`: the content type decides (e.g. CSV is a download, PNG is shown); `true`:
+     *                             always a download; `false`: shown (except the files above)
      */
     public function output(
         HttpRequest $httpRequest,
-        bool $forceDownload = false,
+        ?bool $forceDownload = null,
         ResponseSender $responseSender = new NativeResponseSender(),
     ): never {
         HttpResponse::createResponseFromFilePath(

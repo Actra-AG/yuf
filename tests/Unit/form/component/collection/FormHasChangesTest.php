@@ -47,6 +47,7 @@ final class FormHasChangesTest extends TestCase
                 csrfTokenSource: $withCsrf ? new InMemoryCsrfTokenSource(token: 'tok') : null,
             ),
             name: 'contact',
+            csrfProtection: $withCsrf,
         );
         $form->addField(formField: $this->name);
         $form->addField(formField: $this->agree);
@@ -61,7 +62,7 @@ final class FormHasChangesTest extends TestCase
 
     public function testFormWithoutFieldsHasNoChanges(): void
     {
-        $form = new Form(context: FormContextFactory::create(), name: 'empty');
+        $form = new Form(context: FormContextFactory::create(), name: 'empty', csrfProtection: false);
 
         $this->assertFalse($form->hasChanges());
     }

@@ -10,13 +10,15 @@ declare(strict_types=1);
 namespace actra\yuf\table\column;
 
 use actra\yuf\common\StringUtils;
+use actra\yuf\html\HtmlText;
 use actra\yuf\table\TableItem;
 
 /**
  * Extension point: a column type of a project extends this class and renders the content of one cell (HTML, so it must
  * encode values: `TableItem::renderValue()` does).
  *
- * `$label` is HTML as it is output in the table head (a text of the application, never user input).
+ * `$label` is the text of the table head: `HtmlText::fromText()` encodes it, `HtmlText::fromHtml()` is HTML of the
+ * application (never user input).
  */
 abstract class AbstractTableColumn
 {
@@ -29,7 +31,7 @@ abstract class AbstractTableColumn
 
     public function __construct(
         public readonly string $identifier,
-        public readonly string $label,
+        public readonly HtmlText $label,
         public readonly bool $isSortable = false,
         public readonly bool $sortAscendingByDefault = true,
         public readonly string $sortableColumnClass = 'sort',

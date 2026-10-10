@@ -390,7 +390,7 @@ final class SpecialFieldRenderersTest extends TestCase
             . ' nicht übermittelt werden. Bitte versuchen Sie es erneut.</strong></p>'
             . '<input type="hidden" name="csrftoken" value="tok+en/1=">'
             . '<dl><dt><label for="phone">Phone<span class="required">*</span></label></dt><dd>'
-            . '<input type="tel" name="phone" id="phone" value="+41 44 668 18 00"></dd></dl></form>',
+            . '<input type="tel" name="phone" id="phone" value=""></dd></dl></form>',
             $form->render(),
         );
     }

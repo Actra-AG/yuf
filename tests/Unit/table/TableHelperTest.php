@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\table;
 
+use actra\yuf\html\HtmlText;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\table\renderer\TableHeadRenderer;
@@ -24,7 +25,10 @@ final class TableHelperTest extends TestCase
     public function testCreateTableRendersWithTheGivenHeadRenderer(): void
     {
         $table = TableHelper::createTable(identifier: 'items', tableHeadRenderer: new TableHeadRenderer());
-        $table->addColumn(abstractTableColumn: TableHelper::createDefaultColumn(identifier: 'a', label: 'A'));
+        $table->addColumn(abstractTableColumn: TableHelper::createDefaultColumn(
+            identifier: 'a',
+            label: HtmlText::fromHtml(html: 'A'),
+        ));
         $table->addDataItem(tableItem: new TableItem(dataObject: (object) ['a' => 'x']));
 
         $this->assertSame('items', $table->identifier);
@@ -34,7 +38,10 @@ final class TableHelperTest extends TestCase
     public function testCreateTableWithoutHeadRendererUsesThePlainHead(): void
     {
         $table = TableHelper::createTable(identifier: 'items');
-        $table->addColumn(abstractTableColumn: TableHelper::createDefaultColumn(identifier: 'a', label: 'A'));
+        $table->addColumn(abstractTableColumn: TableHelper::createDefaultColumn(
+            identifier: 'a',
+            label: HtmlText::fromHtml(html: 'A'),
+        ));
         $table->addDataItem(tableItem: new TableItem(dataObject: (object) ['a' => 'x']));
 
         $this->assertStringContainsString('<thead><tr>' . "\n" . '<th scope="col">A</th>', $table->render());
@@ -44,28 +51,28 @@ final class TableHelperTest extends TestCase
     {
         $default = TableHelper::createDefaultColumn(
             identifier: 'a',
-            label: 'A',
+            label: HtmlText::fromHtml(html: 'A'),
             isSortable: true,
             sortAscendingByDefault: false,
         );
-        $date = TableHelper::createDateColumn(identifier: 'b', label: 'B', isSortable: true);
-        $actions = TableHelper::createActionsColumn(identifier: 'actions', label: 'Actions');
+        $date = TableHelper::createDateColumn(identifier: 'b', label: HtmlText::fromHtml(html: 'B'), isSortable: true);
+        $actions = TableHelper::createActionsColumn(identifier: 'actions', label: HtmlText::fromHtml(html: 'Actions'));
         $options = TableHelper::createOptionsColumn(
             identifier: 'c',
-            label: 'C',
+            label: HtmlText::fromHtml(html: 'C'),
             options: ['x' => 'Xx'],
             isSortable: true,
             sortAscendingByDefault: false,
         );
         $callback = TableHelper::createCallbackColumn(
             identifier: 'd',
-            label: 'D',
+            label: HtmlText::fromHtml(html: 'D'),
             callbackFunction: static fn(TableItem $tableItem): string => 'cb',
         );
 
         $this->assertSame(
             ['a', 'A', true, false],
-            [$default->identifier, $default->label, $default->isSortable, $default->sortAscendingByDefault],
+            [$default->identifier, $default->label->render(), $default->isSortable, $default->sortAscendingByDefault],
         );
         $this->assertSame(['b', true, true], [$date->identifier, $date->isSortable, $date->sortAscendingByDefault]);
         $this->assertSame(['actions', false], [$actions->identifier, $actions->isSortable]);
@@ -88,7 +95,10 @@ final class TableHelperTest extends TestCase
             session: new Session(storage: new ArraySessionStorage()),
             params: [1],
         );
-        $table->addColumn(abstractTableColumn: TableHelper::createDefaultColumn(identifier: 'name', label: 'Name'));
+        $table->addColumn(abstractTableColumn: TableHelper::createDefaultColumn(
+            identifier: 'name',
+            label: HtmlText::fromHtml(html: 'Name'),
+        ));
 
         $this->assertSame(2, $table->getTotalAmount());
         $this->assertSame(

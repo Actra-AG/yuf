@@ -50,7 +50,10 @@ final class SortableTableHeadRenderer extends TableHeadRenderer
     {
         $columnCssClasses = $abstractTableColumn->columnCssClasses;
         if (!$abstractTableColumn->isSortable || !($smartTable instanceof DbResultTable)) {
-            return $this->renderHeadCell(columnCssClasses: $columnCssClasses, contentHtml: $abstractTableColumn->label);
+            return $this->renderHeadCell(
+                columnCssClasses: $columnCssClasses,
+                contentHtml: $abstractTableColumn->label->render(),
+            );
         }
 
         $isActiveSortColumn = $smartTable->getCurrentSortColumn() === $abstractTableColumn->identifier;
@@ -90,7 +93,7 @@ final class SortableTableHeadRenderer extends TableHeadRenderer
         return $this->renderHeadCell(
             columnCssClasses: $columnCssClasses,
             contentHtml: '<' . implode(separator: ' ', array: $sortLinkAttributes) . '>'
-            . $abstractTableColumn->label . $labelAddition . '</a>',
+            . $abstractTableColumn->label->render() . $labelAddition . '</a>',
         );
     }
 }

@@ -21,6 +21,7 @@ use actra\yuf\tests\Double\session\NonStartingSessionHandler;
 use DateTimeImmutable;
 use LogicException;
 use Override;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -172,7 +173,10 @@ final class HttpResponseTest extends TestCase
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $httpResponse->httpStatusCode);
         $this->assertSame('text/csv; charset=utf-8', $httpResponse->getHeader(key: 'Content-Type'));
-        $this->assertSame('attachment; filename="export.csv"', $httpResponse->getHeader(key: 'Content-Disposition'));
+        $this->assertSame(
+            'attachment; filename="export.csv"; filename*=UTF-8\'\'export.csv',
+            $httpResponse->getHeader(key: 'Content-Disposition'),
+        );
         $this->assertSame('File Transfer', $httpResponse->getHeader(key: 'Content-Description'));
         $this->assertSame('4', $httpResponse->getHeader(key: 'Content-Length'));
         $this->assertSame('Tue, 14 Nov 2023 22:13:20 GMT', $httpResponse->getHeader(key: 'Last-Modified'));
@@ -216,6 +220,85 @@ final class HttpResponseTest extends TestCase
             gmdate(format: 'D, d M Y H:i:s', timestamp: HttpResponseTest::NOW) . ' GMT',
             $httpResponse->getHeader(key: 'Expires'),
         );
+    }
+
+    private function createFileResponse(string $fileName, ?bool $forceDownload = false): HttpResponse
+    {
+        return HttpResponse::createResponseFromFilePath(
+            absolutePathToFile: $this->file,
+            forceDownload: $forceDownload,
+            individualFileName: $fileName,
+            maxAge: 0,
+            httpRequest: HttpRequestFactory::create(),
+        );
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function activeContentFileNameProvider(): iterable
+    {
+        foreach (['html', 'htm', 'xhtml', 'shtml', 'xml', 'svg', 'js', 'HTML', 'Svg'] as $extension) {
+            yield $extension => ['file.' . $extension];
+        }
+    }
+
+    #[DataProvider('activeContentFileNameProvider')]
+    public function testFileThatABrowserCouldRunIsAlwaysADownload(string $fileName): void
+    {
+        foreach ([false, null] as $forceDownload) {
+            $httpResponse = $this->createFileResponse(fileName: $fileName, forceDownload: $forceDownload);
+
+            $this->assertStringStartsWith(
+                'attachment; filename="' . $fileName . '"',
+                (string) $httpResponse->getHeader(key: 'Content-Disposition'),
+            );
+        }
+    }
+
+    public function testHarmlessFileStaysInlineIfNoDownloadIsForced(): void
+    {
+        $this->assertNull($this->createFileResponse(fileName: 'photo.png')->getHeader(key: 'Content-Disposition'));
+        $this->assertNull($this->createFileResponse(fileName: 'note.pdf')->getHeader(key: 'Content-Disposition'));
+    }
+
+    public function testFileResponseHasAContentSecurityPolicyThatForbidsEverything(): void
+    {
+        $this->assertSame(
+            "default-src 'none'; sandbox",
+            $this->createFileResponse(fileName: 'photo.png')->getHeader(key: 'Content-Security-Policy'),
+        );
+        $this->assertSame(
+            "default-src 'none'; sandbox",
+            $this->createFileResponse(fileName: 'x.html')->getHeader(key: 'Content-Security-Policy'),
+        );
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function dispositionProvider(): iterable
+    {
+        yield 'quote and backslash' => [
+            'a"b\\c.txt',
+            'attachment; filename="a\\"b\\\\c.txt"; filename*=UTF-8\'\'a%22b%5Cc.txt',
+        ];
+        yield 'control characters' => [
+            "a\r\nSet-Cookie: x\x00.txt",
+            'attachment; filename="aSet-Cookie: x.txt"; filename*=UTF-8\'\'aSet-Cookie%3A%20x.txt',
+        ];
+        yield 'non-ASCII' => [
+            'Übersicht €.txt',
+            'attachment; filename="_bersicht _.txt"; filename*=UTF-8\'\'%C3%9Cbersicht%20%E2%82%AC.txt',
+        ];
+    }
+
+    #[DataProvider('dispositionProvider')]
+    public function testContentDispositionOfAFileNameIsEscaped(string $fileName, string $expected): void
+    {
+        $httpResponse = $this->createFileResponse(fileName: $fileName, forceDownload: true);
+
+        $this->assertSame($expected, $httpResponse->getHeader(key: 'Content-Disposition'));
     }
 
     public function testFileResponseIsNotModifiedForTheSameModificationTime(): void

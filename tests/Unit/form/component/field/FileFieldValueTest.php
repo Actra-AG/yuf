@@ -486,11 +486,38 @@ final class FileFieldValueTest extends TestCase
 
     public function testPointerWithSurroundingWhitespaceIsTrimmed(): void
     {
+        $this->storage->issue(pointer: 'abc_1');
         $field = $this->createField();
 
         $field->validate(input: $this->request(['file_UID' => ' abc_1 ']));
 
         $this->assertSame('abc_1', $field->uniqueSessFileStorePointer);
+    }
+
+    public function testPointerThatWasNotIssuedToTheUserIsIgnored(): void
+    {
+        $foreignFile = $this->storedFile(name: 'secret.txt', path: '/stored/foreign');
+        $this->storage->preloadWithoutIssuing(pointer: 'foreign_1', files: $foreignFile);
+        $field = $this->createField();
+        $ownPointer = $field->uniqueSessFileStorePointer;
+
+        $field->validate(input: $this->request(['file_UID' => 'foreign_1']));
+        $field->clearData();
+
+        $this->assertSame($ownPointer, $field->uniqueSessFileStorePointer);
+        $this->assertSame([], $field->getFiles());
+        $this->assertSame([$ownPointer], $this->storage->getClearedPointers());
+        $this->assertSame(
+            [$foreignFile->getHash() => $foreignFile],
+            $this->storage->getSavedFiles(pointer: 'foreign_1'),
+        );
+    }
+
+    public function testPointerOfTheFieldIsIssuedToTheUser(): void
+    {
+        $field = $this->createField();
+
+        $this->assertTrue($this->storage->isIssued(pointer: $field->uniqueSessFileStorePointer));
     }
 
     public function testPointerOfAnArrayIsIgnored(): void

@@ -83,13 +83,24 @@ final class DbResultTableRenderTest extends TestCase
             itemsPerPage: $itemsPerPage,
         );
         $table->addColumn(
-            abstractTableColumn: TableHelper::createDefaultColumn(identifier: 'id', label: 'Id', isSortable: true),
+            abstractTableColumn: TableHelper::createDefaultColumn(
+                identifier: 'id',
+                label: HtmlText::fromHtml(html: 'Id'),
+                isSortable: true,
+            ),
             isDefaultSortColumn: true,
         );
         $table->addColumn(
-            abstractTableColumn: TableHelper::createDefaultColumn(identifier: 'name', label: 'Name', isSortable: true),
+            abstractTableColumn: TableHelper::createDefaultColumn(
+                identifier: 'name',
+                label: HtmlText::fromHtml(html: 'Name'),
+                isSortable: true,
+            ),
         );
-        $table->addColumn(abstractTableColumn: TableHelper::createDefaultColumn(identifier: 'age', label: 'Age'));
+        $table->addColumn(abstractTableColumn: TableHelper::createDefaultColumn(
+            identifier: 'age',
+            label: HtmlText::fromHtml(html: 'Age'),
+        ));
 
         return $table;
     }
@@ -336,12 +347,32 @@ final class DbResultTableRenderTest extends TestCase
             session: $this->session,
             messages: $messages,
         );
-        $fullTable->addColumn(abstractTableColumn: TableHelper::createDefaultColumn(identifier: 'id', label: 'Id'));
+        $fullTable->addColumn(abstractTableColumn: TableHelper::createDefaultColumn(
+            identifier: 'id',
+            label: HtmlText::fromHtml(html: 'Id'),
+        ));
 
         $this->assertSame('<p class="no-entry">Nothing found.</p>', $emptyTable->render());
         $this->assertStringContainsString(
             '<p class="search-result"><strong>3</strong> results</p>',
             $fullTable->render(),
+        );
+    }
+
+    public function testSortableLabelAsTextIsEncodedOnceInTheSortLink(): void
+    {
+        $table = $this->createTable(sql: "SELECT id, name, age, 'x' AS city FROM users");
+        $table->addColumn(
+            abstractTableColumn: TableHelper::createDefaultColumn(
+                identifier: 'city',
+                label: HtmlText::fromText(text: 'A & <b>"B"</b>'),
+                isSortable: true,
+            ),
+        );
+
+        $this->assertStringContainsString(
+            '<a href="?sort=users|city|ASC">A &amp; &lt;b&gt;&quot;B&quot;&lt;/b&gt;</a>',
+            $table->render(),
         );
     }
 
@@ -368,7 +399,7 @@ final class DbResultTableRenderTest extends TestCase
         $table->addColumn(
             abstractTableColumn: new DefaultColumn(
                 identifier: 'extra',
-                label: 'Extra',
+                label: HtmlText::fromHtml(html: 'Extra'),
                 isSortable: true,
                 sortAscendingByDefault: false,
             ),
@@ -477,7 +508,11 @@ final class DbResultTableRenderTest extends TestCase
             itemsPerPage: 2,
         );
         $table->addColumn(
-            abstractTableColumn: TableHelper::createDefaultColumn(identifier: 'name', label: 'Name', isSortable: true),
+            abstractTableColumn: TableHelper::createDefaultColumn(
+                identifier: 'name',
+                label: HtmlText::fromHtml(html: 'Name'),
+                isSortable: true,
+            ),
         );
 
         $this->assertStringContainsString('<a href="?sort=a+b%22c|name|DESC">Name</a>', $table->render());

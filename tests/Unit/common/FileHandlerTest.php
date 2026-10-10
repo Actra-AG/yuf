@@ -209,4 +209,36 @@ final class FileHandlerTest extends TestCase
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $sentResponse->httpStatusCode);
     }
+
+    /**
+     * @return iterable<string, array{string, ?bool, bool}>
+     */
+    public static function contentTypeDecidesProvider(): iterable
+    {
+        yield 'csv is a download by default' => ['export.csv', null, true];
+        yield 'png is shown by default' => ['image.png', null, false];
+        yield 'png can be forced to download' => ['image.png', true, true];
+        yield 'csv can be shown' => ['export.csv', false, false];
+    }
+
+    #[DataProvider('contentTypeDecidesProvider')]
+    public function testOutputLetsTheContentTypeDecideWithoutForceDownload(
+        string $name,
+        ?bool $forceDownload,
+        bool $isDownload,
+    ): void {
+        $path = $this->createFile(name: $name, content: 'x');
+
+        $sentResponse = RecordingResponseSender::capture(
+            action: static fn(ResponseSender $sender) => $forceDownload === null
+                ? new FileHandler(path: $path)->output(httpRequest: HttpRequestFactory::create(), responseSender: $sender)
+                : new FileHandler(path: $path)->output(
+                    httpRequest: HttpRequestFactory::create(),
+                    forceDownload: $forceDownload,
+                    responseSender: $sender,
+                ),
+        );
+
+        $this->assertSame($isDownload, $sentResponse->getHeader(key: 'Content-Disposition') !== null);
+    }
 }

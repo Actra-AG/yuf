@@ -79,6 +79,44 @@ final class FileLoggerTest extends TestCase
         $this->assertTrue($this->logTwice(secondsAfterFirstModification: 86401)->lastIssueIsNew());
     }
 
+    public function testTheTicketOfAnExceptionDoesNotDependOnItsMessage(): void
+    {
+        $logger = new FileLogger(
+            logEmailRecipient: '',
+            logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(),
+            mailer: null,
+        );
+        foreach (['first message', 'second message'] as $message) {
+            $logger->logException(throwable: new RuntimeException(message: $message)); // same file, line and trace
+        }
+
+        $tickets = glob(pattern: $this->logDirectory . 'ticket_*.txt');
+        $this->assertCount(1, $tickets === false ? [] : $tickets);
+    }
+
+    public function testTheMessageCannotForgeLinesOfTheTicketFile(): void
+    {
+        $logger = new FileLogger(
+            logEmailRecipient: '',
+            logDirectory: $this->logDirectory,
+            httpRequest: HttpRequestFactory::create(),
+            mailer: null,
+        );
+
+        $logger->logException(throwable: new RuntimeException(message: "ok\nforged: line\r"));
+        $logger->logMessage(message: "second\nforged: message");
+
+        $tickets = glob(pattern: $this->logDirectory . 'ticket_*.txt');
+        $content = '';
+        foreach ($tickets === false ? [] : $tickets as $ticket) {
+            $content .= file_get_contents(filename: $ticket);
+        }
+        $this->assertStringContainsString('"ok\\nforged: line\\r"', $content);
+        $this->assertStringContainsString('second\\nforged: message', $content);
+        $this->assertStringNotContainsString("\nforged:", $content);
+    }
+
     public function testUnknownIssueIsNew(): void
     {
         $logger = new FileLogger(

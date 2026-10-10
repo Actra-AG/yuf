@@ -24,8 +24,7 @@ final class FormFieldAccessTest extends TestCase
 {
     private function createForm(): Form
     {
-        $form = new Form(context: FormContextFactory::create(), name: 'access');
-        $form->removeCsrfProtection();
+        $form = new Form(context: FormContextFactory::create(), name: 'access', csrfProtection: false);
         $form->addField(formField: new TextField(name: 'name', label: HtmlText::fromText(text: 'Name')));
         $form->addComponent(
             formComponent: new FormControl(name: 'send', submitLabel: HtmlText::fromText(text: 'Send')),

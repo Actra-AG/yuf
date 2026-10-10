@@ -56,11 +56,28 @@ final class LocaleHandler
     /**
      * Loads the texts of a language file (`$txt['key'] = 'text';`) once; an empty file is ignored.
      *
-     * @throws RuntimeException if the file size cannot be read
+     * @param string $languageDirectory The file is PHP code that gets executed: it must lie inside of this directory
+     *                                  (symbolic links are resolved), otherwise it is not loaded
+     *
+     * @throws RuntimeException if the file is not inside of the directory or its size cannot be read
      * @throws UnexpectedValueException if the file defines a text that is not a string
      */
-    public function loadLanguageFile(string $filePath): void
+    public function loadLanguageFile(string $filePath, string $languageDirectory): void
     {
+        $realFilePath = realpath(path: $filePath);
+        $realDirectory = realpath(path: $languageDirectory);
+        if (
+            $realFilePath === false
+            || $realDirectory === false
+            || !str_starts_with(
+                haystack: $realFilePath,
+                needle: rtrim(string: $realDirectory, characters: DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR,
+            )
+        ) {
+            throw new RuntimeException(
+                message: 'The language file ' . $filePath . ' is not inside of the directory ' . $languageDirectory,
+            );
+        }
         if (in_array(
             needle: $filePath,
             haystack: $this->loadedLangFiles,

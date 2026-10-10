@@ -15,6 +15,7 @@ use actra\yuf\core\LocaleHandler;
 use LogicException;
 use OutOfBoundsException;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use UnexpectedValueException;
 
 /**
@@ -23,6 +24,7 @@ use UnexpectedValueException;
 final class LocaleHandlerTest extends TestCase
 {
     private const string TEXT_FILE = __DIR__ . '/../../Fixture/localeTexts.lang.php';
+    private const string DIRECTORY = __DIR__ . '/../../Fixture/';
     private const string EMPTY_FILE = __DIR__ . '/../../Fixture/localeEmpty.lang.php';
 
     private function createHandler(): LocaleHandler
@@ -71,7 +73,10 @@ final class LocaleHandlerTest extends TestCase
     {
         $handler = $this->createHandler();
 
-        $handler->loadLanguageFile(filePath: LocaleHandlerTest::TEXT_FILE);
+        $handler->loadLanguageFile(
+            filePath: LocaleHandlerTest::TEXT_FILE,
+            languageDirectory: LocaleHandlerTest::DIRECTORY,
+        );
 
         $this->assertSame('Plain text', $handler->getText(key: 'plain'));
         $this->assertSame([LocaleHandlerTest::TEXT_FILE], $handler->loadedLangFiles);
@@ -81,7 +86,10 @@ final class LocaleHandlerTest extends TestCase
     {
         $handler = $this->createHandler();
 
-        $handler->loadLanguageFile(filePath: LocaleHandlerTest::EMPTY_FILE);
+        $handler->loadLanguageFile(
+            filePath: LocaleHandlerTest::EMPTY_FILE,
+            languageDirectory: LocaleHandlerTest::DIRECTORY,
+        );
 
         $this->assertSame([], $handler->loadedLangFiles);
         $this->assertSame([], $handler->getAllText());
@@ -91,16 +99,37 @@ final class LocaleHandlerTest extends TestCase
     {
         $handler = $this->createHandler();
 
-        $handler->loadLanguageFile(filePath: LocaleHandlerTest::TEXT_FILE);
-        $handler->loadLanguageFile(filePath: LocaleHandlerTest::TEXT_FILE);
+        $handler->loadLanguageFile(
+            filePath: LocaleHandlerTest::TEXT_FILE,
+            languageDirectory: LocaleHandlerTest::DIRECTORY,
+        );
+        $handler->loadLanguageFile(
+            filePath: LocaleHandlerTest::TEXT_FILE,
+            languageDirectory: LocaleHandlerTest::DIRECTORY,
+        );
 
         $this->assertSame([LocaleHandlerTest::TEXT_FILE], $handler->loadedLangFiles);
+    }
+
+    public function testLoadLanguageFileRejectsAFileOutsideOfTheDirectory(): void
+    {
+        $handler = $this->createHandler();
+
+        $this->expectException(RuntimeException::class);
+
+        $handler->loadLanguageFile(
+            filePath: LocaleHandlerTest::DIRECTORY . 'template/../localeTexts.lang.php',
+            languageDirectory: LocaleHandlerTest::DIRECTORY . 'template',
+        );
     }
 
     public function testGetTextReplacesPlaceholdersCaseInsensitive(): void
     {
         $handler = $this->createHandler();
-        $handler->loadLanguageFile(filePath: LocaleHandlerTest::TEXT_FILE);
+        $handler->loadLanguageFile(
+            filePath: LocaleHandlerTest::TEXT_FILE,
+            languageDirectory: LocaleHandlerTest::DIRECTORY,
+        );
 
         $text = $handler->getText(key: 'greeting', replacements: ['name' => 'Anna', 'PLACE' => 'yuf']);
 
@@ -126,7 +155,7 @@ final class LocaleHandlerTest extends TestCase
             $this->expectExceptionMessageIs(
                 'The text "count" of the language file ' . $file . ' must be a string, int given.',
             );
-            $this->createHandler()->loadLanguageFile(filePath: $file);
+            $this->createHandler()->loadLanguageFile(filePath: $file, languageDirectory: sys_get_temp_dir());
         } finally {
             unlink(filename: $file);
         }
@@ -135,7 +164,10 @@ final class LocaleHandlerTest extends TestCase
     public function testGetAllTextReturnsAllLoadedTexts(): void
     {
         $handler = $this->createHandler();
-        $handler->loadLanguageFile(filePath: LocaleHandlerTest::TEXT_FILE);
+        $handler->loadLanguageFile(
+            filePath: LocaleHandlerTest::TEXT_FILE,
+            languageDirectory: LocaleHandlerTest::DIRECTORY,
+        );
 
         $this->assertSame(
             ['greeting' => 'Hello [NAME], welcome to [place]', 'plain' => 'Plain text'],

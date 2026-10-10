@@ -115,11 +115,12 @@ final class PhoneNumberField extends SettableStringInputField
         if ($this->hasErrors(withChildElements: true) || $phoneNumber === null) {
             return HtmlEncoder::encode(value: $text);
         }
-        if ($this->renderInternalFormat) {
-            return PhoneRenderer::renderInternalFormat(phoneNumber: $phoneNumber);
-        }
-
-        return PhoneRenderer::renderInternationalFormat(phoneNumber: $phoneNumber);
+        // The formats contain data of the phone number metadata (separators, extension prefix): encode them like text
+        return HtmlEncoder::encode(
+            value: $this->renderInternalFormat
+                ? PhoneRenderer::renderInternalFormat(phoneNumber: $phoneNumber)
+                : PhoneRenderer::renderInternationalFormat(phoneNumber: $phoneNumber),
+        );
     }
 
     private function isNumberTypeAllowed(PhoneNumber $phoneNumber): bool

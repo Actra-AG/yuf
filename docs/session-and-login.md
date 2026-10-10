@@ -36,7 +36,8 @@ $cart = $session->getStruct(key: 'cart', map: Cart::fromSessionArray(...)); // ?
 ```
 - `getId()`, `regenerateId()`, `close()` and `export()` (all data, for the debug page) complete the API.
 - The key `yuf` is reserved: all data of yuf lives below `$_SESSION['yuf']` in the sections of `SessionSectionEnum`
-  (`handler`, `auth`, `csrf`, `tables`, `tableFilters`, `search`, `uploads`). Own data is stored next to it.
+  (`handler`, `auth`, `csrf`, `tables`, `tableFilters`, `search`, `uploads`, `uploadPointers`). Own data is stored next
+  to it.
 
 ### Lifecycle
 
@@ -50,6 +51,12 @@ $cart = $session->getStruct(key: 'cart', map: Cart::fromSessionArray(...)); // ?
   CSRF token, …) and a first access throw a `LogicException`: write the session while the view runs, not in a
   destructor or shutdown function.
 - A long-running view (export, report) calls `$this->context->session?->close()` after its last write.
+
+### Garbage collection and save path
+
+`SessionSettings` collects expired sessions with a chance of `gcProbability / gcDivisor` per request, by default
+1/1000. `FileSessionHandler` accepts the PHP form `"N;path"` and `"N;MODE;path"` as save path: the directory is the
+last part, the levels `N` are the subdirectories PHP uses (they must exist; yuf creates only the directory itself).
 
 ### Unique identifiers
 
@@ -68,7 +75,8 @@ Forms and table filters work without CSRF protection then: without a session coo
 `AuthSession` (`$this->context->authSession`) holds the login: `logIn()`, `logOut()`, `isLoggedIn()` and
 `getAuthSessionId()` (throws a `LogicException` when nobody is logged in).
 
-- `logIn()` gives the session a new ID (session fixation).
+- `logIn()` gives the session a new ID (session fixation) and removes the CSRF token (a new one is created when it is
+  needed). Impersonation (`logIn()` with the auth session ID of another user) does the same.
 - `logOut()` resets the login and calls `Session::clearUserData()`: everything except the section `handler` is
   removed (breadcrumb, table and search state, uploads, CSRF token, own data), so the next user of the browser sees
   nothing of the previous one. Data that must survive a logout (a message for the login page) is written after
@@ -128,8 +136,66 @@ final class AppAuthenticator extends Authenticator
 `checkLoginCredentials()`, inactive, lock-out; a rejection is logged and returns `false`), but it cannot know whether
 the password and the code were verified: call it only after your own check, with a user you loaded again from the
 stored ID (never keep the object in the session). Wrong codes belong to the project: count and limit them (a failed
-code should call `AuthUser::increaseWrongPasswordAttempts()`). `logAuthResult()` stays protected: the methods above
-write the log.
+code should be counted like a password: `registerWrongPasswordAttempt()` before the check,
+`releaseWrongPasswordAttempt()` after the right code, see "Lock-out"). `logAuthResult()` stays protected: the methods
+above write the log.
+
+### Lock-out (wrong passwords)
+
+Wrong passwords are counted per user, **in the database, before the password is checked**, so parallel requests cannot
+try more passwords than allowed. The lock is permanent: a user who reached `$maxAllowedWrongPasswordAttempts` is refused
+(`ERROR_OUT_TRIED`), also with the right password, until the project sets a new password and resets the counter
+itself. A successful login does **not** reset the counter (the attempt of the right password is given back, so it only
+counts wrong ones). The project implements two methods of `AuthUser`, each one statement:
+
+```php
+// Counts one attempt if the user is below the limit; false = limit reached, no password check
+protected function dbRegisterWrongPasswordAttempt(int $maxAllowedWrongPasswordAttempts): bool
+{
+    // UPDATE users SET wrong_login_attempts = wrong_login_attempts + 1
+    //   WHERE id = :id AND wrong_login_attempts < :max
+    return $this->updateUsers(id: $this->id, max: $maxAllowedWrongPasswordAttempts) === 1; // affected rows
+}
+
+// Gives the attempt back after the right password
+protected function dbReleaseWrongPasswordAttempt(): void
+{
+    // UPDATE users SET wrong_login_attempts = wrong_login_attempts - 1
+    //   WHERE id = :id AND wrong_login_attempts > 0
+}
+```
+
+Never read the counter and write it afterwards. `AuthUser::$wrongPasswordAttempts` is the value of the request (for
+the lock-out check before the password); the database decides. A second factor counts the same way:
+`registerWrongPasswordAttempt()` of the `Authenticator` before the check, `releaseWrongPasswordAttempt()` after the
+right code. `dbConfirmSuccessfulLogin()` must not reset the counter either; the project's "set password" code does
+(`wrong_login_attempts = 0`).
+
+### Login with a Microsoft account
+
+`MicrosoftAuthenticator` (OpenID Connect, ID token by form post) identifies the user by the **object ID and the tenant
+ID of the token** (claims `oid` and `tid`, GUIDs), never by the email address: users and tenant administrators can
+change it, and Microsoft does not verify it. The project implements the lookup and stores both IDs per user:
+
+```php
+protected function findAuthUserByMicrosoftAccount(string $objectId, string $tenantId): ?AuthUser
+{
+    // SELECT ... FROM users WHERE microsoft_object_id = :oid AND microsoft_tenant_id = :tid (GUIDs in lower case)
+}
+```
+
+`MicrosoftIdToken::getEmail()` is available for display only. Existing users have no stored IDs: link them explicitly,
+never by matching the email address automatically. Two ways: an administrator links the Microsoft account of a user
+(the project shows the `oid` and `tid` of a login that failed with `ERROR_UNKNOWN_USER_NAME`, the log has the object
+ID as user name), or a migration script fills the columns from the directory of the tenant (Microsoft Graph, `id` of
+the user).
+
+The nonce is handled by yuf: `redirectToMicrosoftLogin(tenantId:, clientId:, redirectUri:)` creates it (32 random
+bytes), sends it to Microsoft and keeps it in its own cookie (`__Secure-yuf-sso-nonce`: `Secure`, `HttpOnly`,
+`SameSite=None`, path of the redirect URI, ten minutes). `microsoftIdTokenLogin(tenantId:, clientId:, redirectUri:,
+microsoftIdToken:)` (the same `redirectUri`) compares it with the token, and deletes the cookie in every case: a nonce
+is used once, a token without the cookie of the same browser fails. The project stores no nonce, and the session
+cookie keeps `Strict`.
 
 ### Users without password
 
@@ -151,7 +217,9 @@ texts, and an own instance (named arguments, one per result) gives any language.
 `Password::generateNew()` hashes with `password_hash()` (Argon2id; `PASSWORD_DEFAULT` without Argon2): store `salt`
 (empty) and `hash` (at least 255 characters). Passwords of the earlier salt-and-SHA-256 format are still verified; the
 `Authenticator` rehashes them (and hashes with weaker costs) after a successful login through
-`AuthUser::rehashPassword()` / `dbUpdatePassword()`. Show one message for every failed login, whether the user name is
+`AuthUser::rehashPassword()` / `dbUpdatePassword()`. A legacy hash takes the time of a verification as well, and a login
+for an unknown user hashes with the same algorithm (`Password::spendVerificationTime()`), so the answer time tells
+neither. Show one message for every failed login, whether the user name is
 unknown or the password wrong (`Authenticator::$authResult` is for the log, not for the user).
 
 `Password` is for passwords that humans choose. For random secrets the application generates (API keys, reset links,

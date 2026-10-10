@@ -163,6 +163,28 @@ final class RequestLogFormatterTest extends TestCase
 
         $log = new RequestLogFormatter()->format(httpRequest: $httpRequest);
 
-        $this->assertStringContainsString('User agent: Agent??Injected: line' . PHP_EOL, $log);
+        $this->assertStringContainsString('User agent: Agent\\r\\nInjected: line' . PHP_EOL, $log);
+    }
+
+    public function testParameterValuesAndNamesCannotForgeLines(): void
+    {
+        $httpRequest = HttpRequestFactory::create(
+            queryParameters: ["a\nforged: name" => "x\r\nIP address: 6.6.6.6\x01"],
+            postParameters: ['nested' => ['v' => "1\n2"]],
+        );
+
+        $log = new RequestLogFormatter()->format(httpRequest: $httpRequest);
+
+        $this->assertStringContainsString('[a\\nforged: name] => x\\r\\nIP address: 6.6.6.6\\x01', $log);
+        $this->assertStringContainsString('[v] => 1\\n2', $log);
+        $this->assertStringNotContainsString("\nIP address: 6.6.6.6", $log);
+        $this->assertStringNotContainsString("\nforged:", $log);
+    }
+
+    public function testEscapeControlCharacters(): void
+    {
+        $this->assertSame('a\\nb\\rc\\x1fd\\x7fe', RequestLogFormatter::escapeControlCharacters(
+            text: "a\nb\rc\x1fd\x7fe",
+        ));
     }
 }

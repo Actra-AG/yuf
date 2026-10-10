@@ -56,6 +56,7 @@ final class FileFieldMarkupTest extends TestCase
     private function createStorage(bool $withFirstFile): InMemoryFileUploadStorage
     {
         $storage = new InMemoryFileUploadStorage();
+        $storage->issue(pointer: FileFieldMarkupTest::POINTER);
         if ($withFirstFile) {
             $storage->preload(
                 FileFieldMarkupTest::POINTER,
@@ -84,8 +85,8 @@ final class FileFieldMarkupTest extends TestCase
             name: $formName,
             acceptUpload: true,
             messages: FormMessages::german(),
+            csrfProtection: false,
         );
-        $form->removeCsrfProtection();
         $field = new FileField(
             name: 'file',
             label: HtmlText::fromHtml(html: 'File'),

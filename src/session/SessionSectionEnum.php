@@ -33,4 +33,6 @@ enum SessionSectionEnum: string
     case SEARCH = 'search';
     /** The pointers to uploaded files (`SessionFileUploadStorage`). */
     case UPLOADS = 'uploads';
+    /** The upload pointers issued to this session and when (`SessionFileUploadStorage`). */
+    case UPLOAD_POINTERS = 'uploadPointers';
 }

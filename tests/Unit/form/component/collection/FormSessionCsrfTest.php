@@ -17,6 +17,7 @@ use actra\yuf\security\SessionCsrfTokenSource;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\tests\Double\form\FormContextFactory;
+use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
 
@@ -55,12 +56,16 @@ final class FormSessionCsrfTest extends TestCase
         return is_string(value: $token) ? $token : null;
     }
 
-    private function createForm(bool $methodPost = true, bool $withSession = true): Form
-    {
+    private function createForm(
+        bool $methodPost = true,
+        bool $withSession = true,
+        bool $csrfProtection = true,
+    ): Form {
         return new Form(
             context: FormContextFactory::create(csrfTokenSource: $withSession ? $this->tokenSource : null),
             name: 'sessionForm',
             methodPost: $methodPost,
+            csrfProtection: $csrfProtection && $withSession,
         );
     }
 
@@ -169,10 +174,9 @@ final class FormSessionCsrfTest extends TestCase
         $this->assertSame([], $this->storage->all());
     }
 
-    public function testRemovedCsrfProtectionNeverTouchesTheSession(): void
+    public function testFormWithoutCsrfProtectionNeverTouchesTheSession(): void
     {
-        $form = $this->createForm();
-        $form->removeCsrfProtection();
+        $form = $this->createForm(csrfProtection: false);
 
         $this->assertTrue($this->send(form: $form, post: []));
 
@@ -180,8 +184,8 @@ final class FormSessionCsrfTest extends TestCase
     }
 
     /**
-     * Decision of v4.30.0: without session (no token source in the `FormContext`) the form has no CSRF field and
-     * checks no token. Before, it rendered a token that was never accepted.
+     * Without session (no token source in the `FormContext`) a POST form is created with `csrfProtection: false`: it
+     * has no CSRF field and checks no token.
      */
     public function testWithoutTokenSourceTheFormHasNoCsrfFieldAndChecksNoToken(): void
     {
@@ -206,12 +210,21 @@ final class FormSessionCsrfTest extends TestCase
         $this->assertTrue($this->send(form: $form, post: ['csrftoken' => 'anything']));
     }
 
-    public function testWithoutTokenSourceRemovingTheCsrfProtectionIsHarmless(): void
+    public function testWithoutTokenSourceAPostFormNeedsTheExplicitOptOut(): void
     {
-        $form = $this->createForm(withSession: false);
+        $this->expectException(LogicException::class);
 
-        $form->removeCsrfProtection();
+        new Form(context: FormContextFactory::create(csrfTokenSource: null), name: 'sessionForm');
+    }
 
-        $this->assertTrue($this->send(form: $form, post: []));
+    public function testWithoutTokenSourceAGetFormNeedsNoOptOut(): void
+    {
+        $form = new Form(
+            context: FormContextFactory::create(csrfTokenSource: null),
+            name: 'sessionForm',
+            methodPost: false,
+        );
+
+        $this->assertFalse($form->hasField(name: 'csrftoken'));
     }
 }

@@ -40,7 +40,7 @@ final class FormFieldTopFormComponentTest extends TestCase
 
     public function testFormAddsItselfAsTopFormComponent(): void
     {
-        $form = new Form(context: FormContextFactory::create(), name: 'topFormComponentForm');
+        $form = new Form(context: FormContextFactory::create(), name: 'topFormComponentForm', csrfProtection: false);
         $field = $this->createField();
 
         $form->addField(formField: $field);

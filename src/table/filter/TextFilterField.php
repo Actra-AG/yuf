@@ -14,12 +14,10 @@ use actra\yuf\db\DbQueryData;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
 use Override;
-use RuntimeException;
 
 /**
- * A text input: the value is searched with the search syntax of `SearchQueryBuilder` in the column (an SQL expression
- * of the
- * application, never user input).
+ * A text input: the value is searched with the search syntax of `SearchQueryBuilder` in the column (a column name like
+ * `name` or `table.name` of the application, never user input).
  */
 final class TextFilterField extends AbstractTableFilterField
 {
@@ -61,15 +59,7 @@ final class TextFilterField extends AbstractTableFilterField
     #[Override]
     public function getWhereCondition(): DbQueryData
     {
-        $column = preg_replace(pattern: '!\s+!', replacement: ' ', subject: $this->dataTableColumnReference);
-        if ($column === null) {
-            throw new RuntimeException(
-                message: 'The column of the filter field ' . $this->identifier . ' cannot be normalized: '
-                . preg_last_error_msg(),
-            );
-        }
-
-        return SearchQueryBuilder::createSqlFilters(filterArr: [$column => $this->value]);
+        return SearchQueryBuilder::createSqlFilters(filterArr: [$this->dataTableColumnReference => $this->value]);
     }
 
     public function getValue(): string

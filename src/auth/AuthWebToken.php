@@ -17,7 +17,8 @@ use stdClass;
 
 /**
  * Extension point: a signed JWT (three base64url segments) of an identity provider that logs a user in
- * (`Authenticator::authWebTokenLogin()`). The constructor splits and decodes the token, then calls `verify()` of the
+ * (`Authenticator::logInIdentifiedUser()`, the user is found by the stable identity of the token, never by a mutable
+ * claim such as an email address). The constructor splits and decodes the token, then calls `verify()` of the
  * provider class; a token that does not verify never becomes an object. `verify()` must check the signature with a
  * fixed algorithm (never the one the token asks for) and every claim that ties the token to this application.
  */
@@ -75,11 +76,6 @@ abstract class AuthWebToken
      * @throws UnauthorizedException
      */
     abstract protected function verify(): bool;
-
-    /**
-     * @throws UnauthorizedException if the token has no valid user name
-     */
-    abstract public function getUserName(): string;
 
     private static function decodeBase64Url(string $encoded): string
     {

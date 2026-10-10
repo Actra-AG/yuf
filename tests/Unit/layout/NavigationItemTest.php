@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\layout;
 
 use actra\yuf\auth\AccessRightCollection;
+use actra\yuf\html\HtmlText;
 use actra\yuf\layout\NavigationItem;
 use actra\yuf\layout\NavigationItemCollection;
 use InvalidArgumentException;
@@ -29,7 +30,7 @@ final class NavigationItemTest extends TestCase
             navKey: $navKey,
             href: $href,
             svgPath: 'M0 0',
-            title: $title,
+            title: HtmlText::fromHtml(html: $title),
             requiredAccessRights: $requiredAccessRights ?? AccessRightCollection::createEmpty(),
             childNavigation: $childNavigation,
         );
@@ -87,6 +88,24 @@ final class NavigationItemTest extends TestCase
         $this->assertSame('nav-main-sub-toggle', $data->cssClass);
     }
 
+    public function testTitleAsTextIsEncodedOnce(): void
+    {
+        $item = new NavigationItem(
+            navKey: 'a',
+            href: '/a/',
+            svgPath: '',
+            title: HtmlText::fromText(text: 'Users & <Groups> "x"'),
+            requiredAccessRights: AccessRightCollection::createEmpty(),
+        );
+
+        $data = $item->render(
+            activeMainNavigationItem: 'a',
+            accessRightCollection: AccessRightCollection::createEmpty(),
+        )->toTemplateData();
+
+        $this->assertSame('Users &amp; &lt;Groups&gt; &quot;x&quot;', $data->title);
+    }
+
     public function testCustomToggleClasses(): void
     {
         $children = new NavigationItemCollection();
@@ -95,7 +114,7 @@ final class NavigationItemTest extends TestCase
             navKey: 'parent',
             href: '/p/',
             svgPath: '',
-            title: 'P',
+            title: HtmlText::fromHtml(html: 'P'),
             requiredAccessRights: AccessRightCollection::createEmpty(),
             childNavigation: $children,
             activeSubToggleClass: 'on',
