@@ -17,13 +17,12 @@ use actra\yuf\core\ViewContext;
 use actra\yuf\core\ViewMap;
 use app\view\frontend\IndexView;
 
-// Uses the yuf sources of this repository (in a real project: vendor/actra/yuf/src/Core.php)
-require __DIR__ . '/../../src/Core.php';
+// Composer loads yuf and the classes of app/ (in this repository: autoload and autoload-dev of composer.json)
+require __DIR__ . '/../../vendor/autoload.php';
 
 $core = Core::fromEnvironment(
     envFilePath: __DIR__ . '/../.env.php',
     copyrightYear: 2026,
-    autoloaderPath: __DIR__ . '/../../vendor/actra/autoloader/src/Autoloader.php',
 );
 $english = new Language(code: 'en', locale: 'en_US.UTF-8');
 $core->availableLanguages->add(language: $english);

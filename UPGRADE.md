@@ -4,6 +4,28 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v5.1.0 (2026-10-10)
+
+### ⚠️ Composer loads all classes, `actra/autoloader` is no longer used
+
+yuf no longer depends on `actra/autoloader`, and `Core::fromEnvironment()` registers no autoloader. Composer is needed
+to build the application, not on the server. Remove `autoloaderPath:`, delete `app/cache/autoloader.php` and deploy
+with `composer install --no-dev --optimize-autoloader`.
+
+```php
+// Before: composer.json without autoload for app\, entry point
+require __DIR__ . '/../vendor/actra/yuf/src/Core.php';
+$core = Core::fromEnvironment(envFilePath: …, copyrightYear: 2026, autoloaderPath: …);
+
+// After: composer.json "autoload": {"psr-4": {"app\\": "app/"}}, then composer dump-autoload; entry point
+require __DIR__ . '/../vendor/autoload.php';
+$core = Core::fromEnvironment(envFilePath: …, copyrightYear: 2026);
+```
+
+CLI scripts include `vendor/autoload.php` the same way. The test bootstrap is `require __DIR__ .
+'/../vendor/autoload.php';` only (no `Autoloader::register()`). Remove `actra/autoloader` from the project's
+`composer.json` unless the project uses it itself. `Core::AUTOLOADER_CACHE_FILE_NAME` is removed.
+
 ## v5.0.2 (2026-10-10)
 
 - Docs: the v5.0.0 entry "Applications are unchanged" was wrong for applications that include `vendor/autoload.php`

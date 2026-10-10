@@ -7,5 +7,5 @@
 
 declare(strict_types=1);
 
-// yuf and its tests are loaded by Composer (PSR-4); projects load yuf by actra/autoloader in Core::fromEnvironment()
+// yuf, its tests and the example app are loaded by Composer (PSR-4)
 require __DIR__ . '/../vendor/autoload.php';

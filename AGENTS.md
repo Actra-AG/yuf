@@ -21,10 +21,9 @@ This project follows the Actra coding standard, installed as development depende
 
 ## Project-specific rules
 
-- Zero runtime dependencies besides `actra/autoloader`; development dependencies are `actra/coding-standard` and
-  PHPUnit only.
-- yuf is loaded by Composer (PSR-4, `autoload`, `autoload-dev`) wherever `vendor/autoload.php` is included (tools,
-  tests, applications with Composer packages); otherwise `Core::fromEnvironment()` loads it with `actra/autoloader`.
+- Zero runtime dependencies; development dependencies are `actra/coding-standard` and PHPUnit only.
+- All classes are loaded by Composer (PSR-4: `autoload` for `src/`, `autoload-dev` for `tests/` and the example's
+  `app\` classes).
 - yuf ships no JavaScript and no CSS. No frontend review: changes of the HTML output are API changes and get an
   `UPGRADE.md` entry.
 - Example app: `example/` (https://yuf.ddev.site/, uses the sources of `src/`).

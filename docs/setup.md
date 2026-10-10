@@ -3,17 +3,18 @@
 ## Application entry point
 
 Create `.env.php` based on [.env.example.php](../.env.example.php) and an `index.php` in the document root based on
-[index.example.php](../index.example.php). `Core::fromEnvironment()` needs `envFilePath:` and `copyrightYear:`;
-`autoloaderPath:` and the directories have defaults:
+[index.example.php](../index.example.php). `Core::fromEnvironment()` needs `envFilePath:` and `copyrightYear:`; the
+directories have defaults. Composer loads all classes: the project maps its own namespace in `composer.json`
+(`"autoload": {"psr-4": {"app\\": "app/"}}`):
 
 ```php
-require __DIR__ . '/../vendor/actra/yuf/src/Core.php';
+require __DIR__ . '/../vendor/autoload.php';
 $core = Core::fromEnvironment(envFilePath: __DIR__ . '/../.env.php', copyrightYear: 2026);
 $core->prepareHttpResponse(routeCollection: $routes)->sendAndExit();
 ```
 
-`fromEnvironment()` does everything global, once per process: it registers the autoloader and the error handler, reads
-the environment file, sets `error_reporting()` and the time zone, creates the directories and the request from the PHP
+`fromEnvironment()` does everything global, once per process: it registers the error handler, reads the environment
+file, sets `error_reporting()` and the time zone, creates the directories and the request from the PHP
 globals. A request without HTTPS gets the redirect to HTTPS as response of `prepareHttpResponse()`. Tests build `Core`
 without globals (see [testing.md](testing.md)).
 
@@ -43,12 +44,8 @@ Own keys of a project (flat, e.g. `'mailer.hostname'`) are read from `$core->env
 - Without `debug`, compiled templates are used without comparing them with the templates (no file checks per render,
   `checkTemplateChanges` follows `debug`). Delete `app/cache/v*/` on every deployment, else changed templates are not
   compiled again; or set `'checkTemplateChanges' => true`.
-- Who loads the classes: an application that includes `vendor/autoload.php` before `fromEnvironment()` (needed as soon
-  as it uses other Composer packages) loads yuf through Composer, which registers its loader first; `actra/autoloader`
-  then loads only the classes of `app/`. Without `vendor/autoload.php`, `actra/autoloader` loads yuf as well. Each
-  class is loaded once either way. Deploy with `composer install --no-dev --optimize-autoloader` (a class map instead
-  of file lookups). The cache of `actra/autoloader` (`autoloader.php` in the cache directory, the paths of the loaded
-  classes) works like a class map: keep it between requests.
+- Deploy with `composer install --no-dev --optimize-autoloader`: Composer's class map finds every class with one array
+  lookup (and still finds classes added later by their PSR-4 path).
 - Optional: `opcache.preload` with a script that loads the classes of yuf and your application.
 - With PHP-FPM, yuf calls `fastcgi_finish_request()` after the response is sent: destructors and shutdown functions run
   after the client has the response. Nothing can be output afterwards, and the session is already closed (see

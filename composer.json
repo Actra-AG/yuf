@@ -23,7 +23,6 @@
     "ext-dom": "*",
     "ext-iconv": "*",
     "ext-curl": "*",
-    "actra/autoloader": "~1.2.0",
     "ext-libxml": "*",
     "ext-ctype": "*",
     "ext-fileinfo": "*"
@@ -35,7 +34,8 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "actra\\yuf\\tests\\": "tests/"
+      "actra\\yuf\\tests\\": "tests/",
+      "app\\": "example/app/"
     }
   },
   "require-dev": {

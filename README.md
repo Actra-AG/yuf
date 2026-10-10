@@ -1,8 +1,7 @@
 # yuf
 
-**yuf** (pronounced "[jʌf]" or "[jʊf]") is a smart, fast and lightweight PHP framework. Its only dependency is
-[actra/autoloader](https://github.com/Actra-AG/autoloader), which loads yuf in applications without Composer's
-autoloader.
+**yuf** (pronounced "[jʌf]" or "[jʊf]") is a smart, fast and lightweight PHP framework without runtime dependencies,
+installed and loaded with Composer.
 
 - Routing, views, JSON endpoints and an immutable request object
 - Template engine with escaping by default and own tags
@@ -32,13 +31,13 @@ Or add yuf to an existing project:
 composer require actra/yuf
 ```
 
-Without Composer, download yuf and [actra/autoloader](https://github.com/Actra-AG/autoloader) and pass the path of
-`Autoloader.php` to `Core::fromEnvironment(autoloaderPath: …)`.
+Composer is needed to build the application (`vendor/`), not on the server: deploy with
+`composer install --no-dev --optimize-autoloader`.
 
 ## Usage
 
 ```php
-require __DIR__ . '/../vendor/actra/yuf/src/Core.php';
+require __DIR__ . '/../vendor/autoload.php';
 $core = Core::fromEnvironment(envFilePath: __DIR__ . '/../.env.php', copyrightYear: 2026);
 $core->prepareHttpResponse(routeCollection: $routes)->sendAndExit();
 ```

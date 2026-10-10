@@ -5,7 +5,7 @@ since v5.0.0, yuf wherever `vendor/autoload.php` is included) and `actra/autoloa
 `Core::fromEnvironment()`, today mostly for the classes of `app/`). One loader is simpler and faster: Composer's class
 map, generated at deploy time, is one array lookup per class, held in OPcache, without writes at runtime.
 
-Status: draft, waiting for the user's decisions.
+Status: in progress (user decisions 2026-10-10 below).
 
 ## Why `actra/autoloader` is not extended instead
 
@@ -49,15 +49,22 @@ that PHPStan, PHPUnit and IDEs get from `vendor/autoload.php`. That is a rebuild
 
 ### Step 4 – `actra/autoloader`
 
-- When no project requires it any more: last release with a README note "superseded by Composer's autoloader",
-  archive the repository.
+- Dropped (decision 4): `actra/autoloader` stays maintained for projects outside yuf.
 
-## Open questions
+## Decisions (user, 2026-10-10)
 
-1. Agreed that yuf is no longer usable without Composer (build time only, not on the server)?
-2. Release: in the next big yuf release (temporary release-cycle deviation), or on its own?
-3. Deploy: `--optimize-autoloader` as default and `--classmap-authoritative` optional, or authoritative as default
-   (fastest; a class added without `dump-autoload` is then not found)?
-4. Archive `actra/autoloader`, or keep it for projects outside yuf?
+1. yuf requires Composer at build time (not on the server); no compatibility for the download variant.
+2. Now, as one big release of yuf: v5.1.0 (breaking changes in a minor release, versioning.md section 2).
+3. Deploy with `composer install --no-dev --optimize-autoloader` (class map with PSR-4 fallback).
+4. `actra/autoloader` stays maintained for projects outside yuf (step 4 is dropped: no archive).
 
 ## Handover notes
+
+### Step 1 (2026-10-10, v5.1.0)
+
+- `Core::fromEnvironment()` registers no autoloader (`autoloaderPath:`, `AUTOLOADER_CACHE_FILE_NAME` and the
+  `require_once` of the resolver removed); `actra/autoloader` removed from `require`; the example's `app\` classes are
+  in `autoload-dev`; example, `index.example.php`, README, setup, testing, AGENTS.md and UPGRADE.md updated.
+- Measured (example home page, median of 200 requests): 10.0–10.8 ms with `actra/autoloader`, 10.4–12.0 ms with
+  Composer (plain and optimized): no difference beyond the noise of about 1 ms.
+- Next: step 2 (skeleton) and step 3 (projects) in their own sessions.

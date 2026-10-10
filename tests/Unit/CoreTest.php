@@ -43,7 +43,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Builds `Core` with the constructor, from temporary directories and a request without globals. Not covered:
- * `Core::fromEnvironment()` (it registers the autoloader and the error handler, reads `$_SERVER` and can only be called
+ * `Core::fromEnvironment()` (it registers the error handler, reads `$_SERVER` and can only be called
  * once per process); `prepareHttpResponse()` registers the global exception handler, which each test removes.
  */
 final class CoreTest extends TestCase

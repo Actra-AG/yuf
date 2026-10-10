@@ -9,8 +9,6 @@ declare(strict_types=1);
 
 namespace actra\yuf;
 
-use actra\autoloader\Autoloader;
-use actra\autoloader\AutoloaderPath;
 use actra\yuf\clock\SystemClock;
 use actra\yuf\common\FileCache;
 use actra\yuf\core\ContentHandler;
@@ -59,7 +57,7 @@ use UnexpectedValueException;
  * The application of a request: its settings, the request and the response that is prepared from them.
  *
  * Production code creates it with `Core::fromEnvironment()`, which does everything that is global and happens once per
- * process: it registers the autoloader and the error handler, reads the environment file, sets `error_reporting()`
+ * process: it registers the error handler, reads the environment file, sets `error_reporting()`
  * and the time zone, creates the directories and the request from the PHP globals. The constructor takes explicit
  * settings and a request and touches no globals, so tests build `Core` directly. `fromEnvironment()` is not unit
  * tested for the same reason (global state that can only be set once per process); the guard `$isInitialized` is the
@@ -68,8 +66,6 @@ use UnexpectedValueException;
 final class Core
 {
     public const string APP_CLASS_PREFIX = 'app';
-    /** The cache of the autoloader (paths of the loaded classes) in the cache directory of the application */
-    public const string AUTOLOADER_CACHE_FILE_NAME = 'autoloader.php';
     private static bool $isInitialized = false;
     private ?HttpResponse $httpResponse = null;
     private readonly string $logEmailRecipient;
@@ -147,12 +143,11 @@ final class Core
     }
 
     /**
-     * Creates the application of the request of this process: resolves and creates the directories, registers the
-     * autoloader (own and `app` classes, its cache is `autoloader.php` in the cache directory), reads the environment
-     * file, sets `error_reporting()` and the time zone, registers the error handler and creates the request from the
-     * PHP globals. A request with an unsupported method
-     * is answered with a 405 response and ends the script. Call it once, as the first statement of the front
-     * controller; it is not unit tested (global, once per process).
+     * Creates the application of the request of this process: resolves and creates the directories, reads the
+     * environment file, sets `error_reporting()` and the time zone, registers the error handler and creates the
+     * request from the PHP globals. A request with an unsupported method is answered with a 405 response and ends the
+     * script. Call it once in the front controller, after `require 'vendor/autoload.php'` (Composer loads the
+     * classes); it is not unit tested (global, once per process).
      *
      * The directory arguments may contain the placeholders `{DOCUMENT_ROOT}`, `{BASE_DIRECTORY}` and
      * `{APP_DIRECTORY}`.
@@ -164,7 +159,6 @@ final class Core
     public static function fromEnvironment(
         string $envFilePath,
         int $copyrightYear,
-        string $autoloaderPath = __DIR__ . '/../../autoloader/src/Autoloader.php',
         string $baseDirectory = '{DOCUMENT_ROOT}../',
         string $appDirectory = '{BASE_DIRECTORY}/app/',
         string $cacheDirectory = '{APP_DIRECTORY}cache/',
@@ -178,11 +172,6 @@ final class Core
             throw new LogicException(message: 'Core is already initialized');
         }
         Core::$isInitialized = true;
-        require_once $autoloaderPath;
-        // The directories are resolved before the autoloader is registered, so the cache of the autoloader is a file
-        // of the cache directory of the application (not in vendor/, which may be read-only or deployed from another
-        // machine); the resolver is the only class needed for that
-        require_once __DIR__ . DIRECTORY_SEPARATOR . 'core' . DIRECTORY_SEPARATOR . 'DirectoryPathResolver.php';
         $documentRoot = Core::readDocumentRoot();
         $resolvedBaseDirectory = Core::createIfNotExists(
             path: $baseDirectory,
@@ -203,13 +192,6 @@ final class Core
             appDirectory: $resolvedAppDirectory,
         );
         $resolvedCacheDirectory = $resolve(path: $cacheDirectory);
-        $autoloader = Autoloader::register(cacheFilePath: $resolvedCacheDirectory . Core::AUTOLOADER_CACHE_FILE_NAME);
-        $autoloader->addPath(
-            autoloaderPath: new AutoloaderPath(
-                path: __DIR__ . DIRECTORY_SEPARATOR,
-                prefix: 'actra\\yuf\\',
-            ),
-        );
         $environment = EnvironmentSettings::fromArray(values: Core::loadEnvironmentFile(path: $envFilePath));
         error_reporting(error_level: $environment->errorReporting);
         date_default_timezone_set(timezoneId: $environment->timeZone);
@@ -226,12 +208,6 @@ final class Core
             settingsDirectory: $resolve(path: $settingsDirectory),
             snippetsDirectory: $resolve(path: $snippetsDirectory),
             viewDirectory: $resolve(path: $viewDirectory),
-        );
-        $autoloader->addPath(
-            autoloaderPath: new AutoloaderPath(
-                path: $settings->appDirectory,
-                prefix: Core::APP_CLASS_PREFIX . '\\',
-            ),
         );
         new ErrorHandler()->register();
         try {

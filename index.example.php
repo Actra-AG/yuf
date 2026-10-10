@@ -7,7 +7,7 @@ use actra\yuf\core\ContentType;
 use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
 
-require __DIR__ . '/../vendor/actra/yuf/src/Core.php';
+require __DIR__ . '/../vendor/autoload.php';
 $core = Core::fromEnvironment(
     envFilePath: __DIR__ . '/../.env.php',
     copyrightYear: 2026
