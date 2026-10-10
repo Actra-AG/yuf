@@ -32,4 +32,6 @@ This project follows the Actra coding standard, installed as development depende
 
 ## Deviations from the global standard
 
-- None.
+- Release cycle (temporary): while the new base of the Actra libraries is built, changes are collected into few,
+  big releases instead of short development cycles (`standards/versioning.md`, section 1). Reason: building the
+  foundation fast. Remove this deviation when the base is finished.
