@@ -5,7 +5,8 @@ since v5.0.0, yuf wherever `vendor/autoload.php` is included) and `actra/autoloa
 `Core::fromEnvironment()`, today mostly for the classes of `app/`). One loader is simpler and faster: Composer's class
 map, generated at deploy time, is one array lookup per class, held in OPcache, without writes at runtime.
 
-Status: in progress (user decisions 2026-10-10 below).
+Status: done for yuf (v5.1.0), the skeleton and drogeriehaas.ch (2026-10-10); the other projects follow with their
+own migration to yuf 5.
 
 ## Why `actra/autoloader` is not extended instead
 
@@ -68,3 +69,9 @@ that PHPStan, PHPUnit and IDEs get from `vendor/autoload.php`. That is a rebuild
 - Measured (example home page, median of 200 requests): 10.0–10.8 ms with `actra/autoloader`, 10.4–12.0 ms with
   Composer (plain and optimized): no difference beyond the noise of about 1 ms.
 - Next: step 2 (skeleton) and step 3 (projects) in their own sessions.
+
+### Steps 2 and 3 (2026-10-10)
+
+- Skeleton (v1.14.0) and drogeriehaas.ch load all classes with Composer; actra/backend already did. The other projects
+  on yuf (actra.ch and the projects without a version constraint) were postponed by the user: they take the Composer
+  migration with their move to yuf 5 (yuf UPGRADE.md v5.1.0).
