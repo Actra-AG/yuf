@@ -61,7 +61,7 @@ final class CurlOptionsBuilderTest extends TestCase
         $this->assertOption(expected: 3, options: $options, option: CURLOPT_CONNECTTIMEOUT);
         $this->assertOption(expected: 10, options: $options, option: CURLOPT_TIMEOUT);
         $this->assertOption(expected: 33554432, options: $options, option: CURLOPT_MAXFILESIZE);
-        $this->assertOption(expected: self::URL, options: $options, option: CURLOPT_URL);
+        $this->assertOption(expected: CurlOptionsBuilderTest::URL, options: $options, option: CURLOPT_URL);
     }
 
     public function testLimitsAreTakenFromTheRequest(): void
@@ -130,7 +130,7 @@ final class CurlOptionsBuilderTest extends TestCase
     {
         $options = $this->buildOptions(request: CurlGetRequest::create(requestTargetUrl: CurlOptionsBuilderTest::URL));
 
-        self::assertArrayNotHasKey(CURLOPT_POSTFIELDS, $options);
+        $this->assertArrayNotHasKey(CURLOPT_POSTFIELDS, $options);
         $this->assertOption(expected: [], options: $options, option: CURLOPT_HTTPHEADER);
     }
 
@@ -143,7 +143,7 @@ final class CurlOptionsBuilderTest extends TestCase
 
         $this->assertOption(expected: CURLAUTH_BASIC, options: $options, option: CURLOPT_HTTPAUTH);
         $this->assertOption(expected: 'user:pass', options: $options, option: CURLOPT_USERPWD);
-        self::assertArrayNotHasKey(CURLOPT_XOAUTH2_BEARER, $options);
+        $this->assertArrayNotHasKey(CURLOPT_XOAUTH2_BEARER, $options);
     }
 
     public function testBearerAuthentication(): void
@@ -155,16 +155,16 @@ final class CurlOptionsBuilderTest extends TestCase
 
         $this->assertOption(expected: CURLAUTH_BEARER, options: $options, option: CURLOPT_HTTPAUTH);
         $this->assertOption(expected: 'abc.def', options: $options, option: CURLOPT_XOAUTH2_BEARER);
-        self::assertArrayNotHasKey(CURLOPT_USERPWD, $options);
+        $this->assertArrayNotHasKey(CURLOPT_USERPWD, $options);
     }
 
     public function testNoAuthenticationByDefault(): void
     {
         $options = $this->buildOptions(request: CurlGetRequest::create(requestTargetUrl: CurlOptionsBuilderTest::URL));
 
-        self::assertArrayNotHasKey(CURLOPT_HTTPAUTH, $options);
-        self::assertArrayNotHasKey(CURLOPT_USERPWD, $options);
-        self::assertArrayNotHasKey(CURLOPT_XOAUTH2_BEARER, $options);
+        $this->assertArrayNotHasKey(CURLOPT_HTTPAUTH, $options);
+        $this->assertArrayNotHasKey(CURLOPT_USERPWD, $options);
+        $this->assertArrayNotHasKey(CURLOPT_XOAUTH2_BEARER, $options);
     }
 
     public function testCallbacksFillTheCollector(): void
@@ -175,20 +175,20 @@ final class CurlOptionsBuilderTest extends TestCase
             collector: $collector,
         );
         $handle = curl_init();
-        self::assertArrayHasKey(CURLOPT_WRITEFUNCTION, $options);
-        self::assertArrayHasKey(CURLOPT_HEADERFUNCTION, $options);
+        $this->assertArrayHasKey(CURLOPT_WRITEFUNCTION, $options);
+        $this->assertArrayHasKey(CURLOPT_HEADERFUNCTION, $options);
         $writeCallback = $options[CURLOPT_WRITEFUNCTION];
         $headerCallback = $options[CURLOPT_HEADERFUNCTION];
-        self::assertIsCallable($writeCallback);
-        self::assertIsCallable($headerCallback);
+        $this->assertIsCallable($writeCallback);
+        $this->assertIsCallable($headerCallback);
 
         $written = $writeCallback($handle, 'body');
         $headerRead = $headerCallback($handle, "X-A: b\r\n");
 
-        self::assertSame(4, $written);
-        self::assertSame(8, $headerRead);
-        self::assertSame('body', $collector->getBody());
-        self::assertSame(['x-a' => ['b']], $collector->getHeaders());
+        $this->assertSame(4, $written);
+        $this->assertSame(8, $headerRead);
+        $this->assertSame('body', $collector->getBody());
+        $this->assertSame(['x-a' => ['b']], $collector->getHeaders());
     }
 
     /**
@@ -207,7 +207,7 @@ final class CurlOptionsBuilderTest extends TestCase
     public function testNoMethodGivesAccessToCurlOptionsOrSwitchesTheCertificateCheckOff(string $method): void
     {
         // The options of the builder are the only ones: a caller cannot weaken them
-        self::assertFalse(method_exists(object_or_class: AbstractCurlRequest::class, method: $method));
+        $this->assertFalse(method_exists(object_or_class: AbstractCurlRequest::class, method: $method));
     }
 
     /**
@@ -216,8 +216,8 @@ final class CurlOptionsBuilderTest extends TestCase
      */
     private function assertOption(bool|int|string|array $expected, array $options, int $option): void
     {
-        self::assertArrayHasKey($option, $options);
-        self::assertSame($expected, $options[$option]);
+        $this->assertArrayHasKey($option, $options);
+        $this->assertSame($expected, $options[$option]);
     }
 
     /**

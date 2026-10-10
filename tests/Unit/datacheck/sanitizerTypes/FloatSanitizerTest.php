@@ -103,7 +103,7 @@ final class FloatSanitizerTest extends TestCase
     {
         $previousLocale = setlocale(LC_NUMERIC, '0');
         if (setlocale(LC_NUMERIC, 'de_DE.UTF-8', 'de_DE', 'de_CH.UTF-8', 'fr_FR.UTF-8') === false) {
-            self::markTestSkipped('No locale with a decimal comma is installed.');
+            FloatSanitizerTest::markTestSkipped('No locale with a decimal comma is installed.');
         }
         try {
             $this->assertSame(1.5, FloatSanitizer::sanitize(input: '1.5'));

@@ -41,7 +41,7 @@ final class HtmlSnippetTest extends TestCase
     public function testRendersTheGivenNonce(): void
     {
         $html = new HtmlSnippet(
-            htmlSnippetFilePath: self::snippetPath(),
+            htmlSnippetFilePath: HtmlSnippetTest::snippetPath(),
             cspNonce: new CspNonce(value: 'fixed+nonce=='),
         )->render(templateEngine: $this->templateEngine);
 
@@ -54,7 +54,7 @@ final class HtmlSnippetTest extends TestCase
         $replacements->addHtml(identifier: 'cspNonce', html: 'own');
 
         $html = new HtmlSnippet(
-            htmlSnippetFilePath: self::snippetPath(),
+            htmlSnippetFilePath: HtmlSnippetTest::snippetPath(),
             replacements: $replacements,
             cspNonce: new CspNonce(value: 'fixed'),
         )->render(templateEngine: $this->templateEngine);

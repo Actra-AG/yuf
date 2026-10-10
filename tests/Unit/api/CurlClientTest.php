@@ -43,8 +43,8 @@ final class CurlClientTest extends TestCase
         $first = EchoedRequest::fromResponse(response: $request->execute());
         $second = EchoedRequest::fromResponse(response: $request->execute());
 
-        self::assertSame('GET', $first->method);
-        self::assertSame('GET', $second->method);
+        $this->assertSame('GET', $first->method);
+        $this->assertSame('GET', $second->method);
     }
 
     public function testOptionsOfARequestDoNotCarryOverToTheNextRequestOfTheSameClient(): void
@@ -61,13 +61,13 @@ final class CurlClientTest extends TestCase
         $postEcho = EchoedRequest::fromResponse(response: $client->send(request: $post));
         $getEcho = EchoedRequest::fromResponse(response: $client->send(request: $get));
 
-        self::assertSame('POST', $postEcho->method);
-        self::assertSame('{"a":1}', $postEcho->body);
-        self::assertSame('GET', $getEcho->method);
-        self::assertSame('', $getEcho->body);
-        self::assertFalse($getEcho->hasHeader(name: 'Authorization'));
-        self::assertFalse($getEcho->hasHeader(name: 'X-First'));
-        self::assertFalse($getEcho->hasHeader(name: 'Content-Type'));
+        $this->assertSame('POST', $postEcho->method);
+        $this->assertSame('{"a":1}', $postEcho->body);
+        $this->assertSame('GET', $getEcho->method);
+        $this->assertSame('', $getEcho->body);
+        $this->assertFalse($getEcho->hasHeader(name: 'Authorization'));
+        $this->assertFalse($getEcho->hasHeader(name: 'X-First'));
+        $this->assertFalse($getEcho->hasHeader(name: 'Content-Type'));
     }
 
     public function testClientsAreIndependentOfEachOther(): void
@@ -80,8 +80,8 @@ final class CurlClientTest extends TestCase
         unset($firstClient);
         $secondResponse = $secondClient->send(request: $request);
 
-        self::assertFalse($firstResponse->hasErrors());
-        self::assertFalse($secondResponse->hasErrors());
+        $this->assertFalse($firstResponse->hasErrors());
+        $this->assertFalse($secondResponse->hasErrors());
     }
 
     public function testExecuteWithAGivenClient(): void
@@ -92,27 +92,27 @@ final class CurlClientTest extends TestCase
             curlClient: $client,
         );
 
-        self::assertFalse($response->hasErrors());
+        $this->assertFalse($response->hasErrors());
     }
 
     public function testResponseHeaders(): void
     {
         $response = CurlGetRequest::create(requestTargetUrl: $this->server->url('/headers'))->execute();
 
-        self::assertSame('with headers', $response->rawResponseBody);
-        self::assertSame('one', $response->getHeader(name: 'x-single'));
-        self::assertSame(['a', 'b'], $response->getHeaderValues(name: 'X-Multi'));
-        self::assertSame('', $response->getHeader(name: 'X-Empty'));
-        self::assertNull($response->getHeader(name: 'X-Missing'));
+        $this->assertSame('with headers', $response->rawResponseBody);
+        $this->assertSame('one', $response->getHeader(name: 'x-single'));
+        $this->assertSame(['a', 'b'], $response->getHeaderValues(name: 'X-Multi'));
+        $this->assertSame('', $response->getHeader(name: 'X-Empty'));
+        $this->assertNull($response->getHeader(name: 'X-Missing'));
     }
 
     public function testHeadRequestHasHeadersAndNoBody(): void
     {
         $response = CurlHeadRequest::create(requestTargetUrl: $this->server->url('/headers'))->execute();
 
-        self::assertFalse($response->hasErrors());
-        self::assertSame('', $response->rawResponseBody);
-        self::assertSame('one', $response->getHeader(name: 'X-Single'));
+        $this->assertFalse($response->hasErrors());
+        $this->assertSame('', $response->rawResponseBody);
+        $this->assertSame('one', $response->getHeader(name: 'X-Single'));
     }
 
     public function testRedirectIsNotFollowedAndTheTargetIsInTheLocationHeader(): void
@@ -123,10 +123,10 @@ final class CurlClientTest extends TestCase
 
         $response = $request->execute();
 
-        self::assertFalse($response->hasErrors());
-        self::assertSame(HttpStatusCodeEnum::HTTP_MOVED_PERMANENTLY, $response->responseHttpCode);
-        self::assertSame('http://127.0.0.2:1/echo', $response->getHeader(name: 'Location'));
-        self::assertSame(0, $response->curlInfo['redirect_count']);
+        $this->assertFalse($response->hasErrors());
+        $this->assertSame(HttpStatusCodeEnum::HTTP_MOVED_PERMANENTLY, $response->responseHttpCode);
+        $this->assertSame('http://127.0.0.2:1/echo', $response->getHeader(name: 'Location'));
+        $this->assertSame(0, $response->curlInfo['redirect_count']);
     }
 
     /**
@@ -146,11 +146,11 @@ final class CurlClientTest extends TestCase
     {
         $response = CurlGetRequest::create(requestTargetUrl: $this->server->url('/status/' . $statusCode))->execute();
 
-        self::assertTrue($response->hasErrors());
-        self::assertSame(CurlResponse::ERROR_BAD_HTTP_RESPONSE_CODE, $response->errorCode);
-        self::assertSame(HttpStatusCodeEnum::HTTP_UNKNOWN, $response->responseHttpCode);
-        self::assertSame($statusCode, $response->curlInfo['http_code']);
-        self::assertSame('status ' . $statusCode, $response->rawResponseBody);
+        $this->assertTrue($response->hasErrors());
+        $this->assertSame(CurlResponse::ERROR_BAD_HTTP_RESPONSE_CODE, $response->errorCode);
+        $this->assertSame(HttpStatusCodeEnum::HTTP_UNKNOWN, $response->responseHttpCode);
+        $this->assertSame($statusCode, $response->curlInfo['http_code']);
+        $this->assertSame('status ' . $statusCode, $response->rawResponseBody);
     }
 
     public function testResponseAtTheLimitIsAccepted(): void
@@ -160,8 +160,8 @@ final class CurlClientTest extends TestCase
 
         $response = $request->execute();
 
-        self::assertFalse($response->hasErrors());
-        self::assertSame(1000, strlen(string: (string) $response->rawResponseBody));
+        $this->assertFalse($response->hasErrors());
+        $this->assertSame(1000, strlen(string: (string) $response->rawResponseBody));
     }
 
     public function testResponseWithContentLengthBeyondTheLimitIsRefused(): void
@@ -171,10 +171,10 @@ final class CurlClientTest extends TestCase
 
         $response = $request->execute();
 
-        self::assertTrue($response->hasErrors());
-        self::assertSame(CurlResponse::ERROR_RESPONSE_TOO_LARGE, $response->errorCode);
-        self::assertFalse($response->rawResponseBody);
-        self::assertSame(
+        $this->assertTrue($response->hasErrors());
+        $this->assertSame(CurlResponse::ERROR_RESPONSE_TOO_LARGE, $response->errorCode);
+        $this->assertFalse($response->rawResponseBody);
+        $this->assertSame(
             CurlResponse::class . ': The response is larger than 1000 bytes.',
             $response->errorMessage,
         );
@@ -187,9 +187,9 @@ final class CurlClientTest extends TestCase
 
         $response = $request->execute();
 
-        self::assertTrue($response->hasErrors());
-        self::assertSame(CurlResponse::ERROR_RESPONSE_TOO_LARGE, $response->errorCode);
-        self::assertFalse($response->rawResponseBody);
+        $this->assertTrue($response->hasErrors());
+        $this->assertSame(CurlResponse::ERROR_RESPONSE_TOO_LARGE, $response->errorCode);
+        $this->assertFalse($response->rawResponseBody);
     }
 
     public function testNoCredentialsAreSentWithoutAuthentication(): void
@@ -198,7 +198,7 @@ final class CurlClientTest extends TestCase
             response: CurlGetRequest::create(requestTargetUrl: $this->server->url('/echo'))->execute(),
         );
 
-        self::assertFalse($echo->hasHeader(name: 'Authorization'));
+        $this->assertFalse($echo->hasHeader(name: 'Authorization'));
     }
 
     public function testCertificateOfTheServerIsVerified(): void
@@ -209,9 +209,9 @@ final class CurlClientTest extends TestCase
 
         $response = $request->execute();
 
-        self::assertTrue($response->hasErrors());
-        self::assertSame(CURLE_SSL_PEER_CERTIFICATE, $response->errorCode);
-        self::assertFalse($response->rawResponseBody);
-        self::assertStringContainsString('always verified', $response->errorMessage);
+        $this->assertTrue($response->hasErrors());
+        $this->assertSame(CURLE_SSL_PEER_CERTIFICATE, $response->errorCode);
+        $this->assertFalse($response->rawResponseBody);
+        $this->assertStringContainsString('always verified', $response->errorMessage);
     }
 }

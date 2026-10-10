@@ -30,7 +30,7 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $this->textMail(body: 'Hello'));
 
         $this->assertSame(
-            self::header(
+            MailMessageTest::header(
                 'Content-Type: text/plain; charset=utf-8',
                 'Content-Transfer-Encoding: quoted-printable',
             ),
@@ -49,7 +49,7 @@ final class MailMessageTest extends TestCase
         );
 
         $this->assertSame(
-            self::crlf(
+            MailMessageTest::crlf(
                 'Gr=C3=BCezi Z=C3=BCrich, sch=C3=B6ne Gr=C3=BCsse!=0AZeile 2 mit =3D Zeichen=',
                 '=0Alang lang lang lang lang lang lang lang lang lang lang lang lang lang la=',
                 'ng lang lang lang lang lang lang lang lang lang lang lang lang lang lang la=',
@@ -66,7 +66,7 @@ final class MailMessageTest extends TestCase
         );
 
         $this->assertSame(
-            self::header(
+            MailMessageTest::header(
                 'Content-Type: text/plain; charset=utf-8',
                 'Content-Transfer-Encoding: base64',
             ),
@@ -82,7 +82,7 @@ final class MailMessageTest extends TestCase
         );
 
         $this->assertSame(
-            self::header(
+            MailMessageTest::header(
                 'Content-Type: text/plain; charset=utf-8',
                 'Content-Transfer-Encoding: 8bit',
             ),
@@ -97,7 +97,7 @@ final class MailMessageTest extends TestCase
             mail: $this->textMail(body: "Hello\nWorld", encoding: MailerEncodingEnum::SEVEN_BIT),
         );
 
-        $this->assertSame(self::header('Content-Type: text/plain; charset=utf-8'), $message->normalizedHeader());
+        $this->assertSame(MailMessageTest::header('Content-Type: text/plain; charset=utf-8'), $message->normalizedHeader());
         $this->assertSame("Hello\r\nWorld\r\n", $message->body);
     }
 
@@ -108,7 +108,7 @@ final class MailMessageTest extends TestCase
         );
 
         $this->assertSame(
-            self::header(
+            MailMessageTest::header(
                 'Content-Type: text/plain; charset=utf-8',
                 'Content-Transfer-Encoding: binary',
             ),
@@ -134,7 +134,7 @@ final class MailMessageTest extends TestCase
         );
 
         $this->assertSame(
-            self::crlf(
+            MailMessageTest::crlf(
                 'Date: Thu, 08 Oct 2026 12:00:00 +0000',
                 'From: from@example.com',
                 'To: to@example.com',
@@ -176,7 +176,7 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $mail);
 
         $this->assertSame(
-            self::crlf(
+            MailMessageTest::crlf(
                 'wort wort wort wort wort wort wort wort',
                 'wort wort wort wort wort wort wort wort',
                 'wort wort wort wort wort wort wort wort',
@@ -195,7 +195,7 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $mail);
 
         $this->assertSame(
-            self::crlf(
+            MailMessageTest::crlf(
                 'This is a multi-part message in MIME format.',
                 '',
                 '--b1_ID',
@@ -225,7 +225,7 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $this->htmlMail(htmlBody: '<p>Hi</p>', alternativeBody: ''));
 
         $this->assertSame(
-            self::header(
+            MailMessageTest::header(
                 'Content-Type: text/html; charset=utf-8',
                 'Content-Transfer-Encoding: quoted-printable',
             ),
@@ -241,14 +241,14 @@ final class MailMessageTest extends TestCase
         );
 
         $this->assertSame(
-            self::header(
+            MailMessageTest::header(
                 'Content-Type: multipart/alternative;',
                 ' boundary="b1_ID"',
             ),
             $message->normalizedHeader(),
         );
         $this->assertSame(
-            self::crlf(
+            MailMessageTest::crlf(
                 'This is a multi-part message in MIME format.',
                 '',
                 '--b1_ID',
@@ -277,14 +277,14 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $mail);
 
         $this->assertSame(
-            self::header(
+            MailMessageTest::header(
                 'Content-Type: multipart/mixed;',
                 ' boundary="b1_ID"',
             ),
             $message->normalizedHeader(),
         );
         $this->assertSame(
-            self::crlf(
+            MailMessageTest::crlf(
                 'This is a multi-part message in MIME format.',
                 '',
                 '--b1_ID',
@@ -314,14 +314,14 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $mail);
 
         $this->assertSame(
-            self::header(
+            MailMessageTest::header(
                 'Content-Type: multipart/related;',
                 ' boundary="b1_ID"',
             ),
             $message->normalizedHeader(),
         );
         $this->assertSame(
-            self::crlf(
+            MailMessageTest::crlf(
                 'This is a multi-part message in MIME format.',
                 '',
                 '--b1_ID',
@@ -352,14 +352,14 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $mail);
 
         $this->assertSame(
-            self::header(
+            MailMessageTest::header(
                 'Content-Type: multipart/mixed;',
                 ' boundary="b1_ID"',
             ),
             $message->normalizedHeader(),
         );
         $this->assertSame(
-            self::crlf(
+            MailMessageTest::crlf(
                 'This is a multi-part message in MIME format.',
                 '',
                 '--b1_ID',
@@ -401,14 +401,14 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $mail);
 
         $this->assertSame(
-            self::header(
+            MailMessageTest::header(
                 'Content-Type: multipart/alternative;',
                 ' boundary="b1_ID"',
             ),
             $message->normalizedHeader(),
         );
         $this->assertSame(
-            self::crlf(
+            MailMessageTest::crlf(
                 'This is a multi-part message in MIME format.',
                 '',
                 '--b1_ID',
@@ -453,14 +453,14 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $mail);
 
         $this->assertSame(
-            self::header(
+            MailMessageTest::header(
                 'Content-Type: multipart/mixed;',
                 ' boundary="b1_ID"',
             ),
             $message->normalizedHeader(),
         );
         $this->assertSame(
-            self::crlf(
+            MailMessageTest::crlf(
                 'This is a multi-part message in MIME format.',
                 '',
                 '--b1_ID',
@@ -518,14 +518,14 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $mail);
 
         $this->assertSame(
-            self::header(
+            MailMessageTest::header(
                 'Content-Type: multipart/mixed;',
                 ' boundary="b1_ID"',
             ),
             $message->normalizedHeader(),
         );
         $this->assertSame(
-            self::crlf(
+            MailMessageTest::crlf(
                 'This is a multi-part message in MIME format.',
                 '',
                 '--b1_ID',
@@ -572,7 +572,7 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $mail);
 
         $this->assertStringContainsString(
-            self::crlf(
+            MailMessageTest::crlf(
                 '--b1_ID',
                 'Content-Type: text/plain; name=hello.txt',
                 'Content-Transfer-Encoding: base64',
@@ -601,7 +601,7 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $mail);
 
         $this->assertStringContainsString(
-            self::crlf(
+            MailMessageTest::crlf(
                 '--b1_ID',
                 'Content-Type: text/x-notes; name="Mein Text.txt"',
                 'Content-Transfer-Encoding: quoted-printable',
@@ -627,7 +627,7 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $mail);
 
         $this->assertStringContainsString(
-            self::crlf(
+            MailMessageTest::crlf(
                 'Content-Type: image/png; name=pixel.png',
                 'Content-Transfer-Encoding: base64',
                 'Content-ID: <pixel.png>',
@@ -659,7 +659,7 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $mail);
 
         $this->assertStringContainsString(
-            self::crlf(
+            MailMessageTest::crlf(
                 'Content-Type: application/pdf; name="=?utf-8?Q?Rechnung_M=C3=A4rz_\"2024\"_(1).pdf?="',
                 'Content-Transfer-Encoding: base64',
                 'Content-Disposition: attachment; filename="=?utf-8?Q?Rechnung_M=C3=A4rz_\"2024\"_(1).pdf?="',
@@ -689,7 +689,7 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $mail);
 
         $this->assertSame(
-            self::crlf(
+            MailMessageTest::crlf(
                 'Date: Thu, 08 Oct 2026 12:00:00 +0000',
                 'From: =?utf-8?Q?M=C3=BCller=2C_Anna?= <from@example.com>',
                 'To: "To \"Quoted\" Name" <to@example.com>, to2@example.com',
@@ -717,7 +717,7 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $mail, isSmtpLike: false);
 
         $this->assertSame(
-            self::crlf(
+            MailMessageTest::crlf(
                 'Date: Thu, 08 Oct 2026 12:00:00 +0000',
                 'From: From Name <from@example.com>',
                 'Cc: Cc Person <cc@example.com>',
@@ -871,7 +871,7 @@ final class MailMessageTest extends TestCase
         );
 
         $this->assertStringContainsString(
-            self::crlf(
+            MailMessageTest::crlf(
                 'Subject: =?utf-8?B?0J/RgNC40LLQtdGCINC80LjRgCwg0LrQsNC6INC00LXQu9CwPyDQrdGC0L4=?=',
                 ' =?utf-8?B?INC00LvQuNC90L3QsNGPINGC0LXQvNCwINC/0LjRgdGM0LzQsCDQtNC70Y8g?=',
                 ' =?utf-8?B?0L/RgNC+0LLQtdGA0LrQuCDQv9C10YDQtdC90L7RgdCwINGB0YLRgNC+0Log?=',
@@ -934,7 +934,7 @@ final class MailMessageTest extends TestCase
         $message = CapturingMailer::capture(mail: $mail, isSmtpLike: false);
 
         $this->assertStringContainsString(
-            self::crlf(
+            MailMessageTest::crlf(
                 'From: =?utf-8?Q?Dr=2E_Hans-Peter_M=C3=BCller-L=C3=BCdenscheid_von_?=',
                 ' =?utf-8?Q?und_zu_Hohenzollern?= <from@example.com>',
                 'Reply-To: =?utf-8?Q?Dr=2E_Hans-Peter_M=C3=BCller-L=C3=BCdenscheid_von_?=',
@@ -1078,7 +1078,7 @@ final class MailMessageTest extends TestCase
 
     private static function header(string ...$contentLines): string
     {
-        return self::crlf(
+        return MailMessageTest::crlf(
             'Date: Thu, 08 Oct 2026 12:00:00 +0000',
             'From: From Name <from@example.com>',
             'To: To Name <to@example.com>',

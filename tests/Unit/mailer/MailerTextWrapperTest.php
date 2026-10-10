@@ -19,7 +19,7 @@ final class MailerTextWrapperTest extends TestCase
     {
         $this->assertSame(
             "aaa bbb\r\nccc ddd\r\neee fff\r\n",
-            self::wrap(message: 'aaa bbb ccc ddd eee fff', length: 8),
+            MailerTextWrapperTest::wrap(message: 'aaa bbb ccc ddd eee fff', length: 8),
         );
     }
 
@@ -27,7 +27,7 @@ final class MailerTextWrapperTest extends TestCase
     {
         $this->assertSame(
             "aaa\r\nbbb\r\nccc\r\nddd\r\n",
-            self::wrap(message: "aaa bbb\nccc\r\nddd\n", length: 5),
+            MailerTextWrapperTest::wrap(message: "aaa bbb\nccc\r\nddd\n", length: 5),
         );
     }
 
@@ -35,7 +35,7 @@ final class MailerTextWrapperTest extends TestCase
     {
         $this->assertSame(
             "aaaaaaaaaaaaaaa\r\nbb\r\n",
-            self::wrap(message: 'aaaaaaaaaaaaaaa bb', length: 5),
+            MailerTextWrapperTest::wrap(message: 'aaaaaaaaaaaaaaa bb', length: 5),
         );
     }
 

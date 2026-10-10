@@ -175,7 +175,7 @@ final class MicrosoftClientCredentialsTokenProviderTest extends TestCase
 
         try {
             $this->provider()->getAccessToken();
-            self::fail('A MailerException was expected.');
+            MicrosoftClientCredentialsTokenProviderTest::fail('A MailerException was expected.');
         } catch (MailerException $exception) {
             $this->assertSame(
                 'The request for the OAuth access token failed with HTTP status 401: invalid_client:'
@@ -199,7 +199,7 @@ final class MicrosoftClientCredentialsTokenProviderTest extends TestCase
         $provider = $this->provider();
         try {
             $provider->getAccessToken();
-            self::fail('A MailerException was expected.');
+            MicrosoftClientCredentialsTokenProviderTest::fail('A MailerException was expected.');
         } catch (MailerException $exception) {
             $this->assertSame(
                 'The request for the OAuth access token failed with HTTP status 500.',
@@ -224,7 +224,7 @@ final class MicrosoftClientCredentialsTokenProviderTest extends TestCase
 
         try {
             $this->provider()->getAccessToken();
-            self::fail('A MailerException was expected.');
+            MicrosoftClientCredentialsTokenProviderTest::fail('A MailerException was expected.');
         } catch (MailerException $exception) {
             $this->assertSame(
                 'The request for the OAuth access token failed with HTTP status 400: bad "code": '

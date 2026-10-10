@@ -32,7 +32,7 @@ final class SmtpMailerTest extends TestCase
     public function testDialogueWithAuthentication(): void
     {
         $transport = new FakeSmtpTransport(
-            replies: self::replies(authenticated: true),
+            replies: SmtpMailerTest::replies(authenticated: true),
         );
         $mailer = $this->mailer(transport: $transport, userName: 'user');
 
@@ -44,7 +44,7 @@ final class SmtpMailerTest extends TestCase
                 'write EHLO mail.example.com',
                 'write AUTH LOGIN',
                 'write dXNlcg==',
-                'write ' . base64_encode(string: self::PASSWORD),
+                'write ' . base64_encode(string: SmtpMailerTest::PASSWORD),
                 'write MAIL FROM: <send@example.com>',
                 'write RCPT TO: <to@example.com>',
                 'write RCPT TO: <cc@example.com>',
@@ -52,7 +52,7 @@ final class SmtpMailerTest extends TestCase
                 'write DATA',
                 ...array_map(
                     callback: static fn(string $line): string => 'write ' . $line,
-                    array: self::expectedMessageLines(),
+                    array: SmtpMailerTest::expectedMessageLines(),
                 ),
                 'write .',
                 'write QUIT',
@@ -65,7 +65,7 @@ final class SmtpMailerTest extends TestCase
 
     public function testDialogueWithoutAuthenticationWhenThereIsNoUserName(): void
     {
-        $transport = new FakeSmtpTransport(replies: self::replies(authenticated: false));
+        $transport = new FakeSmtpTransport(replies: SmtpMailerTest::replies(authenticated: false));
         $mailer = $this->mailer(transport: $transport, userName: '');
 
         $this->mail()->send(abstractMailer: $mailer);
@@ -85,7 +85,7 @@ final class SmtpMailerTest extends TestCase
 
     public function testBlindCopiesAreRecipientsButNotInTheHeader(): void
     {
-        $transport = new FakeSmtpTransport(replies: self::replies(authenticated: false));
+        $transport = new FakeSmtpTransport(replies: SmtpMailerTest::replies(authenticated: false));
 
         $this->mail()->send(abstractMailer: $this->mailer(transport: $transport, userName: ''));
 
@@ -105,7 +105,7 @@ final class SmtpMailerTest extends TestCase
                 "334 VXNlcm5hbWU6\r\n",
                 "334 UGFzc3dvcmQ6\r\n",
                 "235 ok\r\n",
-                ...array_slice(array: self::replies(authenticated: false), offset: 2),
+                ...array_slice(array: SmtpMailerTest::replies(authenticated: false), offset: 2),
             ],
         );
         $mailer = $this->mailer(transport: $transport, userName: 'user', useTls: true);
@@ -121,7 +121,7 @@ final class SmtpMailerTest extends TestCase
                 'write EHLO mail.example.com',
                 'write AUTH LOGIN',
                 'write dXNlcg==',
-                'write ' . base64_encode(string: self::PASSWORD),
+                'write ' . base64_encode(string: SmtpMailerTest::PASSWORD),
                 'write MAIL FROM: <send@example.com>',
             ],
             array_slice(array: $transport->events, offset: 0, length: 9),
@@ -138,7 +138,7 @@ final class SmtpMailerTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $mailer);
-            self::fail('The delivery must be aborted.');
+            SmtpMailerTest::fail('The delivery must be aborted.');
         } catch (MailerException $exception) {
             $this->assertStringContainsString('TLS connection', $exception->getMessage());
         }
@@ -158,7 +158,7 @@ final class SmtpMailerTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $mailer);
-            self::fail('The delivery must be aborted.');
+            SmtpMailerTest::fail('The delivery must be aborted.');
         } catch (MailerException $exception) {
             $this->assertSame(
                 'Unexpected answer of the SMTP server to STARTTLS: code 502 instead of 220.',
@@ -180,7 +180,7 @@ final class SmtpMailerTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $mailer);
-            self::fail('The delivery must be aborted.');
+            SmtpMailerTest::fail('The delivery must be aborted.');
         } catch (MailerException $exception) {
             $this->assertSame(
                 'Unexpected answer of the SMTP server to the password: code 535 instead of 235.',
@@ -202,9 +202,9 @@ final class SmtpMailerTest extends TestCase
             ],
             array_slice(array: $mailer->log, offset: 1),
         );
-        $this->assertStringNotContainsString(self::PASSWORD, implode(separator: '', array: $mailer->log));
+        $this->assertStringNotContainsString(SmtpMailerTest::PASSWORD, implode(separator: '', array: $mailer->log));
         $this->assertStringNotContainsString(
-            base64_encode(string: self::PASSWORD),
+            base64_encode(string: SmtpMailerTest::PASSWORD),
             implode(separator: '', array: $mailer->log),
         );
     }
@@ -218,7 +218,7 @@ final class SmtpMailerTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $mailer);
-            self::fail('The delivery must be aborted.');
+            SmtpMailerTest::fail('The delivery must be aborted.');
         } catch (MailerException $exception) {
             $this->assertSame(
                 'Unexpected answer of the SMTP server to RCPT TO: code 550 instead of 250.',
@@ -257,7 +257,7 @@ final class SmtpMailerTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $this->mailer(transport: $transport, userName: ''));
-            self::fail('The delivery must be aborted.');
+            SmtpMailerTest::fail('The delivery must be aborted.');
         } catch (MailerException $exception) {
             $this->assertSame('Socket connection error: smtp.example.com', $exception->getMessage());
         }
@@ -284,7 +284,7 @@ final class SmtpMailerTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $mailer);
-            self::fail('The delivery must be aborted.');
+            SmtpMailerTest::fail('The delivery must be aborted.');
         } catch (MailerException) {
             // The message id is part of the header, so the message is not even built
         }
@@ -327,7 +327,7 @@ final class SmtpMailerTest extends TestCase
     public function testEachDeliveryStartsWithAnEmptyLogAndReply(): void
     {
         $transport = new FakeSmtpTransport(
-            replies: [...self::replies(authenticated: false), ...self::replies(authenticated: false)],
+            replies: [...SmtpMailerTest::replies(authenticated: false), ...SmtpMailerTest::replies(authenticated: false)],
         );
         $mailer = $this->mailer(transport: $transport, userName: '');
         $this->mail()->send(abstractMailer: $mailer);
@@ -340,7 +340,7 @@ final class SmtpMailerTest extends TestCase
 
     public function testCommandsAreNotLongerThanTheirTimeoutAllows(): void
     {
-        $transport = new FakeSmtpTransport(replies: self::replies(authenticated: false));
+        $transport = new FakeSmtpTransport(replies: SmtpMailerTest::replies(authenticated: false));
 
         $this->mail()->send(abstractMailer: $this->mailer(transport: $transport, userName: ''));
 
@@ -390,7 +390,7 @@ final class SmtpMailerTest extends TestCase
             serverAddress: '192.0.2.1',
             hostName: 'smtp.example.com',
             smtpUserName: $userName,
-            smtpPassword: self::PASSWORD,
+            smtpPassword: SmtpMailerTest::PASSWORD,
             serverNameCache: null,
             port: 587,
             useTls: $useTls,

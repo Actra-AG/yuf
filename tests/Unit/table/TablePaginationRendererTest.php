@@ -40,7 +40,7 @@ final class TablePaginationRendererTest extends TestCase
 
     public function testDefaultTitlesAreEnglish(): void
     {
-        $html = $this->render(renderer: new TablePaginationRenderer(individualHtmlSnippetPath: self::snippetPath()));
+        $html = $this->render(renderer: new TablePaginationRenderer(individualHtmlSnippetPath: TablePaginationRendererTest::snippetPath()));
 
         $this->assertStringContainsString('<title>Previous</title>', $html);
         $this->assertStringContainsString('<title>Next</title>', $html);
@@ -50,7 +50,7 @@ final class TablePaginationRendererTest extends TestCase
     {
         $html = $this->render(
             renderer: new TablePaginationRenderer(
-                individualHtmlSnippetPath: self::snippetPath(),
+                individualHtmlSnippetPath: TablePaginationRendererTest::snippetPath(),
                 previousTitle: 'Zurück',
                 nextTitle: 'Vor',
             ),
@@ -65,7 +65,7 @@ final class TablePaginationRendererTest extends TestCase
     {
         $html = $this->render(
             renderer: new TablePaginationRenderer(
-                individualHtmlSnippetPath: self::snippetPath(),
+                individualHtmlSnippetPath: TablePaginationRendererTest::snippetPath(),
                 previousTitle: '<b>Back</b>',
             ),
         );
@@ -82,7 +82,7 @@ final class TablePaginationRendererTest extends TestCase
     private function render(TablePaginationRenderer $renderer): string
     {
         $table = new FixedPageDbResultTable(
-            identifier: 'paginationTest' . ++self::$tableCounter,
+            identifier: 'paginationTest' . ++TablePaginationRendererTest::$tableCounter,
             db: TablePaginationRendererTest::createStub(FrameworkDb::class),
             dbQuery: DbQuery::createFromSqlQuery(query: 'SELECT id FROM item'),
             templateEngine: $this->templateEngine,

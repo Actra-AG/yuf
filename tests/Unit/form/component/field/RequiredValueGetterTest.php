@@ -45,37 +45,37 @@ final class RequiredValueGetterTest extends TestCase
     {
         yield 'integer' => [
             IntegerField::class, 'getValueAsInt', '42', 'abc',
-            static fn(ParsedInputField $field): int => self::as(IntegerField::class, $field)
+            static fn(ParsedInputField $field): int => RequiredValueGetterTest::as(IntegerField::class, $field)
                 ->getRequiredValueAsInt(),
             42,
         ];
         yield 'hidden integer' => [
             HiddenIntegerField::class, 'getValueAsInt', '7', 'abc',
-            static fn(ParsedInputField $field): int => self::as(HiddenIntegerField::class, $field)
+            static fn(ParsedInputField $field): int => RequiredValueGetterTest::as(HiddenIntegerField::class, $field)
                 ->getRequiredValueAsInt(),
             7,
         ];
         yield 'float' => [
             FloatField::class, 'getValueAsFloat', '1.5', 'abc',
-            static fn(ParsedInputField $field): float => self::as(FloatField::class, $field)
+            static fn(ParsedInputField $field): float => RequiredValueGetterTest::as(FloatField::class, $field)
                 ->getRequiredValueAsFloat(),
             1.5,
         ];
         yield 'decimal' => [
             DecimalField::class, 'getValueAsDecimal', '12.5', 'abc',
-            static fn(ParsedInputField $field): string => self::as(DecimalField::class, $field)
+            static fn(ParsedInputField $field): string => RequiredValueGetterTest::as(DecimalField::class, $field)
                 ->getRequiredValueAsDecimal(),
             '12.50',
         ];
         yield 'date' => [
             DateField::class, 'getValueAsDateTimeImmutable', '2020-02-03', 'abc',
-            static fn(ParsedInputField $field): string => self::as(DateField::class, $field)
+            static fn(ParsedInputField $field): string => RequiredValueGetterTest::as(DateField::class, $field)
                 ->getRequiredValueAsDateTimeImmutable()->format(format: 'Y-m-d'),
             '2020-02-03',
         ];
         yield 'time' => [
             TimeField::class, 'getValueAsTimeOfDay', '08:30', 'abc',
-            static fn(ParsedInputField $field): string => self::as(TimeField::class, $field)
+            static fn(ParsedInputField $field): string => RequiredValueGetterTest::as(TimeField::class, $field)
                 ->getRequiredValueAsTimeOfDay()->toString(),
             '08:30:00',
         ];
@@ -88,9 +88,9 @@ final class RequiredValueGetterTest extends TestCase
      */
     private static function as(string $class, ParsedInputField $field): ParsedInputField
     {
-        self::assertInstanceOf($class, $field);
-
-        return $field;
+        return $field instanceof $class
+            ? $field
+            : throw new LogicException(message: 'Expected ' . $class . ', got ' . $field::class . '.');
     }
 
     /**
@@ -103,7 +103,7 @@ final class RequiredValueGetterTest extends TestCase
         $field = match ($class) {
             IntegerField::class => new IntegerField(
                 name: 'field',
-                label: self::label(),
+                label: RequiredValueGetterTest::label(),
                 initialValue: $initial === null ? null : (int) $initial,
                 requiredError: $requiredError,
             ),
@@ -113,27 +113,27 @@ final class RequiredValueGetterTest extends TestCase
             ),
             FloatField::class => new FloatField(
                 name: 'field',
-                label: self::label(),
+                label: RequiredValueGetterTest::label(),
                 initialValue: $initial === null ? null : (float) $initial,
                 requiredError: $requiredError,
             ),
             DecimalField::class => new DecimalField(
                 name: 'field',
-                label: self::label(),
+                label: RequiredValueGetterTest::label(),
                 scale: 2,
                 initialValue: $initial,
                 requiredError: $requiredError,
             ),
             DateField::class => new DateField(
                 name: 'field',
-                label: self::label(),
+                label: RequiredValueGetterTest::label(),
                 value: $initial === null ? null : new DateTimeImmutable(datetime: $initial),
                 invalidError: $invalid,
                 requiredError: $requiredError,
             ),
             TimeField::class => new TimeField(
                 name: 'field',
-                label: self::label(),
+                label: RequiredValueGetterTest::label(),
                 value: $initial === null ? null : TimeOfDay::fromString(time: $initial . ':00'),
                 invalidError: $invalid,
                 requiredError: $requiredError,

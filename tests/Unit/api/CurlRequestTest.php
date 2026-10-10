@@ -56,27 +56,27 @@ final class CurlRequestTest extends TestCase
     #[DataProvider('methodProvider')]
     public function testRequestKnowsMethodAndUrl(AbstractCurlRequest $request, RequestMethodEnum $expectedMethod): void
     {
-        self::assertSame($expectedMethod, $request->getMethod());
-        self::assertSame(CurlRequestTest::URL, $request->getUrl());
+        $this->assertSame($expectedMethod, $request->getMethod());
+        $this->assertSame(CurlRequestTest::URL, $request->getUrl());
     }
 
     public function testRequestWithoutBodyHasNoBodyAndNoHeaders(): void
     {
         $request = CurlGetRequest::create(requestTargetUrl: CurlRequestTest::URL);
 
-        self::assertNull($request->getBody());
-        self::assertSame([], $this->headersOf(request: $request));
+        $this->assertNull($request->getBody());
+        $this->assertSame([], $this->headersOf(request: $request));
     }
 
     public function testDefaults(): void
     {
         $request = CurlGetRequest::create(requestTargetUrl: CurlRequestTest::URL);
 
-        self::assertSame(3, $request->getConnectTimeoutInSeconds());
-        self::assertSame(10, $request->getRequestTimeoutInSeconds());
-        self::assertSame(33554432, $request->getMaxResponseSizeInBytes());
-        self::assertFalse($request->isRedirectionResponseCodeAccepted());
-        self::assertNull($request->getAuthentication());
+        $this->assertSame(3, $request->getConnectTimeoutInSeconds());
+        $this->assertSame(10, $request->getRequestTimeoutInSeconds());
+        $this->assertSame(33554432, $request->getMaxResponseSizeInBytes());
+        $this->assertFalse($request->isRedirectionResponseCodeAccepted());
+        $this->assertNull($request->getAuthentication());
     }
 
     /**
@@ -116,10 +116,10 @@ final class CurlRequestTest extends TestCase
     {
         try {
             CurlGetRequest::create(requestTargetUrl: 'ftp://api.example.com/?token=SECRET-TOKEN');
-            self::fail('The URL must be rejected.');
+            CurlRequestTest::fail('The URL must be rejected.');
         } catch (InvalidArgumentException $exception) {
-            self::assertStringNotContainsString('SECRET-TOKEN', $exception->getMessage());
-            self::assertStringNotContainsString('api.example.com', $exception->getMessage());
+            $this->assertStringNotContainsString('SECRET-TOKEN', $exception->getMessage());
+            $this->assertStringNotContainsString('api.example.com', $exception->getMessage());
         }
     }
 
@@ -141,7 +141,7 @@ final class CurlRequestTest extends TestCase
     #[DataProvider('validUrlProvider')]
     public function testValidUrlIsKept(string $url): void
     {
-        self::assertSame($url, CurlGetRequest::create(requestTargetUrl: $url)->getUrl());
+        $this->assertSame($url, CurlGetRequest::create(requestTargetUrl: $url)->getUrl());
     }
 
     public function testHeadersAreSentInTheOrderTheyWereSet(): void
@@ -150,7 +150,7 @@ final class CurlRequestTest extends TestCase
         $request->setHttpHeader(key: 'X-First', value: '1');
         $request->setHttpHeader(key: 'X-Second', value: '2');
 
-        self::assertSame(['X-First' => '1', 'X-Second' => '2'], $this->headersOf(request: $request));
+        $this->assertSame(['X-First' => '1', 'X-Second' => '2'], $this->headersOf(request: $request));
     }
 
     public function testHeaderIsReplacedCaseInsensitively(): void
@@ -159,7 +159,7 @@ final class CurlRequestTest extends TestCase
         $request->setHttpHeader(key: 'X-Api-Key', value: 'old');
         $request->setHttpHeader(key: 'x-api-key', value: 'new');
 
-        self::assertSame(['x-api-key' => 'new'], $this->headersOf(request: $request));
+        $this->assertSame(['x-api-key' => 'new'], $this->headersOf(request: $request));
     }
 
     /**
@@ -222,10 +222,10 @@ final class CurlRequestTest extends TestCase
 
         try {
             $request->setHttpHeader(key: 'X-Api-Key', value: "SECRET-KEY\r\n");
-            self::fail('The header must be rejected.');
+            CurlRequestTest::fail('The header must be rejected.');
         } catch (InvalidArgumentException $exception) {
-            self::assertStringNotContainsString('SECRET-KEY', $exception->getMessage());
-            self::assertStringContainsString('X-Api-Key', $exception->getMessage());
+            $this->assertStringNotContainsString('SECRET-KEY', $exception->getMessage());
+            $this->assertStringContainsString('X-Api-Key', $exception->getMessage());
         }
     }
 
@@ -234,7 +234,7 @@ final class CurlRequestTest extends TestCase
         $request = CurlGetRequest::create(requestTargetUrl: CurlRequestTest::URL);
         $request->setHttpHeader(key: 'X-Test', value: "a\tb ä");
 
-        self::assertSame(['X-Test' => "a\tb ä"], $this->headersOf(request: $request));
+        $this->assertSame(['X-Test' => "a\tb ä"], $this->headersOf(request: $request));
     }
 
     public function testHeaderLineOfAnEmptyValueIsSentWithSemicolon(): void
@@ -243,8 +243,8 @@ final class CurlRequestTest extends TestCase
         $request->setHttpHeader(key: 'X-Empty', value: '');
 
         $headers = $request->getHttpHeaders();
-        self::assertCount(1, $headers);
-        self::assertSame('X-Empty;', $headers[0]->toLine());
+        $this->assertCount(1, $headers);
+        $this->assertSame('X-Empty;', $headers[0]->toLine());
     }
 
     public function testPostFieldsBody(): void
@@ -254,8 +254,8 @@ final class CurlRequestTest extends TestCase
             postData: ['a' => 'b c'],
         );
 
-        self::assertSame('a=b%20c', $request->getBody());
-        self::assertSame(
+        $this->assertSame('a=b%20c', $request->getBody());
+        $this->assertSame(
             ['Content-Type' => 'application/x-www-form-urlencoded; charset=utf-8'],
             $this->headersOf(request: $request),
         );
@@ -265,8 +265,8 @@ final class CurlRequestTest extends TestCase
     {
         $request = CurlPutRequest::createWithXmlBody(requestTargetUrl: CurlRequestTest::URL, xmlString: '<a/>');
 
-        self::assertSame('<a/>', $request->getBody());
-        self::assertSame(
+        $this->assertSame('<a/>', $request->getBody());
+        $this->assertSame(
             ['HTTP_PRETTY_PRINT' => 'TRUE', 'Content-Type' => 'text/xml; charset=utf-8'],
             $this->headersOf(request: $request),
         );
@@ -276,15 +276,15 @@ final class CurlRequestTest extends TestCase
     {
         $request = CurlPatchRequest::createWithJsonBody(requestTargetUrl: CurlRequestTest::URL, jsonString: '{"a":1}');
 
-        self::assertSame('{"a":1}', $request->getBody());
-        self::assertSame(['Content-Type' => 'application/json; charset=utf-8'], $this->headersOf(request: $request));
+        $this->assertSame('{"a":1}', $request->getBody());
+        $this->assertSame(['Content-Type' => 'application/json; charset=utf-8'], $this->headersOf(request: $request));
     }
 
     public function testJsonApiBody(): void
     {
         $request = CurlPostRequest::createJsonApiRequest(requestTargetUrl: CurlRequestTest::URL, jsonString: '{}');
 
-        self::assertSame(
+        $this->assertSame(
             ['Accept' => 'application/vnd.api+json', 'Content-Type' => 'application/vnd.api+json'],
             $this->headersOf(request: $request),
         );
@@ -294,8 +294,8 @@ final class CurlRequestTest extends TestCase
     {
         $request = CurlPostRequest::createWithPlainTextBody(requestTargetUrl: CurlRequestTest::URL, plainText: 'hi');
 
-        self::assertSame('hi', $request->getBody());
-        self::assertSame(['Content-Type' => 'text/plain; charset=utf-8'], $this->headersOf(request: $request));
+        $this->assertSame('hi', $request->getBody());
+        $this->assertSame(['Content-Type' => 'text/plain; charset=utf-8'], $this->headersOf(request: $request));
     }
 
     public function testDefaultHeaderOfTheBodyCanBeReplaced(): void
@@ -303,7 +303,7 @@ final class CurlRequestTest extends TestCase
         $request = CurlPostRequest::createJsonApiRequest(requestTargetUrl: CurlRequestTest::URL, jsonString: '{}');
         $request->setHttpHeader(key: 'accept', value: 'application/json');
 
-        self::assertSame(
+        $this->assertSame(
             ['accept' => 'application/json', 'Content-Type' => 'application/vnd.api+json'],
             $this->headersOf(request: $request),
         );
@@ -315,8 +315,8 @@ final class CurlRequestTest extends TestCase
 
         $request->setTimeoutInSeconds(connectTimeOut: 3, requestTimeOut: 30);
 
-        self::assertSame(3, $request->getConnectTimeoutInSeconds());
-        self::assertSame(30, $request->getRequestTimeoutInSeconds());
+        $this->assertSame(3, $request->getConnectTimeoutInSeconds());
+        $this->assertSame(30, $request->getRequestTimeoutInSeconds());
     }
 
     /**
@@ -357,7 +357,7 @@ final class CurlRequestTest extends TestCase
 
         $request->setMaxResponseSizeInBytes(maxResponseSizeInBytes: 1024);
 
-        self::assertSame(1024, $request->getMaxResponseSizeInBytes());
+        $this->assertSame(1024, $request->getMaxResponseSizeInBytes());
     }
 
     public function testMaxResponseSizeBelowOneByteIsRejected(): void
@@ -375,7 +375,7 @@ final class CurlRequestTest extends TestCase
 
         $request->acceptRedirectionResponseCode();
 
-        self::assertTrue($request->isRedirectionResponseCodeAccepted());
+        $this->assertTrue($request->isRedirectionResponseCodeAccepted());
     }
 
     /**
@@ -408,8 +408,8 @@ final class CurlRequestTest extends TestCase
         $bearerRequest->useTokenAuthentication(token: 'token');
         $basicRequest->useBasicHttpAuthentication(authUserNamePassword: 'user:password');
 
-        self::assertNotNull($bearerRequest->getAuthentication());
-        self::assertNotNull($basicRequest->getAuthentication());
+        $this->assertNotNull($bearerRequest->getAuthentication());
+        $this->assertNotNull($basicRequest->getAuthentication());
     }
 
     public function testExceptionOfCredentialsOverHttpDoesNotShowThem(): void
@@ -418,9 +418,9 @@ final class CurlRequestTest extends TestCase
 
         try {
             $request->useTokenAuthentication(token: 'SECRET-TOKEN');
-            self::fail('Credentials over plain HTTP must be rejected.');
+            CurlRequestTest::fail('Credentials over plain HTTP must be rejected.');
         } catch (LogicException $exception) {
-            self::assertStringNotContainsString('SECRET', $exception->getMessage());
+            $this->assertStringNotContainsString('SECRET', $exception->getMessage());
         }
     }
 
@@ -482,11 +482,11 @@ final class CurlRequestTest extends TestCase
         $dump = print_r(value: $request, return: true) . print_r(value: $request->getAuthentication(), return: true);
         $dump .= (string) json_encode(value: $request->getAuthentication());
 
-        self::assertStringNotContainsString('URL-SECRET', $dump);
-        self::assertStringNotContainsString('BODY-SECRET', $dump);
-        self::assertStringNotContainsString('TOKEN-SECRET', $dump);
-        self::assertStringNotContainsString('HEADER-SECRET', $dump);
-        self::assertStringContainsString('api.example.com', $dump);
+        $this->assertStringNotContainsString('URL-SECRET', $dump);
+        $this->assertStringNotContainsString('BODY-SECRET', $dump);
+        $this->assertStringNotContainsString('TOKEN-SECRET', $dump);
+        $this->assertStringNotContainsString('HEADER-SECRET', $dump);
+        $this->assertStringContainsString('api.example.com', $dump);
     }
 
     /**

@@ -40,7 +40,7 @@ final class CurlErrorEvaluatorTest extends TestCase
     #[DataProvider('noErrorProvider')]
     public function testNoError(int $statusCode, bool $acceptRedirection): void
     {
-        self::assertNull($this->evaluate(statusCode: $statusCode, acceptRedirection: $acceptRedirection));
+        $this->assertNull($this->evaluate(statusCode: $statusCode, acceptRedirection: $acceptRedirection));
     }
 
     /**
@@ -75,9 +75,9 @@ final class CurlErrorEvaluatorTest extends TestCase
     {
         $error = $this->evaluate(statusCode: $statusCode, acceptRedirection: $acceptRedirection);
 
-        self::assertInstanceOf(CurlResponseError::class, $error);
-        self::assertSame(CurlResponse::ERROR_BAD_HTTP_RESPONSE_CODE, $error->code);
-        self::assertStringStartsWith(
+        $this->assertInstanceOf(CurlResponseError::class, $error);
+        $this->assertSame(CurlResponse::ERROR_BAD_HTTP_RESPONSE_CODE, $error->code);
+        $this->assertStringStartsWith(
             CurlResponse::class . ': Bad HTTP response code received: ' . $statusCode,
             $error->message,
         );
@@ -94,9 +94,9 @@ final class CurlErrorEvaluatorTest extends TestCase
             maxResponseSizeInBytes: 100,
         );
 
-        self::assertInstanceOf(CurlResponseError::class, $error);
-        self::assertSame(CURLE_COULDNT_CONNECT, $error->code);
-        self::assertSame(
+        $this->assertInstanceOf(CurlResponseError::class, $error);
+        $this->assertSame(CURLE_COULDNT_CONNECT, $error->code);
+        $this->assertSame(
             CurlResponse::class . ': (7) Failed to connect to example.com port 443',
             $error->message,
         );
@@ -113,8 +113,8 @@ final class CurlErrorEvaluatorTest extends TestCase
             maxResponseSizeInBytes: 100,
         );
 
-        self::assertInstanceOf(CurlResponseError::class, $error);
-        self::assertSame(CURLE_OPERATION_TIMEOUTED, $error->code);
+        $this->assertInstanceOf(CurlResponseError::class, $error);
+        $this->assertSame(CURLE_OPERATION_TIMEOUTED, $error->code);
     }
 
     /**
@@ -145,8 +145,8 @@ final class CurlErrorEvaluatorTest extends TestCase
             maxResponseSizeInBytes: 100,
         );
 
-        self::assertInstanceOf(CurlResponseError::class, $error);
-        self::assertSame(
+        $this->assertInstanceOf(CurlResponseError::class, $error);
+        $this->assertSame(
             CurlResponse::class . ': (' . $curlErrorCode . ') message' . $expectedHint,
             $error->message,
         );
@@ -163,8 +163,8 @@ final class CurlErrorEvaluatorTest extends TestCase
             maxResponseSizeInBytes: 100,
         );
 
-        self::assertInstanceOf(CurlResponseError::class, $error);
-        self::assertStringContainsString('always verified', $error->message);
+        $this->assertInstanceOf(CurlResponseError::class, $error);
+        $this->assertStringContainsString('always verified', $error->message);
     }
 
     public function testResponseLargerThanTheLimitFromTheWriteCallback(): void
@@ -178,9 +178,9 @@ final class CurlErrorEvaluatorTest extends TestCase
             maxResponseSizeInBytes: 1000,
         );
 
-        self::assertInstanceOf(CurlResponseError::class, $error);
-        self::assertSame(CurlResponse::ERROR_RESPONSE_TOO_LARGE, $error->code);
-        self::assertSame(CurlResponse::class . ': The response is larger than 1000 bytes.', $error->message);
+        $this->assertInstanceOf(CurlResponseError::class, $error);
+        $this->assertSame(CurlResponse::ERROR_RESPONSE_TOO_LARGE, $error->code);
+        $this->assertSame(CurlResponse::class . ': The response is larger than 1000 bytes.', $error->message);
     }
 
     public function testResponseLargerThanTheLimitFromContentLength(): void
@@ -194,8 +194,8 @@ final class CurlErrorEvaluatorTest extends TestCase
             maxResponseSizeInBytes: 1000,
         );
 
-        self::assertInstanceOf(CurlResponseError::class, $error);
-        self::assertSame(CurlResponse::ERROR_RESPONSE_TOO_LARGE, $error->code);
+        $this->assertInstanceOf(CurlResponseError::class, $error);
+        $this->assertSame(CurlResponse::ERROR_RESPONSE_TOO_LARGE, $error->code);
     }
 
     public function testWriteErrorWithoutExceededLimitStaysACurlError(): void
@@ -209,8 +209,8 @@ final class CurlErrorEvaluatorTest extends TestCase
             maxResponseSizeInBytes: 1000,
         );
 
-        self::assertInstanceOf(CurlResponseError::class, $error);
-        self::assertSame(CURLE_WRITE_ERROR, $error->code);
+        $this->assertInstanceOf(CurlResponseError::class, $error);
+        $this->assertSame(CURLE_WRITE_ERROR, $error->code);
     }
 
     /**
@@ -239,8 +239,8 @@ final class CurlErrorEvaluatorTest extends TestCase
     {
         $error = $this->evaluate(statusCode: $statusCode, acceptRedirection: false);
 
-        self::assertInstanceOf(CurlResponseError::class, $error);
-        self::assertSame(
+        $this->assertInstanceOf(CurlResponseError::class, $error);
+        $this->assertSame(
             CurlResponse::class . ': Bad HTTP response code received: ' . $statusCode . $expectedHint,
             $error->message,
         );

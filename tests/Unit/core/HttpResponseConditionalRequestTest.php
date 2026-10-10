@@ -57,7 +57,7 @@ final class HttpResponseConditionalRequestTest extends TestCase
     public function testSameModificationTimeIsNotModified(): void
     {
         $httpRequest = HttpRequestFactory::create(
-            headers: ['If-Modified-Since' => gmdate(format: 'r', timestamp: self::MODIFIED)],
+            headers: ['If-Modified-Since' => gmdate(format: 'r', timestamp: HttpResponseConditionalRequestTest::MODIFIED)],
         );
 
         $this->assertTrue(HttpResponse::isNotModified(
@@ -70,7 +70,7 @@ final class HttpResponseConditionalRequestTest extends TestCase
     public function testOtherModificationTimeIsModified(): void
     {
         $httpRequest = HttpRequestFactory::create(
-            headers: ['If-Modified-Since' => gmdate(format: 'r', timestamp: self::MODIFIED - 60)],
+            headers: ['If-Modified-Since' => gmdate(format: 'r', timestamp: HttpResponseConditionalRequestTest::MODIFIED - 60)],
         );
 
         $this->assertFalse(HttpResponse::isNotModified(
@@ -126,7 +126,7 @@ final class HttpResponseConditionalRequestTest extends TestCase
     {
         $httpRequest = HttpRequestFactory::create(headers: [
             'If-None-Match' => '"other"',
-            'If-Modified-Since' => gmdate(format: 'r', timestamp: self::MODIFIED),
+            'If-Modified-Since' => gmdate(format: 'r', timestamp: HttpResponseConditionalRequestTest::MODIFIED),
         ]);
 
         $this->assertFalse(HttpResponse::isNotModified(
@@ -139,7 +139,7 @@ final class HttpResponseConditionalRequestTest extends TestCase
     public function testLaterModificationTimeIsNotModified(): void
     {
         $httpRequest = HttpRequestFactory::create(
-            headers: ['If-Modified-Since' => gmdate(format: 'r', timestamp: self::MODIFIED + 60)],
+            headers: ['If-Modified-Since' => gmdate(format: 'r', timestamp: HttpResponseConditionalRequestTest::MODIFIED + 60)],
         );
 
         $this->assertTrue(HttpResponse::isNotModified(

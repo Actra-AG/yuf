@@ -37,7 +37,7 @@ final class NavigationItemTest extends TestCase
 
     public function testRenderWithoutChildren(): void
     {
-        $data = self::item(navKey: 'users', title: 'Users &amp; Groups', href: '/users/?reset')->render(
+        $data = NavigationItemTest::item(navKey: 'users', title: 'Users &amp; Groups', href: '/users/?reset')->render(
             activeMainNavigationItem: 'users',
             accessRightCollection: AccessRightCollection::createEmpty(),
         )->toTemplateData();
@@ -58,9 +58,9 @@ final class NavigationItemTest extends TestCase
     public function testRenderWithChildren(): void
     {
         $children = new NavigationItemCollection();
-        $children->addItem(navigationItem: self::item(navKey: 'a', title: 'A'));
-        $children->addItem(navigationItem: self::item(navKey: 'b', title: 'B'));
-        $parent = self::item(navKey: 'parent', childNavigation: $children);
+        $children->addItem(navigationItem: NavigationItemTest::item(navKey: 'a', title: 'A'));
+        $children->addItem(navigationItem: NavigationItemTest::item(navKey: 'b', title: 'B'));
+        $parent = NavigationItemTest::item(navKey: 'parent', childNavigation: $children);
 
         $data = $parent->render(
             activeMainNavigationItem: 'b',
@@ -76,8 +76,8 @@ final class NavigationItemTest extends TestCase
     public function testRenderWithChildrenWithoutActiveItem(): void
     {
         $children = new NavigationItemCollection();
-        $children->addItem(navigationItem: self::item(navKey: 'a'));
-        $parent = self::item(navKey: 'parent', childNavigation: $children);
+        $children->addItem(navigationItem: NavigationItemTest::item(navKey: 'a'));
+        $parent = NavigationItemTest::item(navKey: 'parent', childNavigation: $children);
 
         $data = $parent->render(
             activeMainNavigationItem: 'other',
@@ -90,7 +90,7 @@ final class NavigationItemTest extends TestCase
     public function testCustomToggleClasses(): void
     {
         $children = new NavigationItemCollection();
-        $children->addItem(navigationItem: self::item(navKey: 'a'));
+        $children->addItem(navigationItem: NavigationItemTest::item(navKey: 'a'));
         $parent = new NavigationItem(
             navKey: 'parent',
             href: '/p/',
@@ -122,13 +122,13 @@ final class NavigationItemTest extends TestCase
     {
         $children = new NavigationItemCollection();
         $children->addItem(
-            navigationItem: self::item(
+            navigationItem: NavigationItemTest::item(
                 navKey: 'secret',
                 requiredAccessRights: AccessRightCollection::createFromStringArray(input: ['admin']),
             ),
         );
-        $children->addItem(navigationItem: self::item(navKey: 'open'));
-        $parent = self::item(navKey: 'parent', childNavigation: $children);
+        $children->addItem(navigationItem: NavigationItemTest::item(navKey: 'open'));
+        $parent = NavigationItemTest::item(navKey: 'parent', childNavigation: $children);
 
         $data = $parent->render(
             activeMainNavigationItem: 'secret',
@@ -144,12 +144,12 @@ final class NavigationItemTest extends TestCase
     {
         $children = new NavigationItemCollection();
         $children->addItem(
-            navigationItem: self::item(
+            navigationItem: NavigationItemTest::item(
                 navKey: 'secret',
                 requiredAccessRights: AccessRightCollection::createFromStringArray(input: ['admin']),
             ),
         );
-        $parent = self::item(navKey: 'parent', childNavigation: $children);
+        $parent = NavigationItemTest::item(navKey: 'parent', childNavigation: $children);
 
         $this->assertFalse($parent->hasAccess(accessRightCollection: AccessRightCollection::createEmpty()));
         $this->assertTrue(
@@ -161,7 +161,7 @@ final class NavigationItemTest extends TestCase
 
     public function testAccessRights(): void
     {
-        $item = self::item(
+        $item = NavigationItemTest::item(
             navKey: 'a',
             requiredAccessRights: AccessRightCollection::createFromStringArray(input: ['edit', 'admin']),
         );
@@ -178,21 +178,21 @@ final class NavigationItemTest extends TestCase
     public function testItemWithoutRequiredRightsIsOpenForEveryone(): void
     {
         $this->assertTrue(
-            self::item(navKey: 'a')->hasAccess(accessRightCollection: AccessRightCollection::createEmpty()),
+            NavigationItemTest::item(navKey: 'a')->hasAccess(accessRightCollection: AccessRightCollection::createEmpty()),
         );
     }
 
     public function testCollectionPrepareForRenderer(): void
     {
         $collection = new NavigationItemCollection();
-        $collection->addItem(navigationItem: self::item(navKey: 'a'));
+        $collection->addItem(navigationItem: NavigationItemTest::item(navKey: 'a'));
         $collection->addItem(
-            navigationItem: self::item(
+            navigationItem: NavigationItemTest::item(
                 navKey: 'b',
                 requiredAccessRights: AccessRightCollection::createFromStringArray(input: ['admin']),
             ),
         );
-        $collection->addItem(navigationItem: self::item(navKey: 'c'));
+        $collection->addItem(navigationItem: NavigationItemTest::item(navKey: 'c'));
 
         $this->assertFalse($collection->isActive);
         $objects = $collection->prepareForRenderer(
@@ -210,12 +210,12 @@ final class NavigationItemTest extends TestCase
     {
         $collection = new NavigationItemCollection();
         $collection->addItem(
-            navigationItem: self::item(
+            navigationItem: NavigationItemTest::item(
                 navKey: 'b',
                 requiredAccessRights: AccessRightCollection::createFromStringArray(input: ['admin']),
             ),
         );
-        $collection->addItem(navigationItem: self::item(navKey: 'a'));
+        $collection->addItem(navigationItem: NavigationItemTest::item(navKey: 'a'));
 
         $collection->prepareForRenderer(
             activeSubNavigationItem: 'b',
@@ -232,7 +232,7 @@ final class NavigationItemTest extends TestCase
         $this->assertTrue($collection->isEmpty(accessRightCollection: $noRights));
 
         $collection->addItem(
-            navigationItem: self::item(
+            navigationItem: NavigationItemTest::item(
                 navKey: 'b',
                 requiredAccessRights: AccessRightCollection::createFromStringArray(input: ['admin']),
             ),
@@ -250,11 +250,11 @@ final class NavigationItemTest extends TestCase
         $collection = new NavigationItemCollection();
         $this->assertNull($collection->getFirst(accessRightCollection: AccessRightCollection::createEmpty()));
 
-        $secret = self::item(
+        $secret = NavigationItemTest::item(
             navKey: 'secret',
             requiredAccessRights: AccessRightCollection::createFromStringArray(input: ['admin']),
         );
-        $open = self::item(navKey: 'open');
+        $open = NavigationItemTest::item(navKey: 'open');
         $collection->addItem(navigationItem: $secret);
         $collection->addItem(navigationItem: $open);
 
@@ -288,7 +288,7 @@ final class NavigationItemTest extends TestCase
     #[DataProvider('validHrefProvider')]
     public function testValidHref(string $href): void
     {
-        $this->assertSame($href, self::item(navKey: 'a', href: $href)->href);
+        $this->assertSame($href, NavigationItemTest::item(navKey: 'a', href: $href)->href);
     }
 
     /**
@@ -313,26 +313,26 @@ final class NavigationItemTest extends TestCase
     public function testInvalidHrefIsRejected(string $href): void
     {
         $this->expectException(InvalidArgumentException::class);
-        self::item(navKey: 'a', href: $href);
+        NavigationItemTest::item(navKey: 'a', href: $href);
     }
 
     public function testAddItemRejectsASecondItemWithTheSameKey(): void
     {
         $collection = new NavigationItemCollection();
-        $collection->addItem(navigationItem: self::item(navKey: 'a', title: 'First'));
+        $collection->addItem(navigationItem: NavigationItemTest::item(navKey: 'a', title: 'First'));
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageIsOrContains('The navigation already has an item with the key a.');
-        $collection->addItem(navigationItem: self::item(navKey: 'a', title: 'Second'));
+        $collection->addItem(navigationItem: NavigationItemTest::item(navKey: 'a', title: 'Second'));
     }
 
     public function testRejectedItemDoesNotReplaceTheEarlierOne(): void
     {
         $collection = new NavigationItemCollection();
-        $collection->addItem(navigationItem: self::item(navKey: 'a', title: 'First'));
+        $collection->addItem(navigationItem: NavigationItemTest::item(navKey: 'a', title: 'First'));
 
         try {
-            $collection->addItem(navigationItem: self::item(navKey: 'a', title: 'Second'));
+            $collection->addItem(navigationItem: NavigationItemTest::item(navKey: 'a', title: 'Second'));
         } catch (InvalidArgumentException) {
         }
 

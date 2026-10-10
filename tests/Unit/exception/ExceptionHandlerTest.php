@@ -163,7 +163,7 @@ final class ExceptionHandlerTest extends TestCase
      */
     private static function decodeJson(HttpResponse $response): array
     {
-        $decoded = json_decode(json: self::content(response: $response), associative: true, flags: JSON_THROW_ON_ERROR);
+        $decoded = json_decode(json: ExceptionHandlerTest::content(response: $response), associative: true, flags: JSON_THROW_ON_ERROR);
         if (!is_array(value: $decoded)) {
             throw new JsonException(message: 'The response is no JSON object.');
         }
@@ -261,7 +261,7 @@ final class ExceptionHandlerTest extends TestCase
 
         try {
             ExceptionHandler::register(individualExceptionHandler: null, context: $this->createContext());
-            self::fail('The second registration must throw.');
+            ExceptionHandlerTest::fail('The second registration must throw.');
         } catch (LogicException $exception) {
             $this->assertSame('ExceptionHandler is already registered.', $exception->getMessage());
         }
@@ -362,7 +362,7 @@ final class ExceptionHandlerTest extends TestCase
         );
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $sentResponse->httpStatusCode);
-        $this->assertStringContainsString('<h1>Not found page</h1>', self::content(response: $sentResponse));
+        $this->assertStringContainsString('<h1>Not found page</h1>', ExceptionHandlerTest::content(response: $sentResponse));
     }
 
     // Production: HTML
@@ -374,8 +374,8 @@ final class ExceptionHandlerTest extends TestCase
         $response = $handler->createResponse(throwable: new NotFoundException(message: 'Invoice 42 is missing'));
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $response->httpStatusCode);
-        $this->assertStringContainsString('<h1>Not found page</h1>', self::content(response: $response));
-        $this->assertStringContainsString('class="body-notFound"', self::content(response: $response));
+        $this->assertStringContainsString('<h1>Not found page</h1>', ExceptionHandlerTest::content(response: $response));
+        $this->assertStringContainsString('class="body-notFound"', ExceptionHandlerTest::content(response: $response));
     }
 
     public function testUnauthorizedIsAnsweredWithTheUnauthorizedPage(): void
@@ -385,8 +385,8 @@ final class ExceptionHandlerTest extends TestCase
         $response = $handler->createResponse(throwable: new UnauthorizedException(message: 'JWT verification failed'));
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_UNAUTHORIZED, $response->httpStatusCode);
-        $this->assertStringContainsString('<h1>Unauthorized page</h1>', self::content(response: $response));
-        $this->assertStringContainsString('class="body-unauthorized"', self::content(response: $response));
+        $this->assertStringContainsString('<h1>Unauthorized page</h1>', ExceptionHandlerTest::content(response: $response));
+        $this->assertStringContainsString('class="body-unauthorized"', ExceptionHandlerTest::content(response: $response));
     }
 
     public function testMissingAccessRightWithoutLoginPathIsAnsweredWithTheUnauthorizedPage(): void
@@ -397,7 +397,7 @@ final class ExceptionHandlerTest extends TestCase
         $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_UNAUTHORIZED, $response->httpStatusCode);
-        $this->assertStringContainsString('<h1>Unauthorized page</h1>', self::content(response: $response));
+        $this->assertStringContainsString('<h1>Unauthorized page</h1>', ExceptionHandlerTest::content(response: $response));
     }
 
     private function createLoginRedirectHandler(
@@ -513,8 +513,8 @@ final class ExceptionHandlerTest extends TestCase
         $response = $handler->createResponse(throwable: new RuntimeException('SQLSTATE[HY000] in /var/www/secret.php'));
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_INTERNAL_SERVER_ERROR, $response->httpStatusCode);
-        $this->assertStringContainsString('<h1>Default error page</h1>', self::content(response: $response));
-        $this->assertStringContainsString('class="body-default"', self::content(response: $response));
+        $this->assertStringContainsString('<h1>Default error page</h1>', ExceptionHandlerTest::content(response: $response));
+        $this->assertStringContainsString('class="body-default"', ExceptionHandlerTest::content(response: $response));
     }
 
     public function testProductionPagesNeverShowTheExceptionMessageFileOrTrace(): void
@@ -528,7 +528,7 @@ final class ExceptionHandlerTest extends TestCase
         ];
 
         foreach ($exceptions as $exception) {
-            $content = self::content(response: $handler->createResponse(throwable: $exception));
+            $content = ExceptionHandlerTest::content(response: $handler->createResponse(throwable: $exception));
 
             $this->assertStringNotContainsString('secret', $content);
             $this->assertStringNotContainsString('ExceptionHandlerTest', $content);
@@ -592,7 +592,7 @@ final class ExceptionHandlerTest extends TestCase
     {
         $handler = $this->register();
 
-        $content = self::content(response: $handler->createResponse(throwable: new NotFoundException()));
+        $content = ExceptionHandlerTest::content(response: $handler->createResponse(throwable: new NotFoundException()));
 
         $this->assertStringContainsString('<html lang="en" class="notFound">', $content);
         $this->assertStringContainsString('<title>Error</title>', $content);
@@ -611,7 +611,7 @@ final class ExceptionHandlerTest extends TestCase
         $session = new Session(storage: new ArraySessionStorage());
         $handler->setSession(session: $session, csrfTokenSource: new SessionCsrfTokenSource(session: $session));
 
-        $content = self::content(response: $handler->createResponse(throwable: new NotFoundException()));
+        $content = ExceptionHandlerTest::content(response: $handler->createResponse(throwable: new NotFoundException()));
 
         $this->assertMatchesRegularExpression(
             '#<div id="csrf"><input type="hidden" name="[^"]+" value="[^"]+"></div>#',
@@ -627,7 +627,7 @@ final class ExceptionHandlerTest extends TestCase
         $csrfTokenSource = new CountingCsrfTokenSource();
         $handler->setSession(session: null, csrfTokenSource: $csrfTokenSource);
 
-        $content = self::content(response: $handler->createResponse(throwable: new NotFoundException()));
+        $content = ExceptionHandlerTest::content(response: $handler->createResponse(throwable: new NotFoundException()));
 
         $this->assertStringContainsString('<h1>plain</h1>', $content);
         $this->assertSame(0, $csrfTokenSource->tokenReads);
@@ -639,7 +639,7 @@ final class ExceptionHandlerTest extends TestCase
         $session = new Session(storage: new FailingSessionStorage());
         $handler->setSession(session: $session, csrfTokenSource: new SessionCsrfTokenSource(session: $session));
 
-        $content = self::content(response: $handler->createResponse(throwable: new NotFoundException()));
+        $content = ExceptionHandlerTest::content(response: $handler->createResponse(throwable: new NotFoundException()));
 
         $this->assertStringContainsString('<h1>Not found page</h1>', $content);
         $this->assertStringContainsString('<div id="csrf"></div>', $content);
@@ -650,7 +650,7 @@ final class ExceptionHandlerTest extends TestCase
         $handler = $this->register(context: $this->createContext(isDebug: true));
         $handler->setSession(session: new Session(storage: new FailingSessionStorage()), csrfTokenSource: null);
 
-        $content = self::content(response: $handler->createResponse(throwable: new RuntimeException('the error')));
+        $content = ExceptionHandlerTest::content(response: $handler->createResponse(throwable: new RuntimeException('the error')));
 
         $this->assertStringContainsString('<p id="message">the error</p>', $content);
         $this->assertStringContainsString('The session could not be read: The session could not be started.', $content);
@@ -667,7 +667,7 @@ final class ExceptionHandlerTest extends TestCase
 
         $response = $handler->createResponse(throwable: new NotFoundException());
 
-        $content = self::content(response: $response);
+        $content = ExceptionHandlerTest::content(response: $response);
         $this->assertStringContainsString('<html lang="en" class="notFound">', $content);
         $this->assertStringContainsString('<p id="root">/en/</p>', $content);
         $this->assertStringContainsString('<p id="file">nope.html</p>', $content);
@@ -691,7 +691,7 @@ final class ExceptionHandlerTest extends TestCase
 
         $response = $handler->createResponse(throwable: new NotFoundException());
 
-        $content = self::content(response: $response);
+        $content = ExceptionHandlerTest::content(response: $response);
         $this->assertStringContainsString('<html lang="en" class="notFound">', $content);
         $this->assertStringContainsString('<p id="root">/en/</p>', $content);
         $this->assertStringContainsString('<p id="file">index.html</p>', $content);
@@ -709,7 +709,7 @@ final class ExceptionHandlerTest extends TestCase
             requestHandler: $this->createRequestHandler(requestUri: '/en/"><img src=x onerror=alert(1)>.html'),
         );
 
-        $content = self::content(response: $handler->createResponse(throwable: new NotFoundException()));
+        $content = ExceptionHandlerTest::content(response: $handler->createResponse(throwable: new NotFoundException()));
 
         $this->assertStringNotContainsString('<img', $content);
         $this->assertStringContainsString('&quot;&gt;&lt;img src=x onerror=alert(1)&gt;.html', $content);
@@ -723,7 +723,7 @@ final class ExceptionHandlerTest extends TestCase
         $response = $handler->createResponse(throwable: new NotFoundException());
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $response->httpStatusCode);
-        $this->assertSame('Not Found', self::content(response: $response));
+        $this->assertSame('Not Found', ExceptionHandlerTest::content(response: $response));
         $this->assertSame(['Missing error html file ' . $directory . 'notFound.html'], $this->logger->loggedMessages);
     }
 
@@ -734,7 +734,7 @@ final class ExceptionHandlerTest extends TestCase
 
         $response = $handler->createResponse(throwable: new NotFoundException());
 
-        $this->assertSame('Missing error html file ' . $directory . 'debug.html', self::content(response: $response));
+        $this->assertSame('Missing error html file ' . $directory . 'debug.html', ExceptionHandlerTest::content(response: $response));
         $this->assertSame([], $this->logger->loggedMessages);
     }
 
@@ -750,7 +750,7 @@ final class ExceptionHandlerTest extends TestCase
         $this->assertSame('application/json; charset=utf-8', $response->getHeader(key: 'Content-Type'));
         $this->assertSame(
             ['success' => false, 'error' => ['code' => 404, 'message' => 'Not Found']],
-            self::decodeJson(response: $response),
+            ExceptionHandlerTest::decodeJson(response: $response),
         );
     }
 
@@ -763,7 +763,7 @@ final class ExceptionHandlerTest extends TestCase
         $this->assertSame(HttpStatusCodeEnum::HTTP_UNAUTHORIZED, $response->httpStatusCode);
         $this->assertSame(
             ['success' => false, 'error' => ['code' => 401, 'message' => 'Unauthorized']],
-            self::decodeJson(response: $response),
+            ExceptionHandlerTest::decodeJson(response: $response),
         );
     }
 
@@ -777,7 +777,7 @@ final class ExceptionHandlerTest extends TestCase
         $this->assertSame(HttpStatusCodeEnum::HTTP_INTERNAL_SERVER_ERROR, $response->httpStatusCode);
         $this->assertSame(
             ['success' => false, 'error' => ['code' => 500, 'message' => 'Internal Server Error']],
-            self::decodeJson(response: $response),
+            ExceptionHandlerTest::decodeJson(response: $response),
         );
         $this->assertSame([$exception], $this->logger->loggedExceptions);
     }
@@ -786,7 +786,7 @@ final class ExceptionHandlerTest extends TestCase
     {
         $handler = $this->createJsonHandler();
 
-        $content = self::content(response: $handler->createResponse(throwable: new RuntimeException()));
+        $content = ExceptionHandlerTest::content(response: $handler->createResponse(throwable: new RuntimeException()));
 
         $this->assertStringNotContainsString('from the project', $content);
         $this->assertStringNotContainsString('"data"', $content);
@@ -799,7 +799,7 @@ final class ExceptionHandlerTest extends TestCase
         $response = $handler->createResponse(throwable: new RuntimeException('Broken'));
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_INTERNAL_SERVER_ERROR, $response->httpStatusCode);
-        $this->assertSame('error: Internal Server Error (500)', self::content(response: $response));
+        $this->assertSame('error: Internal Server Error (500)', ExceptionHandlerTest::content(response: $response));
         $this->assertSame('text/plain; charset=utf-8', $response->getHeader(key: 'Content-Type'));
     }
 
@@ -810,7 +810,7 @@ final class ExceptionHandlerTest extends TestCase
         $response = $handler->createResponse(throwable: new NotFoundException());
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $response->httpStatusCode);
-        $this->assertSame('error: Not Found (404)', self::content(response: $response));
+        $this->assertSame('error: Not Found (404)', ExceptionHandlerTest::content(response: $response));
     }
 
     public function testOtherContentTypesGetTheErrorPage(): void
@@ -819,7 +819,7 @@ final class ExceptionHandlerTest extends TestCase
 
         $response = $handler->createResponse(throwable: new NotFoundException());
 
-        $this->assertStringContainsString('<h1>Not found page</h1>', self::content(response: $response));
+        $this->assertStringContainsString('<h1>Not found page</h1>', ExceptionHandlerTest::content(response: $response));
         $this->assertSame('text/html; charset=utf-8', $response->getHeader(key: 'Content-Type'));
     }
 
@@ -831,7 +831,7 @@ final class ExceptionHandlerTest extends TestCase
 
         $response = $handler->createResponse(throwable: new RuntimeException('Broken thing', 12));
 
-        $content = self::content(response: $response);
+        $content = ExceptionHandlerTest::content(response: $response);
         $this->assertSame(HttpStatusCodeEnum::HTTP_INTERNAL_SERVER_ERROR, $response->httpStatusCode);
         $this->assertStringContainsString('<h1>Internal Server Error</h1>', $content);
         $this->assertStringContainsString('<p id="type">RuntimeException</p>', $content);
@@ -853,16 +853,16 @@ final class ExceptionHandlerTest extends TestCase
         $unauthorized = $handler->createResponse(throwable: new UnauthorizedException());
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $notFound->httpStatusCode);
-        $this->assertStringContainsString('<h1>Page not found</h1>', self::content(response: $notFound));
+        $this->assertStringContainsString('<h1>Page not found</h1>', ExceptionHandlerTest::content(response: $notFound));
         $this->assertSame(HttpStatusCodeEnum::HTTP_UNAUTHORIZED, $unauthorized->httpStatusCode);
-        $this->assertStringContainsString('<h1>Unauthorized</h1>', self::content(response: $unauthorized));
+        $this->assertStringContainsString('<h1>Unauthorized</h1>', ExceptionHandlerTest::content(response: $unauthorized));
     }
 
     public function testDebugPageEscapesTheMessageTheFileAndTheTrace(): void
     {
         $handler = $this->register(context: $this->createContext(isDebug: true));
 
-        $content = self::content(
+        $content = ExceptionHandlerTest::content(
             response: $handler->createResponse(
                 throwable: new PhpException(
                     message: '<script>alert("x")</script>',
@@ -885,7 +885,7 @@ final class ExceptionHandlerTest extends TestCase
         $cause = new LogicException(message: 'the cause', code: 5);
         $wrapper = new RuntimeException(message: 'wrapper', previous: $cause);
 
-        $content = self::content(response: $handler->createResponse(throwable: $wrapper));
+        $content = ExceptionHandlerTest::content(response: $handler->createResponse(throwable: $wrapper));
 
         $this->assertStringContainsString('<p id="type">RuntimeException</p>', $content);
         $this->assertStringContainsString('<p id="message">the cause</p>', $content);
@@ -899,7 +899,7 @@ final class ExceptionHandlerTest extends TestCase
         $session->set(key: 'name', value: '<i>Anna</i>');
         $handler->setSession(session: $session, csrfTokenSource: null);
 
-        $content = self::content(response: $handler->createResponse(throwable: new RuntimeException()));
+        $content = ExceptionHandlerTest::content(response: $handler->createResponse(throwable: new RuntimeException()));
 
         $this->assertStringContainsString(
             '&#039;name&#039; =&gt; &#039;&lt;i&gt;Anna&lt;/i&gt;&#039;',
@@ -912,7 +912,7 @@ final class ExceptionHandlerTest extends TestCase
     {
         $handler = $this->register(context: $this->createContext(isDebug: true));
 
-        $content = self::content(response: $handler->createResponse(throwable: new RuntimeException()));
+        $content = ExceptionHandlerTest::content(response: $handler->createResponse(throwable: new RuntimeException()));
 
         $this->assertStringContainsString('<pre id="session"></pre>', $content);
     }
@@ -932,17 +932,17 @@ final class ExceptionHandlerTest extends TestCase
 
         $response = $handler->createResponse(throwable: new RuntimeException('Broken <thing>', 12));
 
-        $decoded = self::decodeJson(response: $response);
-        $data = self::arrayAt(array: $decoded, key: 'data');
+        $decoded = ExceptionHandlerTest::decodeJson(response: $response);
+        $data = ExceptionHandlerTest::arrayAt(array: $decoded, key: 'data');
         $this->assertSame(HttpStatusCodeEnum::HTTP_INTERNAL_SERVER_ERROR, $response->httpStatusCode);
-        $this->assertSame(['code' => 12, 'message' => 'Broken <thing>'], self::arrayAt(array: $decoded, key: 'error'));
-        $this->assertSame('Internal Server Error', self::stringAt(array: $data, key: 'title'));
-        $this->assertSame('RuntimeException', self::stringAt(array: $data, key: 'errorType'));
-        $this->assertSame('Broken <thing>', self::stringAt(array: $data, key: 'errorMessage'));
-        $this->assertSame(__FILE__, self::stringAt(array: $data, key: 'errorFile'));
-        $this->assertSame('12', self::stringAt(array: $data, key: 'errorCode'));
-        $this->assertStringContainsString('ExceptionHandlerTest', self::stringAt(array: $data, key: 'backtrace'));
-        $this->assertStringContainsString("'id' => '7'", self::stringAt(array: $data, key: 'vardump_get'));
+        $this->assertSame(['code' => 12, 'message' => 'Broken <thing>'], ExceptionHandlerTest::arrayAt(array: $decoded, key: 'error'));
+        $this->assertSame('Internal Server Error', ExceptionHandlerTest::stringAt(array: $data, key: 'title'));
+        $this->assertSame('RuntimeException', ExceptionHandlerTest::stringAt(array: $data, key: 'errorType'));
+        $this->assertSame('Broken <thing>', ExceptionHandlerTest::stringAt(array: $data, key: 'errorMessage'));
+        $this->assertSame(__FILE__, ExceptionHandlerTest::stringAt(array: $data, key: 'errorFile'));
+        $this->assertSame('12', ExceptionHandlerTest::stringAt(array: $data, key: 'errorCode'));
+        $this->assertStringContainsString('ExceptionHandlerTest', ExceptionHandlerTest::stringAt(array: $data, key: 'backtrace'));
+        $this->assertStringContainsString("'id' => '7'", ExceptionHandlerTest::stringAt(array: $data, key: 'vardump_get'));
     }
 
     public function testDebugTextHasTheErrorAndTheDetails(): void
@@ -955,7 +955,7 @@ final class ExceptionHandlerTest extends TestCase
             ),
         );
 
-        $content = self::content(response: $handler->createResponse(throwable: new RuntimeException('Broken', 3)));
+        $content = ExceptionHandlerTest::content(response: $handler->createResponse(throwable: new RuntimeException('Broken', 3)));
 
         $this->assertStringStartsWith('error: Broken (3)', $content);
         $this->assertStringContainsString('[errorType] => RuntimeException', $content);
@@ -972,7 +972,7 @@ final class ExceptionHandlerTest extends TestCase
         $response = $handler->createResponse(throwable: new RuntimeException('Broken'));
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_BAD_GATEWAY, $response->httpStatusCode);
-        $this->assertStringContainsString('<h1>Default error page</h1>', self::content(response: $response));
+        $this->assertStringContainsString('<h1>Default error page</h1>', ExceptionHandlerTest::content(response: $response));
     }
 
     public function testProjectHandlerStillLogsUnexpectedErrors(): void
@@ -1002,7 +1002,7 @@ final class ExceptionHandlerTest extends TestCase
 
         $this->assertSame(
             ['success' => false, 'error' => ['code' => 502, 'message' => 'Try again later']],
-            self::decodeJson(response: $response),
+            ExceptionHandlerTest::decodeJson(response: $response),
         );
     }
 }

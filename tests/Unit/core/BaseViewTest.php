@@ -101,7 +101,7 @@ final class BaseViewTest extends TestCase
                 context: ViewContextFactory::create(),
                 requiredAccessRights: AccessRightCollection::createFromStringArray(input: ['admin']),
             );
-            self::fail('The view must throw.');
+            BaseViewTest::fail('The view must throw.');
         } catch (UnauthorizedAccessRightException $exception) {
             $this->assertTrue($exception->isNotLoggedIn);
         }
@@ -115,7 +115,7 @@ final class BaseViewTest extends TestCase
                 authUser: TestAuthUser::create(accessRights: ['editor']),
                 requiredAccessRights: AccessRightCollection::createFromStringArray(input: ['admin']),
             );
-            self::fail('The view must throw.');
+            BaseViewTest::fail('The view must throw.');
         } catch (UnauthorizedAccessRightException $exception) {
             $this->assertFalse($exception->isNotLoggedIn);
         }

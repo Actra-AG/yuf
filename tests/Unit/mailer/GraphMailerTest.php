@@ -153,7 +153,7 @@ final class GraphMailerTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $this->mailer());
-            self::fail('A MailerException was expected.');
+            GraphMailerTest::fail('A MailerException was expected.');
         } catch (MailerException $exception) {
             $this->assertSame(
                 'The Microsoft Graph API did not accept the message: HTTP status 403:'
@@ -215,7 +215,7 @@ final class GraphMailerTest extends TestCase
 
         try {
             $mail->send(abstractMailer: $this->mailer(tokenProvider: $tokenProvider));
-            self::fail('A MailerException was expected.');
+            GraphMailerTest::fail('A MailerException was expected.');
         } catch (MailerException $exception) {
             $this->assertStringContainsString('too large for the Microsoft Graph API', $exception->getMessage());
             $this->assertStringContainsString('the limit is 4194304 bytes (4 MB)', $exception->getMessage());
@@ -248,7 +248,7 @@ final class GraphMailerTest extends TestCase
             $this->mail()->send(
                 abstractMailer: $this->mailer(tokenProvider: new FixedOAuthTokenProvider(accessToken: 'bad token')),
             );
-            self::fail('A MailerException was expected.');
+            GraphMailerTest::fail('A MailerException was expected.');
         } catch (MailerException $exception) {
             $this->assertStringNotContainsString('bad token', $exception->getMessage());
         }

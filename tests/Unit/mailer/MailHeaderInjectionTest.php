@@ -156,14 +156,14 @@ final class MailHeaderInjectionTest extends TestCase
                 value: "secret-token\r\nBcc: e@example.com",
                 maxLineLength: 998,
             );
-            self::fail('The header must be rejected.');
+            MailHeaderInjectionTest::fail('The header must be rejected.');
         } catch (MailerException $exception) {
             $this->assertStringNotContainsString('secret-token', $exception->getMessage());
         }
 
         try {
             $this->mail(toEmail: "person@example.com\r\nBcc: e@example.com");
-            self::fail('The address must be rejected.');
+            MailHeaderInjectionTest::fail('The address must be rejected.');
         } catch (MailerException $exception) {
             $this->assertStringNotContainsString('person', $exception->getMessage());
         }

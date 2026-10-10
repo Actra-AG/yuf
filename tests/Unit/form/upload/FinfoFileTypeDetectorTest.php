@@ -53,7 +53,7 @@ final class FinfoFileTypeDetectorTest extends TestCase
     private function createZip(string $name, string $entryName): string
     {
         if (!class_exists(class: ZipArchive::class)) {
-            self::markTestSkipped('ext-zip is needed to create the sample files.');
+            FinfoFileTypeDetectorTest::markTestSkipped('ext-zip is needed to create the sample files.');
         }
         $path = $this->directory . DIRECTORY_SEPARATOR . $name;
         $zip = new ZipArchive();
@@ -127,7 +127,7 @@ final class FinfoFileTypeDetectorTest extends TestCase
     public function testZipIsDetected(): void
     {
         if (!class_exists(class: ZipArchive::class)) {
-            self::markTestSkipped('ext-zip is needed to create the sample files.');
+            FinfoFileTypeDetectorTest::markTestSkipped('ext-zip is needed to create the sample files.');
         }
         $path = $this->directory . DIRECTORY_SEPARATOR . 'a.zip';
         $zip = new ZipArchive();

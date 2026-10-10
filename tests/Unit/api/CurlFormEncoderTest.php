@@ -58,13 +58,13 @@ final class CurlFormEncoderTest extends TestCase
     #[DataProvider('encodingProvider')]
     public function testEncode(array $data, string $expected): void
     {
-        self::assertSame($expected, CurlFormEncoder::encode(postData: $data));
+        $this->assertSame($expected, CurlFormEncoder::encode(postData: $data));
     }
 
     public function testResourceIsRejected(): void
     {
         $resource = fopen(filename: 'php://memory', mode: 'r');
-        self::assertNotFalse($resource);
+        $this->assertNotFalse($resource);
 
         try {
             $this->expectException(InvalidArgumentException::class);
@@ -87,6 +87,6 @@ final class CurlFormEncoderTest extends TestCase
             }
         };
 
-        self::assertSame('o%5Bid%5D=3', CurlFormEncoder::encode(postData: ['o' => $object]));
+        $this->assertSame('o%5Bid%5D=3', CurlFormEncoder::encode(postData: ['o' => $object]));
     }
 }

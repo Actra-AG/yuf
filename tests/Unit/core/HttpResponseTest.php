@@ -365,7 +365,7 @@ final class HttpResponseTest extends TestCase
     public function testFileResponseOfAnUnreadableFileIsA403WithoutHeadersAndContent(): void
     {
         if (function_exists(function: 'posix_geteuid') && posix_geteuid() === 0) {
-            self::markTestSkipped('The root user can read every file.');
+            HttpResponseTest::markTestSkipped('The root user can read every file.');
         }
         chmod(filename: $this->file, permissions: 0o000);
 

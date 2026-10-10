@@ -31,7 +31,7 @@ final class ClassNameViewFactoryTest extends TestCase
         string $fileTitle,
         ?string $fileGroup = null,
         string $viewGroup = 'frontend',
-        string $prefix = self::TEST_PREFIX,
+        string $prefix = ClassNameViewFactoryTest::TEST_PREFIX,
     ): ViewContext {
         return ViewContextFactory::create(
             fileTitle: $fileTitle,

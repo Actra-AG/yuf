@@ -135,7 +135,7 @@ final class SmtpAuthenticationTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $mailer);
-            self::fail('The delivery must be aborted.');
+            SmtpAuthenticationTest::fail('The delivery must be aborted.');
         } catch (MailerException $exception) {
             $this->assertSame(
                 'The SMTP server does not announce the authentication method PLAIN (announced: LOGIN).',
@@ -154,7 +154,7 @@ final class SmtpAuthenticationTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $mailer);
-            self::fail('The delivery must be aborted.');
+            SmtpAuthenticationTest::fail('The delivery must be aborted.');
         } catch (MailerException $exception) {
             $this->assertSame(
                 'The SMTP server does not announce the authentication method PLAIN (announced: none).',
@@ -169,7 +169,7 @@ final class SmtpAuthenticationTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $this->mailer(transport: $transport, userName: 'user'));
-            self::fail('The delivery must be aborted.');
+            SmtpAuthenticationTest::fail('The delivery must be aborted.');
         } catch (MailerException $exception) {
             $this->assertSame(
                 'The SMTP server announces none of the authentication methods PLAIN, LOGIN'
@@ -187,7 +187,7 @@ final class SmtpAuthenticationTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $this->mailer(transport: $transport, userName: "us\0er"));
-            self::fail('The delivery must be aborted.');
+            SmtpAuthenticationTest::fail('The delivery must be aborted.');
         } catch (MailerException $exception) {
             $this->assertSame(
                 'The user name and the password must not contain a NUL character for AUTH PLAIN.',
@@ -207,7 +207,7 @@ final class SmtpAuthenticationTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $mailer);
-            self::fail('The delivery must be aborted.');
+            SmtpAuthenticationTest::fail('The delivery must be aborted.');
         } catch (MailerException $exception) {
             $this->assertSame(
                 'Unexpected answer of the SMTP server to AUTH PLAIN: code 535 instead of 235.',
@@ -264,7 +264,7 @@ final class SmtpAuthenticationTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $mailer);
-            self::fail('The delivery must be aborted.');
+            SmtpAuthenticationTest::fail('The delivery must be aborted.');
         } catch (MailerException $exception) {
             $this->assertSame(
                 'The SMTP server announces none of the authentication methods XOAUTH2'
@@ -292,7 +292,7 @@ final class SmtpAuthenticationTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $mailer);
-            self::fail('The delivery must be aborted.');
+            SmtpAuthenticationTest::fail('The delivery must be aborted.');
         } catch (MailerException $exception) {
             $this->assertSame(
                 'The SMTP server rejected the authentication with XOAUTH2: code 535'
@@ -323,7 +323,7 @@ final class SmtpAuthenticationTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $mailer);
-            self::fail('The delivery must be aborted.');
+            SmtpAuthenticationTest::fail('The delivery must be aborted.');
         } catch (MailerException $exception) {
             $this->assertStringContainsString('code 535', $exception->getMessage());
         }
@@ -342,7 +342,7 @@ final class SmtpAuthenticationTest extends TestCase
 
         try {
             $this->mail()->send(abstractMailer: $mailer);
-            self::fail('The delivery must be aborted.');
+            SmtpAuthenticationTest::fail('The delivery must be aborted.');
         } catch (MailerException $exception) {
             $this->assertSame('The OAuth token provider returned an empty access token.', $exception->getMessage());
         }

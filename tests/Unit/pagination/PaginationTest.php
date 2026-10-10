@@ -13,6 +13,7 @@ use actra\yuf\pagination\Pagination;
 use actra\yuf\template\TemplateEngine;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
 use InvalidArgumentException;
+use LogicException;
 use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -87,7 +88,9 @@ final class PaginationTest extends TestCase
     private static function hrefOf(string $html): string
     {
         preg_match(pattern: '#href="([^"]*)"#', subject: $html, matches: $matches);
-        self::assertArrayHasKey(1, $matches);
+        if (!array_key_exists(key: 1, array: $matches)) {
+            throw new LogicException(message: 'No href in ' . $html);
+        }
 
         return '(' . $matches[1] . ')';
     }

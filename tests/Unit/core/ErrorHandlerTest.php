@@ -44,7 +44,7 @@ final class ErrorHandlerTest extends TestCase
             error_reporting($previousLevel);
         }
 
-        self::fail('No PhpException was thrown.');
+        ErrorHandlerTest::fail('No PhpException was thrown.');
     }
 
     public function testDeprecationThrowsIfReported(): void

@@ -44,11 +44,11 @@ final class CurlRequestCharacterizationTest extends TestCase
         $response = CurlGetRequest::create(requestTargetUrl: $this->server->url('/echo?a=1&b=two'))->execute();
 
         $echo = EchoedRequest::fromResponse(response: $response);
-        self::assertFalse($response->hasErrors());
-        self::assertSame(HttpStatusCodeEnum::HTTP_OK, $response->responseHttpCode);
-        self::assertSame('GET', $echo->method);
-        self::assertSame('/echo?a=1&b=two', $echo->uri);
-        self::assertSame('', $echo->body);
+        $this->assertFalse($response->hasErrors());
+        $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $response->responseHttpCode);
+        $this->assertSame('GET', $echo->method);
+        $this->assertSame('/echo?a=1&b=two', $echo->uri);
+        $this->assertSame('', $echo->body);
     }
 
     public function testDeleteRequestSendsMethodWithoutBody(): void
@@ -56,8 +56,8 @@ final class CurlRequestCharacterizationTest extends TestCase
         $response = CurlDeleteRequest::create(requestTargetUrl: $this->server->url('/echo'))->execute();
 
         $echo = EchoedRequest::fromResponse(response: $response);
-        self::assertSame('DELETE', $echo->method);
-        self::assertSame('', $echo->body);
+        $this->assertSame('DELETE', $echo->method);
+        $this->assertSame('', $echo->body);
     }
 
     public function testPatchRequestWithoutBody(): void
@@ -65,8 +65,8 @@ final class CurlRequestCharacterizationTest extends TestCase
         $response = CurlPatchRequest::createWithoutBody(requestTargetUrl: $this->server->url('/echo'))->execute();
 
         $echo = EchoedRequest::fromResponse(response: $response);
-        self::assertSame('PATCH', $echo->method);
-        self::assertSame('', $echo->body);
+        $this->assertSame('PATCH', $echo->method);
+        $this->assertSame('', $echo->body);
     }
 
     public function testPostFieldsAreFormEncodedWithRfc3986(): void
@@ -87,13 +87,13 @@ final class CurlRequestCharacterizationTest extends TestCase
 
         $echo = EchoedRequest::fromResponse(response: $request->execute());
 
-        self::assertSame('POST', $echo->method);
-        self::assertSame(
+        $this->assertSame('POST', $echo->method);
+        $this->assertSame(
             'name=Anna%20Muster&flag=1&off=0&nothing=&number=12&price=1.5&list%5B0%5D=a%20b'
             . '&list%5B1%5D=%C3%A4%26%3D&nested%5Bkey%5D%5Bdeep%5D=x',
             $echo->body,
         );
-        self::assertSame('application/x-www-form-urlencoded; charset=utf-8', $echo->header(name: 'Content-Type'));
+        $this->assertSame('application/x-www-form-urlencoded; charset=utf-8', $echo->header(name: 'Content-Type'));
     }
 
     public function testPostFieldsOfObjectsUseTheirPublicProperties(): void
@@ -116,7 +116,7 @@ final class CurlRequestCharacterizationTest extends TestCase
             )->execute(),
         );
 
-        self::assertSame('item%5Btitle%5D=T&item%5Bactive%5D=1', $echo->body);
+        $this->assertSame('item%5Btitle%5D=T&item%5Bactive%5D=1', $echo->body);
     }
 
     #[DataProvider('bodyRequestProvider')]
@@ -144,9 +144,9 @@ final class CurlRequestCharacterizationTest extends TestCase
 
         $echo = EchoedRequest::fromResponse(response: $request->execute());
 
-        self::assertSame($method, $echo->method);
-        self::assertSame($content, $echo->body);
-        self::assertSame($expectedContentType, $echo->header(name: 'Content-Type'));
+        $this->assertSame($method, $echo->method);
+        $this->assertSame($content, $echo->body);
+        $this->assertSame($expectedContentType, $echo->header(name: 'Content-Type'));
     }
 
     /**
@@ -171,7 +171,7 @@ final class CurlRequestCharacterizationTest extends TestCase
             )->execute(),
         );
 
-        self::assertSame('TRUE', $echo->header(name: 'HTTP_PRETTY_PRINT'));
+        $this->assertSame('TRUE', $echo->header(name: 'HTTP_PRETTY_PRINT'));
     }
 
     public function testJsonApiBodyAcceptsJsonApi(): void
@@ -183,7 +183,7 @@ final class CurlRequestCharacterizationTest extends TestCase
             )->execute(),
         );
 
-        self::assertSame('application/vnd.api+json', $echo->header(name: 'Accept'));
+        $this->assertSame('application/vnd.api+json', $echo->header(name: 'Accept'));
     }
 
     public function testCustomHeadersAreSent(): void
@@ -194,8 +194,8 @@ final class CurlRequestCharacterizationTest extends TestCase
 
         $echo = EchoedRequest::fromResponse(response: $request->execute());
 
-        self::assertSame('k-123', $echo->header(name: 'X-Api-Key'));
-        self::assertSame('application/json', $echo->header(name: 'Accept'));
+        $this->assertSame('k-123', $echo->header(name: 'X-Api-Key'));
+        $this->assertSame('application/json', $echo->header(name: 'Accept'));
     }
 
     public function testLastValueOfAHeaderWins(): void
@@ -204,7 +204,7 @@ final class CurlRequestCharacterizationTest extends TestCase
         $request->setHttpHeader(key: 'X-Api-Key', value: 'first');
         $request->setHttpHeader(key: 'X-Api-Key', value: 'second');
 
-        self::assertSame(
+        $this->assertSame(
             'second',
             EchoedRequest::fromResponse(response: $request->execute())->header(name: 'X-Api-Key'),
         );
@@ -215,7 +215,7 @@ final class CurlRequestCharacterizationTest extends TestCase
         $request = CurlGetRequest::create(requestTargetUrl: $this->server->url('/echo'));
         $request->useTokenAuthentication(token: 'token-value');
 
-        self::assertSame(
+        $this->assertSame(
             'Bearer token-value',
             EchoedRequest::fromResponse(response: $request->execute())->header(name: 'Authorization'),
         );
@@ -226,7 +226,7 @@ final class CurlRequestCharacterizationTest extends TestCase
         $request = CurlGetRequest::create(requestTargetUrl: $this->server->url('/echo'));
         $request->useBasicHttpAuthentication(authUserNamePassword: 'user:pass word');
 
-        self::assertSame(
+        $this->assertSame(
             'Basic ' . base64_encode(string: 'user:pass word'),
             EchoedRequest::fromResponse(response: $request->execute())->header(name: 'Authorization'),
         );
@@ -266,24 +266,24 @@ final class CurlRequestCharacterizationTest extends TestCase
     {
         $response = CurlGetRequest::create(requestTargetUrl: $this->server->url('/json'))->execute();
 
-        self::assertFalse($response->hasErrors());
-        self::assertSame(0, $response->errorCode);
-        self::assertSame('', $response->errorMessage);
-        self::assertSame(HttpStatusCodeEnum::HTTP_OK, $response->responseHttpCode);
-        self::assertSame('{"name":"yuf","list":[1,2],"nested":{"ok":true}}', $response->rawResponseBody);
-        self::assertSame(200, $response->curlInfo['http_code']);
-        self::assertGreaterThan(0.0, $response->totalRequestTime);
+        $this->assertFalse($response->hasErrors());
+        $this->assertSame(0, $response->errorCode);
+        $this->assertSame('', $response->errorMessage);
+        $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $response->responseHttpCode);
+        $this->assertSame('{"name":"yuf","list":[1,2],"nested":{"ok":true}}', $response->rawResponseBody);
+        $this->assertSame(200, $response->curlInfo['http_code']);
+        $this->assertGreaterThan(0.0, $response->totalRequestTime);
     }
 
     public function testJsonResponseIsDecodedToObject(): void
     {
         $json = CurlGetRequest::create(requestTargetUrl: $this->server->url('/json'))->execute()->getJsonResponse();
 
-        self::assertInstanceOf(stdClass::class, $json);
-        self::assertSame('yuf', $json->name);
-        self::assertSame([1, 2], $json->list);
-        self::assertInstanceOf(stdClass::class, $json->nested);
-        self::assertTrue($json->nested->ok);
+        $this->assertInstanceOf(stdClass::class, $json);
+        $this->assertSame('yuf', $json->name);
+        $this->assertSame([1, 2], $json->list);
+        $this->assertInstanceOf(stdClass::class, $json->nested);
+        $this->assertTrue($json->nested->ok);
     }
 
     public function testJsonResponseOfListIsArray(): void
@@ -292,7 +292,7 @@ final class CurlRequestCharacterizationTest extends TestCase
             ->execute()
             ->getJsonResponse();
 
-        self::assertSame([1, 2, 3], $json);
+        $this->assertSame([1, 2, 3], $json);
     }
 
     public function testInvalidJsonResponseThrows(): void
@@ -308,16 +308,16 @@ final class CurlRequestCharacterizationTest extends TestCase
     {
         $xml = CurlGetRequest::create(requestTargetUrl: $this->server->url('/xml'))->execute()->getXmlResponse();
 
-        self::assertSame('a & b', (string) $xml->item);
+        $this->assertSame('a & b', (string) $xml->item);
     }
 
     public function testNoContentResponse(): void
     {
         $response = CurlGetRequest::create(requestTargetUrl: $this->server->url('/empty'))->execute();
 
-        self::assertFalse($response->hasErrors());
-        self::assertSame(HttpStatusCodeEnum::HTTP_NO_CONTENT, $response->responseHttpCode);
-        self::assertSame('', $response->rawResponseBody);
+        $this->assertFalse($response->hasErrors());
+        $this->assertSame(HttpStatusCodeEnum::HTTP_NO_CONTENT, $response->responseHttpCode);
+        $this->assertSame('', $response->rawResponseBody);
     }
 
     /**
@@ -346,23 +346,23 @@ final class CurlRequestCharacterizationTest extends TestCase
     {
         $response = CurlGetRequest::create(requestTargetUrl: $this->server->url('/status/' . $statusCode))->execute();
 
-        self::assertTrue($response->hasErrors());
-        self::assertSame(CurlResponse::ERROR_BAD_HTTP_RESPONSE_CODE, $response->errorCode);
-        self::assertSame(
+        $this->assertTrue($response->hasErrors());
+        $this->assertSame(CurlResponse::ERROR_BAD_HTTP_RESPONSE_CODE, $response->errorCode);
+        $this->assertSame(
             CurlResponse::class . ': Bad HTTP response code received: ' . $statusCode . $hint,
             $response->errorMessage,
         );
-        self::assertSame($statusCode, $response->curlInfo['http_code']);
-        self::assertSame('status ' . $statusCode, $response->rawResponseBody);
+        $this->assertSame($statusCode, $response->curlInfo['http_code']);
+        $this->assertSame('status ' . $statusCode, $response->rawResponseBody);
     }
 
     public function testRedirectIsNotFollowed(): void
     {
         $response = CurlGetRequest::create(requestTargetUrl: $this->server->url('/redirect?code=302'))->execute();
 
-        self::assertSame(HttpStatusCodeEnum::HTTP_FOUND, $response->responseHttpCode);
-        self::assertSame(0, $response->curlInfo['redirect_count']);
-        self::assertTrue($response->hasErrors());
+        $this->assertSame(HttpStatusCodeEnum::HTTP_FOUND, $response->responseHttpCode);
+        $this->assertSame(0, $response->curlInfo['redirect_count']);
+        $this->assertTrue($response->hasErrors());
     }
 
     /**
@@ -387,7 +387,7 @@ final class CurlRequestCharacterizationTest extends TestCase
         $request = CurlGetRequest::create(requestTargetUrl: $this->server->url('/redirect?code=' . $statusCode));
         $request->acceptRedirectionResponseCode();
 
-        self::assertSame($hasErrors, $request->execute()->hasErrors());
+        $this->assertSame($hasErrors, $request->execute()->hasErrors());
     }
 
     public function testConnectionRefusedIsACurlError(): void
@@ -399,17 +399,17 @@ final class CurlRequestCharacterizationTest extends TestCase
 
         $response = $request->execute();
 
-        self::assertTrue($response->hasErrors());
-        self::assertSame(CURLE_COULDNT_CONNECT, $response->errorCode);
-        self::assertStringStartsWith(CurlResponse::class . ': (7) ', $response->errorMessage);
-        self::assertFalse($response->rawResponseBody);
-        self::assertSame(HttpStatusCodeEnum::HTTP_UNKNOWN, $response->responseHttpCode);
+        $this->assertTrue($response->hasErrors());
+        $this->assertSame(CURLE_COULDNT_CONNECT, $response->errorCode);
+        $this->assertStringStartsWith(CurlResponse::class . ': (7) ', $response->errorMessage);
+        $this->assertFalse($response->rawResponseBody);
+        $this->assertSame(HttpStatusCodeEnum::HTTP_UNKNOWN, $response->responseHttpCode);
     }
 
     public function testRequestTimeoutIsACurlError(): void
     {
         $silentServer = stream_socket_server(address: 'tcp://127.0.0.1:0');
-        self::assertNotFalse($silentServer);
+        $this->assertNotFalse($silentServer);
         $name = (string) stream_socket_get_name(socket: $silentServer, remote: false);
         $request = CurlGetRequest::create(requestTargetUrl: 'http://' . $name . '/echo');
         $request->setTimeoutInSeconds(connectTimeOut: 1, requestTimeOut: 1);
@@ -417,10 +417,10 @@ final class CurlRequestCharacterizationTest extends TestCase
         $response = $request->execute();
         fclose(stream: $silentServer);
 
-        self::assertTrue($response->hasErrors());
-        self::assertSame(CURLE_OPERATION_TIMEDOUT, $response->errorCode);
-        self::assertStringStartsWith(CurlResponse::class . ': (28) ', $response->errorMessage);
-        self::assertFalse($response->rawResponseBody);
+        $this->assertTrue($response->hasErrors());
+        $this->assertSame(CURLE_OPERATION_TIMEDOUT, $response->errorCode);
+        $this->assertStringStartsWith(CurlResponse::class . ': (28) ', $response->errorMessage);
+        $this->assertFalse($response->rawResponseBody);
     }
 
     public function testSeveralRequestsAtTheSameTimeAreIndependent(): void
@@ -434,18 +434,18 @@ final class CurlRequestCharacterizationTest extends TestCase
         $firstEcho = EchoedRequest::fromResponse(response: $first->execute());
         $secondEcho = EchoedRequest::fromResponse(response: $second->execute());
 
-        self::assertSame('POST', $firstEcho->method);
-        self::assertSame('{"n":1}', $firstEcho->body);
-        self::assertSame('GET', $secondEcho->method);
-        self::assertSame('', $secondEcho->body);
-        self::assertFalse($secondEcho->hasHeader(name: 'Content-Type'));
+        $this->assertSame('POST', $firstEcho->method);
+        $this->assertSame('{"n":1}', $firstEcho->body);
+        $this->assertSame('GET', $secondEcho->method);
+        $this->assertSame('', $secondEcho->body);
+        $this->assertFalse($secondEcho->hasHeader(name: 'Content-Type'));
     }
 
     public function testHeadRequestSendsHeadAndHasNoBody(): void
     {
         $response = CurlHeadRequest::create(requestTargetUrl: $this->server->url('/echo'))->execute();
 
-        self::assertFalse($response->hasErrors());
-        self::assertSame(HttpStatusCodeEnum::HTTP_OK, $response->responseHttpCode);
+        $this->assertFalse($response->hasErrors());
+        $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $response->responseHttpCode);
     }
 }

@@ -340,7 +340,7 @@ final class RequestHandlerTest extends TestCase
         );
         try {
             $handler->resolveRoute();
-            self::fail('NotFoundException expected');
+            RequestHandlerTest::fail('NotFoundException expected');
         } catch (NotFoundException) {
         }
 

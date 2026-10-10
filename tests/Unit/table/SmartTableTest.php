@@ -41,7 +41,9 @@ final class SmartTableTest extends TestCase
 
     private static function column(SmartTable $table, string $identifier): AbstractTableColumn
     {
-        self::assertArrayHasKey($identifier, $table->columns);
+        if (!array_key_exists(key: $identifier, array: $table->columns)) {
+            throw new LogicException(message: 'No column ' . $identifier);
+        }
 
         return $table->columns[$identifier];
     }

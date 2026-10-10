@@ -94,7 +94,7 @@ final class StreamSmtpTransportTest extends TestCase
 
         try {
             $transport->readLine(timeoutSeconds: 1);
-            self::fail('The read must time out.');
+            StreamSmtpTransportTest::fail('The read must time out.');
         } catch (MailerException $exception) {
             $this->assertSame('The SMTP server did not answer within 1 seconds.', $exception->getMessage());
         } finally {
@@ -111,7 +111,7 @@ final class StreamSmtpTransportTest extends TestCase
 
         try {
             $transport->open(hostName: '127.0.0.1', port: $port, timeoutSeconds: 5);
-            self::fail('The connection must fail.');
+            StreamSmtpTransportTest::fail('The connection must fail.');
         } catch (MailerException $exception) {
             $this->assertStringStartsWith('Socket connection error: 127.0.0.1 (', $exception->getMessage());
         } finally {
