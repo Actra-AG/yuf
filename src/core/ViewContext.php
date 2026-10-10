@@ -24,7 +24,8 @@ use InvalidArgumentException;
  * The request data of a view and what a view factory needs to choose and create it. One instance per request.
  * `session`, `sessionHandler` (for the SameSite change of a login redirect) and `authSession` are `null` without
  * sessions (`individualSessionHandler: false`); `formContext` is what every form needs (the request and, with a
- * session, the CSRF token source). `responseSender` sends the responses a view ends the script with.
+ * session, the CSRF token source). `responseSender` sends the responses a view ends the script with. `documentRoot` is
+ * the document root of the web server, with a trailing slash (e.g. for files that a view writes below it).
  *
  * The navigation of the page is built per request: with a `navigationProvider` (see
  * `Core::prepareHttpResponse()`), `getNavigation()` calls it once with this context, so the items can depend on the
@@ -51,6 +52,7 @@ final class ViewContext
         public readonly ContentHandler $content,
         public readonly LocaleHandler $locale,
         public readonly TemplateEngine $templateEngine,
+        public readonly string $documentRoot,
         public readonly ResponseSender $responseSender = new NativeResponseSender(),
         private readonly ?Closure $navigationProvider = null,
     ) {}

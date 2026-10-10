@@ -105,6 +105,7 @@ final class ContentHandlerTest extends TestCase
         ?FormContext $formContext = null,
         ?ResponseSender $responseSender = null,
         ?Closure $navigationProvider = null,
+        string $documentRoot = '/var/www/public/',
     ): void {
         $httpRequest ??= HttpRequestFactory::create();
         $handler->processRequest(
@@ -118,6 +119,7 @@ final class ContentHandlerTest extends TestCase
             session: $session,
             sessionHandler: $sessionHandler,
             formContext: $formContext ?? FormContextFactory::create(httpRequest: $httpRequest),
+            documentRoot: $documentRoot,
             copyright: '2020-2026',
             robots: 'noindex',
             responseSender: $responseSender ?? new RecordingResponseSender(),
@@ -274,6 +276,7 @@ final class ContentHandlerTest extends TestCase
             sessionHandler: $sessionHandler,
             formContext: $formContext,
             responseSender: $responseSender,
+            documentRoot: '/srv/site/public/',
         );
 
         $this->assertInstanceOf(ViewContext::class, $viewContext);
@@ -284,6 +287,7 @@ final class ContentHandlerTest extends TestCase
         $this->assertSame($formContext, $viewContext->formContext);
         $this->assertSame($responseSender, $viewContext->responseSender);
         $this->assertSame($handler, $viewContext->content);
+        $this->assertSame('/srv/site/public/', $viewContext->documentRoot);
     }
 
     public function testProcessRequestPassesTheNavigationProviderToTheViewContext(): void

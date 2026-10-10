@@ -4,6 +4,14 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v5.5.0 (2026-10-10)
+
+- New `ViewContext::$documentRoot`: the document root of the web server (with a trailing slash), filled by `Core`, for
+  views and the libraries they use (e.g. uploads below the document root) without static configuration
+  ([docs/views.md](docs/views.md)).
+- ⚠️ Code that creates a `ViewContext` itself (test doubles) passes `documentRoot:`; code that calls
+  `ContentHandler::processRequest()` itself passes `documentRoot:` too.
+
 ## v5.4.0 (2026-10-10)
 
 - New `HtmlDocument::useContentFile(filePath:)`: a view renders a content file with a fixed path, also on routes with

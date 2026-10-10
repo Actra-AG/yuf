@@ -220,6 +220,36 @@ final class CoreTest extends TestCase
         $this->assertInstanceOf(NavigationItemCollection::class, $navigation);
     }
 
+    public function testPrepareHttpResponseGivesTheDocumentRootToTheViews(): void
+    {
+        $documentRoot = null;
+        $route = new Route(
+            path: '/',
+            viewDirectory: $this->workDirectory->viewDirectory,
+            viewClassPrefix: 'actra\\yuf\\tests\\Double',
+            viewGroup: 'frontend',
+            defaultFileName: 'sample.html',
+            defaultContentType: ContentType::createHtml(),
+            viewFactory: new ViewMap()->add(
+                fileTitle: 'sample',
+                create: static function (ViewContext $context) use (&$documentRoot): BaseView {
+                    $documentRoot = $context->documentRoot;
+
+                    return new TestView(context: $context);
+                },
+            ),
+        );
+        $core = $this->createCore();
+
+        $core->prepareHttpResponse(
+            logger: new RecordingLogger(),
+            routeCollection: new RouteCollection(routes: [$route]),
+            individualSessionHandler: false,
+        );
+
+        $this->assertSame($core->documentRoot, $documentRoot);
+    }
+
     public function testPrepareHttpResponseWithoutCspPolicy(): void
     {
         $httpResponse = $this->createCore()->prepareHttpResponse(

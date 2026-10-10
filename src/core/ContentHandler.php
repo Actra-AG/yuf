@@ -79,6 +79,7 @@ final class ContentHandler
      *
      * @param ?Session $session `null` without sessions
      * @param ?AbstractSessionHandler $sessionHandler `null` without sessions
+     * @param string $documentRoot Document root of the web server, with a trailing slash
      * @param string $copyright Years of the copyright notice of the HTML document
      * @param string $robots Content of the robots meta tag of the HTML document
      * @param ?Closure(ViewContext): NavigationItemCollection $navigationProvider Builds the navigation of the request
@@ -94,6 +95,7 @@ final class ContentHandler
         ?Session $session,
         ?AbstractSessionHandler $sessionHandler,
         FormContext $formContext,
+        string $documentRoot,
         string $copyright,
         string $robots,
         ResponseSender $responseSender,
@@ -141,6 +143,7 @@ final class ContentHandler
                 content: $this,
                 locale: $localeHandler,
                 templateEngine: $templateEngine,
+                documentRoot: $documentRoot,
                 responseSender: $responseSender,
                 navigationProvider: $navigationProvider,
             );

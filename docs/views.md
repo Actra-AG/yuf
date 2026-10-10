@@ -46,6 +46,7 @@ Every view receives the `ViewContext` of the request and passes it to `BaseView:
 | `session`           | `?Session`, `null` without sessions (see [session-and-login.md](session-and-login.md)) |
 | `authSession`       | `AuthSession`                                                 |
 | `formContext`       | `FormContext` for forms (see [forms.md](forms.md))            |
+| `documentRoot`      | Document root of the web server, with a trailing slash (e.g. for uploads below it) |
 
 `BaseView::getHtmlDocument()` and `getJsonRequestBody()` give the HTML document and the JSON request body.
 

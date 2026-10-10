@@ -48,6 +48,7 @@ final class ViewContextFactory
         ?ResponseSender $responseSender = null,
         ?AbstractSessionHandler $sessionHandler = null,
         ?Closure $navigationProvider = null,
+        string $documentRoot = '/tmp/public/',
     ): ViewContext {
         $httpRequest ??= HttpRequestFactory::create();
         $localeHandler = new LocaleHandler(language: null, availableLanguages: new LanguageCollection());
@@ -77,6 +78,7 @@ final class ViewContextFactory
                 templateBaseDirectory: sys_get_temp_dir() . '/',
                 localeHandler: $localeHandler,
             ),
+            documentRoot: $documentRoot,
             responseSender: $responseSender ?? new RecordingResponseSender(),
             navigationProvider: $navigationProvider,
         );

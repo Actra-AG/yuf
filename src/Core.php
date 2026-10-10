@@ -392,6 +392,7 @@ final class Core
             session: $this->session,
             sessionHandler: $this->sessionHandler,
             formContext: $this->formContext,
+            documentRoot: $this->documentRoot,
             copyright: $this->renderCopyrightYear(),
             robots: $this->robots,
             responseSender: $this->responseSender,
