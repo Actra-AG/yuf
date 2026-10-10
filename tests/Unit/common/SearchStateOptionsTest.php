@@ -100,6 +100,43 @@ final class SearchStateOptionsTest extends TestCase
         $this->assertSame('2', $unknown);
     }
 
+    public function testOptionsFilterAcceptsTheEmptyOptionAsNoFilter(): void
+    {
+        $options = $this->textOptions();
+        $this->helper(post: ['f' => 'b'])->checkOptionsFilter(formOptions: $options, fieldName: 'f');
+
+        $all = $this->helper(post: ['f' => ''])->checkOptionsFilter(formOptions: $options, fieldName: 'f');
+
+        $this->assertSame('', $all);
+        $this->assertSame('', $this->storedField(field: 'f'));
+        $this->assertSame('', $this->helper()->checkOptionsFilter(formOptions: $options, fieldName: 'f'));
+    }
+
+    public function testOptionsFilterAcceptsTheEmptyOptionWithFind(): void
+    {
+        $options = $this->textOptions();
+        $this->helper(post: ['f' => 'b'])->checkOptionsFilter(formOptions: $options, fieldName: 'f');
+
+        $all = $this->helper(query: ['find' => ''], post: ['f' => ''])->checkOptionsFilter(
+            formOptions: $options,
+            fieldName: 'f',
+            default: 'a',
+        );
+
+        $this->assertSame('', $all);
+    }
+
+    public function testOptionsFilterKeepsTheRememberedKeyForAnUnknownKey(): void
+    {
+        $options = $this->textOptions();
+        $this->helper(post: ['f' => 'b'])->checkOptionsFilter(formOptions: $options, fieldName: 'f');
+
+        $unknown = $this->helper(post: ['f' => 'x'])->checkOptionsFilter(formOptions: $options, fieldName: 'f');
+
+        $this->assertSame('b', $unknown);
+        $this->assertSame('b', $this->storedField(field: 'f'));
+    }
+
     public function testOptionsFilterTakesTheDefaultAndIsResetByReset(): void
     {
         $options = $this->textOptions();
@@ -142,6 +179,17 @@ final class SearchStateOptionsTest extends TestCase
         );
 
         $this->assertSame(1, $reset);
+    }
+
+    public function testIntOptionsFilterReturnsNullForTheEmptyOption(): void
+    {
+        $options = $this->intOptions();
+        $this->helper(post: ['f' => '2'])->checkIntOptionsFilter(formOptions: $options, fieldName: 'f');
+
+        $all = $this->helper(post: ['f' => ''])->checkIntOptionsFilter(formOptions: $options, fieldName: 'f');
+
+        $this->assertNull($all);
+        $this->assertNull($this->helper()->checkIntOptionsFilter(formOptions: $options, fieldName: 'f'));
     }
 
     public function testIntOptionsFilterThrowsForTextOptions(): void

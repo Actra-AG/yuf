@@ -105,13 +105,14 @@ final class SearchState
     }
 
     /**
-     * A filter with one of the keys of `FormOptions`: the input of this request if it is an option, else the
-     * remembered key, else the default. The keys stay strings, `''` means no filter.
+     * A filter with one of the keys of `FormOptions`: the input of this request if it is an option or `''`, else the
+     * remembered key, else the default. The keys stay strings, `''` means no filter (the empty option of the field,
+     * e.g. `individualEmptyValueLabel`, which is not part of the options).
      */
     public function checkOptionsFilter(FormOptions $formOptions, string $fieldName, string $default = ''): string
     {
         return $this->checkKnownKey(
-            isKnown: static fn(string $key): bool => $formOptions->exists(key: $key),
+            isKnown: static fn(string $key): bool => $key === '' || $formOptions->exists(key: $key),
             fieldName: $fieldName,
             default: $default,
         );

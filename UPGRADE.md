@@ -4,6 +4,12 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v5.2.1 (2026-10-10)
+
+- Fix: a search filter can be reset to "all" again. `SearchState::checkOptionsFilter()` and
+  `checkIntOptionsFilter()` accept a posted `''` (the empty option of the field, e.g. `individualEmptyValueLabel`)
+  as no filter (`''`, `null`) instead of keeping the remembered key (broken since v5.0.0).
+
 ## v5.2.0 (2026-10-10)
 
 - New `HtmlText::fromTextWithLineBreaks(text:)`: plain text escaped, line breaks as `<br>`; instead of

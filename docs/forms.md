@@ -107,7 +107,9 @@ string getters for options with text keys. `FormOptions::toIntKey(string): ?int`
 
 Search forms: `SearchState::checkOptionsFilter()`, `checkMultiOptionsFilter()` (keys as strings), and
 `checkIntOptionsFilter()` (`?int`), `checkIntMultiOptionsFilter()` (`list<int>`) take the `FormOptions` of the field.
-They remember keys as strings and drop remembered keys that are not an option any more.
+They remember keys as strings and drop remembered keys that are not an option any more. A posted `''` (the empty
+option of the field, e.g. `individualEmptyValueLabel`) resets `checkOptionsFilter()` to `''` and
+`checkIntOptionsFilter()` to `null` (no filter).
 
 ## Changes and password rules
 
