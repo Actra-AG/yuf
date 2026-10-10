@@ -4,6 +4,14 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v5.6.0 (2026-10-10)
+
+- New `Form::addSpamProtection(spamProtection: new SpamProtection(clock:, secret:, emailField:,
+  rejectedEmailAddresses:))`: honeypot, signed render time (3–3600 seconds) and rejected e-mail addresses for public
+  forms, checked in `validate()`; texts in `FormMessages` (`spamHoneypotLabel`, `spamHoneypotFilled`, `spamRetry`,
+  `spamRejectedEmailAddress`). Replace own honeypot and timestamp fields with it; the markup stays the same, only the
+  value of the hidden field is signed ([docs/forms.md](docs/forms.md)).
+
 ## v5.5.0 (2026-10-10)
 
 - New `ViewContext::$documentRoot`: the document root of the web server (with a trailing slash), filled by `Core`, for

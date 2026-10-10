@@ -5,7 +5,7 @@ installed and loaded with Composer.
 
 - Routing, views, JSON endpoints and an immutable request object
 - Template engine with escaping by default and own tags
-- Typed form fields, rules, CSRF protection and checked file uploads
+- Typed form fields, rules, CSRF and spam protection, checked file uploads
 - Session object, login with session fixation protection, Argon2id passwords, IP whitelists
 - PDO connection with typed rows and a safe query builder
 - Mail via SMTP (incl. XOAUTH2) or the Microsoft Graph API, phone numbers based on libphonenumber
@@ -48,7 +48,7 @@ See [.env.example.php](.env.example.php), [index.example.php](index.example.php)
 - [Views and requests](docs/views.md): views, request, path variables, JSON endpoints
 - [Session and login](docs/session-and-login.md): session, login, passwords, secret tokens
 - [Templates](docs/templates.md): syntax, escaping, snippets and tables, own tags
-- [Forms](docs/forms.md): typed values, rules, uploads, extension points
+- [Forms](docs/forms.md): typed values, rules, spam protection, uploads, extension points
 - [Database](docs/database.md): connection, typed rows, query builder, boolean search
 - [Mail](docs/mail.md): SMTP and Microsoft 365
 - [Phone numbers](docs/phone-numbers.md): parsing, formats, validation

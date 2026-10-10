@@ -39,6 +39,13 @@ final class FormMessagesTest extends TestCase
         $this->assertSame('Only [max] file(s) allowed.', $messages->tooManyFiles);
         $this->assertSame('A file named "[fileName]" has already been uploaded.', $messages->duplicateFile);
         $this->assertSame('The password must have at least [min] characters.', $messages->passwordTooShort);
+        $this->assertSame('For internal use only', $messages->spamHoneypotLabel);
+        $this->assertSame(
+            'Please leave the field labelled "For internal use only" empty.',
+            $messages->spamHoneypotFilled,
+        );
+        $this->assertSame('Please try again.', $messages->spamRetry);
+        $this->assertSame('Please enter a valid e-mail address.', $messages->spamRejectedEmailAddress);
     }
 
     public function testGermanTexts(): void
@@ -73,6 +80,13 @@ final class FormMessagesTest extends TestCase
             $messages->duplicateFile,
         );
         $this->assertSame('Das Passwort muss mindestens [min] Zeichen lang sein.', $messages->passwordTooShort);
+        $this->assertSame('Nur für interne Zwecke', $messages->spamHoneypotLabel);
+        $this->assertSame(
+            'Bitte lassen Sie das Feld mit der Bezeichnung "Nur für interne Zwecke" leer.',
+            $messages->spamHoneypotFilled,
+        );
+        $this->assertSame('Bitte versuchen Sie es erneut.', $messages->spamRetry);
+        $this->assertSame('Bitte geben Sie eine gültige E-Mail-Adresse ein.', $messages->spamRejectedEmailAddress);
     }
 
     public function testGermanHasNoEnglishDefaultText(): void

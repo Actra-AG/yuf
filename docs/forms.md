@@ -171,6 +171,30 @@ $isValid = $form->validate(input: FormInput::fromHttpRequest(httpRequest: $httpR
 $isValid = $form->validate(input: FormInput::fromArray(data: ['customer' => 'Ann'], query: ['order' => '']));
 ```
 
+## Spam protection
+
+Public forms (contact, order, sign-up) add a honeypot and a signed render time where the fields should be rendered,
+usually before the `FormControl`:
+
+```php
+$form->addSpamProtection(spamProtection: new SpamProtection(
+    clock: $clock,
+    secret: $environmentSettings->getString(key: 'spamProtectionSecret'), // bin2hex(random_bytes(32))
+    emailField: $emailField, // or null
+    rejectedEmailAddresses: ['info@example.com'], // e.g. the own address; [] as explicit opt-out
+));
+```
+
+- It adds the text field `internal` (label `FormMessages::$spamHoneypotLabel`, `autocomplete="off"`) and the hidden
+  field `timestamp`, with the markup of a `TextField` and a hidden field (other names: `honeypotName:`,
+  `renderTimeName:`). Hide the honeypot with the CSS of the project (e.g. `dl:has(#internal)`).
+- `validate()` fails with an error of the form if the e-mail address is rejected (case-insensitive), the honeypot is
+  filled or the form is submitted less than 3 or more than 3600 seconds after rendering (`minSeconds:`,
+  `maxSeconds:`). The render time is signed with the secret and the form name (HMAC-SHA256); a missing, unsigned or
+  manipulated value counts as expired. The texts are `spamRejectedEmailAddress`, `spamHoneypotFilled` and `spamRetry`
+  of `FormMessages`.
+- `SpamCheck` has the rules without the form, e.g. for tests with a `FixedClock`.
+
 ## File uploads
 
 `FileField` needs a `FileUploadStorage` (in production `SessionFileUploadStorage::forHttpRequest(session:,

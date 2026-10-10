@@ -11,6 +11,8 @@ namespace actra\yuf\form\component\collection;
 
 use actra\yuf\form\component\field\CsrfTokenField;
 use actra\yuf\form\component\field\MultiToggleField;
+use actra\yuf\form\component\field\SpamRenderTimeField;
+use actra\yuf\form\component\field\TextField;
 use actra\yuf\form\component\field\ToggleField;
 use actra\yuf\form\component\FormControl;
 use actra\yuf\form\component\FormField;
@@ -23,6 +25,9 @@ use actra\yuf\form\FormRenderer;
 use actra\yuf\form\renderer\CompactFieldRenderer;
 use actra\yuf\form\renderer\DefaultFormRenderer;
 use actra\yuf\form\renderer\DefinitionListRenderer;
+use actra\yuf\form\settings\AutoCompleteEnum;
+use actra\yuf\form\spam\SpamCheckResultEnum;
+use actra\yuf\form\spam\SpamProtection;
 use actra\yuf\html\HtmlText;
 use actra\yuf\security\CsrfTokenSource;
 use LogicException;
@@ -42,6 +47,9 @@ class Form extends FormCollection
     public private(set) array $cssClasses = [];
     private bool $renderRequiredAbbr = true;
     private bool $compactFields = false;
+    private ?SpamProtection $spamProtection = null;
+    private ?TextField $honeypotField = null;
+    private ?SpamRenderTimeField $renderTimeField = null;
 
     public function __construct(
         public readonly FormContext $context,
@@ -78,6 +86,36 @@ class Form extends FormCollection
         if ($this->hasChildComponent(childComponentName: CsrfTokenSource::FIELD_NAME)) {
             $this->removeChildComponent(childComponentName: CsrfTokenSource::FIELD_NAME);
         }
+    }
+
+    /**
+     * Adds the honeypot field (label `FormMessages::$spamHoneypotLabel`, `autocomplete="off"`, to be hidden by the CSS
+     * of the project) and the hidden field with the signed render time at this position; `validate()` checks them.
+     * A broken rule is an error of the form (`FormMessages::$spamHoneypotFilled`, `$spamRetry`,
+     * `$spamRejectedEmailAddress`).
+     *
+     * @throws LogicException if the form already has a spam protection
+     */
+    public function addSpamProtection(SpamProtection $spamProtection): void
+    {
+        if ($this->spamProtection !== null) {
+            throw new LogicException(message: 'Form ' . $this->name . ' already has a spam protection.');
+        }
+        $this->spamProtection = $spamProtection;
+        $this->addField(
+            formField: $this->honeypotField = new TextField(
+                name: $spamProtection->honeypotName,
+                label: HtmlText::fromText(text: $this->messages->spamHoneypotLabel),
+                autoComplete: AutoCompleteEnum::OFF,
+            ),
+        );
+        $this->addField(
+            formField: $this->renderTimeField = new SpamRenderTimeField(
+                name: $spamProtection->renderTimeName,
+                formName: $this->name,
+                spamCheck: $spamProtection->spamCheck,
+            ),
+        );
     }
 
     public function getDefaultFormFieldRenderer(FormField $formField): FormRenderer
@@ -154,6 +192,7 @@ class Form extends FormCollection
 
             $formComponent->validate(input: $input);
         }
+        $this->validateSpamProtection();
 
         if (!$this->hasErrors(withChildElements: true)) {
             $this->validateCsrf(input: $input);
@@ -184,6 +223,32 @@ class Form extends FormCollection
     private function createInput(): FormInput
     {
         return FormInput::fromHttpRequest(httpRequest: $this->context->httpRequest, methodPost: $this->methodPost);
+    }
+
+    /**
+     * Runs also if fields have errors: the error of a manipulated hidden field would not be visible.
+     */
+    private function validateSpamProtection(): void
+    {
+        if ($this->spamProtection === null || $this->honeypotField === null || $this->renderTimeField === null) {
+            return;
+        }
+        $emailField = $this->spamProtection->emailField;
+        $result = $this->spamProtection->spamCheck->check(
+            formName: $this->name,
+            honeypot: $this->honeypotField->getValueAsString(),
+            signedRenderTime: $this->renderTimeField->getPostedValue(),
+            emailAddress: $emailField?->getValueAsString(),
+        );
+        $errorMessage = match ($result) {
+            SpamCheckResultEnum::OK => null,
+            SpamCheckResultEnum::REJECTED_EMAIL_ADDRESS => $this->messages->spamRejectedEmailAddress,
+            SpamCheckResultEnum::HONEYPOT_FILLED => $this->messages->spamHoneypotFilled,
+            SpamCheckResultEnum::TOO_FAST, SpamCheckResultEnum::EXPIRED => $this->messages->spamRetry,
+        };
+        if ($errorMessage !== null) {
+            $this->addError(errorMessage: HtmlText::fromText(text: $errorMessage));
+        }
     }
 
     private function validateCsrf(FormInput $input): void

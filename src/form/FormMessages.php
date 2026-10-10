@@ -14,7 +14,8 @@ namespace actra\yuf\form;
  * `FormMessages::german()` has the German texts (Sie-form, Swiss spelling). Pass it to `Form(messages: ...)`.
  *
  * Placeholders: `[field]` in `invalidOption`, `[max]` in `tooManyFiles`, `[fileName]` in `duplicateFile`,
- * `[maxSize]` in `fileExceedsMaxSize`, `[min]` in `passwordTooShort`.
+ * `[maxSize]` in `fileExceedsMaxSize`, `[min]` in `passwordTooShort`. `spamHoneypotFilled` names the label
+ * `spamHoneypotLabel`: change both together.
  */
 final readonly class FormMessages
 {
@@ -38,6 +39,10 @@ final readonly class FormMessages
         public string $tooManyFiles = 'Only [max] file(s) allowed.',
         public string $duplicateFile = 'A file named "[fileName]" has already been uploaded.',
         public string $passwordTooShort = 'The password must have at least [min] characters.',
+        public string $spamHoneypotLabel = 'For internal use only',
+        public string $spamHoneypotFilled = 'Please leave the field labelled "For internal use only" empty.',
+        public string $spamRetry = 'Please try again.',
+        public string $spamRejectedEmailAddress = 'Please enter a valid e-mail address.',
     ) {}
 
     public static function german(): FormMessages
@@ -62,6 +67,10 @@ final readonly class FormMessages
             tooManyFiles: 'Nur [max] Datei(en) möglich.',
             duplicateFile: 'Es wurde bereits eine Datei mit dem Dateinamen "[fileName]" hochgeladen.',
             passwordTooShort: 'Das Passwort muss mindestens [min] Zeichen lang sein.',
+            spamHoneypotLabel: 'Nur für interne Zwecke',
+            spamHoneypotFilled: 'Bitte lassen Sie das Feld mit der Bezeichnung "Nur für interne Zwecke" leer.',
+            spamRetry: 'Bitte versuchen Sie es erneut.',
+            spamRejectedEmailAddress: 'Bitte geben Sie eine gültige E-Mail-Adresse ein.',
         );
     }
 }
