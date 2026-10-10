@@ -26,6 +26,7 @@ use actra\yuf\tests\Double\security\InMemoryCsrfTokenSource;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use LogicException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -40,12 +41,14 @@ final class FormSpamProtectionTest extends TestCase
         int $now,
         FormMessages $messages = new FormMessages(),
         bool $withCsrf = false,
+        ?HtmlText $globalErrorMessage = null,
     ): Form {
         $form = new Form(
             context: FormContextFactory::create(
                 csrfTokenSource: $withCsrf ? new InMemoryCsrfTokenSource(token: 'expected-token') : null,
             ),
             name: 'contact',
+            globalErrorMessage: $globalErrorMessage,
             messages: $messages,
         );
         $form->addField(
@@ -199,14 +202,84 @@ final class FormSpamProtectionTest extends TestCase
         $this->assertFalse($form->hasChanges());
     }
 
-    public function testRenderTimeIsSignedOnEachRenderingNotPosted(): void
+    /**
+     * @return array<string, array{array<string, string>, int}>
+     */
+    public static function provideSpamWithInvalidFields(): array
     {
-        $form = $this->createForm(now: FormSpamProtectionTest::RENDERED_AT);
-        $this->send(form: $form, post: ['timestamp' => 'posted'] + FormSpamProtectionTest::validPost());
+        return [
+            'filled honeypot' => [['internal' => 'spam'], FormSpamProtectionTest::RENDERED_AT + 10],
+            'expired render time' => [[], FormSpamProtectionTest::RENDERED_AT + 3601],
+            'too fast' => [[], FormSpamProtectionTest::RENDERED_AT + 1],
+            'forged render time' => [['timestamp' => FormSpamProtectionTest::RENDERED_AT . '.' . str_repeat(string: '0', times: 64)], FormSpamProtectionTest::RENDERED_AT + 10],
+        ];
+    }
+
+    /**
+     * @param array<string, string> $post
+     */
+    #[DataProvider('provideSpamWithInvalidFields')]
+    public function testInvalidFieldsShowOnlyTheFieldErrorsAndTheGlobalErrorMessage(array $post, int $now): void
+    {
+        $form = $this->createForm(
+            now: $now,
+            messages: FormMessages::german(),
+            globalErrorMessage: HtmlText::fromText(text: 'Bitte prüfen Sie Ihre Eingaben.'),
+        );
+
+        $this->assertFalse($this->send(form: $form, post: $post + ['email' => 'invalid'] + FormSpamProtectionTest::validPost()));
+        $this->assertSame(1, $form->errorCollection->count());
+        $this->assertSame('Bitte prüfen Sie Ihre Eingaben.', $form->errorCollection->getFirstError()->render());
+        $this->assertSame('invalid', $form->getField(name: 'email')->errorCollection->getFirstError()->render());
+    }
+
+    public function testForgedRenderTime(): void
+    {
+        $form = $this->createForm(now: FormSpamProtectionTest::RENDERED_AT + 10);
+
+        $this->assertFalse($this->send(form: $form, post: ['timestamp' => FormSpamProtectionTest::RENDERED_AT . '.' . str_repeat(string: '0', times: 64)] + FormSpamProtectionTest::validPost()));
+        $this->assertSame('Please try again.', $form->errorCollection->getFirstError()->render());
+    }
+
+    public function testRenderingAfterFieldErrorsKeepsAValidPostedRenderTime(): void
+    {
+        $form = $this->createForm(now: FormSpamProtectionTest::RENDERED_AT + 3600);
+        $this->send(form: $form, post: ['email' => 'invalid'] + FormSpamProtectionTest::validPost());
+
+        $this->assertStringContainsString('value="' . FormSpamProtectionTest::signedRenderTime() . '"', $form->render());
+    }
+
+    /**
+     * @return array<string, array{array<string, string>}>
+     */
+    public static function provideReplacedRenderTimes(): array
+    {
+        return [
+            'expired' => [['timestamp' => FormSpamProtectionTest::signedRenderTime()]],
+            'forged' => [['timestamp' => FormSpamProtectionTest::RENDERED_AT . '.' . str_repeat(string: '0', times: 64)]],
+            'missing' => [['timestamp' => '']],
+            'unsigned' => [['timestamp' => 'posted']],
+        ];
+    }
+
+    /**
+     * @param array<string, string> $post
+     */
+    #[DataProvider('provideReplacedRenderTimes')]
+    public function testRenderingAfterFieldErrorsReplacesAnInvalidRenderTimeWithTheCurrentTime(array $post): void
+    {
+        $now = FormSpamProtectionTest::RENDERED_AT + 3601;
+        $form = $this->createForm(now: $now);
+        $this->send(form: $form, post: $post + ['email' => 'invalid'] + FormSpamProtectionTest::validPost());
 
         $html = $form->render();
 
-        $this->assertStringContainsString('value="' . FormSpamProtectionTest::signedRenderTime() . '"', $html);
+        $currentTime = new SpamCheck(
+            clock: FormSpamProtectionTest::clockAt(timestamp: $now),
+            secret: FormSpamProtectionTest::SECRET,
+            rejectedEmailAddresses: [],
+        )->signRenderTime(formName: 'contact');
+        $this->assertStringContainsString('value="' . $currentTime . '"', $html);
         $this->assertStringNotContainsString('posted', $html);
     }
 

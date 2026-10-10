@@ -17,8 +17,10 @@ use actra\yuf\html\HtmlText;
 use Override;
 
 /**
- * The hidden field with the signed render time of the spam protection (`Form::addSpamProtection()`). It always renders
- * the current time, never the posted value; the form checks the posted value with the `SpamCheck`.
+ * The hidden field with the signed render time of the spam protection (`Form::addSpamProtection()`). It renders the
+ * posted value again if it is validly signed for the form and not expired (the form is rendered again after field
+ * errors, the minimum time does not start again), otherwise the current time; the form checks the posted value with
+ * the `SpamCheck`.
  */
 final class SpamRenderTimeField extends InputField
 {
@@ -63,6 +65,11 @@ final class SpamRenderTimeField extends InputField
     #[Override]
     public function renderValue(): string
     {
-        return HtmlEncoder::encode(value: $this->spamCheck->signRenderTime(formName: $this->formName));
+        $postedValue = $this->getPostedValue();
+        $signedRenderTime = $this->spamCheck->isValidRenderTime(formName: $this->formName, signedRenderTime: $postedValue)
+            ? $postedValue
+            : $this->spamCheck->signRenderTime(formName: $this->formName);
+
+        return HtmlEncoder::encode(value: $signedRenderTime);
     }
 }

@@ -211,6 +211,22 @@ abstract class AbstractMail
         $this->isSent = true;
     }
 
+    /**
+     * The subject as given (trimmed), not encoded for the header.
+     */
+    public function getSubject(): string
+    {
+        return $this->subject;
+    }
+
+    /**
+     * The body as set by `setTextBody()` or `setHtmlBody()` (trimmed), not wrapped or encoded.
+     */
+    public function getBody(): string
+    {
+        return $this->body;
+    }
+
     public function getSubjectForHeader(int $maxLineLength): string
     {
         return MailerHeaderEncoder::encodeText(

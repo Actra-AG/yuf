@@ -92,22 +92,45 @@ final readonly class SpamCheck
         if ($honeypot !== '') {
             return SpamCheckResultEnum::HONEYPOT_FILLED;
         }
-        // At most 12 digits, so the timestamp fits into an int
-        if (
-            preg_match(pattern: '/^(\d{1,12})\.([0-9a-f]{64})$/D', subject: $signedRenderTime, matches: $matches) !== 1
-        ) {
+        $renderedAt = $this->parseRenderTime(formName: $formName, signedRenderTime: $signedRenderTime);
+        if ($renderedAt === null) {
             return SpamCheckResultEnum::EXPIRED;
         }
-        $signature = $this->createSignature(formName: $formName, timestamp: $matches[1]);
-        if (!hash_equals(known_string: $signature, user_string: $matches[2])) {
-            return SpamCheckResultEnum::EXPIRED;
-        }
-        $seconds = $this->clock->now()->getTimestamp() - (int) $matches[1];
+        $seconds = $this->clock->now()->getTimestamp() - $renderedAt;
         if ($seconds < $this->minSeconds) {
             return SpamCheckResultEnum::TOO_FAST;
         }
 
         return $seconds > $this->maxSeconds ? SpamCheckResultEnum::EXPIRED : SpamCheckResultEnum::OK;
+    }
+
+    /**
+     * Whether the posted render time is signed for this form and not expired; the minimum time is not checked. A form
+     * rendered again after field errors keeps such a render time, so the minimum time does not start again.
+     *
+     * @param string $signedRenderTime The posted value of `signRenderTime()`
+     */
+    public function isValidRenderTime(string $formName, string $signedRenderTime): bool
+    {
+        $renderedAt = $this->parseRenderTime(formName: $formName, signedRenderTime: $signedRenderTime);
+
+        return $renderedAt !== null && $this->clock->now()->getTimestamp() - $renderedAt <= $this->maxSeconds;
+    }
+
+    /**
+     * @return ?int The timestamp of a validly signed render time; `null` if it is missing, unsigned or manipulated
+     */
+    private function parseRenderTime(string $formName, string $signedRenderTime): ?int
+    {
+        // At most 12 digits, so the timestamp fits into an int
+        if (
+            preg_match(pattern: '/^(\d{1,12})\.([0-9a-f]{64})$/D', subject: $signedRenderTime, matches: $matches) !== 1
+        ) {
+            return null;
+        }
+        $signature = $this->createSignature(formName: $formName, timestamp: $matches[1]);
+
+        return hash_equals(known_string: $signature, user_string: $matches[2]) ? (int) $matches[1] : null;
     }
 
     private function createSignature(string $formName, string $timestamp): string

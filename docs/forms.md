@@ -193,6 +193,9 @@ $form->addSpamProtection(spamProtection: new SpamProtection(
   `maxSeconds:`). The render time is signed with the secret and the form name (HMAC-SHA256); a missing, unsigned or
   manipulated value counts as expired. The texts are `spamRejectedEmailAddress`, `spamHoneypotFilled` and `spamRetry`
   of `FormMessages`.
+- The rules are checked only if the other fields are valid (like the CSRF token): with field errors the form shows them
+  and `globalErrorMessage`, not a spam text. A form rendered again keeps a validly signed, not expired posted render
+  time (a visitor who corrects a field is not too fast); otherwise it renders the current time.
 - `SpamCheck` has the rules without the form, e.g. for tests with a `FixedClock`.
 
 ## File uploads

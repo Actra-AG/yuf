@@ -4,6 +4,17 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v5.7.0 (2026-10-10)
+
+- The spam protection (`Form::addSpamProtection()`) is checked only if the fields are valid: a submission with field
+  errors shows the field errors and `globalErrorMessage` instead of a spam text. A form rendered again after errors
+  keeps a validly signed, not expired render time, so the 3-second minimum does not start again. New
+  `SpamCheck::isValidRenderTime(formName:, signedRenderTime:)`. No change for projects; the markup stays the same.
+- `MailMimeHeader` and `MailMimeBody` are public API of `AbstractMailer::sendMail()` (only their constructors are
+  `@internal`): an own mailer, e.g. a test double that records the `AbstractMail`, passes PHPStan. New
+  `AbstractMail::getSubject()`, `getBody()` and `FixedServerNameResolver` for such doubles
+  ([docs/mail.md](docs/mail.md#tests)). Projects may replace `MailFunction` doubles with it.
+
 ## v5.6.0 (2026-10-10)
 
 - New `Form::addSpamProtection(spamProtection: new SpamProtection(clock:, secret:, emailField:,

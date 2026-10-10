@@ -12,6 +12,7 @@ namespace actra\yuf\tests\Double\mailer;
 use actra\yuf\clock\FixedClock;
 use actra\yuf\mailer\AbstractMail;
 use actra\yuf\mailer\AbstractMailer;
+use actra\yuf\mailer\FixedServerNameResolver;
 use actra\yuf\mailer\MailMimeBody;
 use actra\yuf\mailer\MailMimeHeader;
 use DateTimeImmutable;

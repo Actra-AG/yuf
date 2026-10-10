@@ -10,13 +10,13 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\mailer;
 
 use actra\yuf\clock\FixedClock;
+use actra\yuf\mailer\FixedServerNameResolver;
 use actra\yuf\mailer\MailerEncodingEnum;
 use actra\yuf\mailer\MailerException;
 use actra\yuf\mailer\SmtpMailer;
 use actra\yuf\mailer\TextMail;
 use actra\yuf\tests\Double\mailer\FakeSmtpTransport;
 use actra\yuf\tests\Double\mailer\FixedMimeIdGenerator;
-use actra\yuf\tests\Double\mailer\FixedServerNameResolver;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;

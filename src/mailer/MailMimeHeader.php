@@ -32,15 +32,17 @@ declare(strict_types=1);
 namespace actra\yuf\mailer;
 
 /**
- * The header of a message (all header lines, without the blank line before the body).
- *
- * @internal Created by `AbstractMail`; a mailer only reads `getMimeHeader()`
+ * The header of a message (all header lines, without the blank line before the body), passed to
+ * `AbstractMailer::sendMail()`. A mailer reads `getMimeHeader()`.
  */
 final class MailMimeHeader
 {
     /** @var list<string> */
     private array $headerItems = [];
 
+    /**
+     * @internal Created by `AbstractMail::send()`
+     */
     public function __construct(
         AbstractMailer $abstractMailer,
         string $subjectForHeader,

@@ -11,6 +11,7 @@ namespace actra\yuf\tests\Unit\mailer;
 
 use actra\yuf\clock\FixedClock;
 use actra\yuf\mailer\attachment\MailerStringAttachment;
+use actra\yuf\mailer\FixedServerNameResolver;
 use actra\yuf\mailer\GraphMailer;
 use actra\yuf\mailer\MailerException;
 use actra\yuf\mailer\MicrosoftClientCredentialsTokenProvider;
@@ -21,7 +22,6 @@ use actra\yuf\tests\Double\api\ScriptedHttpServer;
 use actra\yuf\tests\Double\clock\AdjustableClock;
 use actra\yuf\tests\Double\mailer\FixedMimeIdGenerator;
 use actra\yuf\tests\Double\mailer\FixedOAuthTokenProvider;
-use actra\yuf\tests\Double\mailer\FixedServerNameResolver;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use Override;

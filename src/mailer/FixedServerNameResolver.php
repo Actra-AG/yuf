@@ -7,13 +7,13 @@
 
 declare(strict_types=1);
 
-namespace actra\yuf\tests\Double\mailer;
+namespace actra\yuf\mailer;
 
-use actra\yuf\mailer\ServerNameResolver;
 use Override;
 
 /**
- * Answers every address with the same host name.
+ * Answers every address with the same host name, without DNS. Use it in tests of yuf and of projects that build upon
+ * yuf (e.g. a mailer double, see docs/testing.md).
  */
 final readonly class FixedServerNameResolver implements ServerNameResolver
 {

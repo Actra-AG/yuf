@@ -63,6 +63,44 @@ The same token provider serves `SmtpMailer` with `scope: 'https://outlook.office
 permission `SMTP.SendAsApp` of Office 365 Exchange Online, and its service principal must be registered in Exchange
 Online (`New-ServicePrincipal`) with full access to the mailbox (`Add-MailboxPermission`).
 
+## Tests
+
+A test double extends `AbstractMailer` and records the `AbstractMail` in `sendMail()` instead of delivering it
+(`MailMimeHeader` and `MailMimeBody` are the built message, a double may ignore them). The fixed clock and server name
+keep it free of the system clock and DNS:
+
+```php
+final class RecordingMailer extends AbstractMailer
+{
+    /** @var list<AbstractMail> */
+    public private(set) array $sentMails = [];
+
+    public function __construct()
+    {
+        parent::__construct(
+            serverAddress: '192.0.2.1',
+            clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-01-02 03:04:05')),
+            serverNameResolver: new FixedServerNameResolver(),
+        );
+    }
+
+    // headerHasTo(), headerHasSubject(): true; headerHasBcc(): false; getMaxLineLength(): 998
+
+    #[Override]
+    public function sendMail(
+        AbstractMail $abstractMail,
+        MailMimeHeader $mailMimeHeader,
+        MailMimeBody $mailMimeBody,
+    ): void {
+        $this->sentMails[] = $abstractMail;
+    }
+}
+```
+
+The test asserts the mail with `getSubject()`, `getBody()`, `fromAddress` and
+`mailerAddressCollection->list(mailerAddressKindEnum: MailerAddressKindEnum::KIND_TO)` (`getPunyEncodedEmail()`,
+`getName()` of each `MailerAddress`).
+
 ## Performance
 
 - Send mail after the response where possible (a shutdown function runs after `fastcgi_finish_request()`), or from

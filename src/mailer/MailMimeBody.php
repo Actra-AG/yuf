@@ -36,9 +36,7 @@ use actra\yuf\mailer\attachment\MailerAttachmentCollection;
 
 /**
  * The body of a message: the single part or the multipart structure with alternative text, inline images and
- * attachments.
- *
- * @internal Created by `AbstractMail`; a mailer only reads `getMimeBody()`
+ * attachments, passed to `AbstractMailer::sendMail()`. A mailer reads `getMimeBody()`.
  */
 final readonly class MailMimeBody
 {
@@ -46,6 +44,9 @@ final readonly class MailMimeBody
 
     private string $body;
 
+    /**
+     * @internal Created by `AbstractMail::send()`
+     */
     public function __construct(
         private int $maxLineLength,
         private MailerCharsetEnum $charSet,

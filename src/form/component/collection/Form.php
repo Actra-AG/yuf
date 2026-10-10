@@ -193,7 +193,6 @@ class Form extends FormCollection
             $formComponent->validate(input: $input);
         }
         $this->validateSpamProtection();
-
         if (!$this->hasErrors(withChildElements: true)) {
             $this->validateCsrf(input: $input);
         }
@@ -226,12 +225,24 @@ class Form extends FormCollection
     }
 
     /**
-     * Runs also if fields have errors: the error of a manipulated hidden field would not be visible.
+     * Runs only if the fields are valid, like `validateCsrf()`: fields with errors block the submission anyway, and the
+     * global error message stays the error of the form. The form is rendered again with a signed render time, so the
+     * next submission is checked. Errors of the spam fields themselves (a manipulated value) do not count, as they are
+     * not visible.
      */
     private function validateSpamProtection(): void
     {
         if ($this->spamProtection === null || $this->honeypotField === null || $this->renderTimeField === null) {
             return;
+        }
+        foreach ($this->getAllFields() as $formField) {
+            if (
+                $formField !== $this->honeypotField
+                && $formField !== $this->renderTimeField
+                && $formField->hasErrors(withChildElements: true)
+            ) {
+                return;
+            }
         }
         $emailField = $this->spamProtection->emailField;
         $result = $this->spamProtection->spamCheck->check(

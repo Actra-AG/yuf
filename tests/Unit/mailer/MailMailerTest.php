@@ -11,10 +11,10 @@ namespace actra\yuf\tests\Unit\mailer;
 
 use actra\yuf\clock\FixedClock;
 use actra\yuf\common\FileCache;
+use actra\yuf\mailer\FixedServerNameResolver;
 use actra\yuf\mailer\MailMailer;
 use actra\yuf\mailer\TextMail;
 use actra\yuf\tests\Double\mailer\FixedMimeIdGenerator;
-use actra\yuf\tests\Double\mailer\FixedServerNameResolver;
 use actra\yuf\tests\Double\mailer\RecordingMailFunction;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
