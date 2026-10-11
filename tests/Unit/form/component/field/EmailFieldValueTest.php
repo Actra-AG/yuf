@@ -9,23 +9,58 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\form\component\field;
 
+use actra\yuf\common\AcceptingMailDomainResolver;
+use actra\yuf\common\EmailAddressError;
+use actra\yuf\common\EmailAddressErrorEnum;
+use actra\yuf\common\MailDomainResolver;
 use actra\yuf\form\component\field\EmailField;
 use actra\yuf\form\FormInput;
 use actra\yuf\html\HtmlText;
+use actra\yuf\tests\Double\common\FixedMailDomainResolver;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class EmailFieldValueTest extends TestCase
 {
-    private function createField(?string $value = null): EmailField
+    private function createField(?string $value = null, ?MailDomainResolver $resolver = null): EmailField
     {
         return new EmailField(
             name: 'email',
             label: HtmlText::fromHtml(html: 'Email'),
             value: $value,
             invalidError: HtmlText::fromHtml(html: 'Invalid'),
-            dnsCheck: false,
+            mailDomainResolver: $resolver,
         );
+    }
+
+    /**
+     * @return iterable<string, array{?MailDomainResolver}>
+     */
+    public static function resolverWithoutDomainCheckProvider(): iterable
+    {
+        yield 'accepting resolver (debug mode)' => [new AcceptingMailDomainResolver()];
+        yield 'no resolver (syntax only)' => [null];
+    }
+
+    #[DataProvider('resolverWithoutDomainCheckProvider')]
+    public function testDomainIsNotCheckedButSyntaxIs(?MailDomainResolver $resolver): void
+    {
+        $field = $this->createField(resolver: $resolver);
+        $invalidField = $this->createField(resolver: $resolver);
+
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['email' => 'admin@example.invalid'])));
+        $this->assertFalse($invalidField->validate(input: FormInput::fromArray(data: ['email' => 'admin@example'])));
+    }
+
+    public function testDomainIsCheckedWithTheResolver(): void
+    {
+        $resolver = new FixedMailDomainResolver(
+            problem: new EmailAddressError(code: EmailAddressErrorEnum::NULL_MX, message: 'null MX'),
+        );
+        $field = $this->createField(resolver: $resolver);
+
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['email' => 'admin@example.com'])));
+        $this->assertSame(['example.com'], $resolver->checkedDomains);
     }
 
     public function testValueIsEmptyStringAfterConstructionWithoutValue(): void

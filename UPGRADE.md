@@ -4,6 +4,21 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v6.4.0 (2026-10-11)
+
+### ⚠️ Email fields: null MX rejected, mail domain resolver from the form context, no domain check in debug mode
+
+- Addresses of domains with a null MX (RFC 7505, e.g. `example.com`) are rejected (`EmailAddressErrorEnum::NULL_MX`).
+- `EmailField` / `ValidEmailAddressRule`: the required `mailDomainResolver:` replaces `dnsCheck:`; pass
+  `$formContext->mailDomainResolver`. Before: `new EmailField(…)` or `new EmailField(…, dnsCheck: true)`, after:
+  `new EmailField(…, mailDomainResolver: $formContext->mailDomainResolver)`; `dnsCheck: false` →
+  `mailDomainResolver: null` (syntax only).
+- `FormContext` has the required `mailDomainResolver:` (in tests that create it: e.g.
+  `new AcceptingMailDomainResolver()`).
+- In debug mode (`'debug' => true` in `.env.php`) email fields check only the syntax, not the mail domain.
+- `SystemMailDomainResolver` takes a `MailServerLookup` (default `SystemMailServerLookup`): the DNS lookups and the
+  port 25 connection, replaceable in tests.
+
 ## v6.3.0 (2026-10-11)
 
 - New `DbResultTable::addSortTieBreaker(column:, ascending:)`: a stable secondary order after the sort column, also

@@ -129,6 +129,7 @@ final class ValidatedEmailAddressTest extends TestCase
         yield 'fsockopen' => ['fsockopen', EmailAddressErrorEnum::FSOCKOPEN];
         yield 'notResolvable' => ['notResolvable', EmailAddressErrorEnum::NOT_RESOLVABLE];
         yield 'controlCharacters' => ['controlCharacters', EmailAddressErrorEnum::CONTROL_CHARACTERS];
+        yield 'nullMx' => ['nullMx', EmailAddressErrorEnum::NULL_MX];
     }
 
     #[DataProvider('errorCodeProvider')]

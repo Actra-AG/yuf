@@ -58,6 +58,7 @@ final class FormSpamProtectionTest extends TestCase
                 label: HtmlText::fromText(text: 'E-Mail'),
                 value: null,
                 invalidError: HtmlText::fromText(text: 'invalid'),
+                mailDomainResolver: null,
                 requiredError: HtmlText::fromText(text: 'required'),
             ),
         );
@@ -325,6 +326,7 @@ final class FormSpamProtectionTest extends TestCase
                 label: HtmlText::fromText(text: 'E-Mail'),
                 value: null,
                 invalidError: HtmlText::fromText(text: 'invalid'),
+                mailDomainResolver: null,
                 requiredError: HtmlText::fromText(text: 'required'),
             ),
         );

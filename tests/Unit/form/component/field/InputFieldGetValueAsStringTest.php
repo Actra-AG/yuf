@@ -38,7 +38,7 @@ final class InputFieldGetValueAsStringTest extends TestCase
 
         yield 'text' => [new TextField(name: 'field', label: $label), 'field'];
         yield 'email' => [
-            new EmailField(name: 'field', label: $label, value: null, invalidError: $error, dnsCheck: false),
+            new EmailField(name: 'field', label: $label, value: null, invalidError: $error, mailDomainResolver: null),
             'field',
         ];
         yield 'zip code' => [new ZipCodeField(name: 'field', label: $label), 'field'];

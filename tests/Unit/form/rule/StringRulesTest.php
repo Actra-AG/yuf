@@ -48,13 +48,13 @@ final class StringRulesTest extends TestCase
             '01',
             false,
         ];
-        yield 'email without dns check' => [
-            new ValidEmailAddressRule(errorMessage: $message, dnsCheck: false),
+        yield 'email without domain check' => [
+            new ValidEmailAddressRule(errorMessage: $message, mailDomainResolver: null),
             'a@example.com',
             true,
         ];
         yield 'email with invalid syntax' => [
-            new ValidEmailAddressRule(errorMessage: $message, dnsCheck: false),
+            new ValidEmailAddressRule(errorMessage: $message, mailDomainResolver: null),
             'not an address',
             false,
         ];

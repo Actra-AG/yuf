@@ -24,4 +24,6 @@ enum EmailAddressErrorEnum: string
     case NO_DNS_RECORDS = 'noDnsRecords';
     case FSOCKOPEN = 'fsockopen';
     case NOT_RESOLVABLE = 'notResolvable';
+    /** The domain declares that it accepts no mail (RFC 7505) */
+    case NULL_MX = 'nullMx';
 }

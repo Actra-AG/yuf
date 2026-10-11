@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\field;
 
+use actra\yuf\common\MailDomainResolver;
 use actra\yuf\common\ValidatedEmailAddress;
 use actra\yuf\form\rule\ValidEmailAddressRule;
 use actra\yuf\form\settings\AutoCompleteEnum;
@@ -18,13 +19,18 @@ use Override;
 
 final class EmailField extends SettableStringInputField
 {
+    /**
+     * @param ?MailDomainResolver $mailDomainResolver Checks the domain: `$formContext->mailDomainResolver` (accepts
+     *                                                every domain in debug mode); `null` checks the syntax only
+     * @param bool $trueOnDnsError `true` accepts the address if the DNS lookup itself fails
+     */
     public function __construct(
         string $name,
         HtmlText $label,
         ?string $value,
         HtmlText $invalidError,
+        ?MailDomainResolver $mailDomainResolver,
         ?HtmlText $requiredError = null,
-        bool $dnsCheck = true,
         bool $trueOnDnsError = true,
         ?string $placeholder = null,
         ?AutoCompleteEnum $autoComplete = null,
@@ -45,7 +51,7 @@ final class EmailField extends SettableStringInputField
         $this->addRule(
             formRule: new ValidEmailAddressRule(
                 errorMessage: $invalidError,
-                dnsCheck: $dnsCheck,
+                mailDomainResolver: $mailDomainResolver,
                 trueOnDnsError: $trueOnDnsError,
             ),
         );

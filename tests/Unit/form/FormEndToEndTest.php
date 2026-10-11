@@ -106,7 +106,7 @@ final class FormEndToEndTest extends TestCase
             value: null,
             invalidError: $invalid,
             requiredError: $required,
-            dnsCheck: false,
+            mailDomainResolver: null,
         );
         $this->password = new PasswordField(
             name: 'secret',

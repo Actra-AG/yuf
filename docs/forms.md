@@ -164,8 +164,33 @@ final class NoSpacesRule extends StringRule
 $name->addRule(formRule: new MinLengthRule(minLength: 3, errorMessage: $tooShort));
 $name->addRule(formRule: new NoSpacesRule(defaultErrorMessage: $noSpaces));
 $quantity->addValueRule(formRule: new IntegerMinRule(min: 1, errorMessage: $atLeastOne));
-$recipients->addEachRule(formRule: new ValidEmailAddressRule(errorMessage: $invalidAddress));
+$recipients->addEachRule(formRule: new ValidEmailAddressRule(
+    errorMessage: $invalidAddress,
+    mailDomainResolver: $this->context->formContext->mailDomainResolver,
+));
 ```
+
+## Email addresses
+
+`EmailField` and `ValidEmailAddressRule` always check the syntax, and the domain with the `mailDomainResolver:` of the
+`FormContext`:
+
+```php
+$email = new EmailField(
+    name: 'email',
+    label: HtmlText::fromHtml(html: 'E-Mail'),
+    value: null,
+    invalidError: $invalidEmail,
+    mailDomainResolver: $this->context->formContext->mailDomainResolver, // null: syntax only
+);
+```
+
+- `SystemMailDomainResolver` (default): the domain needs an MX record, or without one an A record of a public address
+  that accepts connections on port 25. A domain with a null MX (RFC 7505, e.g. `example.com`) is rejected. With
+  `trueOnDnsError: true` (default) a failed DNS lookup accepts the address.
+- In debug mode (`'debug' => true` in `.env.php`) `Core` sets `AcceptingMailDomainResolver`: no domain check, so test
+  domains (`.test`, `.invalid`, `example.com`) work locally, where all mail goes to a mail catcher.
+- A project can pass its own `MailDomainResolver`.
 
 ## Request data
 

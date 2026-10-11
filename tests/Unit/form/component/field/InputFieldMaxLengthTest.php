@@ -102,7 +102,7 @@ final class InputFieldMaxLengthTest extends TestCase
             label: HtmlText::fromHtml(html: 'Mail'),
             value: null,
             invalidError: HtmlText::fromHtml(html: 'Invalid'),
-            dnsCheck: false,
+            mailDomainResolver: null,
             maxLength: 10,
         );
 

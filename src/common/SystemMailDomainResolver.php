@@ -12,62 +12,48 @@ namespace actra\yuf\common;
 use Override;
 
 /**
- * Looks up the MX records of the domain. Without an MX record, the domain must have an A record of a public address
- * that accepts connections on port 25. Addresses of private and reserved ranges are not contacted, so an entered
- * domain cannot make the server connect to its internal network.
+ * Looks up the MX records of the domain. A domain with a null MX (RFC 7505: the MX host ".") accepts no mail. Without
+ * an MX record, the domain must have an A record of a public address that accepts connections on port 25. Addresses
+ * of private and reserved ranges are not contacted, so an entered domain cannot make the server connect to its
+ * internal network.
  */
 final readonly class SystemMailDomainResolver implements MailDomainResolver
 {
-    private const int SMTP_PORT = 25;
-    /** Short: the check runs while the user waits for the form */
-    private const int CONNECTION_TIMEOUT_IN_SECONDS = 2;
+    public function __construct(private MailServerLookup $mailServerLookup = new SystemMailServerLookup()) {}
 
     #[Override]
     public function findProblem(string $domain): ?EmailAddressError
     {
-        $mxRecords = [];
-        if (getmxrr(hostname: $domain, hosts: $mxRecords)) {
+        $mxHosts = $this->mailServerLookup->findMxHosts(domain: $domain);
+        if ($mxHosts !== []) {
+            // A null MX next to other MX records is invalid (RFC 7505, section 3): rejected as well
+            if (in_array(needle: '', haystack: $mxHosts, strict: true)
+                || in_array(needle: '.', haystack: $mxHosts, strict: true)) {
+                return new EmailAddressError(
+                    code: EmailAddressErrorEnum::NULL_MX,
+                    message: 'The domain accepts no mail (null MX record)',
+                );
+            }
+
             // The note of https://www.php.net/manual/en/function.getmxrr is ignored on purpose: without MX records,
             // the host itself is the mail exchanger (RFC 2821), which the port 25 check below tests.
             return null;
         }
-        $errorMessage = null;
-        $aRecords = SystemMailDomainResolver::runCollectingWarning(
-            function: static fn(): array|false => dns_get_record(hostname: $domain, type: DNS_A),
-            warning: $errorMessage,
-        );
-        if ($aRecords === false) {
-            return new EmailAddressError(
-                code: EmailAddressErrorEnum::DNS_GET_RECORD,
-                message: $errorMessage ?? 'The DNS lookup failed.',
-            );
+        $ipAddresses = $this->mailServerLookup->findIpv4Addresses(domain: $domain);
+        if ($ipAddresses instanceof EmailAddressError) {
+            return $ipAddresses;
         }
-        $ipAddress = SystemMailDomainResolver::findIpAddress(aRecords: $aRecords);
-        if ($ipAddress === null) {
+        if ($ipAddresses === []) {
             return new EmailAddressError(
                 code: EmailAddressErrorEnum::NO_DNS_RECORDS,
                 message: 'No A-Records found for the domain',
             );
         }
 
-        return SystemMailDomainResolver::checkSmtpPort(ipAddress: $ipAddress);
+        return $this->checkSmtpPort(ipAddress: $ipAddresses[0]);
     }
 
-    /**
-     * @param list<array<array-key, mixed>> $aRecords
-     */
-    private static function findIpAddress(array $aRecords): ?string
-    {
-        foreach ($aRecords as $aRecord) {
-            if (array_key_exists(key: 'ip', array: $aRecord) && is_string(value: $aRecord['ip'])) {
-                return $aRecord['ip'];
-            }
-        }
-
-        return null;
-    }
-
-    private static function checkSmtpPort(string $ipAddress): ?EmailAddressError
+    private function checkSmtpPort(string $ipAddress): ?EmailAddressError
     {
         $isPublicAddress = filter_var(
             value: $ipAddress,
@@ -80,51 +66,11 @@ final readonly class SystemMailDomainResolver implements MailDomainResolver
                 message: 'The A-Record is no public address',
             );
         }
-        $errorMessage = null;
-        $connection = SystemMailDomainResolver::runCollectingWarning(
-            function: static fn() => fsockopen(
-                hostname: $ipAddress,
-                port: SystemMailDomainResolver::SMTP_PORT,
-                timeout: SystemMailDomainResolver::CONNECTION_TIMEOUT_IN_SECONDS,
-            ),
-            warning: $errorMessage,
-        );
-        if ($connection === false) {
-            return new EmailAddressError(
-                code: EmailAddressErrorEnum::NOT_RESOLVABLE,
-                message: 'Failed to connect to port 25' . ($errorMessage === null ? '' : ': ' . $errorMessage),
-            );
+        $connectionProblem = $this->mailServerLookup->findSmtpConnectionProblem(ipAddress: $ipAddress);
+        if ($connectionProblem !== null) {
+            return new EmailAddressError(code: EmailAddressErrorEnum::NOT_RESOLVABLE, message: $connectionProblem);
         }
-        fclose(stream: $connection);
 
         return null;
-    }
-
-    /**
-     * Runs the function without raising its warning (a failed lookup is no program error) and returns the text of
-     * the warning.
-     *
-     * @template T
-     *
-     * @param callable(): T $function
-     * @param-out ?string $warning
-     *
-     * @return T
-     */
-    private static function runCollectingWarning(callable $function, ?string &$warning): mixed
-    {
-        $warning = null;
-        set_error_handler(
-            callback: static function (int $level, string $message) use (&$warning): bool {
-                $warning = $message;
-
-                return true;
-            },
-        );
-        try {
-            return $function();
-        } finally {
-            restore_error_handler();
-        }
     }
 }

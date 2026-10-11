@@ -10,7 +10,10 @@ declare(strict_types=1);
 namespace actra\yuf;
 
 use actra\yuf\clock\SystemClock;
+use actra\yuf\common\AcceptingMailDomainResolver;
 use actra\yuf\common\FileCache;
+use actra\yuf\common\MailDomainResolver;
+use actra\yuf\common\SystemMailDomainResolver;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentResponseFactory;
 use actra\yuf\core\CoreSettings;
@@ -107,6 +110,7 @@ final class Core
     public readonly string $robots;
     /** @var list<TemplateTag> */
     private array $templateTags = [];
+    private readonly MailDomainResolver $mailDomainResolver;
 
     /**
      * Touches no globals and no files: the settings and the request are given, so this is the constructor for tests.
@@ -134,7 +138,15 @@ final class Core
         $this->snippetsDirectory = $settings->snippetsDirectory;
         $this->viewDirectory = $settings->viewDirectory;
         $this->httpRequest = $httpRequest;
-        $this->formContext = new FormContext(httpRequest: $httpRequest, csrfTokenSource: null);
+        // Debug: all mail goes to a local mail catcher, test domains have no mail server
+        $this->mailDomainResolver = $environment->debug
+            ? new AcceptingMailDomainResolver()
+            : new SystemMailDomainResolver();
+        $this->formContext = new FormContext(
+            httpRequest: $httpRequest,
+            csrfTokenSource: null,
+            mailDomainResolver: $this->mailDomainResolver,
+        );
         $this->allowedDomains = $environment->allowedDomains;
         $this->availableLanguages = new LanguageCollection();
         $this->debug = $environment->debug;
@@ -368,7 +380,11 @@ final class Core
             ? null
             : new Session(storage: new NativeSessionStorage(sessionHandler: $this->sessionHandler));
         $csrfTokenSource = $this->session === null ? null : new SessionCsrfTokenSource(session: $this->session);
-        $this->formContext = new FormContext(httpRequest: $this->httpRequest, csrfTokenSource: $csrfTokenSource);
+        $this->formContext = new FormContext(
+            httpRequest: $this->httpRequest,
+            csrfTokenSource: $csrfTokenSource,
+            mailDomainResolver: $this->mailDomainResolver,
+        );
         $exceptionHandler->setSession(session: $this->session, csrfTokenSource: $csrfTokenSource);
         if (!$routeCollection->hasRoutes()) {
             throw new LogicException(message: 'There must be at least one route');

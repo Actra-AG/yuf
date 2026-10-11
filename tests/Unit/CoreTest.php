@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit;
 
+use actra\yuf\common\AcceptingMailDomainResolver;
+use actra\yuf\common\SystemMailDomainResolver;
 use actra\yuf\Core;
 use actra\yuf\core\BaseView;
 use actra\yuf\core\ContentType;
@@ -139,6 +141,28 @@ final class CoreTest extends TestCase
         $this->assertNull($core->cspPolicySettings);
         $this->assertSame($httpRequest, $core->formContext->httpRequest);
         $this->assertNull($core->formContext->csrfTokenSource);
+        $this->assertInstanceOf(SystemMailDomainResolver::class, $core->formContext->mailDomainResolver);
+    }
+
+    public function testFormContextAcceptsEveryMailDomainInDebugMode(): void
+    {
+        $core = $this->createCore(debug: true);
+
+        $this->assertInstanceOf(AcceptingMailDomainResolver::class, $core->formContext->mailDomainResolver);
+    }
+
+    public function testFormContextOfTheSessionKeepsTheMailDomainResolver(): void
+    {
+        $core = $this->createCore(debug: true);
+        $resolver = $core->formContext->mailDomainResolver;
+
+        $core->prepareHttpResponse(
+            logger: new RecordingLogger(),
+            routeCollection: new RouteCollection(routes: [$this->createTextRoute()]),
+            individualSessionHandler: new NonStartingSessionHandler(),
+        );
+
+        $this->assertSame($resolver, $core->formContext->mailDomainResolver);
     }
 
     public function testFileCacheKeepsItsValuesInTheCacheDirectory(): void
