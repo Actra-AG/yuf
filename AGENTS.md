@@ -9,10 +9,6 @@ This project follows the Actra coding standard, installed as development depende
 
 - Read [vendor/actra/coding-standard/AGENTS.md](vendor/actra/coding-standard/AGENTS.md) and the standards linked
   there before working on this project. They are binding. If `vendor/` is missing, run `composer install` first.
-- Before every change to yuf, check for a newer release of `actra/coding-standard`
-  (`ddev composer show -a actra/coding-standard`). If there is one, raise the constraint in `composer.json`, run
-  `ddev composer update actra/coding-standard`, apply its `UPGRADE.md` entries since the previous version and release
-  the result with the next yuf release; name the entries that are not applied yet in the final report.
 - The rules below only **add** project-specific rules or state explicit deviations (with reason). They take precedence
   over the global standard where they conflict.
 
