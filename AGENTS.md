@@ -9,6 +9,10 @@ This project follows the Actra coding standard, installed as development depende
 
 - Read [vendor/actra/coding-standard/AGENTS.md](vendor/actra/coding-standard/AGENTS.md) and the standards linked
   there before working on this project. They are binding. If `vendor/` is missing, run `composer install` first.
+- Before every change to yuf, check for a newer release of `actra/coding-standard`
+  (`ddev composer show -a actra/coding-standard`). If there is one, raise the constraint in `composer.json`, run
+  `ddev composer update actra/coding-standard`, apply its `UPGRADE.md` entries since the previous version and release
+  the result with the next yuf release; name the entries that are not applied yet in the final report.
 - The rules below only **add** project-specific rules or state explicit deviations (with reason). They take precedence
   over the global standard where they conflict.
 
@@ -28,7 +32,8 @@ This project follows the Actra coding standard, installed as development depende
   versioning.md section 4): new markup only as opt-in; any other change of existing markup only with the frontend
   developer and a ⚠️ `UPGRADE.md` entry with before/after.
 - Example app: `example/` (https://yuf.ddev.site/, uses the sources of `src/`).
-- Skeleton project: `../yuf-skeleton` (https://github.com/Actra-AG/yuf-skeleton).
+- Skeleton project: `../yuf-skeleton` (https://github.com/Actra-AG/yuf-skeleton), checked on every release
+  (`vendor/actra/coding-standard/standards/versioning.md`, section 1).
 
 ## Deviations from the global standard
 
