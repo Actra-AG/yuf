@@ -94,7 +94,9 @@ $html = $snippet->render(templateEngine: $this->context->templateEngine);
   with the filter and the sorting the user chose, but not paged. The first row has the labels of the columns (tags
   removed), then one row per result row with the values as the database delivers them in the order of the columns;
   `NULL` is an empty cell, so no cell moves. `ActionsColumn` and `CallbackColumn` have no data of their own and are
-  left out; every other column needs a column of its identifier in the query. The rows are read and written one by one
+  left out, except a `CallbackColumn` with `exportValueFunction:` (gets the `DbRow`, returns a scalar or `NULL`, e.g.
+  the name of a linked name: `fn(DbRow $row): string => $row->getString(column: 'name')`); every other column needs a
+  column of its identifier in the query. The rows are read and written one by one
   and the temporary file is removed after the response. Call it before the table renders anything (e.g. for a request
   with `?export`); tests pass `responseSender:` (`RecordingResponseSender`) and read the file of the response.
 - The label of a column and the title of a `NavigationItem` are an `HtmlText`: `HtmlText::fromText()` is escaped when

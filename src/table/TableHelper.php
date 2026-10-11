@@ -11,6 +11,7 @@ namespace actra\yuf\table;
 
 use actra\yuf\core\HttpRequest;
 use actra\yuf\db\DbQuery;
+use actra\yuf\db\DbRow;
 use actra\yuf\db\FrameworkDb;
 use actra\yuf\html\HtmlText;
 use actra\yuf\session\Session;
@@ -138,6 +139,8 @@ final class TableHelper
 
     /**
      * @param callable(TableItem): string $callbackFunction Returns the HTML of the cell, see `CallbackColumn`
+     * @param null|callable(DbRow): (bool|float|int|string|null) $exportValueFunction The value in the CSV export,
+     *     `null` leaves the column out of it
      */
     public static function createCallbackColumn(
         string $identifier,
@@ -145,6 +148,7 @@ final class TableHelper
         callable $callbackFunction,
         bool $isSortable = false,
         bool $sortAscendingByDefault = true,
+        ?callable $exportValueFunction = null,
     ): CallbackColumn {
         return new CallbackColumn(
             identifier: $identifier,
@@ -152,6 +156,7 @@ final class TableHelper
             callbackFunction: $callbackFunction,
             isSortable: $isSortable,
             sortAscendingByDefault: $sortAscendingByDefault,
+            exportValueFunction: $exportValueFunction,
         );
     }
 }

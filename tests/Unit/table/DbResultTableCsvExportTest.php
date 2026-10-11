@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\table;
 
 use actra\yuf\core\HttpStatusCodeEnum;
+use actra\yuf\db\DbRow;
 use actra\yuf\db\DbRowValueException;
 use actra\yuf\html\HtmlText;
 use actra\yuf\session\ArraySessionStorage;
@@ -18,6 +19,7 @@ use actra\yuf\table\column\ActionsColumn;
 use actra\yuf\table\column\CallbackColumn;
 use actra\yuf\table\table\DbResultTable;
 use actra\yuf\table\TableHelper;
+use actra\yuf\table\TableItem;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\core\RecordingResponseSender;
 use actra\yuf\tests\Double\core\ResponseSentException;
@@ -177,6 +179,31 @@ final class DbResultTableCsvExportTest extends TestCase
 
         $this->assertStringStartsWith(
             DbResultTableCsvExportTest::BOM . "Id;\"Name & Title\";Age\n1;Anna;30\n",
+            $content,
+        );
+    }
+
+    public function testCallbackColumnWithExportValueIsExported(): void
+    {
+        $table = $this->createTable();
+        $table->addColumn(
+            abstractTableColumn: TableHelper::createCallbackColumn(
+                identifier: 'link',
+                label: HtmlText::fromText(text: 'Link'),
+                callbackFunction: static fn(TableItem $tableItem): string => '<a href="/users/'
+                    . $tableItem->renderValue(name: 'id') . '">' . $tableItem->renderValue(name: 'name') . '</a>',
+                exportValueFunction: static fn(DbRow $row): ?string => $row->getNullableInt(column: 'age') === null
+                    ? null
+                    : $row->getString(column: 'name') . ' (' . $row->getInt(column: 'age') . ')',
+            ),
+        );
+
+        $content = $this->export(table: $table, sender: new RecordingResponseSender());
+
+        // The export value, never the HTML of the cell; NULL is an empty cell
+        $this->assertSame(
+            DbResultTableCsvExportTest::BOM . "Id;\"Name & Title\";Age;Link\n1;Anna;30;\"Anna (30)\"\n2;Ben;;\n"
+            . "3;Cleo;41;\"Cleo (41)\"\n",
             $content,
         );
     }

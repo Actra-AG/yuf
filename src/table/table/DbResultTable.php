@@ -166,9 +166,9 @@ class DbResultTable extends SmartTable
      * by one), and the page of the table is not changed. Call it before the table renders anything.
      *
      * The first row has the labels of the columns (tags removed, entities decoded), then one row per result row with
-     * the values as the database delivers them (`NULL` is an empty cell, so no cell moves). A column without data of
-     * its own (`ActionsColumn`, `CallbackColumn`) is not exported; the other columns need a column of their
-     * identifier in the query.
+     * the values as the database delivers them (`NULL` is an empty cell, so no cell moves). An `ActionsColumn` and a
+     * `CallbackColumn` without export value (`exportValueFunction:`) are not exported; the other columns need a column
+     * of their identifier in the query.
      *
      * @param string $fileName Name of the download, chosen by the application (never user input)
      */
@@ -177,7 +177,7 @@ class DbResultTable extends SmartTable
         $exportColumns = array_filter(
             array: $this->columns,
             callback: static fn(AbstractTableColumn $column): bool => !$column instanceof ActionsColumn
-                && !$column instanceof CallbackColumn,
+                && (!$column instanceof CallbackColumn || $column->isExported()),
         );
         $this->applyFilterAndSorting();
         $csvFile = new CsvFile(
@@ -196,12 +196,12 @@ class DbResultTable extends SmartTable
         $csvFile->pushDownloadAndExit(
             httpRequest: $this->httpRequest,
             responseSender: $responseSender,
-            moreRows: $this->iterateExportRows(columns: array_keys(array: $exportColumns)),
+            moreRows: $this->iterateExportRows(columns: array_values(array: $exportColumns)),
         );
     }
 
     /**
-     * @param list<string> $columns Identifiers of the columns to export
+     * @param list<AbstractTableColumn> $columns The columns to export
      *
      * @return Generator<int, list<bool|float|int|string>>
      */
@@ -211,7 +211,9 @@ class DbResultTable extends SmartTable
         foreach ($this->db->iterateRows(sql: $dbQueryData->query, parameters: $dbQueryData->params) as $row) {
             $cells = [];
             foreach ($columns as $column) {
-                $cells[] = $row->getScalar(column: $column) ?? '';
+                $cells[] = ($column instanceof CallbackColumn
+                    ? $column->getExportValue(row: $row)
+                    : $row->getScalar(column: $column->identifier)) ?? '';
             }
             yield $cells;
         }

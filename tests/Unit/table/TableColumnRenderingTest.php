@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\table;
 
 use actra\yuf\core\Language;
+use actra\yuf\db\DbRow;
 use actra\yuf\html\HtmlText;
 use actra\yuf\table\column\AbstractTableColumn;
 use actra\yuf\table\column\ActionsColumn;
@@ -23,6 +24,7 @@ use actra\yuf\table\column\OptionsColumn;
 use actra\yuf\table\column\StripHtmlTagsColumn;
 use actra\yuf\table\TableItem;
 use InvalidArgumentException;
+use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use UnexpectedValueException;
@@ -558,6 +560,19 @@ final class TableColumnRenderingTest extends TestCase
             '<td><b>&lt;i&gt;</b></td>',
             $column->renderCell(tableItem: TableColumnRenderingTest::item(values: ['name' => '<i>'])),
         );
+    }
+
+    public function testCallbackColumnWithoutExportValueIsNotExported(): void
+    {
+        $column = new CallbackColumn(
+            identifier: 'cb',
+            label: HtmlText::fromHtml(html: 'Callback'),
+            callbackFunction: static fn(): string => '',
+        );
+
+        $this->assertFalse($column->isExported());
+        $this->expectExceptionObject(new LogicException(message: 'Column "cb" has no export value.'));
+        $column->getExportValue(row: new DbRow(values: []));
     }
 
     /**
