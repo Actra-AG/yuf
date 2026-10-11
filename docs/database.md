@@ -71,6 +71,9 @@ $users = array_map(callback: User::fromRow(...), array: $db->selectRows(sql: 'SE
   large tables. A CSV export passes them to `CsvFile::pushDownloadAndExit(moreRows: …)`, which writes them one by one.
 - `DbSelectStmt` has the same (`executeAndFetchRows()`, `executeAndFetchRow()`).
 - Date and time columns are parsed in the PHP default time zone: the time zone of the database session must match.
+  Write them with `DbDateTime::toDateTimeString()` / `toDateString()` (and the `toNullable…` variants) instead of
+  `->format('Y-m-d H:i:s')`: they convert the value to the default time zone first, so a value in another time zone
+  (e.g. UTC from an external API) reads back as the same point in time.
 
 ### Typed values in table columns
 

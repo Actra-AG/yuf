@@ -25,7 +25,8 @@ use ReflectionEnum;
  * they keep working if a project switches to emulated prepares or stringified fetches.
  *
  * Date and time columns are parsed in the PHP default time zone (`date_default_timezone_get()`): the time zone of the
- * database session must match it, otherwise TIMESTAMP values are shifted.
+ * database session must match it, otherwise TIMESTAMP values are shifted. For writing use `DbDateTime`, so a value
+ * in another time zone (e.g. UTC) is converted to the same time zone.
  */
 final readonly class DbRow
 {

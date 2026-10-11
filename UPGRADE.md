@@ -4,6 +4,14 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v6.5.0 (2026-10-11)
+
+- New `DbDateTime` (write counterpart of `DbRow::getDateTimeImmutable()`): `toDateTimeString()` and `toDateString()`
+  (and `toNullableDateTimeString()`, `toNullableDateString()`) convert a `DateTimeInterface` to the PHP default time
+  zone before formatting, so it reads back as the same point in time. Replace `->format('Y-m-d H:i:s')` and
+  `->format('Y-m-d')` in database writes with them: otherwise a date in another time zone (e.g. UTC from an external
+  API) is stored with its own wall-clock time, shifted by the offset to the default time zone.
+
 ## v6.4.0 (2026-10-11)
 
 ### ⚠️ Email fields: null MX rejected, mail domain resolver from the form context, no domain check in debug mode
