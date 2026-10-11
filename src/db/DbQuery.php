@@ -601,7 +601,7 @@ final class DbQuery
         $sortDirection = DbSortDirectionEnum::fromAscending(ascending: $ascending);
         if ($parameters === []) {
             foreach (explode(separator: ',', string: $column) as $singleColumn) {
-                $this->orderParts[] = DbQuery::escapeColumn(column: $singleColumn) . ' ' . $sortDirection->value;
+                $this->orderParts[] = DbQuery::escapeOrderColumn(column: $singleColumn) . ' ' . $sortDirection->value;
             }
 
             return;
@@ -642,8 +642,10 @@ final class DbQuery
      * The column of an "ORDER BY" cannot be bound as a "?" placeholder, so it is validated against a
      * whitelist of characters which are valid within an identifier. Every part of a qualified column
      * is wrapped in backticks (e.g. "t.group" => "`t`.`group`"), because it could be a reserved word.
+     *
+     * @throws InvalidArgumentException For an empty, incomplete or invalid column
      */
-    private static function escapeColumn(string $column): string
+    public static function escapeOrderColumn(string $column): string
     {
         $column = trim(string: $column);
         if ($column === '') {

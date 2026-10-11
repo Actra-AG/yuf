@@ -113,6 +113,9 @@ $query->addOrderPart(column: 'users.name');
   separated by a comma). Never pass user input that was not checked against your own whitelist of sortable columns.
 - With `parameters`, the first argument of `addOrderPart()` is an SQL expression, taken over unchanged: it must never
   contain user input and must not end with `ASC` or `DESC` (use `ascending:`). `clearOrderParts()` removes all sorting.
+- A `DbResultTable` replaces the order parts of its query when the user sorts. Rows with equal values in the sort column
+  come in an undefined order (MariaDB), also across pages: add a stable secondary order with
+  `$dbResultTable->addSortTieBreaker(column: 'c.id')` (after every sort column, also one chosen by the user).
 
 ```php
 $query->addWherePart(

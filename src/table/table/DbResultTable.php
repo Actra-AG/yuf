@@ -59,6 +59,8 @@ class DbResultTable extends SmartTable
     private ?AbstractTableColumn $defaultSortColumn = null;
     /** Whether the current sorting has been chosen by the user instead of being the default one. */
     private bool $hasUserDefinedSorting = false;
+    /** @var array<string, bool> Ascending per escaped column, appended after the order part of the sort column */
+    private array $sortTieBreakers = [];
     private TablePaginationRenderer $tablePaginationRenderer;
     private int $filledAmount = 0;
     private readonly TableSessionState $state;
@@ -117,6 +119,20 @@ class DbResultTable extends SmartTable
         if ($isDefaultSortColumn) {
             $this->defaultSortColumn = $abstractTableColumn;
         }
+    }
+
+    /**
+     * Adds a stable secondary order after the sort column (chosen by the user or the default one), so rows with equal
+     * values in the sort column keep their order across pages (e.g. the primary key). Recommended for every sortable
+     * table. A tie-breaker equal to the current sort column is skipped; adding a column again changes its direction.
+     *
+     * @param string $column Column of the query (e.g. "c.id"), chosen by the application (never user input)
+     *
+     * @throws InvalidArgumentException For an empty or incomplete column or other characters than [a-zA-Z0-9_.`]
+     */
+    public function addSortTieBreaker(string $column, bool $ascending = true): void
+    {
+        $this->sortTieBreakers[DbQuery::escapeOrderColumn(column: $column)] = $ascending;
     }
 
     /**
@@ -220,7 +236,8 @@ class DbResultTable extends SmartTable
     }
 
     /**
-     * Validates the filter and applies the sorting of the user (else the default one) to the query, once.
+     * Validates the filter and applies the sorting of the user (else the default one) and the tie-breakers to the
+     * query, once.
      */
     private function applyFilterAndSorting(): void
     {
@@ -243,6 +260,12 @@ class DbResultTable extends SmartTable
             column: $sortColumn,
             ascending: $this->getCurrentSortDirection()->isAscending(),
         );
+        $escapedSortColumn = DbQuery::escapeOrderColumn(column: $sortColumn);
+        foreach ($this->sortTieBreakers as $escapedColumn => $ascending) {
+            if ($escapedColumn !== $escapedSortColumn) {
+                $this->dbQuery->addOrderPart(column: $escapedColumn, ascending: $ascending);
+            }
+        }
     }
 
     private function initSorting(): void

@@ -228,6 +228,29 @@ final class DbResultTableCsvExportTest extends TestCase
         $this->assertStringContainsString("3;Cleo;41\n2;Ben;\n1;Anna;30\n", $content);
     }
 
+    public function testExportUsesTheSortTieBreakers(): void
+    {
+        // All rows have the same group: only the tie-breaker orders them
+        $table = $this->createTable(
+            query: ['sort' => 'users|grp|ASC'],
+            sql: 'SELECT id, name, age, 1 AS grp FROM users',
+        );
+        $table->addColumn(abstractTableColumn: TableHelper::createDefaultColumn(
+            identifier: 'grp',
+            label: HtmlText::fromText(text: 'Group'),
+            isSortable: true,
+        ));
+        $table->addSortTieBreaker(column: 'id', ascending: false);
+
+        $content = $this->export(table: $table, sender: new RecordingResponseSender());
+
+        $this->assertStringContainsString("3;Cleo;41;1\n2;Ben;;1\n1;Anna;30;1\n", $content);
+        $this->assertStringContainsString(
+            'ORDER BY `grp` ASC, `id` DESC',
+            $table->dbQuery->getDbQueryData(offset: 0, rowCount: 1)->query,
+        );
+    }
+
     public function testMissingColumnInTheQueryThrows(): void
     {
         $table = $this->createTable(sql: 'SELECT id, name FROM users');
