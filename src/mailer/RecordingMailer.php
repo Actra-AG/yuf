@@ -7,31 +7,27 @@
 
 declare(strict_types=1);
 
-namespace actra\yuf\tests\Double\mailer;
+namespace actra\yuf\mailer;
 
-use actra\yuf\clock\FixedClock;
-use actra\yuf\mailer\AbstractMail;
-use actra\yuf\mailer\AbstractMailer;
-use actra\yuf\mailer\FixedServerNameResolver;
-use actra\yuf\mailer\MailMimeBody;
-use actra\yuf\mailer\MailMimeHeader;
-use DateTimeImmutable;
+use actra\yuf\clock\Clock;
+use actra\yuf\clock\SystemClock;
 use Override;
 
 /**
- * The mailer double recommended for projects (docs/testing.md): records the sent mails instead of delivering them.
- * Uses only the public API of the mailer, like a double outside of yuf.
+ * Mail transport for tests: records the sent mails instead of delivering them, without network or DNS. Assert them
+ * with the getters of `AbstractMail` (docs/mail.md). Behaves like an SMTP mailer when the message is built (`To` and
+ * `Subject` in the header, no `Bcc`, lines up to 998 characters).
  */
 final class RecordingMailer extends AbstractMailer
 {
     /** @var list<AbstractMail> */
     public private(set) array $sentMails = [];
 
-    public function __construct()
+    public function __construct(Clock $clock = new SystemClock())
     {
         parent::__construct(
             serverAddress: '192.0.2.1',
-            clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-01-02 03:04:05')),
+            clock: $clock,
             serverNameResolver: new FixedServerNameResolver(),
         );
     }
@@ -57,7 +53,7 @@ final class RecordingMailer extends AbstractMailer
     #[Override]
     public function getMaxLineLength(): int
     {
-        return 998;
+        return MailerConstants::MAX_LINE_LENGTH;
     }
 
     #[Override]

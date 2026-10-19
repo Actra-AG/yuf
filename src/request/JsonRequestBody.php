@@ -14,6 +14,7 @@ use stdClass;
 
 /**
  * The JSON object of a request body, read with typed getters (`getRequiredString()`, `getOptionalInteger()`, …).
+ * A missing property and JSON `null` are the same; values are not converted (the string `"1"` is no integer).
  */
 final readonly class JsonRequestBody
 {
@@ -126,6 +127,51 @@ final readonly class JsonRequestBody
             return (float) $value;
         }
         throw new InvalidArgumentException(message: 'Invalid JSON property (float): ' . $keyName);
+    }
+
+    public function getRequiredBoolean(string $keyName): bool
+    {
+        $value = $this->getOptionalBoolean(keyName: $keyName);
+        if ($value === null) {
+            throw new InvalidArgumentException(message: 'Missing JSON property (boolean): ' . $keyName);
+        }
+        return $value;
+    }
+
+    public function getOptionalBoolean(string $keyName): ?bool
+    {
+        $value = $this->getValue(keyName: $keyName);
+        if ($value === null) {
+            return null;
+        }
+        if (is_bool(value: $value)) {
+            return $value;
+        }
+        throw new InvalidArgumentException(message: 'Invalid JSON property (boolean): ' . $keyName);
+    }
+
+    /**
+     * A nested JSON object, read with the same typed getters. An empty object is not missing.
+     */
+    public function getRequiredObject(string $keyName): JsonRequestBody
+    {
+        $value = $this->getOptionalObject(keyName: $keyName);
+        if ($value === null) {
+            throw new InvalidArgumentException(message: 'Missing JSON property (object): ' . $keyName);
+        }
+        return $value;
+    }
+
+    public function getOptionalObject(string $keyName): ?JsonRequestBody
+    {
+        $value = $this->getValue(keyName: $keyName);
+        if ($value === null) {
+            return null;
+        }
+        if ($value instanceof stdClass) {
+            return new JsonRequestBody(data: $value);
+        }
+        throw new InvalidArgumentException(message: 'Invalid JSON property (object): ' . $keyName);
     }
 
     /**

@@ -19,7 +19,7 @@ require __DIR__ . '/../vendor/autoload.php';
 | `FormInput`    | `FormInput::fromArray(data: […], query: […])` (see [forms.md](forms.md))                     |
 | `FrameworkDb`  | `new FrameworkDb(connectionParameters: new DbConnectionParameters(dsn: 'sqlite::memory:'))`  |
 | `Clock`        | `new FixedClock(now: new DateTimeImmutable(datetime: '2026-01-02 03:04:05'))`                |
-| Mailer         | Own `AbstractMailer` recording the `AbstractMail`, see [mail.md](mail.md#tests)              |
+| Mailer         | `new RecordingMailer()`: records the sent mails, see [mail.md](mail.md#tests)                |
 
 `HttpRequest::fromGlobals()` is meant for `Core`, bootstrap files and CLI scripts, not for logic classes.
 

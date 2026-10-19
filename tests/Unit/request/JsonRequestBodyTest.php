@@ -172,4 +172,93 @@ final class JsonRequestBodyTest extends TestCase
         $this->expectExceptionMessageIs('Invalid JSON property (array): a');
         JsonRequestBody::fromString(json: '{"a":"x"}')->getOptionalArray(keyName: 'a');
     }
+
+    public function testBoolean(): void
+    {
+        $body = JsonRequestBody::fromString(json: '{"a":true,"b":false,"c":null}');
+
+        $this->assertTrue($body->getRequiredBoolean(keyName: 'a'));
+        $this->assertFalse($body->getRequiredBoolean(keyName: 'b'));
+        $this->assertFalse($body->getOptionalBoolean(keyName: 'b'));
+        $this->assertNull($body->getOptionalBoolean(keyName: 'c'));
+        $this->assertNull($body->getOptionalBoolean(keyName: 'missing'));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function missingProvider(): iterable
+    {
+        yield 'missing' => ['{}'];
+        yield 'null' => ['{"a":null}'];
+    }
+
+    #[DataProvider('missingProvider')]
+    public function testMissingRequiredBooleanThrows(string $json): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageIs('Missing JSON property (boolean): a');
+        JsonRequestBody::fromString(json: $json)->getRequiredBoolean(keyName: 'a');
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function noBooleanProvider(): iterable
+    {
+        yield 'string' => ['"true"'];
+        yield 'integer' => ['1'];
+        yield 'zero' => ['0'];
+        yield 'float' => ['1.0'];
+        yield 'array' => ['[true]'];
+        yield 'object' => ['{}'];
+    }
+
+    #[DataProvider('noBooleanProvider')]
+    public function testOtherTypeIsNotABoolean(string $value): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageIs('Invalid JSON property (boolean): a');
+        JsonRequestBody::fromString(json: '{"a":' . $value . '}')->getOptionalBoolean(keyName: 'a');
+    }
+
+    public function testObjectIsReadWithTheSameGetters(): void
+    {
+        $body = JsonRequestBody::fromString(json: '{"a":{"name":" x ","count":2,"b":{"active":true}},"empty":{}}');
+
+        $nested = $body->getRequiredObject(keyName: 'a');
+        $this->assertSame('x', $nested->getRequiredString(keyName: 'name'));
+        $this->assertSame(2, $nested->getRequiredInteger(keyName: 'count'));
+        $this->assertTrue($nested->getRequiredObject(keyName: 'b')->getRequiredBoolean(keyName: 'active'));
+        $this->assertSame(2, $body->getOptionalObject(keyName: 'a')?->getOptionalInteger(keyName: 'count'));
+        $this->assertEquals(new stdClass(), $body->getRequiredObject(keyName: 'empty')->data);
+        $this->assertNull($body->getOptionalObject(keyName: 'missing'));
+    }
+
+    #[DataProvider('missingProvider')]
+    public function testMissingRequiredObjectThrows(string $json): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageIs('Missing JSON property (object): a');
+        JsonRequestBody::fromString(json: $json)->getRequiredObject(keyName: 'a');
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function noObjectPropertyProvider(): iterable
+    {
+        yield 'string' => ['"{}"'];
+        yield 'integer' => ['1'];
+        yield 'boolean' => ['true'];
+        yield 'list' => ['[]'];
+    }
+
+    #[DataProvider('noObjectPropertyProvider')]
+    public function testOtherTypeIsNotAnObject(string $value): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageIs('Invalid JSON property (object): a');
+        JsonRequestBody::fromString(json: '{"a":' . $value . '}')->getOptionalObject(keyName: 'a');
+    }
 }

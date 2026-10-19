@@ -9,15 +9,17 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\mailer;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\mailer\AbstractMail;
 use actra\yuf\mailer\MailerAddress;
 use actra\yuf\mailer\MailerAddressKindEnum;
+use actra\yuf\mailer\RecordingMailer;
 use actra\yuf\mailer\TextMail;
-use actra\yuf\tests\Double\mailer\RecordingMailer;
+use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
 /**
- * A mailer double of a project records the `AbstractMail` and asserts it with the public getters, without parsing
+ * The test mailer of projects records the `AbstractMail` and asserts it with the public getters, without parsing
  * headers (docs/testing.md).
  */
 final class RecordingMailerTest extends TestCase
@@ -47,6 +49,49 @@ final class RecordingMailerTest extends TestCase
         $this->assertSame(
             ['support@example.com'],
             $this->listEmails(mail: $sentMail, kind: MailerAddressKindEnum::KIND_REPLY_TO),
+        );
+    }
+
+    public function testRecordsEveryMailInOrderWithoutNetwork(): void
+    {
+        $mailer = new RecordingMailer();
+        $first = $this->createMail(subject: 'First');
+        $second = $this->createMail(subject: 'Second');
+
+        $first->send(abstractMailer: $mailer);
+        $second->send(abstractMailer: $mailer);
+
+        $this->assertSame([$first, $second], $mailer->sentMails);
+        $this->assertSame('mail.example.com', $mailer->getServerName());
+    }
+
+    public function testBuildsTheMessageLikeAnSmtpMailer(): void
+    {
+        $mailer = new RecordingMailer();
+
+        $this->assertTrue($mailer->headerHasTo());
+        $this->assertTrue($mailer->headerHasSubject());
+        $this->assertFalse($mailer->headerHasBcc());
+        $this->assertSame(998, $mailer->getMaxLineLength());
+    }
+
+    public function testUsesTheGivenClock(): void
+    {
+        $now = new DateTimeImmutable(datetime: '2026-01-02 03:04:05');
+
+        $this->assertSame($now, new RecordingMailer(clock: new FixedClock(now: $now))->getClock()->now());
+    }
+
+    private function createMail(string $subject): TextMail
+    {
+        return new TextMail(
+            senderEmail: 'sender@example.com',
+            fromEmail: 'from@example.com',
+            fromName: 'Shop',
+            toEmail: 'customer@example.com',
+            toName: 'Customer',
+            subject: $subject,
+            textBody: 'Text',
         );
     }
 

@@ -165,7 +165,8 @@ Integers are strict: optional minus and digits only; values outside the integer 
 ## JSON endpoints
 
 - `BaseView::getJsonRequestBody()` reads and validates a JSON request body; `JsonRequestBody` has typed accessors for
-  required and optional strings, integers, floats and arrays.
+  required and optional strings, integers, floats, booleans, arrays and nested objects (`getRequiredObject()` returns
+  a `JsonRequestBody` with the same accessors). Values are not converted: `"1"` is no integer, `1` no boolean.
 - `BaseView::setSuccessResponseContent()` answers `{"success": true, "data": {}}`.
 - `BaseView::setErrorResponseContent()` answers `{"success": false, "error": {"code": 0, "message": "…"}}` with an
   HTTP status code; optional additional data is in a top-level `data` property.
