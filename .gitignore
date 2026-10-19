@@ -7,6 +7,9 @@
 !/.editorconfig
 !/.env.example.php
 !/.gitattributes
+!/.github/
+!/.github/workflows/
+!/.github/workflows/release.yml
 !/.gitignore
 !/.php-cs-fixer.dist.php
 !/AGENTS.md

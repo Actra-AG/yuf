@@ -1,0 +1,82 @@
+# Actra coding standard: https://github.com/Actra-AG/coding-standard (standards/versioning.md, section 1)
+# Publishes a GitHub release for every pushed version tag, with the section of that version from UPGRADE.md (or
+# CHANGELOG.md) as release notes.
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or update the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          notes_source=''
+          for file in UPGRADE.md CHANGELOG.md; do
+            if gh api "repos/${GITHUB_REPOSITORY}/contents/${file}?ref=${TAG}" \
+              -H 'Accept: application/vnd.github.raw' > notes-source.md 2>/dev/null; then
+              notes_source="${file}"
+              break
+            fi
+          done
+          if [ "${notes_source}" = '' ]; then
+            echo "::error::Neither UPGRADE.md nor CHANGELOG.md exists at ${TAG}"
+            exit 1
+          fi
+          # The section "## <tag> …" up to the next "## ", with wrapped lines joined: GitHub shows every line break
+          # of release notes, the files are wrapped at 120 characters
+          python3 - "${TAG}" notes-source.md > notes.md <<'PYTHON'
+          import re
+          import sys
+
+          tag, path = sys.argv[1], sys.argv[2]
+          lines = open(path, encoding='utf-8').read().splitlines()
+          start = next((i for i, line in enumerate(lines) if re.match(rf'## {re.escape(tag)}(\s|$)', line)), None)
+          if start is None:
+              sys.exit(f'No section "## {tag}" in {path}')
+          end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith('## ')), len(lines))
+          block_start = ('#', '|', '>', '- ', '* ', '```')
+          out = []
+          in_fence = False
+          for line in lines[start + 1:end]:
+              stripped = line.strip()
+              if stripped.startswith('```'):
+                  in_fence = not in_fence
+                  out.append(line)
+                  continue
+              previous = out[-1].strip() if out else ''
+              if (
+                  in_fence
+                  or stripped == ''
+                  or previous == ''
+                  or previous.startswith(('#', '|', '```'))
+                  or stripped.startswith(block_start)
+                  or re.match(r'\d+\. ', stripped)
+              ):
+                  out.append(line)
+              else:
+                  out[-1] = out[-1].rstrip() + ' ' + stripped
+          print('\n'.join(out).strip())
+          PYTHON
+          echo "Release notes from ${notes_source}:"
+          cat notes.md
+          prerelease=()
+          if [[ "${TAG}" == *-* ]]; then
+            prerelease=(--prerelease)
+          fi
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" > /dev/null 2>&1; then
+            gh release edit "${TAG}" --repo "${GITHUB_REPOSITORY}" --notes-file notes.md
+          else
+            gh release create "${TAG}" --repo "${GITHUB_REPOSITORY}" --verify-tag --title "${TAG}" \
+              --notes-file notes.md "${prerelease[@]}"
+          fi
