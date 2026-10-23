@@ -9,7 +9,7 @@ installed and loaded with Composer.
 - Session object, login with session fixation protection, Argon2id passwords, IP whitelists
 - PDO connection with typed rows and a safe query builder
 - Mail via SMTP (incl. XOAUTH2) or the Microsoft Graph API, phone numbers based on libphonenumber
-- CSP nonces, ships no JavaScript
+- CSP nonces, rate limiting per IP address, ships no JavaScript
 
 ## Requirements
 
@@ -52,6 +52,7 @@ See [.env.example.php](.env.example.php), [index.example.php](index.example.php)
 - [Database](docs/database.md): connection, typed rows, query builder, boolean search
 - [Mail](docs/mail.md): SMTP (STARTTLS or implicit TLS) and Microsoft 365
 - [Phone numbers](docs/phone-numbers.md): parsing, formats, validation
+- [Rate limiting](docs/rate-limiting.md): limits per IP address or globally, without database
 - [Testing](docs/testing.md): PHPStan and PHPUnit in projects using yuf, test objects, clock
 
 ## Upgrading

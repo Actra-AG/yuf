@@ -136,7 +136,7 @@ final class CurlClientTest extends TestCase
     {
         return [
             'status 418' => [418],
-            'status 429' => [429],
+            'status 499' => [499],
             'status 599' => [599],
         ];
     }

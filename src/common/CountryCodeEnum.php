@@ -96,7 +96,6 @@ enum CountryCodeEnum: string
     case HM = 'HM';
     case HN = 'HN';
     case HK = 'HK';
-    case HQ = 'HQ';
     case IN = 'IN';
     case ID = 'ID';
     case IQ = 'IQ';
@@ -106,12 +105,9 @@ enum CountryCodeEnum: string
     case IL = 'IL';
     case IT = 'IT';
     case JM = 'JM';
-    case JN = 'JN';
     case JP = 'JP';
     case YE = 'YE';
-    case JQ = 'JQ';
     case JO = 'JO';
-    case YU = 'YU';
     case KH = 'KH';
     case MF = 'MF';
     case CM = 'CM';
@@ -126,7 +122,6 @@ enum CountryCodeEnum: string
     case CC = 'CC';
     case CO = 'CO';
     case KM = 'KM';
-    case CS = 'CS';
     case XK = 'XK';
     case HR = 'HR';
     case CU = 'CU';
@@ -170,7 +165,6 @@ enum CountryCodeEnum: string
     case NZ = 'NZ';
     case NI = 'NI';
     case NL = 'NL';
-    case AN = 'AN';
     case NE = 'NE';
     case NG = 'NG';
     case NU = 'NU';
@@ -221,7 +215,6 @@ enum CountryCodeEnum: string
     case KN = 'KN';
     case LC = 'LC';
     case PM = 'PM';
-    case VZ = 'VZ';
     case SD = 'SD';
     case GS = 'GS';
     case KR = 'KR';

@@ -64,6 +64,7 @@ enum HttpStatusCodeEnum: int
     case HTTP_FAILE_DEPENDENCY = 424;
     case HTTP_UNORDERED_COLLECTION = 425;
     case HTTP_UPGRADE_REQUIRED = 426;
+    case HTTP_TOO_MANY_REQUESTS = 429;
     case HTTP_UNAVAILABLE_FOR_LEGAL_REASON = 451;
 
     // 5xx - Server error
@@ -110,6 +111,7 @@ enum HttpStatusCodeEnum: int
             HttpStatusCodeEnum::HTTP_REQUEST_ENTITY_TOO_LARGE => 'Request Entity Too Large',
             HttpStatusCodeEnum::HTTP_REQUEST_URL_TOO_LONG => 'Request-URI Too Long',
             HttpStatusCodeEnum::HTTP_UNSUPPORTED_MEDIA_TYPE => 'Unsupported Media Type',
+            HttpStatusCodeEnum::HTTP_TOO_MANY_REQUESTS => 'Too Many Requests',
             HttpStatusCodeEnum::HTTP_INTERNAL_SERVER_ERROR => 'Internal Server Error',
             HttpStatusCodeEnum::HTTP_NOT_IMPLEMENTED => 'Not Implemented',
             HttpStatusCodeEnum::HTTP_BAD_GATEWAY => 'Bad Gateway',

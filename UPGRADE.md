@@ -4,6 +4,22 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v6.7.0 (2026-10-23)
+
+- New `RateLimiter` (`actra\yuf\security`): counts hits per key (e.g. `RateLimiter::ipBucket()` of the client IP,
+  IPv6 per /64) in fixed windows of one or more `RateLimit`s, in files under an exclusive lock, without database
+  ([docs/rate-limiting.md](docs/rate-limiting.md)).
+- `HttpStatusCodeEnum::HTTP_TOO_MANY_REQUESTS` (429, RFC 6585), e.g. for answers of the `RateLimiter`. The status
+  of a `CurlClient` response with 429 is this case now instead of `HTTP_UNKNOWN`.
+
+### ⚠️ `CountryCodeEnum`: codes without country removed
+
+- Removed: `HQ`, `JN`, `JQ`, `VZ` (no country, intl shows only the code) and the obsolete `AN` (Netherlands Antilles,
+  now `CW`, `SX`, `BQ`), `CS` and `YU` (now `RS`, `ME`). A country select built from `CountryCodeEnum::cases()` no
+  longer lists them.
+- `CountryCodeEnum::from('YU')` now throws a `ValueError` and `tryFrom()` returns `null`: migrate stored values first,
+  e.g. `UPDATE … SET country = 'RS' WHERE country IN ('YU', 'CS')` and `'CW'` for `'AN'` (check the data).
+
 ## v6.6.0 (2026-10-19)
 
 - `JsonRequestBody`: new `getRequiredBoolean()` / `getOptionalBoolean()` (only JSON `true` / `false`, no conversion
