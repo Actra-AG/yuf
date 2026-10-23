@@ -80,6 +80,24 @@ $agree = new BooleanField(name: 'agree', label: HtmlText::fromHtml(html: 'I agre
 $tags = new MultiSelectOptionsField(name: 'tags', label: $label, formOptions: $options, initialValues: ['a']);
 ```
 
+## Formatting amounts
+
+The values of the number fields have no thousands separator. `AmountFormatter` (`actra\yuf\common`) formats them for
+output: `swiss()` (`1'234.50`, ASCII apostrophe), `german()` (`1.234,50`), `english()` (`1,234.50`), or
+`new AmountFormatter(thousandsSeparator: '’', decimalSeparator: '.')`. Decimals are formatted from the decimal string
+with bcmath (never via float); the currency is up to the caller.
+
+```php
+$formatter = AmountFormatter::swiss();
+$formatter->formatDecimal(amount: '27839.32'); // 27'839.32
+$formatter->formatDecimal(amount: '-2500.5', scale: 2); // -2'500.50 (pads or rounds half away from zero)
+$formatter->formatInt(amount: 1234567); // 1'234'567
+'CHF ' . $formatter->formatDecimal(amount: $price->getRequiredValueAsDecimal());
+```
+
+Only a minus sign, digits and an optional dot with digits are accepted (`1,000.00`, `+1`, `.5` throw an
+`InvalidArgumentException`).
+
 ## Options with integer keys
 
 PHP turns numeric string keys of an array into integers. `FormOptions` keeps them internally; `getKeys()` /

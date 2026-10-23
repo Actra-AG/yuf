@@ -4,6 +4,13 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v7.1.0
+
+- New `AmountFormatter` (`actra\yuf\common`): formats decimal strings (bcmath, optional `scale:` pads or rounds half
+  away from zero) and integers with thousands and decimal separator, `swiss()` (`27'839.32`), `german()`,
+  `english()` or own separators ([docs/forms.md](docs/forms.md#formatting-amounts)).
+- `SmartTable` formats the total amount with `AmountFormatter::swiss()` (same output).
+
 ## v7.0.0 (2026-10-23)
 
 Public forms and logins are rate limited, uploads are hardened. Update PHP to 8.5.12 (php2shell) and set the php.ini

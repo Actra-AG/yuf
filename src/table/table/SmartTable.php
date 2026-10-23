@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\table\table;
 
+use actra\yuf\common\AmountFormatter;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\table\column\AbstractTableColumn;
 use actra\yuf\table\renderer\TableHeadRenderer;
@@ -154,7 +155,7 @@ class SmartTable
 
         return strtr(
             string: $this->totalAmountMessageNumResults,
-            from: [SmartTable::AMOUNT => number_format(num: $totalAmount, thousands_separator: '\'')],
+            from: [SmartTable::AMOUNT => AmountFormatter::swiss()->formatInt(amount: $totalAmount)],
         );
     }
 

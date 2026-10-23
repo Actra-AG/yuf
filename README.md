@@ -49,7 +49,7 @@ See [.env.example.php](.env.example.php), [index.example.php](index.example.php)
 - [Views and requests](docs/views.md): views, request, path variables, JSON endpoints
 - [Session and login](docs/session-and-login.md): session, login, passwords, secret tokens
 - [Templates](docs/templates.md): syntax, escaping, snippets and tables, own tags
-- [Forms](docs/forms.md): typed values, rules, spam protection, uploads, extension points
+- [Forms](docs/forms.md): typed values, formatting amounts, rules, spam protection, uploads, extension points
 - [Database](docs/database.md): connection, typed rows, query builder, boolean search
 - [Mail](docs/mail.md): SMTP (STARTTLS or implicit TLS) and Microsoft 365
 - [Phone numbers](docs/phone-numbers.md): parsing, formats, validation
