@@ -129,6 +129,16 @@ final class ToggleChildren
     }
 
     /**
+     * Reads the input of the child fields of the selected main options without validating it.
+     */
+    public function readSelected(FormInput $input): void
+    {
+        foreach ($this->listSelectedChildFields() as $childField) {
+            $childField->readValue(input: $input);
+        }
+    }
+
+    /**
      * Validates the child fields of the selected main options with their current values (without input).
      */
     public function validateSelectedCurrentValues(): void

@@ -18,6 +18,7 @@ use actra\yuf\session\SessionSectionEnum;
 use DirectoryIterator;
 use InvalidArgumentException;
 use Override;
+use RuntimeException;
 
 /**
  * Keeps the uploaded files in a private directory (`UploadDirectory`: one subdirectory per pointer, files 0600) and
@@ -41,14 +42,23 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
      *                              choose a directory outside the document root that only the web server user can
      *                              use (created with mode 0700 when needed; a symbolic link or a directory of another
      *                              user is refused with a `RuntimeException`)
+     * @param ?string $documentRoot The document root of the web server (`Core::$documentRoot`): a root directory
+     *                              inside it is refused with a `RuntimeException`; `null` only without document root
+     *                              (CLI, tests)
      * @param Clock $clock Decides which directories and pointers are expired
+     *
+     * @throws RuntimeException if the root directory lies inside the document root
      */
     public function __construct(
         private Session $session,
         string $rootDirectory,
+        ?string $documentRoot,
         private Clock $clock = new SystemClock(),
     ) {
         $this->uploadDirectory = new UploadDirectory(path: $rootDirectory);
+        if ($documentRoot !== null) {
+            $this->uploadDirectory->assertOutsideOf(documentRoot: $documentRoot);
+        }
     }
 
     #[Override]
@@ -122,19 +132,15 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
         if (!$this->isIssued(pointer: $pointer) || !is_uploaded_file(filename: $upload->tmpName)) {
             return null;
         }
+        // The size PHP reported must be the size of the file itself
+        if (filesize(filename: $upload->tmpName) !== $upload->size) {
+            return null;
+        }
         // Creates the root directory too, if it does not exist yet
         $directory = $this->uploadDirectory->createSubdirectory(name: $pointer);
-        // The name of the stored file is made of the name PHP gave to the temporary file, never of the client name.
-        // If it exists already, we add a counter and increment it until we get a "free" file name
-        $counter = 0;
-        $path = $baseFilePath = $directory . DIRECTORY_SEPARATOR . basename(path: $upload->tmpName);
-        while (file_exists(filename: $path)) {
-            $counter++;
-            $path = $baseFilePath . $counter;
-        }
-        // "move" (copy-del) it to the store, creating a new file pointer, therefore it does not get deleted after
-        // the script execution
-        if (!move_uploaded_file(from: $upload->tmpName, to: $path)) {
+        $path = $directory . DIRECTORY_SEPARATOR . SessionFileUploadStorage::createFileName();
+        // Moved, so PHP does not delete it at the end of the request; never overwrites a file
+        if (file_exists(filename: $path) || !move_uploaded_file(from: $upload->tmpName, to: $path)) {
             return null;
         }
         $this->uploadDirectory->protectFile(path: $path);
@@ -179,6 +185,15 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
                 $this->removeDirectory(path: $item->getPathname());
             }
         }
+    }
+
+    /**
+     * A random name without extension (128 bits, hexadecimal): never derived from the client name or the name of the
+     * temporary file, so it cannot be guessed and the web server never treats it as a script.
+     */
+    public static function createFileName(): string
+    {
+        return bin2hex(string: random_bytes(length: 16));
     }
 
     private function assertValidPointer(string $pointer): void

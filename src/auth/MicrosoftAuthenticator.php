@@ -44,6 +44,7 @@ abstract class MicrosoftAuthenticator extends Authenticator
         HttpRequest $httpRequest,
         AuthSession $authSession,
         int $maxAllowedWrongPasswordAttempts,
+        ?LoginRateLimit $loginRateLimit,
         private readonly string $logDirectory,
         private readonly string $cacheDirectory,
         SsoNonceCookieWriter $nonceCookieWriter = new NativeSsoNonceCookieWriter(),
@@ -52,6 +53,7 @@ abstract class MicrosoftAuthenticator extends Authenticator
             httpRequest: $httpRequest,
             authSession: $authSession,
             maxAllowedWrongPasswordAttempts: $maxAllowedWrongPasswordAttempts,
+            loginRateLimit: $loginRateLimit,
         );
         $this->nonceCookie = new SsoNonceCookie(httpRequest: $httpRequest, cookieWriter: $nonceCookieWriter);
     }

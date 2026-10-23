@@ -25,6 +25,54 @@ final readonly class UploadDirectory
     public function __construct(public string $path) {}
 
     /**
+     * Refuses a root directory inside the document root (or equal to it), where the web server could serve the files.
+     * Symbolic links in the existing part of the path are resolved; the root does not need to exist yet.
+     *
+     * @throws RuntimeException if the root directory lies inside the document root
+     */
+    public function assertOutsideOf(string $documentRoot): void
+    {
+        $resolvedDocumentRoot = UploadDirectory::resolve(path: $documentRoot);
+        $resolvedRoot = UploadDirectory::resolve(path: $this->path);
+        if (
+            $resolvedRoot === $resolvedDocumentRoot
+            || str_starts_with(haystack: $resolvedRoot . '/', needle: rtrim(string: $resolvedDocumentRoot, characters: '/') . '/')
+        ) {
+            throw new RuntimeException(
+                message: 'The upload directory ' . $this->path . ' lies inside the document root ' . $documentRoot . '.',
+            );
+        }
+    }
+
+    /**
+     * The absolute path with the symbolic links of its existing part resolved and without `.` and `..`.
+     */
+    private static function resolve(string $path): string
+    {
+        $missingParts = [];
+        $existing = rtrim(string: $path, characters: '/');
+        while ($existing !== '' && realpath(path: $existing) === false) {
+            $missingParts[] = basename(path: $existing);
+            $parent = dirname(path: $existing);
+            if ($parent === $existing) {
+                break;
+            }
+            $existing = $parent;
+        }
+        $resolved = realpath(path: $existing === '' ? '/' : $existing);
+        $parts = $resolved === false ? [] : explode(separator: '/', string: trim(string: $resolved, characters: '/'));
+        foreach (array_reverse(array: $missingParts) as $part) {
+            if ($part === '..') {
+                array_pop(array: $parts);
+            } elseif ($part !== '.' && $part !== '') {
+                $parts[] = $part;
+            }
+        }
+
+        return '/' . implode(separator: '/', array: $parts);
+    }
+
+    /**
      * Whether the root directory exists; does not create it.
      *
      * @throws RuntimeException if it exists but must not be used (see the class description)

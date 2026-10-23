@@ -17,8 +17,10 @@ use actra\yuf\form\upload\UploadFileType;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\FixedFileTypeDetector;
 use actra\yuf\tests\Double\form\InMemoryFileUploadStorage;
+use InvalidArgumentException;
 use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\TestWith;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use stdClass;
@@ -152,10 +154,13 @@ final class FileFieldValueTest extends TestCase
         $this->assertMatchesRegularExpression('/^[a-zA-Z\d_]+$/', $field->uniqueSessFileStorePointer);
     }
 
-    public function testMaxFileUploadCountBelowOneIsCorrectedToOne(): void
+    #[TestWith([0])]
+    #[TestWith([-5])]
+    public function testMaxFileUploadCountBelowOneIsRefused(int $maxFileUploadCount): void
     {
-        $this->assertSame(1, $this->createField(maxFileUploadCount: 0)->maxFileUploadCount);
-        $this->assertSame(1, $this->createField(maxFileUploadCount: -5)->maxFileUploadCount);
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->createField(maxFileUploadCount: $maxFileUploadCount);
     }
 
     public function testLabelInfoShowsTheMaximumOfSeveralFiles(): void

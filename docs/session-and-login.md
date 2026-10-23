@@ -140,6 +140,41 @@ code should be counted like a password: `registerWrongPasswordAttempt()` before 
 `releaseWrongPasswordAttempt()` after the right code, see "Lock-out"). `logAuthResult()` stays protected: the methods
 above write the log.
 
+### Rate limit
+
+The constructor of `Authenticator` (and `MicrosoftAuthenticator`) has the required argument `loginRateLimit:`
+(`null` as explicit opt-out):
+
+```php
+parent::__construct(
+    httpRequest: $httpRequest,
+    authSession: $authSession,
+    maxAllowedWrongPasswordAttempts: 5,
+    loginRateLimit: new LoginRateLimit(
+        rateLimiter: $rateLimiter, // see rate-limiting.md
+        failMode: RateLimitFailModeEnum::CLOSED,
+        logger: $logger,
+        // clientLimits: and accountLimits: override the defaults
+    ),
+);
+```
+
+- `passwordLogin()` and every method built on `doLogin()`, `verifyPassword()` / `verifyCredentials()` and
+  `precheck()` count the attempt first: per client IP address (`login|ip|<ip bucket>`, default 20 per 15 minutes and
+  100 per day), then per account name (`login|account|<name>`, lower case and trimmed, default 10 per 15 minutes). A
+  client blocked by its own limit uses up nothing of the account limit.
+- A blocked attempt is rejected before the user is loaded (no password hash, no counter in the database),
+  `$authResult` is `AuthResultEnum::ERROR_RATE_LIMITED` and logged like any rejection (`logAuthResult()`, user ID
+  `null`), `$retryAfterSeconds` tells when the next attempt is allowed. Unknown account names are counted like existing
+  ones, so the limit does not tell which accounts exist. Show the same message as for a wrong password, or a message
+  "too many attempts, try again later" that does not depend on the account.
+- `logInVerifiedUser()` and `logInIdentifiedUser()` are not counted (verified in an earlier, counted step or by the
+  identity provider).
+- Anyone can use up the account limit of a name for the current window by trying it from many IP addresses: keep the
+  account window short. The lock-out below stays the protection against slow guessing.
+- `failMode: CLOSED` is recommended: if the rate limit directory is not writable, logins fail (and are logged) instead
+  of losing the limit.
+
 ### Lock-out (wrong passwords)
 
 Wrong passwords are counted per user, **in the database, before the password is checked**, so parallel requests cannot

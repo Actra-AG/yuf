@@ -67,6 +67,29 @@ type or an unknown enum value throws an `UnexpectedValueException`. Pass the val
   after the client has the response. Nothing can be output afterwards, and the session is already closed (see
   [session-and-login.md](session-and-login.md)).
 
+## Request and upload limits
+
+PHP parses the request body (form data, uploads, the upload progress of the session) before any code of yuf runs. A
+bug there cannot be caught by the application: the "php2shell" vulnerabilities of October 2026 (CVE-2026-109618,
+CVE-2026-109619: memory errors in the multipart parser and the session upload progress) are fixed only by PHP 8.5.12,
+8.4.27, 8.3.36 and 8.2.35. Update PHP first; yuf's checks (CSRF, rate limits, upload rules) are defence in depth.
+
+Set in `php.ini` or the PHP-FPM pool (`php_admin_value[...]`; these settings cannot be changed with `ini_set()`):
+
+| Setting | Recommended | Why |
+| --- | --- | --- |
+| `session.upload_progress.enabled` | `0` | yuf does not use it; it writes request data into the session while the body is parsed |
+| `file_uploads` | `0` for sites without upload forms | no multipart file parsing at all |
+| `max_file_uploads` | the largest `maxFileUploadCount` of the site | more files per request are dropped by PHP |
+| `upload_max_filesize` | the largest `maxFileSize` | larger files arrive as `UPLOAD_ERR_INI_SIZE` |
+| `post_max_size` | slightly above `max_file_uploads` × `upload_max_filesize`, as small as possible (e.g. `2M` without uploads) | limits the whole body |
+| `max_input_vars` | `1000` (default) or the largest form | limits the number of parsed fields |
+| `max_multipart_body_parts` | explicitly, e.g. `max_input_vars` + `max_file_uploads` | limits the parts of a multipart body (default `-1` = that sum) |
+
+Limit the body in the web server too, matching `post_max_size` (Apache `LimitRequestBody`, nginx
+`client_max_body_size`). A form without file field rejects uploads and multipart bodies itself
+([forms.md](forms.md#file-uploads)).
+
 ## Error log
 
 `Core` logs every exception with `FileLogger` (`app/logs/ticket_<hash>.txt`, one file per distinct issue; a new issue is

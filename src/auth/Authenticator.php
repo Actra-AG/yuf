@@ -26,20 +26,30 @@ use SensitiveParameter;
  * passwords than allowed; a user with `$maxAllowedWrongPasswordAttempts` wrong attempts is locked out until the
  * project resets the counter by setting a new password, even with the right password. A successful login does not
  * reset the counter.
+ *
+ * With a `LoginRateLimit`, every login, password verification and token request (`precheck()`) is counted per client
+ * IP address and per account name before the user is loaded; a blocked attempt is rejected and logged as
+ * `AuthResultEnum::ERROR_RATE_LIMITED`, without user lookup and password check. The logins of already verified users
+ * (`logInVerifiedUser()`, `logInIdentifiedUser()`) are not counted.
  */
 abstract class Authenticator
 {
     public protected(set) AuthResultEnum $authResult = AuthResultEnum::UNDEFINED;
+    /** Seconds until the rate limit allows the next attempt; 0 if the attempt was not blocked by it */
+    public protected(set) int $retryAfterSeconds = 0;
 
     /**
      * @param HttpRequest $httpRequest The request of the login: its remote address is checked against the IP
      *                                 whitelist of the user and logged (`Core::$httpRequest`)
      * @param AuthSession $authSession Where the login is stored (`ViewContext::$authSession`)
+     * @param ?LoginRateLimit $loginRateLimit Counts the attempts per client IP address and account name; `null` as
+     *     explicit opt-out (e.g. the login is limited elsewhere)
      */
     protected function __construct(
         protected readonly HttpRequest $httpRequest,
         protected readonly AuthSession $authSession,
         private readonly int $maxAllowedWrongPasswordAttempts,
+        private readonly ?LoginRateLimit $loginRateLimit,
     ) {}
 
     public function passwordLogin(string $userName, #[SensitiveParameter] string $inputPassword): bool
@@ -93,6 +103,9 @@ abstract class Authenticator
     {
         $this->assertNoLoginTried();
         $attempt = $this->createAttempt(userName: $userName);
+        if (!$this->consumeLoginRateLimit(attempt: $attempt)) {
+            return $this->reject(authResult: AuthResultEnum::ERROR_RATE_LIMITED, attempt: $attempt, userId: null);
+        }
         $authUser = $this->createAuthUserByUserName(userName: $userName);
         if ($authUser === null) {
             return $this->reject(authResult: AuthResultEnum::ERROR_UNKNOWN_USER_NAME, attempt: $attempt, userId: null);
@@ -252,6 +265,9 @@ abstract class Authenticator
         #[SensitiveParameter]
         ?string $password,
     ): AuthResultEnum|AuthUser {
+        if (!$this->consumeLoginRateLimit(attempt: $attempt)) {
+            return $this->reject(authResult: AuthResultEnum::ERROR_RATE_LIMITED, attempt: $attempt, userId: null);
+        }
         $authUser = $this->createAuthUserByUserName(userName: $attempt->userName);
         if ($authUser === null) {
             if ($password !== null) {
@@ -269,6 +285,20 @@ abstract class Authenticator
         }
 
         return $authUser;
+    }
+
+    /**
+     * @return bool Whether the attempt may go on
+     */
+    private function consumeLoginRateLimit(LoginAttempt $attempt): bool
+    {
+        if ($this->loginRateLimit === null) {
+            return true;
+        }
+        $result = $this->loginRateLimit->consume(userName: $attempt->userName, ipAddress: $attempt->ipAddress);
+        $this->retryAfterSeconds = $result->retryAfterSeconds;
+
+        return $result->isAllowed;
     }
 
     private function completeLogin(AuthMethodEnum $authMethod, AuthUser $authUser, LoginAttempt $attempt): void

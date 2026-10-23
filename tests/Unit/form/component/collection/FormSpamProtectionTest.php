@@ -66,6 +66,7 @@ final class FormSpamProtectionTest extends TestCase
             spamProtection: new SpamProtection(
                 clock: FormSpamProtectionTest::clockAt(timestamp: $now),
                 secret: FormSpamProtectionTest::SECRET,
+                rateLimit: null,
                 emailField: $emailField,
                 rejectedEmailAddresses: ['info@example.com'],
             ),
@@ -359,6 +360,7 @@ final class FormSpamProtectionTest extends TestCase
             spamProtection: new SpamProtection(
                 clock: FormSpamProtectionTest::clockAt(timestamp: FormSpamProtectionTest::RENDERED_AT),
                 secret: FormSpamProtectionTest::SECRET,
+                rateLimit: null,
                 emailField: null,
                 rejectedEmailAddresses: [],
             ),
@@ -372,6 +374,7 @@ final class FormSpamProtectionTest extends TestCase
         new SpamProtection(
             clock: FormSpamProtectionTest::clockAt(timestamp: FormSpamProtectionTest::RENDERED_AT),
             secret: FormSpamProtectionTest::SECRET,
+            rateLimit: null,
             emailField: null,
             rejectedEmailAddresses: ['info@example.com'],
         );

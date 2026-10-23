@@ -224,6 +224,11 @@ usually before the `FormControl`:
 $form->addSpamProtection(spamProtection: new SpamProtection(
     clock: $clock,
     secret: $environmentSettings->getString(key: 'spamProtectionSecret'), // bin2hex(random_bytes(32))
+    rateLimit: new FormRateLimit(
+        rateLimiter: $rateLimiter, // one RateLimiter per project, see rate-limiting.md
+        failMode: RateLimitFailModeEnum::CLOSED, // or OPEN, see below
+        logger: $logger,
+    ), // null as explicit opt-out
     emailField: $emailField, // or null
     rejectedEmailAddresses: ['info@example.com'], // e.g. the own address; [] as explicit opt-out
 ));
@@ -244,22 +249,57 @@ $form->addSpamProtection(spamProtection: new SpamProtection(
 - `SpamCheck` has the rules without the form, e.g. for tests with a `FixedClock`; `sessionBinding:` is the session
   value (the CSRF token), `null` only without session.
 
+### Rate limit
+
+`rateLimit:` is required: every public form is limited, backend forms (without `addSpamProtection()`) pay nothing.
+`FormRateLimit` counts every submit with a valid CSRF token, valid or not, per client IP address
+(`RateLimiter::ipBucket()`, IPv6 per /64) and form name.
+
+- Limits: `clientLimits:` (default 10 per 10 minutes and 50 per day) and `globalLimits:` per form for all clients
+  (default none; for forms that cost money or call third parties), checked after the client limits, so a blocked client
+  uses up nothing of the global budget. Keys: `form|<form name>|<ip bucket>` and `form|<form name>`.
+- Blocked: `validate()` returns `false`, the form has the error `FormMessages::$rateLimited` (en/de) and
+  `$form->retryAfterSeconds` (for `429` and `Retry-After`, if wanted). The fields only read their input, so the typed
+  values are shown again: no rules (no DNS check of e-mail fields), no listeners, no new uploads.
+- `failMode:` decides what happens when the submit cannot be counted (rate limit directory not writable, invalid
+  client IP address); the error is logged with `logger:` either way. `CLOSED` blocks (the visitor sees the rate limit
+  message, `retryAfterSeconds` 60): for forms that send mails, cost money or call a third party. `OPEN` allows: for
+  forms where a lost submission does more harm (e.g. an order the project checks anyway).
+- Requests with an invalid CSRF token are not counted: they read nothing, and a page of another site could otherwise
+  use up the budget of its visitors' IP addresses with forged submits.
+
 ## File uploads
 
-`FileField` needs a `FileUploadStorage` (in production `new SessionFileUploadStorage(session:, rootDirectory:)`) and the
+`FileField` needs a `FileUploadStorage` (in production
+`new SessionFileUploadStorage(session:, rootDirectory:, documentRoot:)`) and the
 allow-list `allowedFileTypes:` (`UploadFileType::pdf()`, `jpeg()`, `png()`, `gif()`, `webp()`,
 `plainText()`, `csv()`, `docx()`, `xlsx()`, `pptx()`, `zip()`, or `new UploadFileType(mimeTypes:, extensions:)`; no SVG,
 it can carry scripts).
 
-Every upload is checked before it is stored: `maxFileSize:` (bytes, 10 MB by default) and the type, which is detected
-from the file content (`finfo`, never taken from the client) and has to fit the extension of the file name.
-`UploadedFile::$type` is the detected type. `FileFieldRenderer` renders an `accept` attribute with the allowed
-extensions.
+A `FileField` needs a form with `acceptUpload: true` (else `addField()` throws a `LogicException`). A form without
+`acceptUpload` rejects every request with an upload entry or a `multipart/form-data` body with
+`FormMessages::$invalidInput` and reads nothing else (checked after the CSRF token and the rate limit).
+
+Every upload is checked before it is stored: the count (`maxFileUploadCount:`, at least 1, else an
+`InvalidArgumentException`), `maxFileSize:` (bytes, 10 MB by default; the stored file must have the size PHP
+reported) and the type, which is detected from the file content (`finfo`, never taken from the client) and has to fit
+the extension of the file name. `UploadedFile::$type` is the detected type. `FileFieldRenderer` renders an `accept`
+attribute with the allowed extensions.
+
+Images can be re-encoded (opt-in): `imageReencoder: new GdImageReencoder()` (needs `ext-gd`) writes stored JPEG, PNG,
+GIF and WebP files again from their pixels, so metadata (EXIF, GPS position) and data appended to the image (polyglot
+files) are dropped. Animated images keep their first frame, colour profiles are lost. An image with more than
+`maxPixels:` (40 megapixels by default) is rejected before it is decoded; one that cannot be decoded is removed and
+rejected (`fileTypeNotAllowed`). `quality:` (90) applies to JPEG and WebP.
 
 The upload directory `rootDirectory:` is a required argument: choose a directory outside the document root that only
-the user of the web server can use (e.g. below the `var/` directory of the project). It is created with mode 0700
-(directories 0700, stored files 0600, whatever the umask is); a root that is a symbolic link or belongs to another user
-is refused with a `RuntimeException`. The pointer of the uploaded files is issued to the session when the field is
+the user of the web server can use (e.g. below the `var/` directory of the project). With
+`documentRoot: $core->documentRoot` (required, `null` only without document root) a root inside the document root is
+refused with a `RuntimeException` (symbolic links resolved). It is created with mode 0700 (directories 0700, stored
+files 0600, whatever the umask is); a root that is a symbolic link or belongs to another user is refused with a
+`RuntimeException`. Stored files get a random name without extension (128 bits), never the client name. Call
+`FileField::clearData()` after the form has been processed; files of forms that were never completed are removed after
+two days. Set the PHP limits for uploads in php.ini ([setup.md](setup.md#request-and-upload-limits)). The pointer of the uploaded files is issued to the session when the field is
 created; a posted pointer that was not issued to the session (or expired) is ignored and the field starts with an empty
 list, so files of other users cannot be read, added to or removed.
 

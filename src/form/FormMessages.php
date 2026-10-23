@@ -44,6 +44,7 @@ final readonly class FormMessages
         public string $spamRetry = 'Please try again.',
         public string $spamRejectedEmailAddress = 'Please enter a valid e-mail address.',
         public string $tooLong = 'The text must not be longer than [max] characters.',
+        public string $rateLimited = 'Too many submissions. Please try again in a few minutes.',
     ) {}
 
     public static function german(): FormMessages
@@ -73,6 +74,7 @@ final readonly class FormMessages
             spamRetry: 'Bitte versuchen Sie es erneut.',
             spamRejectedEmailAddress: 'Bitte geben Sie eine gültige E-Mail-Adresse ein.',
             tooLong: 'Der Text darf höchstens [max] Zeichen lang sein.',
+            rateLimited: 'Zu viele Übermittlungen. Bitte versuchen Sie es in einigen Minuten erneut.',
         );
     }
 }

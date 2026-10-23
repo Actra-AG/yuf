@@ -14,6 +14,7 @@ use actra\yuf\auth\AuthMethodEnum;
 use actra\yuf\auth\AuthResultEnum;
 use actra\yuf\auth\AuthSession;
 use actra\yuf\auth\AuthUser;
+use actra\yuf\auth\LoginRateLimit;
 use actra\yuf\core\HttpRequest;
 use Override;
 
@@ -26,6 +27,7 @@ final class RecordingAuthenticator extends Authenticator
      * @var list<array{userId: ?int, sessionId: string, ip: string, userName: string, authResult: AuthResultEnum}>
      */
     public array $loggedResults = [];
+    public int $userLookups = 0;
 
     public function __construct(
         HttpRequest $httpRequest,
@@ -33,17 +35,21 @@ final class RecordingAuthenticator extends Authenticator
         private readonly ?AuthUser $authUser,
         int $maxAllowedWrongPasswordAttempts = 3,
         private readonly bool $credentialsAreValid = true,
+        ?LoginRateLimit $loginRateLimit = null,
     ) {
         parent::__construct(
             httpRequest: $httpRequest,
             authSession: $authSession,
             maxAllowedWrongPasswordAttempts: $maxAllowedWrongPasswordAttempts,
+            loginRateLimit: $loginRateLimit,
         );
     }
 
     #[Override]
     protected function createAuthUserByUserName(string $userName): ?AuthUser
     {
+        $this->userLookups++;
+
         return $this->authUser;
     }
 

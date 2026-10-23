@@ -22,6 +22,7 @@ use InvalidArgumentException;
 use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 /**
  * Tested with a temp directory and an `ArraySessionStorage`; the file lists live in `yuf.uploads.<pointer>`. Not
@@ -79,7 +80,11 @@ final class SessionFileUploadStorageTest extends TestCase
 
     private function createStorage(): SessionFileUploadStorage
     {
-        return new SessionFileUploadStorage(session: $this->session, rootDirectory: $this->rootDirectory);
+        return new SessionFileUploadStorage(
+            session: $this->session,
+            rootDirectory: $this->rootDirectory,
+            documentRoot: null,
+        );
     }
 
     private function createStoredFile(
@@ -323,6 +328,7 @@ final class SessionFileUploadStorageTest extends TestCase
         new SessionFileUploadStorage(
             session: $this->session,
             rootDirectory: $this->rootDirectory,
+            documentRoot: null,
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '@' . $now)),
         )->removeExpired();
 
@@ -345,7 +351,11 @@ final class SessionFileUploadStorageTest extends TestCase
     {
         $missingRoot = $this->rootDirectory . DIRECTORY_SEPARATOR . 'missing';
 
-        new SessionFileUploadStorage(session: $this->session, rootDirectory: $missingRoot)->removeExpired();
+        new SessionFileUploadStorage(
+            session: $this->session,
+            rootDirectory: $missingRoot,
+            documentRoot: null,
+        )->removeExpired();
 
         $this->assertDirectoryDoesNotExist($missingRoot);
     }
@@ -448,6 +458,7 @@ final class SessionFileUploadStorageTest extends TestCase
         $storage = new SessionFileUploadStorage(
             session: $this->session,
             rootDirectory: $this->rootDirectory,
+            documentRoot: null,
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '@1800000000')),
         );
 
@@ -467,6 +478,7 @@ final class SessionFileUploadStorageTest extends TestCase
         $otherStorage = new SessionFileUploadStorage(
             session: new Session(storage: new ArraySessionStorage()),
             rootDirectory: $this->rootDirectory,
+            documentRoot: null,
         );
 
         $this->assertFalse($otherStorage->isIssued(pointer: 'ptr'));
@@ -496,6 +508,7 @@ final class SessionFileUploadStorageTest extends TestCase
         $storage = new SessionFileUploadStorage(
             session: $this->session,
             rootDirectory: $this->rootDirectory,
+            documentRoot: null,
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '@' . $now)),
         );
 
@@ -514,5 +527,37 @@ final class SessionFileUploadStorageTest extends TestCase
         $storage->clear(pointer: 'foreign');
 
         $this->assertFileExists($foreignFile->path);
+    }
+
+    public function testRootDirectoryInsideTheDocumentRootIsRefused(): void
+    {
+        $this->expectException(RuntimeException::class);
+
+        new SessionFileUploadStorage(
+            session: $this->session,
+            rootDirectory: $this->rootDirectory,
+            documentRoot: dirname(path: $this->rootDirectory),
+        );
+    }
+
+    public function testRootDirectoryOutsideTheDocumentRootIsAccepted(): void
+    {
+        $storage = new SessionFileUploadStorage(
+            session: $this->session,
+            rootDirectory: $this->rootDirectory,
+            documentRoot: $this->rootDirectory . '-public',
+        );
+
+        $storage->issue(pointer: 'ptr');
+
+        $this->assertTrue($storage->isIssued(pointer: 'ptr'));
+    }
+
+    public function testStoredFileNamesAreRandomWithoutExtension(): void
+    {
+        $first = SessionFileUploadStorage::createFileName();
+
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{32}$/D', $first);
+        $this->assertNotSame($first, SessionFileUploadStorage::createFileName());
     }
 }

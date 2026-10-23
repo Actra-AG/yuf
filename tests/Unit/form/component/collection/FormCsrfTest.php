@@ -38,10 +38,12 @@ final class FormCsrfTest extends TestCase
         FormMessages $messages = new FormMessages(),
         ?HtmlText $globalErrorMessage = null,
         bool $csrfProtection = true,
+        bool $acceptUpload = false,
     ): Form {
         return new Form(
             context: FormContextFactory::create(csrfTokenSource: new InMemoryCsrfTokenSource(token: 'expected-token')),
             name: 'csrfForm' . FormCsrfTest::$formCounter++,
+            acceptUpload: $acceptUpload,
             globalErrorMessage: $globalErrorMessage,
             methodPost: $methodPost,
             messages: $messages,
@@ -152,7 +154,7 @@ final class FormCsrfTest extends TestCase
     public function testMissingTokenReadsNoUploadAndNoRemoveRequest(): void
     {
         $storage = new InMemoryFileUploadStorage();
-        $form = $this->createForm();
+        $form = $this->createForm(acceptUpload: true);
         $form->addField(
             formField: $file = new FileField(
                 name: 'file',

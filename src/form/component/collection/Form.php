@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\form\component\collection;
 
 use actra\yuf\form\component\field\CsrfTokenField;
+use actra\yuf\form\component\field\FileField;
 use actra\yuf\form\component\field\MultiToggleField;
 use actra\yuf\form\component\field\SpamRenderTimeField;
 use actra\yuf\form\component\field\TextField;
@@ -36,7 +37,8 @@ use Override;
  * The form names must be unique per page: the name is the sent indicator and the prefix of the field names.
  * A POST form is protected against CSRF: it has a CSRF field and `validate()` checks the token before it reads any
  * other field. Without CSRF token source in its `FormContext` (no session) a POST form can only be created with
- * `csrfProtection: false`; a GET form has no CSRF field.
+ * `csrfProtection: false`; a GET form has no CSRF field. Only a form with `acceptUpload: true` takes file fields and
+ * uploads; any other form rejects a request with uploads or a multipart body.
  *
  * Extension point: a project form extends `Form`, adds its fields in the constructor and offers methods for the
  * validated values.
@@ -46,6 +48,8 @@ class Form extends FormCollection
     public readonly string $sentIndicator;
     /** @var list<string> */
     public private(set) array $cssClasses = [];
+    /** Seconds until the rate limit of the spam protection allows the next submit; 0 if the submit was not blocked */
+    public private(set) int $retryAfterSeconds = 0;
     private bool $renderRequiredAbbr = true;
     private bool $compactFields = false;
     private ?CsrfTokenField $csrfTokenField = null;
@@ -81,8 +85,17 @@ class Form extends FormCollection
         $this->addField(formField: $this->csrfTokenField = new CsrfTokenField(tokenSource: $csrfTokenSource));
     }
 
+    /**
+     * @throws LogicException if a `FileField` is added to a form without `acceptUpload: true`
+     */
     public function addField(FormField $formField): void
     {
+        if ($formField instanceof FileField && !$this->acceptUpload) {
+            throw new LogicException(
+                message: 'Form ' . $this->name . ' needs acceptUpload: true for the file field ' . $formField->name
+                . '.',
+            );
+        }
         if (!$this->renderRequiredAbbr) {
             $formField->renderRequiredAbbr = false;
         }
@@ -95,7 +108,8 @@ class Form extends FormCollection
      * Adds the honeypot field (label `FormMessages::$spamHoneypotLabel`, `autocomplete="off"`, to be hidden by the CSS
      * of the project) and the hidden field with the signed render time at this position; `validate()` checks them.
      * A broken rule is an error of the form (`FormMessages::$spamHoneypotFilled`, `$spamRetry`,
-     * `$spamRejectedEmailAddress`).
+     * `$spamRejectedEmailAddress`). With a `FormRateLimit`, `validate()` counts every submit with a valid CSRF token
+     * (see there).
      *
      * @throws LogicException if the form already has a spam protection
      */
@@ -180,6 +194,11 @@ class Form extends FormCollection
      * a missing or invalid token the form gets the CSRF error and nothing else of the request is read (no fields,
      * listeners, uploads or spam check).
      *
+     * Then the rate limit of the spam protection counts the submit, valid or not. If it is reached, the fields only
+     * read their input (the typed values are rendered again; no rules, no listeners, no new uploads), the form gets
+     * the error `FormMessages::$rateLimited` and `$retryAfterSeconds` is set. A form without `acceptUpload` then
+     * rejects a request with uploads or a multipart body (`FormMessages::$invalidInput`, nothing else is read).
+     *
      * @param ?FormInput $input The request data, by default the input of the request of the `FormContext` (the post
      *                          data or, for a GET form, the query string)
      */
@@ -192,6 +211,17 @@ class Form extends FormCollection
 
         if (!$this->isCsrfTokenValid(input: $input)) {
             $this->addError(errorMessage: HtmlText::fromText(text: $this->messages->invalidCsrfToken));
+
+            return false;
+        }
+        if (!$this->consumeRateLimit()) {
+            $this->readValues(input: $input->withoutUploads());
+            $this->addError(errorMessage: HtmlText::fromText(text: $this->messages->rateLimited));
+
+            return false;
+        }
+        if (!$this->acceptUpload && ($input->hasFiles || $input->isMultipart)) {
+            $this->addError(errorMessage: HtmlText::fromText(text: $this->messages->invalidInput));
 
             return false;
         }
@@ -231,6 +261,38 @@ class Form extends FormCollection
     private function createInput(): FormInput
     {
         return FormInput::fromHttpRequest(httpRequest: $this->context->httpRequest, methodPost: $this->methodPost);
+    }
+
+    /**
+     * Counts the submit with the rate limit of the spam protection.
+     *
+     * @return bool Whether the submit may be processed
+     */
+    private function consumeRateLimit(): bool
+    {
+        $rateLimit = $this->spamProtection?->rateLimit;
+        if ($rateLimit === null) {
+            return true;
+        }
+        $result = $rateLimit->consume(
+            formName: $this->name,
+            ipAddress: $this->context->httpRequest->getRemoteAddress(),
+        );
+        $this->retryAfterSeconds = $result->retryAfterSeconds;
+
+        return $result->isAllowed;
+    }
+
+    /**
+     * Reads the input of the fields without validating them, so the typed values are rendered again.
+     */
+    private function readValues(FormInput $input): void
+    {
+        foreach ($this->childComponents as $formComponent) {
+            if ($formComponent instanceof FormField && !$formComponent instanceof CsrfTokenField) {
+                $formComponent->readValue(input: $input);
+            }
+        }
     }
 
     /**

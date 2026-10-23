@@ -5,8 +5,8 @@ installed and loaded with Composer.
 
 - Routing, views, JSON endpoints and an immutable request object
 - Template engine with escaping by default and own tags
-- Typed form fields, rules, CSRF and spam protection, checked file uploads
-- Session object, login with session fixation protection, Argon2id passwords, IP whitelists
+- Typed form fields, rules, CSRF and spam protection with rate limits, checked file uploads
+- Session object, login with session fixation protection and rate limits, Argon2id passwords, IP whitelists
 - PDO connection with typed rows and a safe query builder
 - Mail via SMTP (incl. XOAUTH2) or the Microsoft Graph API, phone numbers based on libphonenumber
 - CSP nonces, rate limiting per IP address, ships no JavaScript
@@ -44,7 +44,8 @@ $core->prepareHttpResponse(routeCollection: $routes)->sendAndExit();
 
 See [.env.example.php](.env.example.php), [index.example.php](index.example.php) and the documentation:
 
-- [Setup](docs/setup.md): entry point, environment settings, production (host, client IP, PHP settings), error log
+- [Setup](docs/setup.md): entry point, environment settings, production (host, client IP, PHP settings, request and
+  upload limits), error log
 - [Views and requests](docs/views.md): views, request, path variables, JSON endpoints
 - [Session and login](docs/session-and-login.md): session, login, passwords, secret tokens
 - [Templates](docs/templates.md): syntax, escaping, snippets and tables, own tags
@@ -52,7 +53,8 @@ See [.env.example.php](.env.example.php), [index.example.php](index.example.php)
 - [Database](docs/database.md): connection, typed rows, query builder, boolean search
 - [Mail](docs/mail.md): SMTP (STARTTLS or implicit TLS) and Microsoft 365
 - [Phone numbers](docs/phone-numbers.md): parsing, formats, validation
-- [Rate limiting](docs/rate-limiting.md): limits per IP address or globally, without database
+- [Rate limiting](docs/rate-limiting.md): limits per IP address or globally, public forms and logins, without
+  database
 - [Testing](docs/testing.md): PHPStan and PHPUnit in projects using yuf, test objects, clock
 
 ## Upgrading

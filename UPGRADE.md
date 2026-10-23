@@ -4,6 +4,50 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v7.0.0 (2026-10-23)
+
+Public forms and logins are rate limited, uploads are hardened. Update PHP to 8.5.12 (php2shell) and set the php.ini
+limits of [docs/setup.md](docs/setup.md#request-and-upload-limits).
+
+### ⚠️ `SpamProtection`: required `rateLimit:`
+
+- Every public form counts its submits with a valid CSRF token per client IP (also invalid ones) and is blocked with
+  `FormMessages::$rateLimited` (en/de) when a limit is reached; the typed values stay, nothing is processed
+  ([docs/forms.md](docs/forms.md#rate-limit)).
+- Before: `new SpamProtection(clock: …, secret: …, emailField: …, rejectedEmailAddresses: …)`, after: add
+  `rateLimit: new FormRateLimit(rateLimiter: $rateLimiter, failMode: RateLimitFailModeEnum::CLOSED, logger: $logger)`
+  (default 10 per 10 minutes and 50 per day per IP; `clientLimits:`, `globalLimits:` to change), or `rateLimit: null`
+  as explicit opt-out.
+- Remove own `RateLimiter` calls for such forms (keep their keys' limits in `clientLimits:`/`globalLimits:`). Send
+  `429` with `Retry-After: $form->retryAfterSeconds` if wanted.
+- A project `FormField` with dependent fields overrides the new hook `readChildInput()` (see `HasToggleChildren`).
+
+### ⚠️ `Authenticator`: required `loginRateLimit:`
+
+- Before: `parent::__construct(httpRequest: …, authSession: …, maxAllowedWrongPasswordAttempts: …)`, after: add
+  `loginRateLimit: new LoginRateLimit(rateLimiter: $rateLimiter, failMode: RateLimitFailModeEnum::CLOSED, logger:
+  $logger)` or `loginRateLimit: null`; the same for `MicrosoftAuthenticator` (new argument after
+  `maxAllowedWrongPasswordAttempts:`). Logins, `verifyPassword()` and `precheck()` are limited per IP (default 20 per 15
+  minutes, 100 per day) and per account name (10 per 15 minutes), before the user is loaded
+  ([docs/session-and-login.md](docs/session-and-login.md#rate-limit)).
+- New `AuthResultEnum::ERROR_RATE_LIMITED` (15) and `AuthResultMessages::$errorRateLimited`: add the case to
+  exhaustive `match` expressions and to lists of login results.
+
+### ⚠️ Uploads
+
+- `SessionFileUploadStorage` needs `documentRoot:` (`$core->documentRoot`, `null` only without document root); a root
+  directory inside the document root throws a `RuntimeException`.
+- `addField()` of a `FileField` to a form without `acceptUpload: true` throws a `LogicException`. A form without
+  `acceptUpload` rejects requests with uploads or a `multipart/form-data` body (`FormMessages::$invalidInput`).
+- `FileField(maxFileUploadCount: 0)` (or less) throws an `InvalidArgumentException` instead of using 1;
+  `FileField::$maxFileUploadCount` is `readonly`.
+- Stored files get random names; a file whose size differs from what PHP reported is not stored. Files stored before
+  the update keep working until they expire.
+- New, opt-in: `FileField(imageReencoder: new GdImageReencoder())` writes stored images again without metadata and
+  appended data (needs `ext-gd`, see [docs/forms.md](docs/forms.md#file-uploads)).
+- `FormInput::fromArray()` has the new argument `isMultipart:`; `FormInput::$hasFiles`, `$isMultipart` and
+  `withoutUploads()` are new.
+
 ## v6.7.0 (2026-10-23)
 
 - New `RateLimiter` (`actra\yuf\security`): counts hits per key (e.g. `RateLimiter::ipBucket()` of the client IP,

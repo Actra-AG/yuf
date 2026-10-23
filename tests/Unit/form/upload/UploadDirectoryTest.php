@@ -12,6 +12,7 @@ namespace actra\yuf\tests\Unit\form\upload;
 use actra\yuf\form\upload\UploadDirectory;
 use DirectoryIterator;
 use Override;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -165,5 +166,57 @@ final class UploadDirectoryTest extends TestCase
         $this->assertSame($root . DIRECTORY_SEPARATOR . 'ptr', $pointerDirectory);
         $this->assertSame(0o700, $this->permissions(path: $pointerDirectory));
         $this->assertSame(0o600, $this->permissions(path: $file));
+    }
+
+    /**
+     * @return array<string, array{string, string}> Root directory and document root, relative to the base directory
+     */
+    public static function insideDocumentRoot(): array
+    {
+        return [
+            'below' => ['public/uploads', 'public'],
+            'below, not created yet' => ['public/a/b/uploads', 'public'],
+            'equal' => ['public', 'public'],
+            'trailing slash' => ['public/uploads', 'public/'],
+            'parent directory in the path' => ['var/../public/uploads', 'public'],
+            'through a symbolic link' => ['link/uploads', 'public'],
+        ];
+    }
+
+    #[DataProvider('insideDocumentRoot')]
+    public function testRootInsideTheDocumentRootIsRefused(string $root, string $documentRoot): void
+    {
+        mkdir(directory: $this->baseDirectory . '/public');
+        mkdir(directory: $this->baseDirectory . '/var');
+        symlink(target: $this->baseDirectory . '/public', link: $this->baseDirectory . '/link');
+
+        $this->expectException(RuntimeException::class);
+
+        new UploadDirectory(path: $this->baseDirectory . '/' . $root)->assertOutsideOf(
+            documentRoot: $this->baseDirectory . '/' . $documentRoot,
+        );
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function outsideDocumentRoot(): array
+    {
+        return [
+            'sibling' => ['var/uploads', 'public'],
+            'same prefix' => ['public-uploads', 'public'],
+            'parent' => ['', 'public'],
+        ];
+    }
+
+    #[DataProvider('outsideDocumentRoot')]
+    public function testRootOutsideTheDocumentRootIsAccepted(string $root, string $documentRoot): void
+    {
+        $this->expectNotToPerformAssertions();
+        mkdir(directory: $this->baseDirectory . '/public');
+
+        new UploadDirectory(path: $this->baseDirectory . '/' . $root)->assertOutsideOf(
+            documentRoot: $this->baseDirectory . '/' . $documentRoot,
+        );
     }
 }

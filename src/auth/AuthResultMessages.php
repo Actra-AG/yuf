@@ -31,6 +31,7 @@ final readonly class AuthResultMessages
         public string $failedSsoLogin = 'SSO fehlgeschlagen',
         public string $successfulOtpLogin = 'OTP-Anmeldung',
         public string $successfulMicrosoftLogin = 'Microsoft-Anmeldung',
+        public string $errorRateLimited = 'Zu viele Anmeldeversuche',
     ) {}
 
     public static function english(): AuthResultMessages
@@ -50,6 +51,7 @@ final readonly class AuthResultMessages
             failedSsoLogin: 'SSO failed',
             successfulOtpLogin: 'OTP login',
             successfulMicrosoftLogin: 'Microsoft login',
+            errorRateLimited: 'Too many login attempts',
         );
     }
 }

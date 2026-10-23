@@ -27,6 +27,9 @@
     "ext-ctype": "*",
     "ext-fileinfo": "*"
   },
+  "suggest": {
+    "ext-gd": "Re-encoding of uploaded images (GdImageReencoder)"
+  },
   "autoload": {
     "psr-4": {
       "actra\\yuf\\": "src/"

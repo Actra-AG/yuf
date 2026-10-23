@@ -17,7 +17,7 @@ use SensitiveParameter;
 /**
  * The spam protection of a public form, added with `Form::addSpamProtection()`: a honeypot text field that must stay
  * empty (hidden by the CSS of the project) and a hidden field with the signed render time, checked by `SpamCheck` in
- * `Form::validate()`.
+ * `Form::validate()`, and the rate limit of the submits (`FormRateLimit`).
  */
 final readonly class SpamProtection
 {
@@ -25,6 +25,8 @@ final readonly class SpamProtection
 
     /**
      * @param string $secret At least 32 bytes, e.g. from `.env.php`; never from the request
+     * @param ?FormRateLimit $rateLimit Counts every submit per client IP address; `null` as explicit opt-out (e.g. the
+     *     form is limited elsewhere)
      * @param ?EmailField $emailField The field whose address is checked against `$rejectedEmailAddresses`
      * @param list<string> $rejectedEmailAddresses E-mail addresses no submission may use (e.g. the own address of the
      *     project), compared case-insensitively; an empty list as explicit opt-out
@@ -40,6 +42,7 @@ final readonly class SpamProtection
         Clock $clock,
         #[SensitiveParameter]
         string $secret,
+        public ?FormRateLimit $rateLimit,
         public ?EmailField $emailField,
         array $rejectedEmailAddresses,
         public string $honeypotName = 'internal',

@@ -13,10 +13,12 @@ use actra\yuf\form\component\field\FileField;
 use actra\yuf\form\FormInput;
 use actra\yuf\form\FormMessages;
 use actra\yuf\form\model\UploadedFile;
+use actra\yuf\form\upload\ImageReencoder;
 use actra\yuf\form\upload\UploadFileType;
 use actra\yuf\html\HtmlText;
 use actra\yuf\tests\Double\form\FixedFileTypeDetector;
 use actra\yuf\tests\Double\form\InMemoryFileUploadStorage;
+use actra\yuf\tests\Double\form\RecordingImageReencoder;
 use InvalidArgumentException;
 use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -41,8 +43,11 @@ final class FileFieldUploadCheckTest extends TestCase
     /**
      * @param ?list<UploadFileType> $allowedFileTypes PDF and JPEG by default
      */
-    private function createField(?array $allowedFileTypes = null, int $maxFileSize = 1000): FileField
-    {
+    private function createField(
+        ?array $allowedFileTypes = null,
+        int $maxFileSize = 1000,
+        ?ImageReencoder $imageReencoder = null,
+    ): FileField {
         $field = new FileField(
             name: 'file',
             label: HtmlText::fromHtml(html: 'File'),
@@ -51,6 +56,7 @@ final class FileFieldUploadCheckTest extends TestCase
             maxFileUploadCount: 3,
             maxFileSize: $maxFileSize,
             fileTypeDetector: $this->detector,
+            imageReencoder: $imageReencoder,
         );
         $field->messages = new FormMessages();
 
@@ -354,5 +360,44 @@ final class FileFieldUploadCheckTest extends TestCase
         $field = $this->createField(allowedFileTypes: [UploadFileType::png()]);
 
         $this->assertEquals([UploadFileType::png()], $field->allowedFileTypes);
+    }
+
+    public function testImageIsReencodedAfterStoringAndGetsTheNewSize(): void
+    {
+        $this->detector = new FixedFileTypeDetector(defaultType: 'image/jpeg');
+        $reencoder = new RecordingImageReencoder(newSize: 321);
+        $field = $this->createField(imageReencoder: $reencoder);
+
+        $this->assertSame([], $this->send(field: $field, name: 'photo.jpg'));
+
+        $files = array_values(array: $field->getFiles());
+        $this->assertCount(1, $files);
+        $this->assertSame(321, $files[0]->size);
+        $this->assertSame([['path' => $files[0]->path, 'mimeType' => 'image/jpeg']], $reencoder->calls);
+        $savedFiles = $this->storage->getSavedFiles(pointer: $field->uniqueSessFileStorePointer);
+        $this->assertSame(321, array_first($savedFiles)?->size);
+    }
+
+    public function testImageThatCannotBeReencodedIsRemovedAndRejected(): void
+    {
+        $this->detector = new FixedFileTypeDetector(defaultType: 'image/jpeg');
+        $field = $this->createField(imageReencoder: new RecordingImageReencoder(newSize: null));
+
+        $errors = $this->send(field: $field, name: 'photo.jpg');
+
+        $this->assertSame(['The type of the file is not allowed: photo.jpg'], $errors);
+        $this->assertSame([], $field->getFiles());
+        $this->assertCount(1, $this->storage->getDeletedFiles());
+    }
+
+    public function testOtherTypesAreNotReencoded(): void
+    {
+        $reencoder = new RecordingImageReencoder();
+        $field = $this->createField(imageReencoder: $reencoder);
+
+        $this->assertSame([], $this->send(field: $field, name: 'cv.pdf'));
+
+        $this->assertSame([], $reencoder->calls);
+        $this->assertSame(500, array_first($field->getFiles())?->size);
     }
 }

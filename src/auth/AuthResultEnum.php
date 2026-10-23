@@ -27,6 +27,7 @@ enum AuthResultEnum: int
     case FAILED_SSO_LOGIN = 12;
     case SUCCESSFUL_OTP_LOGIN = 13;
     case SUCCESSFUL_MICROSOFT_LOGIN = 14;
+    case ERROR_RATE_LIMITED = 15;
 
     /**
      * The text of the result in the texts of the given messages (plain text, encoded when rendered).
@@ -49,6 +50,7 @@ enum AuthResultEnum: int
                 AuthResultEnum::FAILED_SSO_LOGIN => $messages->failedSsoLogin,
                 AuthResultEnum::SUCCESSFUL_OTP_LOGIN => $messages->successfulOtpLogin,
                 AuthResultEnum::SUCCESSFUL_MICROSOFT_LOGIN => $messages->successfulMicrosoftLogin,
+                AuthResultEnum::ERROR_RATE_LIMITED => $messages->errorRateLimited,
             },
         );
     }

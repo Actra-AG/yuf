@@ -113,6 +113,11 @@ abstract class FormField extends FormComponent
     protected function validateChildFields(FormInput $input): void {}
 
     /**
+     * Hook: reads the input of the dependent fields without validating them (see `readValue()`).
+     */
+    protected function readChildInput(FormInput $input): void {}
+
+    /**
      * Hook: validates the dependent fields with their current values, when `validateCurrentValue()` is called directly
      * (not as part of `validate()`) and this field is valid.
      */
@@ -159,6 +164,19 @@ abstract class FormField extends FormComponent
         }
 
         return !$this->hasErrors(withChildElements: true);
+    }
+
+    /**
+     * Reads the input of the field (and of its dependent fields) without validating it: no listeners, no required
+     * check, no rules. The form uses it to render the typed values again when it does not process a submit (rate
+     * limit reached); only manipulated input adds its error.
+     */
+    final public function readValue(FormInput $input): void
+    {
+        $this->startReadingInput();
+        $this->readAdditionalInput(input: $input);
+        $this->readInput(input: $input);
+        $this->readChildInput(input: $input);
     }
 
     /**

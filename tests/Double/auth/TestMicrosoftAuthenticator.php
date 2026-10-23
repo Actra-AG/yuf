@@ -41,6 +41,7 @@ final class TestMicrosoftAuthenticator extends MicrosoftAuthenticator
             httpRequest: $httpRequest,
             authSession: $authSession,
             maxAllowedWrongPasswordAttempts: 3,
+            loginRateLimit: null,
             logDirectory: $logDirectory,
             cacheDirectory: $cacheDirectory,
             nonceCookieWriter: $nonceCookieWriter,

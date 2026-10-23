@@ -75,6 +75,15 @@ trait HasToggleChildren
     }
 
     /**
+     * Reads the child fields of the selected options without validating them.
+     */
+    #[Override]
+    protected function readChildInput(FormInput $input): void
+    {
+        $this->getToggleChildren()->readSelected(input: $input);
+    }
+
+    /**
      * Validates the child fields of the selected options with their current values, after this field is valid.
      */
     #[Override]

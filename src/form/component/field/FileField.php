@@ -18,6 +18,7 @@ use actra\yuf\form\renderer\FileFieldRenderer;
 use actra\yuf\form\upload\FileTypeDetector;
 use actra\yuf\form\upload\FileUploadStorage;
 use actra\yuf\form\upload\FinfoFileTypeDetector;
+use actra\yuf\form\upload\ImageReencoder;
 use actra\yuf\form\upload\UploadFileType;
 use actra\yuf\html\HtmlEncoder;
 use actra\yuf\html\HtmlText;
@@ -31,7 +32,9 @@ use Override;
  *
  * Every upload is checked before it is stored: size (`maxFileSize`) and type. The type is detected from the content
  * of the file (`FileTypeDetector`), never taken from the client, and must be one of the `allowedFileTypes` together
- * with the extension of the client file name. `UploadedFile::$type` is the detected type.
+ * with the extension of the client file name. `UploadedFile::$type` is the detected type. With an `ImageReencoder`,
+ * stored images are written again from their pixels (no metadata, nothing appended); an image that cannot be
+ * re-encoded is removed and rejected.
  */
 final class FileField extends FormField
 {
@@ -44,7 +47,7 @@ final class FileField extends FormField
     /**
      * @param HtmlText|null $requiredError NULL, if file upload is not required, otherwise the error message if no
      *                                     file was uploaded
-     * @param int $maxFileUploadCount Maximal amount of allowed files (1 by default) with that field
+     * @param int $maxFileUploadCount Maximal amount of allowed files (at least 1, 1 by default) with that field
      * @param ?HtmlText $tooManyFilesErrMsg Individual error message if more than allowed amount of files are uploaded.
      *                                      Placeholder [max] will be replaced by the max amount. Default:
      *                                      `FormMessages::tooManyFiles`
@@ -58,7 +61,10 @@ final class FileField extends FormField
      *                                               rejected, e.g. `[UploadFileType::pdf(), UploadFileType::jpeg()]`
      * @param int $maxFileSize The maximal size of one file in bytes (more than 0, 10 MB by default)
      * @param FileTypeDetector $fileTypeDetector Detects the type of an uploaded file from its content
-     * @throws InvalidArgumentException If `$allowedFileTypes` is empty or `$maxFileSize` is not positive
+     * @param ?ImageReencoder $imageReencoder Re-encodes the stored images of the types it supports (e.g.
+     *                                        `GdImageReencoder`); `null` stores them as uploaded
+     * @throws InvalidArgumentException If `$allowedFileTypes` is empty or `$maxFileSize` or `$maxFileUploadCount` is
+     *     not positive
      */
     public function __construct(
         string $name,
@@ -66,11 +72,12 @@ final class FileField extends FormField
         FileUploadStorage $storage,
         public readonly array $allowedFileTypes,
         ?HtmlText $requiredError = null,
-        public private(set) int $maxFileUploadCount = 1,
+        public readonly int $maxFileUploadCount = 1,
         private readonly ?HtmlText $tooManyFilesErrMsg = null,
         private readonly ?HtmlText $alreadyExistsErrorMessage = null,
         private readonly int $maxFileSize = 10 * 1024 * 1024,
         private readonly FileTypeDetector $fileTypeDetector = new FinfoFileTypeDetector(),
+        private readonly ?ImageReencoder $imageReencoder = null,
     ) {
         if ($this->allowedFileTypes === []) {
             throw new InvalidArgumentException(message: 'A file field needs at least one allowed file type.');
@@ -79,7 +86,7 @@ final class FileField extends FormField
             throw new InvalidArgumentException(message: 'The maximal file size must be more than 0 bytes.');
         }
         if ($this->maxFileUploadCount < 1) {
-            $this->maxFileUploadCount = 1; // Silent correction
+            throw new InvalidArgumentException(message: 'The maximal file upload count must be at least 1.');
         }
         $this->storage = $storage;
         $this->uniqueSessFileStorePointer = $this->sanitizePointer(
@@ -284,9 +291,30 @@ final class FileField extends FormField
         );
         if ($file === null) {
             $this->addFileError(message: $this->messages->fileTechnicalError, fileName: $upload->name);
+
+            return null;
         }
 
-        return $file;
+        return $this->reencodeImage(file: $file);
+    }
+
+    /**
+     * @return ?UploadedFile The file with its new size; `null` (removed, with an error) if it cannot be re-encoded
+     */
+    private function reencodeImage(UploadedFile $file): ?UploadedFile
+    {
+        if ($this->imageReencoder === null || !$this->imageReencoder->supports(mimeType: $file->type)) {
+            return $file;
+        }
+        $size = $this->imageReencoder->reencode(path: $file->path, mimeType: $file->type);
+        if ($size === null) {
+            $this->storage->delete(file: $file);
+            $this->addFileError(message: $this->messages->fileTypeNotAllowed, fileName: $file->name);
+
+            return null;
+        }
+
+        return new UploadedFile(name: $file->name, type: $file->type, size: $size, path: $file->path);
     }
 
     private function isTypeAllowed(string $detectedType, string $fileName): bool

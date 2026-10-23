@@ -39,6 +39,29 @@ if ($result === null || !$result->isAllowed) {
 - A failed storage (directory not writable) throws a `RuntimeException`: the caller decides whether to block (fail
   closed, for anything that costs money or calls a third party) or to allow the request.
 
+## Public forms and logins
+
+Two classes use the `RateLimiter` with limits per client IP address and further keys, a fail mode for storage errors
+(`RateLimitFailModeEnum::OPEN` allows, `CLOSED` blocks; the error is logged with the `Logger` either way) and default
+limits a project can override:
+
+| Class | Where | Counted | Default limits |
+| --- | --- | --- | --- |
+| `FormRateLimit` | `SpamProtection(rateLimit:)`, [forms.md](forms.md#rate-limit) | every submit with a valid CSRF token, per IP and form; optionally per form for all clients (`globalLimits:`) | 10 per 10 minutes and 50 per day per IP |
+| `LoginRateLimit` | `Authenticator(loginRateLimit:)`, [session-and-login.md](session-and-login.md#rate-limit) | every login, password verification and token request, per IP, then per account name | 20 per 15 minutes and 100 per day per IP, 10 per 15 minutes per account name |
+
+```php
+new FormRateLimit(
+    rateLimiter: $rateLimiter,
+    failMode: RateLimitFailModeEnum::CLOSED,
+    logger: $logger,
+    clientLimits: [new RateLimit(maxHits: 5, windowSeconds: 600)], // optional, overrides the default
+    globalLimits: [new RateLimit(maxHits: 1000, windowSeconds: 86400)], // optional, default none
+);
+```
+
+Both pass `null` as explicit opt-out (e.g. a form or login limited elsewhere).
+
 ## Storage
 
 - One file per key and limit in `directory` (created with mode 0700, files 0600), named

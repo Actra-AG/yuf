@@ -26,6 +26,8 @@ final readonly class FormInput
      * @param array<string, true> $queryKeys
      * @param array<string, list<UploadInput>> $uploads
      * @param array<string, true> $malformedUploads
+     * @param bool $hasFiles Whether the request had any entry in `$_FILES`
+     * @param bool $isMultipart Whether the body of the request was `multipart/form-data`
      */
     private function __construct(
         private array $texts,
@@ -35,6 +37,8 @@ final readonly class FormInput
         private array $queryKeys,
         private array $uploads,
         private array $malformedUploads,
+        public bool $hasFiles,
+        public bool $isMultipart,
     ) {}
 
     /**
@@ -43,9 +47,14 @@ final readonly class FormInput
      *                                       uploads (`getUploads()`); an entry named like a `$data` entry is no upload
      * @param array<array-key, mixed> $query Query string (`$_GET`): the sent indicator (`hasQueryKey()`); the CSRF
      *                                       token is only read from `$data`
+     * @param bool $isMultipart Whether the body was `multipart/form-data` (a form without uploads rejects it)
      */
-    public static function fromArray(array $data, array $files = [], array $query = []): FormInput
-    {
+    public static function fromArray(
+        array $data,
+        array $files = [],
+        array $query = [],
+        bool $isMultipart = false,
+    ): FormInput {
         $texts = [];
         $maps = [];
         $invalid = [];
@@ -92,6 +101,26 @@ final readonly class FormInput
             queryKeys: $queryKeys,
             uploads: $uploads,
             malformedUploads: $malformedUploads,
+            hasFiles: $files !== [],
+            isMultipart: $isMultipart,
+        );
+    }
+
+    /**
+     * The same input without uploads, e.g. to read the typed values of a submit that is not processed.
+     */
+    public function withoutUploads(): FormInput
+    {
+        return new FormInput(
+            texts: $this->texts,
+            maps: $this->maps,
+            invalid: $this->invalid,
+            queryTexts: $this->queryTexts,
+            queryKeys: $this->queryKeys,
+            uploads: [],
+            malformedUploads: [],
+            hasFiles: false,
+            isMultipart: $this->isMultipart,
         );
     }
 
@@ -107,6 +136,10 @@ final readonly class FormInput
             data: $methodPost ? $httpRequest->getPostParameters() : $httpRequest->getQueryParameters(),
             files: $httpRequest->getRawFiles(),
             query: $httpRequest->getQueryParameters(),
+            isMultipart: str_starts_with(
+                haystack: strtolower(string: ltrim(string: $httpRequest->getHeader(name: 'content-type') ?? '')),
+                needle: 'multipart/',
+            ),
         );
     }
 

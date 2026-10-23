@@ -39,6 +39,7 @@ final class AuthResultEnumTest extends TestCase
         yield 'FAILED_SSO_LOGIN' => [12, AuthResultEnum::FAILED_SSO_LOGIN];
         yield 'SUCCESSFUL_OTP_LOGIN' => [13, AuthResultEnum::SUCCESSFUL_OTP_LOGIN];
         yield 'SUCCESSFUL_MICROSOFT_LOGIN' => [14, AuthResultEnum::SUCCESSFUL_MICROSOFT_LOGIN];
+        yield 'ERROR_RATE_LIMITED' => [15, AuthResultEnum::ERROR_RATE_LIMITED];
     }
 
     #[DataProvider('storedValueProvider')]
@@ -105,6 +106,11 @@ final class AuthResultEnumTest extends TestCase
             AuthResultEnum::SUCCESSFUL_MICROSOFT_LOGIN,
             'Microsoft-Anmeldung',
             'Microsoft login',
+        ];
+        yield 'ERROR_RATE_LIMITED' => [
+            AuthResultEnum::ERROR_RATE_LIMITED,
+            'Zu viele Anmeldeversuche',
+            'Too many login attempts',
         ];
     }
 
