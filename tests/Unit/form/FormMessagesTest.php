@@ -46,6 +46,14 @@ final class FormMessagesTest extends TestCase
         );
         $this->assertSame('Please try again.', $messages->spamRetry);
         $this->assertSame('Please enter a valid e-mail address.', $messages->spamRejectedEmailAddress);
+        $this->assertSame(
+            'The security check failed. Please confirm again that you are human.',
+            $messages->captchaFailed,
+        );
+        $this->assertSame(
+            'The security check is not available at the moment. Please try again later.',
+            $messages->captchaUnavailable,
+        );
     }
 
     public function testGermanTexts(): void
@@ -87,6 +95,14 @@ final class FormMessagesTest extends TestCase
         );
         $this->assertSame('Bitte versuchen Sie es erneut.', $messages->spamRetry);
         $this->assertSame('Bitte geben Sie eine gültige E-Mail-Adresse ein.', $messages->spamRejectedEmailAddress);
+        $this->assertSame(
+            'Die Sicherheitsprüfung ist fehlgeschlagen. Bitte bestätigen Sie erneut, dass Sie ein Mensch sind.',
+            $messages->captchaFailed,
+        );
+        $this->assertSame(
+            'Die Sicherheitsprüfung ist im Moment nicht verfügbar. Bitte versuchen Sie es später erneut.',
+            $messages->captchaUnavailable,
+        );
     }
 
     public function testGermanHasNoEnglishDefaultText(): void

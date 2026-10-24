@@ -130,6 +130,7 @@ final class FormRateLimitTest extends TestCase
                 clock: FormRateLimitTest::clock(),
                 secret: FormRateLimitTest::SECRET,
                 rateLimit: $rateLimit,
+                captcha: null,
                 emailField: null,
                 rejectedEmailAddresses: [],
             ),

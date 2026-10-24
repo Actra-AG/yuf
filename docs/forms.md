@@ -247,6 +247,7 @@ $form->addSpamProtection(spamProtection: new SpamProtection(
         failMode: RateLimitFailModeEnum::CLOSED, // or OPEN, see below
         logger: $logger,
     ), // null as explicit opt-out
+    captcha: null, // or a FormCaptcha, see captcha.md
     emailField: $emailField, // or null
     rejectedEmailAddresses: ['info@example.com'], // e.g. the own address; [] as explicit opt-out
 ));
@@ -266,6 +267,7 @@ $form->addSpamProtection(spamProtection: new SpamProtection(
   time (a visitor who corrects a field is not too fast); otherwise it renders the current time.
 - `SpamCheck` has the rules without the form, e.g. for tests with a `FixedClock`; `sessionBinding:` is the session
   value (the CSRF token), `null` only without session.
+- `captcha:` adds a CAPTCHA widget (Cloudflare Turnstile), verified after all other rules: [captcha.md](captcha.md).
 
 ### Rate limit
 

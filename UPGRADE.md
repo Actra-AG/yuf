@@ -4,6 +4,18 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v8.0.0
+
+### ⚠️ `SpamProtection`: required `captcha:`
+
+- Optional CAPTCHA for public forms, verified after honeypot, render time and rate limit: `FormCaptcha` with
+  `TurnstileCaptcha` (Cloudflare Turnstile), `CaptchaFailModeEnum`, new texts `FormMessages::$captchaFailed` and
+  `$captchaUnavailable` (en/de); setup, CSP and privacy policy in [docs/captcha.md](docs/captcha.md).
+- Before: `new SpamProtection(clock: …, secret: …, rateLimit: …, emailField: …, rejectedEmailAddresses: …)`, after: add
+  `captcha: null` (no CAPTCHA, same output) or `captcha: new FormCaptcha(…)`.
+- A `SpamProtection` whose `honeypotName:`, `renderTimeName:` and CAPTCHA field name are not all different throws an
+  `InvalidArgumentException`.
+
 ## v7.1.0
 
 - New `AmountFormatter` (`actra\yuf\common`): formats decimal strings (bcmath, optional `scale:` pads or rounds half

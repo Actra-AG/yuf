@@ -45,6 +45,9 @@ final readonly class FormMessages
         public string $spamRejectedEmailAddress = 'Please enter a valid e-mail address.',
         public string $tooLong = 'The text must not be longer than [max] characters.',
         public string $rateLimited = 'Too many submissions. Please try again in a few minutes.',
+        public string $captchaFailed = 'The security check failed. Please confirm again that you are human.',
+        public string $captchaUnavailable = 'The security check is not available at the moment. Please try again'
+        . ' later.',
     ) {}
 
     public static function german(): FormMessages
@@ -75,6 +78,10 @@ final readonly class FormMessages
             spamRejectedEmailAddress: 'Bitte geben Sie eine gültige E-Mail-Adresse ein.',
             tooLong: 'Der Text darf höchstens [max] Zeichen lang sein.',
             rateLimited: 'Zu viele Übermittlungen. Bitte versuchen Sie es in einigen Minuten erneut.',
+            captchaFailed: 'Die Sicherheitsprüfung ist fehlgeschlagen. Bitte bestätigen Sie erneut, dass Sie ein Mensch'
+            . ' sind.',
+            captchaUnavailable: 'Die Sicherheitsprüfung ist im Moment nicht verfügbar. Bitte versuchen Sie es später'
+            . ' erneut.',
         );
     }
 }

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\component\collection;
 
+use actra\yuf\form\component\field\CaptchaField;
 use actra\yuf\form\component\field\CsrfTokenField;
 use actra\yuf\form\component\field\FileField;
 use actra\yuf\form\component\field\MultiToggleField;
@@ -27,6 +28,7 @@ use actra\yuf\form\renderer\CompactFieldRenderer;
 use actra\yuf\form\renderer\DefaultFormRenderer;
 use actra\yuf\form\renderer\DefinitionListRenderer;
 use actra\yuf\form\settings\AutoCompleteEnum;
+use actra\yuf\form\spam\captcha\CaptchaStatusEnum;
 use actra\yuf\form\spam\SpamCheckResultEnum;
 use actra\yuf\form\spam\SpamProtection;
 use actra\yuf\html\HtmlText;
@@ -56,6 +58,7 @@ class Form extends FormCollection
     private ?SpamProtection $spamProtection = null;
     private ?TextField $honeypotField = null;
     private ?SpamRenderTimeField $renderTimeField = null;
+    private ?CaptchaField $captchaField = null;
 
     public function __construct(
         public readonly FormContext $context,
@@ -106,10 +109,10 @@ class Form extends FormCollection
 
     /**
      * Adds the honeypot field (label `FormMessages::$spamHoneypotLabel`, `autocomplete="off"`, to be hidden by the CSS
-     * of the project) and the hidden field with the signed render time at this position; `validate()` checks them.
-     * A broken rule is an error of the form (`FormMessages::$spamHoneypotFilled`, `$spamRetry`,
-     * `$spamRejectedEmailAddress`). With a `FormRateLimit`, `validate()` counts every submit with a valid CSRF token
-     * (see there).
+     * of the project), the hidden field with the signed render time and, with a `FormCaptcha`, its widget at this
+     * position; `validate()` checks them. A broken rule is an error of the form (`FormMessages::$spamHoneypotFilled`,
+     * `$spamRetry`, `$spamRejectedEmailAddress`, `$captchaFailed`, `$captchaUnavailable`). With a `FormRateLimit`,
+     * `validate()` counts every submit with a valid CSRF token (see there).
      *
      * @throws LogicException if the form already has a spam protection
      */
@@ -134,6 +137,9 @@ class Form extends FormCollection
                 sessionSource: $this->context->csrfTokenSource,
             ),
         );
+        if ($spamProtection->captcha !== null) {
+            $this->addField(formField: $this->captchaField = new CaptchaField(formCaptcha: $spamProtection->captcha));
+        }
     }
 
     public function getDefaultFormFieldRenderer(FormField $formField): FormRenderer
@@ -299,7 +305,7 @@ class Form extends FormCollection
      * Runs only if the fields are valid: fields with errors block the submission anyway, and the global error message
      * stays the error of the form. The form is rendered again with a signed render time, so the
      * next submission is checked. Errors of the spam fields themselves (a manipulated value) do not count, as they are
-     * not visible.
+     * not visible. The CAPTCHA is verified last, so a submission that breaks a rule costs no request to the provider.
      */
     private function validateSpamProtection(): void
     {
@@ -310,6 +316,7 @@ class Form extends FormCollection
             if (
                 $formField !== $this->honeypotField
                 && $formField !== $this->renderTimeField
+                && $formField !== $this->captchaField
                 && $formField->hasErrors(withChildElements: true)
             ) {
                 return;
@@ -329,6 +336,17 @@ class Form extends FormCollection
             SpamCheckResultEnum::HONEYPOT_FILLED => $this->messages->spamHoneypotFilled,
             SpamCheckResultEnum::TOO_FAST, SpamCheckResultEnum::EXPIRED => $this->messages->spamRetry,
         };
+        if ($errorMessage === null && $this->captchaField !== null) {
+            $remoteAddress = $this->context->httpRequest->getRemoteAddress();
+            $errorMessage = match ($this->captchaField->formCaptcha->check(
+                response: $this->captchaField->getPostedValue(),
+                remoteIp: $remoteAddress === '' ? null : $remoteAddress,
+            )) {
+                CaptchaStatusEnum::VALID => null,
+                CaptchaStatusEnum::INVALID => $this->messages->captchaFailed,
+                CaptchaStatusEnum::UNAVAILABLE => $this->messages->captchaUnavailable,
+            };
+        }
         if ($errorMessage !== null) {
             $this->addError(errorMessage: HtmlText::fromText(text: $errorMessage));
         }

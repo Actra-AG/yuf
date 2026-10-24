@@ -17,7 +17,7 @@ use SensitiveParameter;
 /**
  * The spam protection of a public form, added with `Form::addSpamProtection()`: a honeypot text field that must stay
  * empty (hidden by the CSS of the project) and a hidden field with the signed render time, checked by `SpamCheck` in
- * `Form::validate()`, and the rate limit of the submits (`FormRateLimit`).
+ * `Form::validate()`, the rate limit of the submits (`FormRateLimit`) and optionally a CAPTCHA (`FormCaptcha`).
  */
 final readonly class SpamProtection
 {
@@ -27,6 +27,7 @@ final readonly class SpamProtection
      * @param string $secret At least 32 bytes, e.g. from `.env.php`; never from the request
      * @param ?FormRateLimit $rateLimit Counts every submit per client IP address; `null` as explicit opt-out (e.g. the
      *     form is limited elsewhere)
+     * @param ?FormCaptcha $captcha A CAPTCHA widget, verified after all other rules; `null` as explicit opt-out
      * @param ?EmailField $emailField The field whose address is checked against `$rejectedEmailAddresses`
      * @param list<string> $rejectedEmailAddresses E-mail addresses no submission may use (e.g. the own address of the
      *     project), compared case-insensitively; an empty list as explicit opt-out
@@ -36,13 +37,14 @@ final readonly class SpamProtection
      * @param int $maxSeconds A submission later than this after rendering is expired
      *
      * @throws InvalidArgumentException if the secret is too short, the time range is invalid or there are rejected
-     *     addresses without e-mail field
+     *     addresses without e-mail field, or two fields of the spam protection have the same name
      */
     public function __construct(
         Clock $clock,
         #[SensitiveParameter]
         string $secret,
         public ?FormRateLimit $rateLimit,
+        public ?FormCaptcha $captcha,
         public ?EmailField $emailField,
         array $rejectedEmailAddresses,
         public string $honeypotName = 'internal',
@@ -52,6 +54,13 @@ final readonly class SpamProtection
     ) {
         if ($emailField === null && $rejectedEmailAddresses !== []) {
             throw new InvalidArgumentException(message: 'Rejected e-mail addresses need an e-mail field.');
+        }
+        $fieldNames = [$honeypotName, $renderTimeName];
+        if ($captcha !== null) {
+            $fieldNames[] = $captcha->fieldName;
+        }
+        if (count(value: array_unique(array: $fieldNames)) !== count(value: $fieldNames)) {
+            throw new InvalidArgumentException(message: 'The fields of the spam protection need different names.');
         }
         $this->spamCheck = new SpamCheck(
             clock: $clock,
