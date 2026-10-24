@@ -4,6 +4,16 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v8.1.0 (2026-10-24)
+
+### ⚠️ `CspPolicySettings`: default `default-src 'self'`
+
+- The default of `defaultSrc:` is `'self'` instead of `'self' data: {PROTOCOL}://{HOST}` (security checks such as
+  internet.nl flag `data:` in `default-src`). Directives without own value fall back to it, e.g. `media-src`,
+  `manifest-src`, `worker-src`: `data:` URLs there are blocked now. `img-src` keeps `data:`.
+- An application that needs `data:` for such a directive sets it explicitly, e.g. `mediaSrc: "'self' data:"`.
+- `actra/coding-standard` ^1.33.0 (development only).
+
 ## v8.0.0
 
 ### ⚠️ `SpamProtection`: required `captcha:`

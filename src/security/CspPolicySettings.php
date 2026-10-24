@@ -28,8 +28,12 @@ final readonly class CspPolicySettings
     private const string SELF_WITH_DATA_AND_HOST = "'self' data: " . CspPolicySettings::PROTOCOL_PLACEHOLDER . '://'
         . CspPolicySettings::HOST_PLACEHOLDER;
 
+    /**
+     * @param string $defaultSrc The fallback of every fetch directive without own value (e.g. `media-src`,
+     *     `manifest-src`, `worker-src`): only the own origin, never `data:`
+     */
     public function __construct(
-        private string $defaultSrc = CspPolicySettings::SELF_WITH_DATA_AND_HOST,
+        private string $defaultSrc = "'self'",
         private string $styleSrc = "'self'",
         private string $fontSrc = "'self'",
         private string $imgSrc = CspPolicySettings::SELF_WITH_DATA_AND_HOST,

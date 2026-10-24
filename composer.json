@@ -42,7 +42,7 @@
     }
   },
   "require-dev": {
-    "actra/coding-standard": "^1.30.0",
+    "actra/coding-standard": "^1.33.0",
     "phpunit/phpunit": "^13.4"
   },
   "scripts": {

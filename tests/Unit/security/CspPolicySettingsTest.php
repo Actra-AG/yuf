@@ -59,7 +59,7 @@ final class CspPolicySettingsTest extends TestCase
         );
 
         $this->assertSame(
-            "default-src 'self' data: https://www.example.com; style-src 'self' 'nonce-abc'; font-src 'self'; "
+            "default-src 'self'; style-src 'self' 'nonce-abc'; font-src 'self'; "
             . "img-src 'self' data: https://www.example.com; object-src 'none'; "
             . "script-src 'strict-dynamic' 'nonce-abc'; connect-src 'none'; base-uri 'self'; form-action 'self'; "
             . "frame-src 'none'; frame-ancestors 'none';",
