@@ -273,3 +273,10 @@ Steps 1 and 4 touch disjoint files and can run in parallel; 2 and 3 after 1.
 - Docs only: no release needed. Next: step 5 is done except the dry run of the guide on an old project; then the
   skeleton, based on the guide.
 
+
+### Closed (2026-10-29)
+
+- Released: yuf v8.2.0 (`App`, `HtmlFileExtensionEnum`, `Route::$redirectDefaultFileName`), v8.3.0 (migration guide,
+  `RecordingResponseSender`); skeleton v1.18.0 (`App`, `TestApplication`), v1.18.1 (`deploy.json` step).
+- Open: the dry run of `docs/upgrade/from-framework.md` on an old project is tracked outside this repository; add its
+  open questions to the guide.
