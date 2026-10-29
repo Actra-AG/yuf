@@ -1,0 +1,21 @@
+Message-ID: <alternative-1@example.com>
+Date: 28 Oct 2026 11:30 +0000
+From: =?UTF-8?B?SsO8cmcgQmVpc3BpZWw=?= <juerg@example.com>
+Subject: =?UTF-8?B?QmFja3VwIGFiZ2VzY2hsb3NzZW4g4pyU?=
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b1_alt"
+
+This is a multi-part message in MIME format.
+
+--b1_alt
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+Das Backup von =C3=BCber 2 GB ist abgeschlossen. Diese Zeile ist sehr lang =
+und wurde umgebrochen.
+--b1_alt
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<p>Das Backup von =C3=BCber 2 GB ist <b>abgeschlossen</b>.</p>
+--b1_alt--

@@ -4,6 +4,16 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v8.4.0 (2026-10-29)
+
+- New `actra\yuf\mailbox`: reads and moves the messages of one IMAP mailbox without `ext-imap` (not bundled with PHP
+  8.5), e.g. for cron jobs that process notification mails ([docs/mailbox.md](docs/mailbox.md)). `StreamImapMailbox`
+  (interface `ImapMailbox`) with `ImapSettings` and `ImapEncryptionEnum` (implicit TLS on 993 or STARTTLS on 143,
+  certificate verified, never unencrypted); `fetchMessage()` returns a `ReceivedMail` (message ID, date, sender,
+  decoded subject, headers, text body, raw message), also for HTML-only mails; errors are `ImapException`s.
+- New `MimeMessageParser`: a raw message (e.g. a stored `.eml`) as `ReceivedMail`.
+- New `RecordingImapMailbox` for tests of projects ([docs/testing.md](docs/testing.md)).
+
 ## v8.3.0 (2026-10-29)
 
 - New `RecordingResponseSender` and `ResponseSentException` (`actra\yuf\core`) for tests of projects: records

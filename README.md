@@ -8,7 +8,8 @@ installed and loaded with Composer.
 - Typed form fields, rules, CSRF and spam protection with rate limits and optional CAPTCHA, checked file uploads
 - Session object, login with session fixation protection and rate limits, Argon2id passwords, IP whitelists
 - PDO connection with typed rows and a safe query builder
-- Mail via SMTP (incl. XOAUTH2) or the Microsoft Graph API, phone numbers based on libphonenumber
+- Mail via SMTP (incl. XOAUTH2) or the Microsoft Graph API, reading a mailbox via IMAP (without `ext-imap`)
+- Phone numbers based on libphonenumber
 - CSP nonces, rate limiting per IP address, ships no JavaScript
 
 ## Requirements
@@ -60,6 +61,7 @@ See [.env.example.php](.env.example.php), [index.example.php](index.example.php)
 - [CAPTCHA](docs/captcha.md): Cloudflare Turnstile in public forms, CSP, privacy
 - [Database](docs/database.md): connection, typed rows, query builder, boolean search
 - [Mail](docs/mail.md): SMTP (STARTTLS or implicit TLS) and Microsoft 365
+- [Mailbox](docs/mailbox.md): reading and moving the messages of an IMAP mailbox, text of HTML mails
 - [Phone numbers](docs/phone-numbers.md): parsing, formats, validation
 - [Rate limiting](docs/rate-limiting.md): limits per IP address or globally, public forms and logins, without
   database
