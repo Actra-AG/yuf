@@ -7,17 +7,16 @@
 
 declare(strict_types=1);
 
-namespace actra\yuf\tests\Double\core;
+namespace actra\yuf\core;
 
-use actra\yuf\core\HttpResponse;
-use actra\yuf\core\ResponseSender;
 use Closure;
 use LogicException;
 use Override;
 
 /**
- * Records the response instead of sending it and throws `ResponseSentException` (a `never` method may throw), so the
- * code after the sending does not run, like after `exit`.
+ * Response sender for tests: records the response instead of sending it and throws `ResponseSentException` (a `never`
+ * method may throw), so the code after the sending does not run, like after `exit`. Pass it to `Core` to test
+ * redirects, downloads and other responses that end the script (docs/testing.md).
  */
 final class RecordingResponseSender implements ResponseSender
 {

@@ -11,9 +11,9 @@ namespace actra\yuf\tests\Unit\common;
 
 use actra\yuf\common\FileHandler;
 use actra\yuf\core\HttpStatusCodeEnum;
+use actra\yuf\core\RecordingResponseSender;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
-use actra\yuf\tests\Double\core\RecordingResponseSender;
 use InvalidArgumentException;
 use Override;
 use PHPUnit\Framework\Attributes\DataProvider;

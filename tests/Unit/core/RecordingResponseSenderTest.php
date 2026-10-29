@@ -9,15 +9,55 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\core;
 
-use actra\yuf\tests\Double\core\RecordingResponseSender;
+use actra\yuf\core\HttpResponse;
+use actra\yuf\core\HttpStatusCodeEnum;
+use actra\yuf\core\RecordingResponseSender;
+use actra\yuf\core\ResponseSender;
+use actra\yuf\core\ResponseSentException;
 use ArrayObject;
+use LogicException;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The after-response callbacks of the test double: registered, not run until the test says so.
+ * The test double of yuf: records the response, and the after-response callbacks run only when the test says so.
  */
 final class RecordingResponseSenderTest extends TestCase
 {
+    public function testSendRecordsTheResponseAndThrows(): void
+    {
+        $responseSender = new RecordingResponseSender();
+        $httpResponse = HttpResponse::createStatusResponse(httpStatusCode: HttpStatusCodeEnum::HTTP_NOT_FOUND);
+
+        try {
+            $responseSender->send(httpResponse: $httpResponse);
+        } catch (ResponseSentException) {
+            // Instead of ending the process
+        }
+
+        $this->assertSame($httpResponse, $responseSender->sentResponse);
+    }
+
+    public function testCaptureReturnsTheSentResponse(): void
+    {
+        $httpResponse = HttpResponse::createStatusResponse(httpStatusCode: HttpStatusCodeEnum::HTTP_NOT_FOUND);
+
+        $sentResponse = RecordingResponseSender::capture(
+            action: static function (ResponseSender $responseSender) use ($httpResponse): void {
+                $responseSender->send(httpResponse: $httpResponse);
+            },
+        );
+
+        $this->assertSame($httpResponse, $sentResponse);
+    }
+
+    public function testCaptureWithoutResponseThrows(): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIs('The action did not send a response.');
+
+        RecordingResponseSender::capture(action: static function (ResponseSender $responseSender): void {});
+    }
+
     public function testCallbacksRunOnDemandInRegistrationOrderAndOnlyOnce(): void
     {
         $responseSender = new RecordingResponseSender();

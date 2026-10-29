@@ -4,6 +4,13 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v8.3.0 (2026-10-29)
+
+- New `RecordingResponseSender` and `ResponseSentException` (`actra\yuf\core`) for tests of projects: records
+  redirects, downloads and other responses that end the script ([docs/testing.md](docs/testing.md)).
+- New migration guide for projects on the old [Actra framework](https://github.com/Actra-AG/framework):
+  [docs/upgrade/from-framework.md](docs/upgrade/from-framework.md).
+
 ## v8.2.0 (2026-10-29)
 
 - New `App`: the front controller with one line per language and route, everything else from `.env.php`

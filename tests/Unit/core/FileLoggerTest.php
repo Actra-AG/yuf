@@ -11,9 +11,9 @@ namespace actra\yuf\tests\Unit\core;
 
 use actra\yuf\clock\FixedClock;
 use actra\yuf\core\FileLogger;
+use actra\yuf\core\RecordingResponseSender;
 use actra\yuf\mailer\MailerException;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
-use actra\yuf\tests\Double\core\RecordingResponseSender;
 use actra\yuf\tests\Double\mailer\CapturingMailer;
 use actra\yuf\tests\Double\mailer\FailingMailer;
 use actra\yuf\tests\Double\mailer\RecordingMailFunction;

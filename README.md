@@ -68,7 +68,8 @@ See [.env.example.php](.env.example.php), [index.example.php](index.example.php)
 ## Upgrading
 
 Read [UPGRADE.md](UPGRADE.md) before `composer update`: minor versions may contain breaking changes (marked ⚠️).
-Libraries that use yuf require it with `~6.0.0` (minor version locked).
+Libraries that use yuf require it with `~6.0.0` (minor version locked). Projects on the old
+[Actra framework](https://github.com/Actra-AG/framework): [migration guide](docs/upgrade/from-framework.md).
 
 ## Contributing
 

@@ -10,6 +10,8 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\table;
 
 use actra\yuf\core\HttpStatusCodeEnum;
+use actra\yuf\core\RecordingResponseSender;
+use actra\yuf\core\ResponseSentException;
 use actra\yuf\db\DbRow;
 use actra\yuf\db\DbRowValueException;
 use actra\yuf\html\HtmlText;
@@ -21,8 +23,6 @@ use actra\yuf\table\table\DbResultTable;
 use actra\yuf\table\TableHelper;
 use actra\yuf\table\TableItem;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
-use actra\yuf\tests\Double\core\RecordingResponseSender;
-use actra\yuf\tests\Double\core\ResponseSentException;
 use actra\yuf\tests\Double\db\SqliteDatabase;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
 use PHPUnit\Framework\TestCase;

@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace actra\yuf\tests\Double\core;
+namespace actra\yuf\core;
 
 use RuntimeException;
 

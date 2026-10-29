@@ -256,3 +256,20 @@ Steps 1 and 4 touch disjoint files and can run in parallel; 2 and 3 after 1.
 - `UPGRADE.md` (step 5): new `Route` argument `redirectDefaultFileName` (non-breaking, default `false`).
 - Example app: `/index.html` is now a 301 to `/`.
 
+### Step 4 (done, 2026-10-29)
+
+- `docs/upgrade/from-framework.md`: starting point is the last state of https://github.com/Actra-AG/framework
+  (`main`); the three old front controllers (`Core::init()`, `new Core(…)`, `prepareHttpResponse(
+  environmentSettingsModel:)`) with a before/after to `App`; order of work; one table per topic (old → new, search
+  term, link to the detailed entry of `v0.md` … `v4.md`, `UPGRADE.md` or the docs); ⚠️ for silent changes; checklist
+  "Before going live". All 125 relative links and anchors checked with a script (GitHub slug rules).
+- Linked from `README.md` ("Upgrading") and `docs/upgrade/v0.md`.
+- Built from two read-only reviews: all version notes, and the old framework compared with `src/` (plus the
+  framework's README and UPGRADE.md; its UPGRADE.md lists the HTML/CSS changes of 2025 for projects on older
+  copies). Generic examples only, no project names.
+- Findings that are in the guide and not in the version notes: the namespace `framework\` → `actra\yuf\`; the old
+  `Route` defaulted `acceptedExtension` to `html`, the current one to `null`; `de_CH.UTF-8` as locale must not be
+  passed to `DbSettings(timeNamesLanguage:)`.
+- Docs only: no release needed. Next: step 5 is done except the dry run of the guide on an old project; then the
+  skeleton, based on the guide.
+

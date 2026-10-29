@@ -16,6 +16,7 @@ use actra\yuf\core\HttpRequest;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\PathVars;
+use actra\yuf\core\RecordingResponseSender;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\core\Route;
 use actra\yuf\core\ViewContext;

@@ -11,10 +11,10 @@ namespace actra\yuf\tests\Unit\common;
 
 use actra\yuf\common\CsvFile;
 use actra\yuf\core\HttpStatusCodeEnum;
+use actra\yuf\core\RecordingResponseSender;
 use actra\yuf\core\ResponseSender;
+use actra\yuf\core\ResponseSentException;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
-use actra\yuf\tests\Double\core\RecordingResponseSender;
-use actra\yuf\tests\Double\core\ResponseSentException;
 use Generator;
 use InvalidArgumentException;
 use Override;

@@ -20,8 +20,28 @@ require __DIR__ . '/../vendor/autoload.php';
 | `FrameworkDb`  | `new FrameworkDb(connectionParameters: new DbConnectionParameters(dsn: 'sqlite::memory:'))`  |
 | `Clock`        | `new FixedClock(now: new DateTimeImmutable(datetime: '2026-01-02 03:04:05'))`                |
 | Mailer         | `new RecordingMailer()`: records the sent mails, see [mail.md](mail.md#tests)                |
+| Response sender | `new RecordingResponseSender()`: records responses that end the script, see below           |
 
 `HttpRequest::fromGlobals()` is meant for `Core`, bootstrap files and CLI scripts, not for logic classes.
+
+## Redirects, downloads and other responses that end the script
+
+Redirects, file downloads and JSON responses with `sendAndExit` end the script. Give `Core` a
+`RecordingResponseSender`: it records the response and throws `ResponseSentException` instead of ending the process.
+`RecordingResponseSender::capture()` runs the code and returns the sent response:
+
+```php
+$httpResponse = RecordingResponseSender::capture(
+    action: function (ResponseSender $responseSender): void {
+        App::fromCore(core: new Core(settings: $settings, httpRequest: $httpRequest, responseSender: $responseSender))
+            ->withHtmlRoute(path: '/', viewGroup: 'frontend')
+            ->prepare();
+    },
+);
+$this->assertSame(HttpStatusCodeEnum::HTTP_MOVED_PERMANENTLY, $httpResponse->httpStatusCode);
+```
+
+Work registered with `afterResponse()` runs only when the test calls `runAfterResponseCallbacks()`.
 
 ## Clock
 

@@ -12,6 +12,7 @@ namespace actra\yuf\tests\Unit\auth;
 use actra\yuf\auth\AuthResultEnum;
 use actra\yuf\auth\AuthSession;
 use actra\yuf\auth\SsoNonceCookie;
+use actra\yuf\core\RecordingResponseSender;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
@@ -20,7 +21,6 @@ use actra\yuf\tests\Double\auth\TestAuthUser;
 use actra\yuf\tests\Double\auth\TestJwtIssuer;
 use actra\yuf\tests\Double\auth\TestMicrosoftAuthenticator;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
-use actra\yuf\tests\Double\core\RecordingResponseSender;
 use Override;
 use PHPUnit\Framework\TestCase;
 

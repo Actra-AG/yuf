@@ -13,12 +13,12 @@ use actra\yuf\core\HttpRequest;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\Logger;
+use actra\yuf\core\RecordingResponseSender;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\exception\ExceptionHandlerContext;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CspPolicySettings;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
-use actra\yuf\tests\Double\core\RecordingResponseSender;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
 
 /**
