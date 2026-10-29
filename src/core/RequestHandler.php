@@ -96,6 +96,7 @@ final class RequestHandler
         if ($pathMatch->fileName !== null) {
             $this->fileName = $pathMatch->fileName;
         }
+        $this->redirectDefaultFileName(route: $route, requestedFileName: $this->fileName ?? '');
         $forceFileGroup = $route->forceFileGroup;
         if ($forceFileGroup !== null && $forceFileGroup !== '') {
             $fileGroup = $forceFileGroup;
@@ -145,6 +146,31 @@ final class RequestHandler
             fileExtension: $fileExtension,
             routeVariables: $pathMatch->routeVariables,
             pathVars: $pathVars,
+        );
+    }
+
+    /**
+     * A request of the default file name of a route with `redirectDefaultFileName` (`/home.html`) is redirected
+     * permanently to the path of the route (`/`), with the query: the page has one URL. Not for routes with path
+     * variables or a forced file name (their path is no URL of the default file).
+     */
+    private function redirectDefaultFileName(Route $route, string $requestedFileName): void
+    {
+        if (
+            !$route->redirectDefaultFileName
+            || $requestedFileName === ''
+            || $requestedFileName !== $route->defaultFileName
+            || ($route->forceFileName !== null && $route->forceFileName !== '')
+            || str_contains(haystack: $route->path, needle: '${')
+        ) {
+            return;
+        }
+        $query = $this->httpRequest->getQuery();
+        HttpResponse::redirectAndExit(
+            relativeOrAbsoluteUri: $route->path . ($query === '' ? '' : '?' . $query),
+            httpRequest: $this->httpRequest,
+            httpStatusCode: HttpStatusCodeEnum::HTTP_MOVED_PERMANENTLY,
+            responseSender: $this->responseSender,
         );
     }
 

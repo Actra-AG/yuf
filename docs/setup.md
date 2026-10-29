@@ -3,15 +3,51 @@
 ## Application entry point
 
 Create `.env.php` based on [.env.example.php](../.env.example.php) and an `index.php` in the document root based on
-[index.example.php](../index.example.php). `Core::fromEnvironment()` needs `envFilePath:` and `copyrightYear:`; the
-directories have defaults. Composer loads all classes: the project maps its own namespace in `composer.json`
-(`"autoload": {"psr-4": {"app\\": "app/"}}`):
+[index.example.php](../index.example.php). Composer loads all classes: the project maps its own namespace in
+`composer.json` (`"autoload": {"psr-4": {"app\\": "app/"}}`).
+
+`App` sets up the application with one line per language and route; everything that differs between environments
+(dev, stage, prod) is in `.env.php`, languages and routes are the same everywhere:
 
 ```php
 require __DIR__ . '/../vendor/autoload.php';
+
+App::fromEnvironment(envFilePath: __DIR__ . '/../.env.php', copyrightYear: 2026)
+    ->withLanguage(code: 'de', locale: 'de_CH.UTF-8')
+    ->withHtmlRoute(path: '/', viewGroup: 'frontend', defaultFileTitle: 'home')
+    ->withHtmlRoute(path: '/news/', viewGroup: 'news', defaultFileTitle: 'overview')
+    ->withFileRoute(path: '/export/', viewGroup: 'export', contentType: ContentType::createCsv())
+    ->run();
+```
+
+- `withLanguage()`: before the routes. The first language is the language of every route that names none
+  (`languageCode:`).
+- `withHtmlRoute()`: `<path><name>.html` renders `app/view/<viewGroup>/html/<name>.html` with the view class
+  `app\view\<viewGroup>\php\<name>`, if it exists (or the views of `viewFactory:`, e.g. a `ViewMap`). The first HTML
+  route of each language is the target of the redirect of `/`. Without any route, `App` serves `app/view/frontend/` at
+  `/`.
+  - `defaultFileTitle:` (default `index`) is the page of the path itself. Its file name is redirected permanently
+    (301) to the path, so the page has one URL: `/home.html` → `/` with `defaultFileTitle: 'home'`
+    (`redirectDefaultFileName: false` serves both).
+  - `fileExtension: HtmlFileExtensionEnum::NONE` serves paths without extension (`/about`), e.g. to keep the URLs of a
+    site taken over from another system; `.html` is then a 404. Prefer the default `.html`.
+  - A `-` in the file name always separates path variables ([views.md](views.md#path-variables)): `/about-us` is the
+    page `about` with the variable `us`, so a view must allow it (`maxAllowedPathVars`) or the request is a 404.
+- `withFileRoute()`: CSV, PDF, JSON and other files, only with the extension of the content type.
+- `withCsp()`, `withoutSession()`, `withSessionHandler()`, `withLogger()`, `withLoginPath()`, `withTemplateTags()`,
+  `withNavigation()`, `withExceptionHandler()`: the arguments of `Core::prepareHttpResponse()`.
+- `fromEnvironment()` takes the directories of `Core::fromEnvironment()` and `viewClassPrefix:` (the namespace of the
+  view classes, default `app`).
+- Special cases: `withRoute()` with an own `Route` (its language from `$app->getLanguage(code:)`), `$app->core` for
+  the settings and directories, or `Core` directly:
+
+```php
 $core = Core::fromEnvironment(envFilePath: __DIR__ . '/../.env.php', copyrightYear: 2026);
 $core->prepareHttpResponse(routeCollection: $routes)->sendAndExit();
 ```
+
+Mistakes in the setup (a language added after a route, a route of a language that was not added, two routes with the
+same path, a missing `.env.php`) throw at startup with a message that names the fix.
 
 `fromEnvironment()` does everything global, once per process: it registers the error handler, reads the environment
 file, sets `error_reporting()` and the time zone, creates the directories and the request from the PHP
@@ -55,8 +91,9 @@ type or an unknown enum value throws an `UnexpectedValueException`. Pass the val
 - `opcache.validate_timestamps=0`: reset the opcache on every deployment (restart PHP-FPM or call `opcache_reset()`),
   else the old code keeps running. This includes the compiled templates in `app/cache/`.
 - Without `debug`, compiled templates are used without comparing them with the templates (no file checks per render,
-  `checkTemplateChanges` follows `debug`). Delete `app/cache/v*/` on every deployment, else changed templates are not
-  compiled again; or set `'checkTemplateChanges' => true`.
+  `checkTemplateChanges` follows `debug`). Delete `app/cache/v[0-9]*/` on every deployment (`clearDirectories` of
+  `deploy.json`), else changed templates are not compiled again; or set `'checkTemplateChanges' => true`. Not
+  `app/cache/v*/`: that also deletes `app/cache/values/` (`FileCache`, e.g. access tokens).
 - `zend.exception_ignore_args=On` (the default of the `php.ini-production`): the stack traces of exceptions then carry
   no arguments (passwords, tokens) into the error log and the tickets.
 - `debug` is `false`: the error pages show no details of the exception.
@@ -122,4 +159,6 @@ Graph API not reachable), the failure is noted in the ticket file and the issue 
 the notification still arrives. The mail is sent after the response (shutdown function), so the error page does not
 wait for the mail server; the ticket file is written at once.
 
-For another destination, implement `actra\yuf\core\Logger` and pass it as `prepareHttpResponse(logger: …)`.
+With `App`, pass the logger with `withLogger(logger: …)`; `$app->core` has the directories and the request. For
+another destination, implement `actra\yuf\core\Logger` and pass it as `prepareHttpResponse(logger: …)` or
+`withLogger(logger: …)`.

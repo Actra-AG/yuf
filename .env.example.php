@@ -12,6 +12,6 @@ return [
     // true only while developing: the error pages then show details of the exception
     'debug' => false,
     'robots' => 'noindex,nofollow',
-    // Optional, default: the value of debug. Without checks (production), clear app/cache/v*/ on every deployment.
+    // Optional, default: the value of debug. Without checks (production), clear app/cache/v[0-9]*/ on every deployment.
     'checkTemplateChanges' => true,
 ];

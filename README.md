@@ -38,9 +38,16 @@ Composer is needed to build the application (`vendor/`), not on the server: depl
 
 ```php
 require __DIR__ . '/../vendor/autoload.php';
-$core = Core::fromEnvironment(envFilePath: __DIR__ . '/../.env.php', copyrightYear: 2026);
-$core->prepareHttpResponse(routeCollection: $routes)->sendAndExit();
+
+App::fromEnvironment(envFilePath: __DIR__ . '/../.env.php', copyrightYear: 2026)
+    ->withLanguage(code: 'de', locale: 'de_CH.UTF-8')
+    ->withHtmlRoute(path: '/', viewGroup: 'frontend')
+    ->withFileRoute(path: '/export/', viewGroup: 'export', contentType: ContentType::createCsv())
+    ->run();
 ```
+
+Without routes, `App` serves `app/view/frontend/` at `/`. For special cases use `$app->core` and `withRoute()`, or
+`Core` directly.
 
 See [.env.example.php](.env.example.php), [index.example.php](index.example.php) and the documentation:
 

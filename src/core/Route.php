@@ -18,6 +18,9 @@ final readonly class Route
 
     /**
      * @param ?Closure(): string $viewCallback Returns the content of the response instead of a view class
+     * @param bool $redirectDefaultFileName A request of the default file name (`/home.html`) is redirected permanently
+     *     (301) to the path of the route (`/`): one URL per page, no duplicate content. Not for routes with path
+     *     variables or `forceFileName`
      */
     public function __construct(
         public string $path,
@@ -33,6 +36,7 @@ final readonly class Route
         public ?string $forceFileGroup = null,
         public ?string $forceFileName = null,
         public ?ViewFactory $viewFactory = null,
+        public bool $redirectDefaultFileName = false,
     ) {
         $this->viewDirectory = $viewDirectory . $viewGroup . '/';
     }

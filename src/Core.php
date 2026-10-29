@@ -235,10 +235,17 @@ final class Core
     /**
      * @return array<array-key, mixed>
      *
-     * @throws UnexpectedValueException if the file does not return an array (or was included before)
+     * @throws UnexpectedValueException if the file does not exist or does not return an array (or was included
+     *     before)
      */
     private static function loadEnvironmentFile(string $path): array
     {
+        if (!is_file(filename: $path)) {
+            throw new UnexpectedValueException(
+                message: 'The environment file ' . $path . ' does not exist: create it from .env.example.php of'
+                    . ' actra/yuf (see docs/setup.md, "Environment settings").',
+            );
+        }
         $values = require_once $path;
         if (!is_array(value: $values)) {
             throw new UnexpectedValueException(

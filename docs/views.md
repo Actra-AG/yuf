@@ -150,7 +150,9 @@ $inputParameters->add(inputParameter: new InputParameter(name: 'title', source: 
 ## Path variables
 
 A file name like `subscription-42.html` is split at `-` into path variables (`0` → `subscription`, `1` → `42`); the
-view allows them with `maxAllowedPathVars`. `getPathVar()` returns the untyped `?string`. The typed getters of
+view allows them with `maxAllowedPathVars`. This gives readable URLs for dynamic items without a query string:
+`news-today.html`, `news-fire_in_town.html` and `news-2026_10_29.html` are all handled by the view `news`, which reads
+the item from path variable 1. `getPathVar()` returns the untyped `?string`. The typed getters of
 `BaseView` throw a `NotFoundException` (404) for a wrong URL instead of turning it into ID `0`:
 
 ```php
@@ -161,6 +163,13 @@ $page = $this->getPathVarAsInt(nr: 3) ?? 1;       // ?int, null if missing or no
 
 Integers are strict: optional minus and digits only; values outside the integer range are not an integer.
 `$this->context->pathVars` (`PathVars`) also gives `list(): list<string>` (all trimmed values in order) and `count()`.
+
+## Default file name
+
+A `Route` with `redirectDefaultFileName: true` redirects a request of its default file name permanently (301) to its
+path, with the query: `/shop/index.html` → `/shop/` for `path: '/shop/'` and `defaultFileName: 'index.html'`. The page
+then has one URL (no duplicate content), without a redirect in the view. Routes with path variables in the path
+(`${fileName}`) or `forceFileName` are not redirected. `App::withHtmlRoute()` sets it by default.
 
 ## JSON endpoints
 

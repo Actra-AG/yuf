@@ -4,6 +4,30 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v8.2.0 (2026-10-29)
+
+- New `App`: the front controller with one line per language and route, everything else from `.env.php`
+  ([docs/setup.md](docs/setup.md#application-entry-point)). `Core` stays unchanged; switching is optional:
+
+  ```php
+  App::fromEnvironment(envFilePath: __DIR__ . '/../.env.php', copyrightYear: 2026)
+      ->withLanguage(code: 'de', locale: 'de_CH.UTF-8')
+      ->withHtmlRoute(path: '/', viewGroup: 'frontend', defaultFileTitle: 'home')
+      ->withFileRoute(path: '/export/', viewGroup: 'export', contentType: ContentType::createCsv())
+      ->run();
+  ```
+
+  `withHtmlRoute()` accepts `.html` only (or only paths without extension with
+  `fileExtension: HtmlFileExtensionEnum::NONE`) and redirects the default file name to the path (`/home.html` → `/`).
+  Setup mistakes (a language after a route, a route of a language that was not added) throw at startup.
+- New `Route` argument `redirectDefaultFileName:` (default `false`, same behaviour): `true` redirects a request of the
+  default file name permanently (301) to the path of the route ([docs/views.md](docs/views.md#default-file-name)).
+- A missing environment file throws an `UnexpectedValueException` with its path and a pointer to `.env.example.php`
+  (before: PHP warning and fatal error of `require_once`).
+- Deployment: delete `app/cache/v[0-9]*/` instead of `app/cache/v*/` (`clearDirectories` of `deploy.json`):
+  `v*` also deletes `app/cache/values/` (`FileCache`, e.g. access tokens) ([docs/setup.md](docs/setup.md#production)).
+- `actra/coding-standard` ^1.34.0, `phpunit/phpunit` ^13.4.4 (security fix of PHPUnit; development only).
+
 ## v8.1.0 (2026-10-24)
 
 ### ⚠️ `CspPolicySettings`: default `default-src 'self'`

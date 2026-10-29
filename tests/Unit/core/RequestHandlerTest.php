@@ -9,20 +9,24 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\core;
 
+use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\Language;
 use actra\yuf\core\LanguageCollection;
+use actra\yuf\core\NativeResponseSender;
 use actra\yuf\core\PathVars;
 use actra\yuf\core\RequestHandler;
+use actra\yuf\core\ResponseSender;
 use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\core\RecordingResponseSender;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Not covered: redirects of "/" (they exit) and the preferred language in the session.
+ * Not covered: redirects of "/" and the preferred language in the session.
  */
 final class RequestHandlerTest extends TestCase
 {
@@ -33,6 +37,7 @@ final class RequestHandlerTest extends TestCase
         ?string $acceptedExtension = null,
         ?string $forceFileGroup = null,
         ?string $forceFileName = null,
+        bool $redirectDefaultFileName = false,
     ): Route {
         return new Route(
             path: $path,
@@ -43,6 +48,7 @@ final class RequestHandlerTest extends TestCase
             acceptedExtension: $acceptedExtension,
             forceFileGroup: $forceFileGroup,
             forceFileName: $forceFileName,
+            redirectDefaultFileName: $redirectDefaultFileName,
         );
     }
 
@@ -52,14 +58,82 @@ final class RequestHandlerTest extends TestCase
         LanguageCollection $availableLanguages = new LanguageCollection(),
         ?string $allowedDomain = null,
         string $host = 'example.com',
+        ResponseSender $responseSender = new NativeResponseSender(),
+        string $queryString = '',
     ): RequestHandler {
         return new RequestHandler(
-            httpRequest: HttpRequestFactory::create(host: $host, uri: $requestUri),
+            httpRequest: HttpRequestFactory::create(host: $host, uri: $requestUri, queryString: $queryString),
             routeCollection: $routeCollection,
             availableLanguages: $availableLanguages,
             allowedDomains: [$allowedDomain ?? $host],
             session: null,
+            responseSender: $responseSender,
         );
+    }
+
+    public function testDefaultFileNameIsRedirectedPermanentlyToThePathOfTheRoute(): void
+    {
+        $route = $this->createRoute(path: '/shop/', redirectDefaultFileName: true);
+
+        $redirect = RecordingResponseSender::capture(
+            action: function (ResponseSender $responseSender) use ($route): void {
+                $this->createRequestHandler(
+                    requestUri: '/shop/index.html',
+                    routeCollection: new RouteCollection(routes: [$route]),
+                    responseSender: $responseSender,
+                    queryString: 'page=2',
+                )->resolveRoute();
+            },
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_MOVED_PERMANENTLY, $redirect->httpStatusCode);
+        $this->assertSame('https://example.com/shop/?page=2', $redirect->getHeader(key: 'Location'));
+    }
+
+    public function testOtherFileNamesAreNotRedirected(): void
+    {
+        $route = $this->createRoute(path: '/shop/', redirectDefaultFileName: true);
+
+        $resolvedRoute = $this->createRequestHandler(
+            requestUri: '/shop/index-2.html',
+            routeCollection: new RouteCollection(routes: [$route]),
+        )->resolveRoute();
+
+        $this->assertSame('index-2.html', $resolvedRoute->fileName);
+    }
+
+    public function testDefaultFileNameIsNotRedirectedWithoutTheOption(): void
+    {
+        $resolvedRoute = $this->createRequestHandler(
+            requestUri: '/shop/index.html',
+            routeCollection: new RouteCollection(routes: [$this->createRoute(path: '/shop/')]),
+        )->resolveRoute();
+
+        $this->assertSame('index.html', $resolvedRoute->fileName);
+    }
+
+    public function testDefaultFileNameIsNotRedirectedForAForcedFileName(): void
+    {
+        $route = $this->createRoute(path: '/shop/', forceFileName: 'index.html', redirectDefaultFileName: true);
+
+        $resolvedRoute = $this->createRequestHandler(
+            requestUri: '/shop/index.html',
+            routeCollection: new RouteCollection(routes: [$route]),
+        )->resolveRoute();
+
+        $this->assertSame('index.html', $resolvedRoute->fileName);
+    }
+
+    public function testDefaultFileNameIsNotRedirectedForARouteWithPathVariables(): void
+    {
+        $route = $this->createRoute(path: '/shop/${fileName}', redirectDefaultFileName: true);
+
+        $resolvedRoute = $this->createRequestHandler(
+            requestUri: '/shop/index.html',
+            routeCollection: new RouteCollection(routes: [$route]),
+        )->resolveRoute();
+
+        $this->assertSame('index.html', $resolvedRoute->fileName);
     }
 
     public function testConstructorSetsTheFirstAvailableLanguageAndTheDefaultRoutes(): void
