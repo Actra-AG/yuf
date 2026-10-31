@@ -13,6 +13,7 @@ use actra\yuf\auth\AuthSession;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpRequest;
+use actra\yuf\core\Language;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\PathVars;
@@ -36,6 +37,8 @@ final class ViewContextFactory
     /**
      * @param list<string> $pathVars
      * @param ?Closure(ViewContext): NavigationItemCollection $navigationProvider
+     * @param ?Language $requestLanguage The language of a route with `usesRequestLanguage` (`null`: a route without
+     *     language)
      */
     public static function create(
         string $fileTitle = 'index',
@@ -50,9 +53,13 @@ final class ViewContextFactory
         ?AbstractSessionHandler $sessionHandler = null,
         ?Closure $navigationProvider = null,
         string $documentRoot = '/tmp/public/',
+        ?Language $requestLanguage = null,
     ): ViewContext {
         $httpRequest ??= HttpRequestFactory::create();
-        $localeHandler = new LocaleHandler(language: null, availableLanguages: new LanguageCollection());
+        $localeHandler = new LocaleHandler(
+            language: $requestLanguage,
+            availableLanguages: new LanguageCollection(languages: $requestLanguage === null ? [] : [$requestLanguage]),
+        );
 
         return new ViewContext(
             httpRequest: $httpRequest,
@@ -65,6 +72,7 @@ final class ViewContextFactory
                 viewDirectory: '/tmp/views/',
                 viewClassPrefix: $viewClassPrefix,
                 viewGroup: $viewGroup,
+                usesRequestLanguage: $requestLanguage !== null,
             ),
             fileGroup: $fileGroup,
             fileTitle: $fileTitle,

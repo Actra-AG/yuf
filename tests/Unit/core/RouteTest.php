@@ -13,6 +13,7 @@ use actra\yuf\core\Language;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\Route;
+use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -144,5 +145,45 @@ final class RouteTest extends TestCase
         $route->loadLocalizedText(fileTitle: 'detail', localeHandler: $localeHandler);
 
         $this->assertSame([], $localeHandler->getAllText());
+    }
+
+    public function testRouteWithRequestLanguageLoadsTheTextsOfTheLanguageOfTheLocaleHandler(): void
+    {
+        $english = new Language(code: 'en', locale: 'en_US.UTF-8');
+        $route = new Route(
+            path: '/',
+            viewDirectory: $this->viewDirectory,
+            viewGroup: 'frontend',
+            usesRequestLanguage: true,
+        );
+        $localeHandler = $this->createLocaleHandler(language: $english);
+
+        $route->loadLocalizedText(fileTitle: 'detail', localeHandler: $localeHandler);
+
+        $this->assertSame(['global' => 'G', 'detail' => 'D'], $localeHandler->getAllText());
+    }
+
+    public function testRouteWithFixedLanguageIgnoresTheLanguageOfTheLocaleHandler(): void
+    {
+        $german = new Language(code: 'de', locale: 'de_CH.UTF-8');
+        $english = new Language(code: 'en', locale: 'en_US.UTF-8');
+        $route = new Route(path: '/', viewDirectory: $this->viewDirectory, viewGroup: 'frontend', language: $german);
+        $localeHandler = $this->createLocaleHandler(language: $english);
+
+        $route->loadLocalizedText(fileTitle: 'detail', localeHandler: $localeHandler);
+
+        $this->assertSame([], $localeHandler->getAllText());
+    }
+
+    public function testFixedLanguageAndRequestLanguageThrow(): void
+    {
+        $this->expectException(LogicException::class);
+
+        new Route(
+            path: '/',
+            viewDirectory: $this->viewDirectory,
+            language: new Language(code: 'de', locale: 'de_CH.UTF-8'),
+            usesRequestLanguage: true,
+        );
     }
 }

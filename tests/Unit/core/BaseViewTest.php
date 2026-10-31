@@ -17,6 +17,7 @@ use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\InputParameter;
 use actra\yuf\core\InputParameterCollection;
 use actra\yuf\core\InputSourceEnum;
+use actra\yuf\core\Language;
 use actra\yuf\core\RecordingResponseSender;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\exception\NotFoundException;
@@ -555,5 +556,14 @@ final class BaseViewTest extends TestCase
         new ConfigurableTestView(context: $context)->callRespondNotModifiedIfUnchanged(dataVersion: 'v1');
 
         $this->assertNull($context->content->eTag);
+    }
+
+    public function testVersionOfARouteWithRequestLanguageContainsTheLanguage(): void
+    {
+        $context = ViewContextFactory::create(requestLanguage: new Language(code: 'en', locale: 'en_US.UTF-8'));
+
+        new ConfigurableTestView(context: $context)->callRespondNotModifiedIfUnchanged(dataVersion: 'v1');
+
+        $this->assertSame(hash(algo: 'sha256', data: 'v1|en'), $context->content->eTag);
     }
 }

@@ -45,7 +45,8 @@ $cart = $session->getStruct(key: 'cart', map: Cart::fromSessionArray(...)); // ?
   that never uses it takes no lock, sends no cookie and creates no session file.
 - A route with a language remembers it as preferred language only if the view used the session anyway (login, form
   with CSRF protection): the language alone never starts a session or takes its lock. `/` reads it only from an
-  existing session, else it uses the browser language.
+  existing session, else it uses the browser language. A route with `usesRequestLanguage` reads the language of an
+  existing session and never writes it; `LanguageSwitch` does ([setup.md](setup.md#languages)).
 - `prepareHttpResponse()` writes and closes a started session after the view, so parallel requests of the user do not
   wait for each other. Afterwards every write (`set()`, `remove()`, `regenerateId()`, `AuthSession::logIn()`, a new
   CSRF token, …) and a first access throw a `LogicException`: write the session while the view runs, not in a

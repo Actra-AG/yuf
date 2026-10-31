@@ -31,6 +31,7 @@ use actra\yuf\core\Logger;
 use actra\yuf\core\NativeResponseSender;
 use actra\yuf\core\ProtocolEnum;
 use actra\yuf\core\RequestHandler;
+use actra\yuf\core\RequestLanguageProvider;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\core\RouteCollection;
 use actra\yuf\core\UnsupportedRequestMethodException;
@@ -123,7 +124,7 @@ final class Core
     public function __construct(
         CoreSettings $settings,
         HttpRequest $httpRequest,
-        private readonly ResponseSender $responseSender = new NativeResponseSender(),
+        public readonly ResponseSender $responseSender = new NativeResponseSender(),
     ) {
         $environment = $settings->environmentSettings;
         $this->environmentSettings = $environment;
@@ -311,6 +312,10 @@ final class Core
      * @param ?Closure(ViewContext): NavigationItemCollection $navigationProvider Builds the navigation of each request
      *                                        from its `ViewContext` (route, language, login); views read it with
      *                                        `ViewContext::getNavigation()`. `null`: no navigation of the framework
+     * @param ?RequestLanguageProvider $requestLanguageProvider Decides first about the language of the routes with
+     *                                        `usesRequestLanguage` (e.g. the profile language of the logged-in user,
+     *                                        see `RequestLanguageResolver`); `null`: the session, the browser and the
+     *                                        first language decide
      *
      * @throws InvalidArgumentException for an invalid template tag name
      * @throws LogicException if called twice, without a route or for a route without default content type
@@ -323,6 +328,7 @@ final class Core
         false|AbstractSessionHandler|null $individualSessionHandler = null,
         array $templateTags = [],
         ?Closure $navigationProvider = null,
+        ?RequestLanguageProvider $requestLanguageProvider = null,
     ): HttpResponse {
         if ($this->httpResponse !== null) {
             throw new LogicException(message: 'The HttpResponse is already prepared');
@@ -395,6 +401,7 @@ final class Core
             allowedDomains: $this->allowedDomains,
             session: $this->session,
             responseSender: $this->responseSender,
+            requestLanguageProvider: $requestLanguageProvider,
         );
         $exceptionHandler->setRequestHandler(requestHandler: $requestHandler);
         $resolvedRoute = $requestHandler->resolveRoute();

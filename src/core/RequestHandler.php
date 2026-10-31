@@ -21,12 +21,18 @@ final class RequestHandler
     public readonly int $countPathParts;
     public readonly RouteCollection $defaultRoutesByLanguage;
     /**
+     * The route with `usesRequestLanguage` and `isDefaultForLanguage`: the default route of every language without a
+     * default route of its own, `null` for none.
+     */
+    public readonly ?Route $defaultRequestLanguageRoute;
+    /**
      * The login path of the route collection (`RouteCollection::$loginPath`), `null` for none.
      */
     public readonly ?string $loginPath;
     /**
      * The language of the request: the first available language, after `resolveRoute()` the language of the route if
-     * it has one. Stays as far as resolved when `resolveRoute()` throws, so error pages use it.
+     * it has one, for a route with `usesRequestLanguage` the language of `RequestLanguageResolver`. Stays as far as
+     * resolved when `resolveRoute()` throws, so error pages use it.
      */
     public private(set) ?Language $language = null;
     /**
@@ -46,6 +52,11 @@ final class RequestHandler
      *                          (`Session::isActive()`: a visitor without a session cookie gets none; `Core::$session`,
      *                          `null` without sessions)
      * @param ResponseSender $responseSender Sends the redirect of "/"
+     * @param ?RequestLanguageProvider $requestLanguageProvider Decides first about the language of a route with
+     *                                                          `usesRequestLanguage` (see `RequestLanguageResolver`)
+     *
+     * @throws LogicException if two routes are the default of the same language or two routes with
+     *                        `usesRequestLanguage` are default routes
      */
     public function __construct(
         private readonly HttpRequest $httpRequest,
@@ -54,6 +65,7 @@ final class RequestHandler
         private readonly array $allowedDomains,
         private readonly ?Session $session,
         private readonly ResponseSender $responseSender = new NativeResponseSender(),
+        private readonly ?RequestLanguageProvider $requestLanguageProvider = null,
     ) {
         if (!$availableLanguages->isEmpty()) {
             $this->language = $availableLanguages->getFirstLanguage();
@@ -62,6 +74,7 @@ final class RequestHandler
         $this->countPathParts = count(value: $this->pathParts);
         $this->fileName = trim(string: array_last(array: $this->pathParts));
         $this->defaultRoutesByLanguage = $this->initDefaultRoutes();
+        $this->defaultRequestLanguageRoute = $this->findDefaultRequestLanguageRoute();
         $this->loginPath = $routeCollection->loginPath;
     }
 
@@ -105,7 +118,14 @@ final class RequestHandler
         if ($forceFileName !== null && $forceFileName !== '') {
             $this->fileName = $forceFileName;
         }
-        $routeLanguage = $route->language;
+        $routeLanguage = $route->usesRequestLanguage
+            ? new RequestLanguageResolver(
+                httpRequest: $this->httpRequest,
+                availableLanguages: $this->availableLanguages,
+                session: $this->session,
+                requestLanguageProvider: $this->requestLanguageProvider,
+            )->resolve()
+            : $route->language;
         if ($routeLanguage !== null) {
             $this->language = $routeLanguage;
         }
@@ -245,6 +265,27 @@ final class RequestHandler
         return $defaultRoutes;
     }
 
+    /**
+     * @throws LogicException if two routes with `usesRequestLanguage` are default routes
+     */
+    private function findDefaultRequestLanguageRoute(): ?Route
+    {
+        $defaultRoute = null;
+        foreach ($this->routeCollection->routes as $route) {
+            if (!$route->isDefaultForLanguage || !$route->usesRequestLanguage) {
+                continue;
+            }
+            if ($defaultRoute !== null) {
+                throw new LogicException(
+                    message: 'Default route with the language of the request is already set: ' . $defaultRoute->path,
+                );
+            }
+            $defaultRoute = $route;
+        }
+
+        return $defaultRoute;
+    }
+
     private function initRoute(): RoutePathMatch
     {
         $pathMatch = $this->findRouteOfPath();
@@ -329,9 +370,10 @@ final class RequestHandler
     /**
      * The default route that a request of "/" is redirected to: the route of the language that the session
      * remembers (only an active session is asked), else of the first browser language that has one, else the first
-     * default route.
+     * default route, else the default route with `usesRequestLanguage`.
      *
-     * @throws LogicException if there is no default route (`isDefaultForLanguage: true` with an available language)
+     * @throws LogicException if there is no default route (`isDefaultForLanguage: true` with an available language or
+     *                        `usesRequestLanguage`)
      */
     public function findRouteForRootRequest(): Route
     {
@@ -353,6 +395,9 @@ final class RequestHandler
         }
         // None in the accepted languages: the first default route
         if (!$defaultRoutesByLanguage->hasRoutes()) {
+            if ($this->defaultRequestLanguageRoute !== null) {
+                return $this->defaultRequestLanguageRoute;
+            }
             throw new LogicException(
                 message: 'The request of "/" has no route to be redirected to: set isDefaultForLanguage: true on a'
                     . ' route with an available language.',
@@ -362,6 +407,9 @@ final class RequestHandler
         return $defaultRoutesByLanguage->getFirstRoute();
     }
 
+    /**
+     * The path of the default route of the language of the request (`findDefaultRouteForLanguage()`), `/` without.
+     */
     public function getLanguageRoot(): string
     {
         foreach ($this->defaultRoutesByLanguage->routes as $route) {
@@ -369,6 +417,20 @@ final class RequestHandler
                 return $route->path;
             }
         }
+        if ($this->language !== null && $this->defaultRequestLanguageRoute !== null) {
+            return $this->defaultRequestLanguageRoute->path;
+        }
+
         return '/';
+    }
+
+    /**
+     * The default route of the language: the one with this fixed language, else the default route with
+     * `usesRequestLanguage` (it serves every language), `null` for none.
+     */
+    public function findDefaultRouteForLanguage(string $languageCode): ?Route
+    {
+        return $this->defaultRoutesByLanguage->getRouteForLanguage(languageCode: $languageCode)
+            ?? $this->defaultRequestLanguageRoute;
     }
 }

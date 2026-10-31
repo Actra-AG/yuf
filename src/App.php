@@ -15,8 +15,10 @@ use actra\yuf\core\ContentType;
 use actra\yuf\core\HtmlFileExtensionEnum;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\Language;
+use actra\yuf\core\LanguageSwitch;
 use actra\yuf\core\Logger;
 use actra\yuf\core\LoginRedirect;
+use actra\yuf\core\RequestLanguageProvider;
 use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
 use actra\yuf\core\ViewContext;
@@ -69,6 +71,7 @@ final readonly class App
         private ?string $loginPath = null,
         private array $templateTags = [],
         private ?Closure $navigationProvider = null,
+        private ?RequestLanguageProvider $requestLanguageProvider = null,
     ) {}
 
     /**
@@ -159,7 +162,7 @@ final readonly class App
      * Adds a route of HTML pages: `<path><file title>.html` renders
      * `<view directory>/<viewGroup>/html/<file title>.html` with the view class
      * `<viewClassPrefix>\view\<viewGroup>\php\<file title>`, if it exists. The first HTML route of each language is the
-     * one that "/" redirects to.
+     * one that "/" redirects to; without one, the first HTML route with `usesRequestLanguage`.
      *
      * @param string $defaultFileTitle The page of a request of the path itself (`/news/`), without extension
      * @param ?string $languageCode A language added with `withLanguage()`; `null`: the first language (if any)
@@ -168,8 +171,11 @@ final readonly class App
      *     default, `NONE` for paths without extension (`/about`); the other one is a 404
      * @param bool $redirectDefaultFileName The default page has one URL: a request of its file name (`/home.html`) is
      *     redirected permanently to the path of the route (`/`); `false`: both URLs show the page
+     * @param bool $usesRequestLanguage One path for all languages: the language is resolved per request (see
+     *     `withRequestLanguageProvider()`) instead of `languageCode`
      *
-     * @throws LogicException if the language is not added or the path is already used
+     * @throws LogicException if the language is not added, the path is already used or `languageCode` is given with
+     *     `usesRequestLanguage`
      */
     public function withHtmlRoute(
         string $path,
@@ -179,8 +185,12 @@ final readonly class App
         ?ViewFactory $viewFactory = null,
         HtmlFileExtensionEnum $fileExtension = HtmlFileExtensionEnum::HTML,
         bool $redirectDefaultFileName = true,
+        bool $usesRequestLanguage = false,
     ): App {
-        $language = $this->resolveLanguage(languageCode: $languageCode);
+        $language = $this->resolveRouteLanguage(languageCode: $languageCode, usesRequestLanguage: $usesRequestLanguage);
+        $isDefaultRoute = $usesRequestLanguage
+            ? $this->findDefaultRequestLanguageRoute() === null
+            : $language !== null && $this->findDefaultRoute(language: $language) === null;
 
         return $this->withRoute(
             route: new Route(
@@ -189,12 +199,13 @@ final readonly class App
                 viewClassPrefix: $this->viewClassPrefix,
                 viewGroup: $viewGroup,
                 defaultFileName: $fileExtension->createFileName(fileTitle: $defaultFileTitle),
-                isDefaultForLanguage: $language !== null && $this->findDefaultRoute(language: $language) === null,
+                isDefaultForLanguage: $isDefaultRoute,
                 defaultContentType: ContentType::createHtml(),
                 language: $language,
                 acceptedExtension: $fileExtension->value,
                 viewFactory: $viewFactory,
                 redirectDefaultFileName: $redirectDefaultFileName,
+                usesRequestLanguage: $usesRequestLanguage,
             ),
         );
     }
@@ -204,8 +215,11 @@ final readonly class App
      * accepted. Never the target of "/".
      *
      * @param ?string $languageCode A language added with `withLanguage()`; `null`: the first language (if any)
+     * @param bool $usesRequestLanguage The language is resolved per request (see `withRequestLanguageProvider()`)
+     *     instead of `languageCode`
      *
-     * @throws LogicException if the language is not added or the path is already used
+     * @throws LogicException if the language is not added, the path is already used or `languageCode` is given with
+     *     `usesRequestLanguage`
      */
     public function withFileRoute(
         string $path,
@@ -214,6 +228,7 @@ final readonly class App
         string $defaultFileName = '',
         ?string $languageCode = null,
         ?ViewFactory $viewFactory = null,
+        bool $usesRequestLanguage = false,
     ): App {
         return $this->withRoute(
             route: new Route(
@@ -223,9 +238,13 @@ final readonly class App
                 viewGroup: $viewGroup,
                 defaultFileName: $defaultFileName,
                 defaultContentType: $contentType,
-                language: $this->resolveLanguage(languageCode: $languageCode),
+                language: $this->resolveRouteLanguage(
+                    languageCode: $languageCode,
+                    usesRequestLanguage: $usesRequestLanguage,
+                ),
                 acceptedExtension: $contentType->type,
                 viewFactory: $viewFactory,
+                usesRequestLanguage: $usesRequestLanguage,
             ),
         );
     }
@@ -235,8 +254,11 @@ final readonly class App
      * with an extension (`.json`, `.html`) is a 404. Never the target of "/".
      *
      * @param ?string $languageCode A language added with `withLanguage()`; `null`: the first language (if any)
+     * @param bool $usesRequestLanguage The language is resolved per request (see `withRequestLanguageProvider()`)
+     *     instead of `languageCode`
      *
-     * @throws LogicException if the language is not added or the path is already used
+     * @throws LogicException if the language is not added, the path is already used or `languageCode` is given with
+     *     `usesRequestLanguage`
      */
     public function withJsonRoute(
         string $path,
@@ -244,6 +266,7 @@ final readonly class App
         string $defaultFileName = '',
         ?string $languageCode = null,
         ?ViewFactory $viewFactory = null,
+        bool $usesRequestLanguage = false,
     ): App {
         return $this->withRoute(
             route: new Route(
@@ -253,9 +276,13 @@ final readonly class App
                 viewGroup: $viewGroup,
                 defaultFileName: $defaultFileName,
                 defaultContentType: ContentType::createJson(),
-                language: $this->resolveLanguage(languageCode: $languageCode),
+                language: $this->resolveRouteLanguage(
+                    languageCode: $languageCode,
+                    usesRequestLanguage: $usesRequestLanguage,
+                ),
                 acceptedExtension: '',
                 viewFactory: $viewFactory,
+                usesRequestLanguage: $usesRequestLanguage,
             ),
         );
     }
@@ -264,8 +291,8 @@ final readonly class App
      * Adds a fully configured route (`viewCallback`, `forceFileName`, path variables, …). Its language must be the
      * object of `getLanguage()`.
      *
-     * @throws LogicException if the language is not added, the language has a default route already or the path is
-     *     already used
+     * @throws LogicException if the language is not added, the language (or the language of the request) has a
+     *     default route already or the path is already used
      */
     public function withRoute(Route $route): App
     {
@@ -292,7 +319,70 @@ final readonly class App
             }
         }
 
+        if (
+            $route->usesRequestLanguage
+            && $route->isDefaultForLanguage
+            && $this->findDefaultRequestLanguageRoute() !== null
+        ) {
+            throw new LogicException(
+                message: 'There is a default route with the language of the request already, the route "'
+                    . $route->path . '" cannot be the default too.',
+            );
+        }
+
         return clone($this, ['routes' => [...$this->routes, $route]]);
+    }
+
+    /**
+     * Adds the language switcher of the routes with `usesRequestLanguage` (`LanguageSwitch`): a request of the path
+     * with `language` and `returnTo` (query or POST) sets the language of the session and redirects (303) back to
+     * `returnTo`, else to `defaultPath`. Links: `LanguageSwitch::createUri(switchPath: '/language/', languageCode:
+     * 'en', returnUri: $httpRequest->getUri())`.
+     *
+     * @throws LogicException if the path is already used
+     * @throws InvalidArgumentException if the default path is no local path
+     */
+    public function withLanguageSwitchRoute(string $path, string $defaultPath = '/'): App
+    {
+        if (!LoginRedirect::isLocalPath(uri: $defaultPath)) {
+            throw new InvalidArgumentException(message: 'The default path must be a local path starting with "/"');
+        }
+        $core = $this->core;
+
+        return $this->withRoute(
+            route: new Route(
+                path: $path,
+                viewDirectory: $core->viewDirectory,
+                viewCallback: static function () use ($core, $defaultPath): never {
+                    $session = $core->session ?? throw new LogicException(
+                        message: 'The language switcher needs a session: remove withoutSession().',
+                    );
+                    $returnPath = new LanguageSwitch(
+                        httpRequest: $core->httpRequest,
+                        session: $session,
+                        availableLanguages: $core->availableLanguages,
+                    )->apply(defaultPath: $defaultPath);
+                    $session->close();
+                    HttpResponse::redirectAndExit(
+                        relativeOrAbsoluteUri: $returnPath,
+                        httpRequest: $core->httpRequest,
+                        responseSender: $core->responseSender,
+                    );
+                },
+                defaultContentType: ContentType::createHtml(),
+                acceptedExtension: '',
+            ),
+        );
+    }
+
+    /**
+     * Decides first about the language of the routes with `usesRequestLanguage`, e.g. the profile language of the
+     * logged-in user. Without it (or if it returns `null`): the language chosen in the session
+     * (`SessionPreferredLanguage`), then the browser language, then the first language (`RequestLanguageResolver`).
+     */
+    public function withRequestLanguageProvider(RequestLanguageProvider $requestLanguageProvider): App
+    {
+        return clone($this, ['requestLanguageProvider' => $requestLanguageProvider]);
     }
 
     /**
@@ -419,6 +509,7 @@ final readonly class App
             individualSessionHandler: $app->hasSession ? $app->sessionHandler : false,
             templateTags: $app->templateTags,
             navigationProvider: $app->navigationProvider,
+            requestLanguageProvider: $app->requestLanguageProvider,
         );
     }
 
@@ -448,6 +539,32 @@ final readonly class App
         }
 
         return $this->getLanguage(code: $languageCode);
+    }
+
+    /**
+     * @throws LogicException if the language is not added or given with `usesRequestLanguage`
+     */
+    private function resolveRouteLanguage(?string $languageCode, bool $usesRequestLanguage): ?Language
+    {
+        if (!$usesRequestLanguage) {
+            return $this->resolveLanguage(languageCode: $languageCode);
+        }
+        if ($languageCode !== null) {
+            throw new LogicException(
+                message: 'A route with usesRequestLanguage has no fixed language: remove languageCode: \''
+                    . $languageCode . '\'.',
+            );
+        }
+
+        return null;
+    }
+
+    private function findDefaultRequestLanguageRoute(): ?Route
+    {
+        return array_find(
+            array: $this->routes,
+            callback: static fn(Route $route): bool => $route->isDefaultForLanguage && $route->usesRequestLanguage,
+        );
     }
 
     private function findDefaultRoute(Language $language): ?Route

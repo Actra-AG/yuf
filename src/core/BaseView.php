@@ -223,12 +223,18 @@ abstract class BaseView
      * not stored either if the view starts the session later (e.g. a form with CSRF protection).
      *
      * @param string $dataVersion Everything the page depends on: e.g. the `updated_at` of the article, the language and
-     *                            the version of the application (so a deployment with changed templates is seen)
+     *                            the version of the application (so a deployment with changed templates is seen). On a
+     *                            route with `usesRequestLanguage`, yuf adds the language of the request itself
      */
     protected function respondNotModifiedIfUnchanged(string $dataVersion): void
     {
         if ($this->context->sessionHandler?->isStarted() === true) {
             return;
+        }
+        if ($this->context->route->usesRequestLanguage) {
+            // The same path has another content per language
+            $language = $this->context->locale->language;
+            $dataVersion .= '|' . ($language === null ? '' : $language->code);
         }
         $eTag = hash(algo: 'sha256', data: $dataVersion);
         if (HttpResponse::isETagCurrent(httpRequest: $this->context->httpRequest, eTag: $eTag)) {

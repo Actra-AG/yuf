@@ -21,7 +21,8 @@ App::fromEnvironment(envFilePath: __DIR__ . '/../.env.php', copyrightYear: 2026)
 ```
 
 - `withLanguage()`: before the routes. The first language is the language of every route that names none
-  (`languageCode:`).
+  (`languageCode:`). One path per language (`/` and `/en/`) or one path for all languages:
+  [Languages](#languages).
 - `withHtmlRoute()`: `<path><name>.html` renders `app/view/<viewGroup>/html/<name>.html` with the view class
   `app\view\<viewGroup>\php\<name>`, if it exists (or the views of `viewFactory:`, e.g. a `ViewMap`). The first HTML
   route of each language is the target of the redirect of `/`. Without any route, `App` serves `app/view/frontend/` at
@@ -36,6 +37,8 @@ App::fromEnvironment(envFilePath: __DIR__ . '/../.env.php', copyrightYear: 2026)
 - `withFileRoute()`: CSV, PDF, JSON and other files, only with the extension of the content type.
 - `withJsonRoute()`: JSON at paths without extension (`/api/v1/domains`: REST API, webhooks, cron calls); a path with
   extension is a 404.
+- `usesRequestLanguage: true` (all three route methods), `withRequestLanguageProvider()`, `withLanguageSwitchRoute()`:
+  one path for all languages ([Languages](#languages)).
 - `withCsp()`, `withoutSession()`, `withSessionHandler()`, `withLogger()`, `withLoginPath()`, `withTemplateTags()`,
   `withNavigation()`, `withExceptionHandler()`: the arguments of `Core::prepareHttpResponse()`.
 - `withFileSessions(sessionSettings: new SessionSettings(maxLifeTime: 43200))`: the default session files with own
@@ -61,6 +64,47 @@ file, sets `error_reporting()` and the time zone, creates the directories and th
 globals. A request without HTTPS gets the redirect to HTTPS as response of `prepareHttpResponse()`, but only for a
 host of `allowedDomains` (an unknown host gets a 404 without redirect). Tests build `Core`
 without globals (see [testing.md](testing.md)).
+
+## Languages
+
+The texts of a page are in language files of its view group: `app/view/<viewGroup>/language/<code>/global.lang.php`
+for every page and `<fileTitle>.lang.php` for one page (`$txt['key'] = 'text';`), read with `{tst:lang key='…'}` or
+`$this->context->locale->getText(key: '…')`. The language of the request also sets the system locale (`setlocale()`,
+numbers stay `en_US`), the `Content-Language` header and the language of the error pages.
+
+A route has either a fixed language or the language of the request:
+
+- Fixed language (default): one path per language, e.g. a public site with `/` (`de`) and `/en/` (`en`, with
+  `languageCode: 'en'`). The first HTML route of each language is the target of `/`; a session that the view used
+  anyway remembers the language for the next request of `/` ([session-and-login.md](session-and-login.md#lifecycle)).
+- Language of the request (`usesRequestLanguage: true`): one path for all languages, e.g. a backend where every user
+  has a session (no search engines). The language of each request is the first available one of:
+  1. the `RequestLanguageProvider` of `withRequestLanguageProvider()`, e.g. the profile language of the logged-in user
+     (it gets the request and the session; `null` decides nothing),
+  2. the language chosen in the session (`SessionPreferredLanguage`, only read from an existing session),
+  3. the browser language (`Accept-Language`),
+  4. the first language of `withLanguage()`.
+
+  The first HTML route with `usesRequestLanguage` is the target of `/` if no route with a fixed language is.
+
+```php
+App::fromEnvironment(envFilePath: __DIR__ . '/../.env.php', copyrightYear: 2026)
+    ->withLanguage(code: 'de', locale: 'de_CH.UTF-8')
+    ->withLanguage(code: 'en', locale: 'en_GB.UTF-8')
+    ->withRequestLanguageProvider(requestLanguageProvider: new ProfileLanguageProvider(…))
+    ->withHtmlRoute(path: '/', viewGroup: 'backend', usesRequestLanguage: true)
+    ->withLanguageSwitchRoute(path: '/language/')
+    ->run();
+```
+
+`withLanguageSwitchRoute()` serves the language switcher (`LanguageSwitch`): a link or form (GET or POST) with
+`language` and `returnTo` sets the language of the session and redirects back (only to a local path, else to `/`). A
+provider that returns a language (the profile) still wins, so a switcher in a profile-based backend saves the profile
+too. Links:
+
+```php
+LanguageSwitch::createUri(switchPath: '/language/', languageCode: 'en', returnUri: $this->context->httpRequest->getUri())
+```
 
 ## Environment settings
 

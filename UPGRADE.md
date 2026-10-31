@@ -4,6 +4,21 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v8.6.0 (2026-10-31)
+
+- New routes with the language of the request: one path for all languages (e.g. a backend) instead of one path per
+  language ([docs/setup.md](docs/setup.md#languages)). `usesRequestLanguage: true` on `withHtmlRoute()`,
+  `withFileRoute()`, `withJsonRoute()` and `Route`; the language comes from the `RequestLanguageProvider` of
+  `App::withRequestLanguageProvider()` (or `Core::prepareHttpResponse(requestLanguageProvider:)`, e.g. the profile
+  language), else the session, the browser, the first language (`RequestLanguageResolver`). It drives the language
+  files, `{tst:lang}`, `LocaleHandler`, the system locale, `Content-Language` and the error pages, like a fixed
+  language. Routes with a fixed language are unchanged.
+- New `App::withLanguageSwitchRoute(path:)` and `LanguageSwitch`: a link or form sets the language of the session and
+  redirects back.
+- New `RequestHandler::findDefaultRouteForLanguage()` and `$defaultRequestLanguageRoute`; `Core::$responseSender` is
+  public (read-only).
+- `BaseView::respondNotModifiedIfUnchanged()` adds the language to the version on routes with `usesRequestLanguage`.
+
 ## v8.5.0 (2026-10-31)
 
 - New `App` shortcuts for a shorter front controller ([docs/setup.md](docs/setup.md#application-entry-point)):

@@ -194,7 +194,7 @@ public function execute(): void
 {
     $article = $this->articles->findById(id: $this->getRequiredPathVarAsInt(nr: 1));
     $this->respondNotModifiedIfUnchanged(
-        dataVersion: $article->updatedAt->format(format: 'c') . '|' . $this->context->route->language?->code . '|'
+        dataVersion: $article->updatedAt->format(format: 'c') . '|' . $this->context->locale->language?->code . '|'
             . App::VERSION,
     );
     // Render the page as usual

@@ -350,9 +350,7 @@ class ExceptionHandler
         }
         $localeHandler = new LocaleHandler(language: $language, availableLanguages: $context->availableLanguages);
         $localeHandler->applySystemLocale();
-        $defaultRouteForLanguage = $requestHandler->defaultRoutesByLanguage->getRouteForLanguage(
-            languageCode: $language->code,
-        );
+        $defaultRouteForLanguage = $requestHandler->findDefaultRouteForLanguage(languageCode: $language->code);
         $defaultRouteForLanguage?->loadLocalizedText(fileTitle: '', localeHandler: $localeHandler);
 
         return ($context->createTemplateEngine)($localeHandler);

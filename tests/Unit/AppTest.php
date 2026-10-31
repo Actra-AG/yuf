@@ -19,6 +19,7 @@ use actra\yuf\core\HtmlFileExtensionEnum;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\Language;
+use actra\yuf\core\LocaleHandler;
 use actra\yuf\core\RecordingResponseSender;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\core\Route;
@@ -28,9 +29,11 @@ use actra\yuf\exception\ExceptionHandler;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\layout\NavigationItemCollection;
 use actra\yuf\session\FileSessionHandler;
+use actra\yuf\session\SessionPreferredLanguage;
 use actra\yuf\session\SessionSettings;
 use actra\yuf\tests\Double\core\ConfigurableTestView;
 use actra\yuf\tests\Double\core\CoreWorkDirectory;
+use actra\yuf\tests\Double\core\FixedRequestLanguageProvider;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\core\RecordingLogger;
 use actra\yuf\tests\Double\core\TestView;
@@ -67,6 +70,7 @@ final class AppTest extends TestCase
             restore_exception_handler();
         }
         $this->workDirectory->cleanUp();
+        unset($_SESSION); // Sessions are disabled in the CLI
     }
 
     /**
@@ -572,5 +576,146 @@ final class AppTest extends TestCase
         $this->expectExceptionMessageIs('The HttpResponse is already prepared');
 
         $app->prepare();
+    }
+
+    private function writeLanguageFile(string $languageCode, string $fileName, string $text): void
+    {
+        $directory = $this->workDirectory->viewDirectory . 'frontend/language/' . $languageCode . '/';
+        if (!is_dir(filename: $directory)) {
+            mkdir(directory: $directory, recursive: true);
+        }
+        file_put_contents(
+            filename: $directory . $fileName,
+            data: "<?php\n\$txt = ['" . $fileName . "' => '" . $text . "'];\n",
+        );
+    }
+
+    public function testHtmlRouteWithRequestLanguageUsesTheLanguageOfTheProvider(): void
+    {
+        $this->writeLanguageFile(languageCode: 'de', fileName: 'global.lang.php', text: 'Hallo');
+        $this->writeLanguageFile(languageCode: 'en', fileName: 'global.lang.php', text: 'Hello');
+        $this->writeLanguageFile(languageCode: 'en', fileName: 'status.lang.php', text: 'Status');
+        $locale = null;
+        $route = null;
+        $app = $this->createApp(uri: '/status.html', acceptLanguage: 'de')
+            ->withLanguage(code: 'de', locale: 'de_CH.UTF-8')
+            ->withLanguage(code: 'en', locale: 'en_US.UTF-8')
+            ->withRequestLanguageProvider(requestLanguageProvider: new FixedRequestLanguageProvider(languageCode: 'en'))
+            ->withHtmlRoute(
+                path: '/',
+                viewGroup: 'frontend',
+                viewFactory: new ViewMap()->add(
+                    fileTitle: 'status',
+                    create: static function (ViewContext $context) use (&$locale, &$route): BaseView {
+                        $locale = $context->locale;
+                        $route = $context->route;
+                        $view = new ConfigurableTestView(context: $context);
+                        $view->callSetContent(contentString: '<p>' . $context->locale->getText(key: 'global.lang.php')
+                            . '</p>');
+
+                        return $view;
+                    },
+                ),
+                usesRequestLanguage: true,
+            );
+
+        $httpResponse = $app->prepare();
+
+        $this->assertSame('<p>Hello</p>', $httpResponse->getContentString());
+        $this->assertSame('en', $httpResponse->getHeader(key: 'Content-Language'));
+        $this->assertInstanceOf(LocaleHandler::class, $locale);
+        $this->assertSame($app->getLanguage(code: 'en'), $locale->language);
+        $this->assertSame(['global.lang.php' => 'Hello', 'status.lang.php' => 'Status'], $locale->getAllText());
+        $this->assertInstanceOf(Route::class, $route);
+        $this->assertNull($route->language);
+        $this->assertTrue($route->isDefaultForLanguage);
+    }
+
+    public function testHtmlRouteWithRequestLanguageUsesTheBrowserLanguage(): void
+    {
+        $httpResponse = $this->createApp(uri: '/sample.html', acceptLanguage: 'en')
+            ->withLanguage(code: 'de', locale: 'de_CH.UTF-8')
+            ->withLanguage(code: 'en', locale: 'en_US.UTF-8')
+            ->withHtmlRoute(path: '/', viewGroup: 'frontend', usesRequestLanguage: true)
+            ->prepare();
+
+        $this->assertSame('en', $httpResponse->getHeader(key: 'Content-Language'));
+    }
+
+    public function testRouteWithRequestLanguageAndALanguageCodeThrows(): void
+    {
+        $app = $this->createApp()->withLanguage(code: 'de', locale: 'de_CH.UTF-8');
+
+        $this->expectException(LogicException::class);
+
+        $app->withJsonRoute(path: '/api/', viewGroup: 'frontend', languageCode: 'de', usesRequestLanguage: true);
+    }
+
+    public function testSecondDefaultRouteWithRequestLanguageThrows(): void
+    {
+        $app = $this->createApp()->withHtmlRoute(path: '/', viewGroup: 'frontend', usesRequestLanguage: true);
+
+        $this->expectException(LogicException::class);
+
+        $app->withRoute(route: new Route(
+            path: '/other/',
+            viewDirectory: $app->core->viewDirectory,
+            isDefaultForLanguage: true,
+            usesRequestLanguage: true,
+        ));
+    }
+
+    public function testOnlyTheFirstHtmlRouteWithRequestLanguageIsTheDefault(): void
+    {
+        $redirect = $this->prepareRedirect(
+            configure: static fn(App $app): App => $app
+                ->withLanguage(code: 'de', locale: 'de_CH.UTF-8')
+                ->withHtmlRoute(path: '/backend/', viewGroup: 'frontend', usesRequestLanguage: true)
+                ->withHtmlRoute(path: '/other/', viewGroup: 'frontend', usesRequestLanguage: true),
+        );
+
+        $this->assertSame('https://example.com/backend/', $redirect->getHeader(key: 'Location'));
+    }
+
+    public function testLanguageSwitchRouteSetsTheLanguageOfTheSessionAndRedirectsBack(): void
+    {
+        $_SESSION = [];
+        $sessionHandler = new NonStartingSessionHandler();
+        $app = null;
+        $redirect = RecordingResponseSender::capture(
+            action: function (ResponseSender $responseSender) use ($sessionHandler, &$app): void {
+                $app = App::fromCore(
+                    core: new Core(
+                        settings: $this->workDirectory->createSettings(),
+                        httpRequest: HttpRequestFactory::create(
+                            uri: '/language/?language=en&returnTo=%2Fdomains.html',
+                            queryParameters: ['language' => 'en', 'returnTo' => '/domains.html'],
+                        ),
+                        responseSender: $responseSender,
+                    ),
+                )
+                    ->withLogger(logger: new RecordingLogger())
+                    ->withSessionHandler(sessionHandler: $sessionHandler)
+                    ->withLanguage(code: 'de', locale: 'de_CH.UTF-8')
+                    ->withLanguage(code: 'en', locale: 'en_US.UTF-8')
+                    ->withHtmlRoute(path: '/', viewGroup: 'frontend', usesRequestLanguage: true)
+                    ->withLanguageSwitchRoute(path: '/language/');
+                $app->prepare();
+            },
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_SEE_OTHER, $redirect->httpStatusCode);
+        $this->assertSame('https://example.com/domains.html', $redirect->getHeader(key: 'Location'));
+        $this->assertInstanceOf(App::class, $app);
+        $this->assertNotNull($app->core->session);
+        $this->assertSame('en', new SessionPreferredLanguage(session: $app->core->session)->getCode());
+        $this->assertSame(1, $sessionHandler->closes);
+    }
+
+    public function testLanguageSwitchRouteNeedsALocalDefaultPath(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        $this->createApp()->withLanguageSwitchRoute(path: '/language/', defaultPath: 'https://example.org/');
     }
 }
