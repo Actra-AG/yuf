@@ -67,8 +67,8 @@ final class InputFieldMaxLengthTest extends TestCase
         $form = new Form(
             context: FormContextFactory::create(),
             name: 'maxLengthForm',
-            csrfProtection: false,
             messages: FormMessages::german(),
+            csrfProtection: false,
         );
         $field = $this->createField();
         $form->addField(formField: $field);

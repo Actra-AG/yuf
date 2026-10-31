@@ -318,10 +318,10 @@ final class MicrosoftClientCredentialsTokenProviderTest extends TestCase
             tenantId: 'tenant-1',
             clientId: 'client-1',
             clientSecret: MicrosoftClientCredentialsTokenProviderTest::SECRET,
+            tokenCache: $tokenCache,
             scope: $scope,
             authorityUrl: $this->server->url(''),
             clock: $this->clock,
-            tokenCache: $tokenCache,
         );
     }
 

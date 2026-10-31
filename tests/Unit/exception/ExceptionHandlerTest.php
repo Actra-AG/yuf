@@ -407,7 +407,7 @@ final class ExceptionHandlerTest extends TestCase
         bool $isDebug = false,
         ?ContentType $contentType = null,
     ): ExceptionHandler {
-        $httpRequest = HttpRequestFactory::create(uri: $uri, method: $method);
+        $httpRequest = HttpRequestFactory::create(method: $method, uri: $uri);
         $handler = $this->register(context: $this->createContext(isDebug: $isDebug, httpRequest: $httpRequest));
         $handler->setRequestHandler(
             requestHandler: new RequestHandler(

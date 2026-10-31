@@ -502,8 +502,8 @@ final class BaseViewTest extends TestCase
             action: static function (ResponseSender $sender): void {
                 new ConfigurableTestView(
                     context: ViewContextFactory::create(
-                        httpRequest: HttpRequestFactory::create(body: '{not json'),
                         contentType: ContentType::createJson(),
+                        httpRequest: HttpRequestFactory::create(body: '{not json'),
                         responseSender: $sender,
                     ),
                 )->callGetJsonRequestBody();

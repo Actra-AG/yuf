@@ -241,7 +241,7 @@ final class AuthenticatorTest extends TestCase
 
         $this->assertSame(3, $counter->value);
         $counts = array_count_values(
-            array: array_map(array: $results, callback: static fn(AuthResultEnum $result): string => $result->name),
+            array: array_map(callback: static fn(AuthResultEnum $result): string => $result->name, array: $results),
         );
         $this->assertSame(
             [AuthResultEnum::ERROR_WRONG_PASSWORD->name => 3, AuthResultEnum::ERROR_OUT_TRIED->name => 7],

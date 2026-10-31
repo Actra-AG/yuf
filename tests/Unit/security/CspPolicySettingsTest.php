@@ -106,13 +106,13 @@ final class CspPolicySettingsTest extends TestCase
             fontSrc: '',
             imgSrc: '',
             objectSrc: '',
+            mediaSrc: 'https://media.example.com',
             scriptSrc: '',
             connectSrc: '',
             baseUri: '',
             formAction: '',
             frameSrc: '',
             frameAncestors: '',
-            mediaSrc: 'https://media.example.com',
         );
 
         $policy = $settings->getHttpHeaderDataString(nonce: 'abc', httpRequest: HttpRequestFactory::create());

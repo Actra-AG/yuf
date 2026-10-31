@@ -375,10 +375,10 @@ final class FileFieldValueTest extends TestCase
         $field = new FileField(
             name: 'file',
             label: HtmlText::fromHtml(html: 'File'),
-            maxFileUploadCount: 1,
-            tooManyFilesErrMsg: HtmlText::fromHtml(html: 'At most <b>[max]</b>'),
             storage: $this->storage,
             allowedFileTypes: [UploadFileType::plainText()],
+            maxFileUploadCount: 1,
+            tooManyFilesErrMsg: HtmlText::fromHtml(html: 'At most <b>[max]</b>'),
         );
 
         $errors = $this->errorsOf(field: $field, inputData: $this->uploads(names: ['a.txt', 'b.txt']));
@@ -415,10 +415,10 @@ final class FileFieldValueTest extends TestCase
         $field = new FileField(
             name: 'file',
             label: HtmlText::fromHtml(html: 'File'),
-            maxFileUploadCount: 3,
-            alreadyExistsErrorMessage: HtmlText::fromHtml(html: 'Twice <i>[fileName]</i>'),
             storage: $this->storage,
             allowedFileTypes: [UploadFileType::plainText()],
+            maxFileUploadCount: 3,
+            alreadyExistsErrorMessage: HtmlText::fromHtml(html: 'Twice <i>[fileName]</i>'),
         );
         $this->storage->preload($field->uniqueSessFileStorePointer, $this->storedFile(name: '<x>.txt'));
 

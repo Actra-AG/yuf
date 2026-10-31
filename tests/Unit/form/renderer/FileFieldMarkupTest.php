@@ -90,12 +90,12 @@ final class FileFieldMarkupTest extends TestCase
         $field = new FileField(
             name: 'file',
             label: HtmlText::fromHtml(html: 'File'),
+            storage: $this->createStorage(withFirstFile: $withFirstFile),
+            allowedFileTypes: [UploadFileType::plainText()],
             requiredError: HtmlText::fromHtml(html: 'Req'),
             maxFileUploadCount: $maxFileUploadCount,
             tooManyFilesErrMsg: $tooManyFilesErrMsg,
             alreadyExistsErrorMessage: $alreadyExistsErrorMessage,
-            storage: $this->createStorage(withFirstFile: $withFirstFile),
-            allowedFileTypes: [UploadFileType::plainText()],
         );
         $form->addField(formField: $field);
 
@@ -423,10 +423,10 @@ final class FileFieldMarkupTest extends TestCase
         $field = new FileField(
             name: 'file',
             label: HtmlText::fromHtml(html: 'File'),
-            requiredError: HtmlText::fromHtml(html: 'Req'),
-            maxFileUploadCount: $maxFileUploadCount,
             storage: $storage,
             allowedFileTypes: [UploadFileType::plainText()],
+            requiredError: HtmlText::fromHtml(html: 'Req'),
+            maxFileUploadCount: $maxFileUploadCount,
         );
         $field->messages = FormMessages::german();
         $field->validate(input: $this->request(['file_UID' => FileFieldMarkupTest::POINTER]));
@@ -489,9 +489,9 @@ final class FileFieldMarkupTest extends TestCase
         return new FileField(
             name: 'file',
             label: HtmlText::fromHtml(html: 'File'),
-            maxFileUploadCount: $maxFileUploadCount,
             storage: new InMemoryFileUploadStorage(),
             allowedFileTypes: [UploadFileType::plainText()],
+            maxFileUploadCount: $maxFileUploadCount,
         );
     }
 

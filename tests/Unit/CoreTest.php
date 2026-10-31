@@ -453,9 +453,9 @@ final class CoreTest extends TestCase
     {
         $core = $this->createCore(
             httpRequest: HttpRequestFactory::create(
+                uri: '/page.html?a=1',
                 protocol: ProtocolEnum::HTTP,
                 port: 80,
-                uri: '/page.html?a=1',
             ),
         );
 
@@ -477,9 +477,9 @@ final class CoreTest extends TestCase
         $core = $this->createCore(
             httpRequest: HttpRequestFactory::create(
                 host: 'evil.example',
+                uri: '/page.html',
                 protocol: ProtocolEnum::HTTP,
                 port: 80,
-                uri: '/page.html',
             ),
         );
 

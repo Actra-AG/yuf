@@ -30,9 +30,3 @@ This project follows the Actra coding standard, installed as development depende
 - Example app: `example/` (https://yuf.ddev.site/, uses the sources of `src/`).
 - Skeleton project: `../yuf-skeleton` (https://github.com/Actra-AG/yuf-skeleton), checked on every release
   (`vendor/actra/coding-standard/standards/versioning.md`, section 1).
-
-## Deviations from the global standard
-
-- Release cycle (temporary): while the new base of the Actra libraries is built, changes are collected into few,
-  big releases instead of short development cycles (`standards/versioning.md`, section 1). Reason: building the
-  foundation fast. Remove this deviation when the base is finished.

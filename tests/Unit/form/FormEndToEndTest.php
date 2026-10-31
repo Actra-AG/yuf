@@ -105,8 +105,8 @@ final class FormEndToEndTest extends TestCase
             label: $this->text('Email'),
             value: null,
             invalidError: $invalid,
-            requiredError: $required,
             mailDomainResolver: null,
+            requiredError: $required,
         );
         $this->password = new PasswordField(
             name: 'secret',
@@ -171,9 +171,9 @@ final class FormEndToEndTest extends TestCase
         $this->attachment = new FileField(
             name: 'attachment',
             label: $this->text('Attachment'),
-            maxFileUploadCount: 2,
             storage: $this->storage,
             allowedFileTypes: [UploadFileType::pdf()],
+            maxFileUploadCount: 2,
             fileTypeDetector: new FixedFileTypeDetector(defaultType: 'application/pdf'),
         );
 

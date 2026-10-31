@@ -4,6 +4,11 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v8.7.1 (2026-10-31)
+
+- Development only: `actra/coding-standard` ^2.0 (named arguments in the order of the parameters); no change for
+  projects.
+
 ## v8.7.0 (2026-10-31)
 
 - New `SentMailListener` for a log of sent mails ([docs/mail.md](docs/mail.md#log-of-sent-mails)):
