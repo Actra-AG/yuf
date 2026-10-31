@@ -345,7 +345,7 @@ final class RequestHandler
                 continue;
             }
             // The text between the variables is literal: a "." of the route path matches a dot only
-            $literalParts = preg_split(pattern: '#\$\{.*?\}#', subject: $routePath);
+            $literalParts = preg_split(pattern: '#\${.*?}#', subject: $routePath);
             $pattern = '#^' . implode(
                 separator: '(.*)',
                 array: array_map(
