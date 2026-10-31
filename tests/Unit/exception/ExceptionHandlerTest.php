@@ -19,6 +19,7 @@ use actra\yuf\core\Language;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\RecordingResponseSender;
 use actra\yuf\core\RequestHandler;
+use actra\yuf\core\RequestLanguageProvider;
 use actra\yuf\core\RequestMethodEnum;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\core\Route;
@@ -34,6 +35,7 @@ use actra\yuf\security\CspPolicySettings;
 use actra\yuf\security\SessionCsrfTokenSource;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
+use actra\yuf\tests\Double\core\FixedRequestLanguageProvider;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\core\RecordingLogger;
 use actra\yuf\tests\Double\exception\ContextExposingExceptionHandler;
@@ -695,6 +697,70 @@ final class ExceptionHandlerTest extends TestCase
         $this->assertStringContainsString('<html lang="en" class="notFound">', $content);
         $this->assertStringContainsString('<p id="root">/en/</p>', $content);
         $this->assertStringContainsString('<p id="file">index.html</p>', $content);
+        $this->assertSame('en', $response->getHeader(key: 'Content-Language'));
+    }
+
+    /**
+     * The error page of a path without route on an application whose default route has `usesRequestLanguage`.
+     */
+    private function createNotFoundResponseOfRequestLanguageRoute(
+        string $acceptLanguage,
+        ?RequestLanguageProvider $provider = null,
+    ): HttpResponse {
+        $languages = new LanguageCollection(
+            languages: [new Language(code: 'de', locale: 'C'), new Language(code: 'en', locale: 'C')],
+        );
+        $handler = $this->register(context: $this->createContext(availableLanguages: $languages));
+        $requestHandler = new RequestHandler(
+            httpRequest: HttpRequestFactory::create(
+                uri: '/unknown/page.html',
+                headers: ['Accept-Language' => $acceptLanguage],
+            ),
+            routeCollection: new RouteCollection(routes: [
+                new Route(
+                    path: '/',
+                    viewDirectory: $this->workDirectory->templateDirectory,
+                    defaultFileName: 'index.html',
+                    isDefaultForLanguage: true,
+                    usesRequestLanguage: true,
+                ),
+            ]),
+            availableLanguages: $languages,
+            allowedDomains: ['example.com'],
+            session: null,
+            requestLanguageProvider: $provider,
+        );
+        $handler->setRequestHandler(requestHandler: $requestHandler);
+        try {
+            $requestHandler->resolveRoute();
+        } catch (NotFoundException $notFoundException) {
+            return $handler->createResponse(throwable: $notFoundException);
+        }
+        ExceptionHandlerTest::fail('The request is not found.');
+    }
+
+    public function testPageOfAPathWithoutRouteHasTheBrowserLanguageOfTheDefaultRouteWithRequestLanguage(): void
+    {
+        $response = $this->createNotFoundResponseOfRequestLanguageRoute(acceptLanguage: 'en-GB,en;q=0.9');
+
+        $this->assertStringContainsString(
+            '<html lang="en" class="notFound">',
+            ExceptionHandlerTest::content(response: $response),
+        );
+        $this->assertSame('en', $response->getHeader(key: 'Content-Language'));
+    }
+
+    public function testPageOfAPathWithoutRouteHasTheLanguageOfTheProvider(): void
+    {
+        $response = $this->createNotFoundResponseOfRequestLanguageRoute(
+            acceptLanguage: 'de',
+            provider: new FixedRequestLanguageProvider(languageCode: 'en'),
+        );
+
+        $this->assertStringContainsString(
+            '<html lang="en" class="notFound">',
+            ExceptionHandlerTest::content(response: $response),
+        );
         $this->assertSame('en', $response->getHeader(key: 'Content-Language'));
     }
 

@@ -17,6 +17,7 @@ use actra\yuf\core\RequestLanguageProvider;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
+use actra\yuf\exception\NotFoundException;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\tests\Double\core\FixedRequestLanguageProvider;
@@ -205,6 +206,76 @@ final class RequestHandlerRequestLanguageTest extends TestCase
 
         $this->assertNull($handler->defaultRequestLanguageRoute);
         $this->assertNull($handler->findDefaultRouteForLanguage(languageCode: 'de'));
+    }
+
+    /**
+     * The language that `resolveRoute()` leaves for the error page when it throws `NotFoundException`.
+     */
+    private function resolveLanguageOfNotFound(RequestHandler $handler): ?Language
+    {
+        try {
+            $handler->resolveRoute();
+        } catch (NotFoundException) {
+            return $handler->language;
+        }
+        RequestHandlerRequestLanguageTest::fail('The request is not found.');
+    }
+
+    public function testPathWithoutRouteHasTheBrowserLanguage(): void
+    {
+        $language = $this->resolveLanguageOfNotFound(
+            handler: $this->createHandler(
+                routes: [$this->createRequestLanguageRoute()],
+                uri: '/unknown/page.html',
+                acceptLanguage: 'en-GB,en;q=0.9',
+            ),
+        );
+
+        $this->assertSame($this->english, $language);
+    }
+
+    public function testPathWithoutRouteHasTheLanguageOfTheProvider(): void
+    {
+        $language = $this->resolveLanguageOfNotFound(
+            handler: $this->createHandler(
+                routes: [$this->createRequestLanguageRoute()],
+                uri: '/unknown/page.html',
+                acceptLanguage: 'de',
+                provider: new FixedRequestLanguageProvider(languageCode: 'en'),
+            ),
+        );
+
+        $this->assertSame($this->english, $language);
+    }
+
+    public function testPathWithDoubleSlashHasTheRequestLanguage(): void
+    {
+        $language = $this->resolveLanguageOfNotFound(
+            handler: $this->createHandler(
+                routes: [$this->createRequestLanguageRoute()],
+                uri: '//page.html',
+                acceptLanguage: 'en',
+            ),
+        );
+
+        $this->assertSame($this->english, $language);
+    }
+
+    public function testPathWithoutRouteKeepsTheFirstLanguageWithoutDefaultRouteWithRequestLanguage(): void
+    {
+        $provider = new FixedRequestLanguageProvider(languageCode: 'en');
+
+        $language = $this->resolveLanguageOfNotFound(
+            handler: $this->createHandler(
+                routes: [$this->createRequestLanguageRoute(path: '/backend/', isDefaultForLanguage: false)],
+                uri: '/unknown/page.html',
+                acceptLanguage: 'en',
+                provider: $provider,
+            ),
+        );
+
+        $this->assertSame($this->german, $language);
+        $this->assertSame(0, $provider->calls);
     }
 
     public function testTwoDefaultRoutesWithRequestLanguageThrow(): void

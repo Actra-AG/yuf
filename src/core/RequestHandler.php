@@ -31,8 +31,9 @@ final class RequestHandler
     public readonly ?string $loginPath;
     /**
      * The language of the request: the first available language, after `resolveRoute()` the language of the route if
-     * it has one, for a route with `usesRequestLanguage` the language of `RequestLanguageResolver`. Stays as far as
-     * resolved when `resolveRoute()` throws, so error pages use it.
+     * it has one, for a route with `usesRequestLanguage` the language of `RequestLanguageResolver`; for a path without
+     * route, too, if the default route has `usesRequestLanguage` (it serves every language). Stays as far as resolved
+     * when `resolveRoute()` throws, so error pages use it.
      */
     public private(set) ?Language $language = null;
     /**
@@ -101,7 +102,7 @@ final class RequestHandler
             haystack: $this->httpRequest->getPath(),
             needle: '//',
         )) {
-            throw new NotFoundException();
+            $this->throwNotFoundForUnknownPath();
         }
         $pathMatch = $this->initRoute();
         $route = $pathMatch->route;
@@ -118,14 +119,7 @@ final class RequestHandler
         if ($forceFileName !== null && $forceFileName !== '') {
             $this->fileName = $forceFileName;
         }
-        $routeLanguage = $route->usesRequestLanguage
-            ? new RequestLanguageResolver(
-                httpRequest: $this->httpRequest,
-                availableLanguages: $this->availableLanguages,
-                session: $this->session,
-                requestLanguageProvider: $this->requestLanguageProvider,
-            )->resolve()
-            : $route->language;
+        $routeLanguage = $route->usesRequestLanguage ? $this->resolveRequestLanguage() : $route->language;
         if ($routeLanguage !== null) {
             $this->language = $routeLanguage;
         }
@@ -299,8 +293,32 @@ final class RequestHandler
                 responseSender: $this->responseSender,
             );
         }
+        $this->throwNotFoundForUnknownPath();
+    }
+
+    /**
+     * A path without route: with a default route with `usesRequestLanguage` (it serves every language), the error page
+     * has the language of the request, as the pages of that route; otherwise the first available language stays.
+     *
+     * @throws NotFoundException always
+     */
+    private function throwNotFoundForUnknownPath(): never
+    {
+        if ($this->defaultRequestLanguageRoute !== null) {
+            $this->language = $this->resolveRequestLanguage() ?? $this->language;
+        }
 
         throw new NotFoundException();
+    }
+
+    private function resolveRequestLanguage(): ?Language
+    {
+        return new RequestLanguageResolver(
+            httpRequest: $this->httpRequest,
+            availableLanguages: $this->availableLanguages,
+            session: $this->session,
+            requestLanguageProvider: $this->requestLanguageProvider,
+        )->resolve();
     }
 
     /**

@@ -4,6 +4,12 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v8.7.2 (2026-10-31)
+
+- Fix: the error page of a path without route (`/unknown/page.html` next to a route at `/`, or a path with `//`) has
+  the language of the request if the default route has `usesRequestLanguage`, like the pages of that route; it had the
+  first language. No change for projects.
+
 ## v8.7.1 (2026-10-31)
 
 - Development only: `actra/coding-standard` ^2.0 (named arguments in the order of the parameters); no change for
