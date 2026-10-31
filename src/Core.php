@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf;
 
+use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
 use actra\yuf\common\AcceptingMailDomainResolver;
 use actra\yuf\common\FileCache;
@@ -38,6 +39,7 @@ use actra\yuf\exception\ExceptionHandler;
 use actra\yuf\exception\ExceptionHandlerContext;
 use actra\yuf\form\FormContext;
 use actra\yuf\layout\NavigationItemCollection;
+use actra\yuf\mailer\AbstractMailer;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CspPolicySettings;
 use actra\yuf\security\SessionCsrfTokenSource;
@@ -346,13 +348,7 @@ final class Core
 
             return $this->httpResponse;
         }
-        $logger ??= new FileLogger(
-            logEmailRecipient: $this->logEmailRecipient,
-            logDirectory: $this->logDirectory,
-            httpRequest: $this->httpRequest,
-            mailer: null,
-            responseSender: $this->responseSender,
-        );
+        $logger ??= $this->createFileLogger();
         $this->cspPolicySettings = $cspPolicySettings;
         // Checked before the exception handler exists: it needs the tags for the error pages, too
         $this->templateTags = $templateTags;
@@ -376,11 +372,7 @@ final class Core
             ),
         );
         if ($individualSessionHandler === null) {
-            $individualSessionHandler = new FileSessionHandler(
-                httpRequest: $this->httpRequest,
-                sessionSettings: new SessionSettings(),
-                defaultSavePath: $this->cacheDirectory . 'sessions',
-            );
+            $individualSessionHandler = $this->createFileSessionHandler();
         }
         $this->sessionHandler = $individualSessionHandler === false ? null : $individualSessionHandler;
         $this->session = $this->sessionHandler === null
@@ -450,6 +442,48 @@ final class Core
         )->create(contentHandler: $contentHandler);
 
         return $this->httpResponse;
+    }
+
+    /**
+     * The default logger of `prepareHttpResponse()`: tickets in the log directory, new issues mailed to
+     * `logEmailRecipient`. Create it yourself to pass a mailer, or to use the same logger elsewhere (e.g. a rate
+     * limit) and as `prepareHttpResponse(logger: …)`.
+     *
+     * @param ?AbstractMailer $mailer Sends the mails of new issues instead of `mail()` (see `FileLogger`)
+     * @param string $mailSenderAddress Sender of the mails, required with a mailer
+     *
+     * @throws InvalidArgumentException for a mailer without a valid sender address
+     */
+    public function createFileLogger(
+        ?AbstractMailer $mailer = null,
+        string $mailSenderAddress = '',
+        Clock $clock = new SystemClock(),
+    ): FileLogger {
+        return new FileLogger(
+            logEmailRecipient: $this->logEmailRecipient,
+            logDirectory: $this->logDirectory,
+            httpRequest: $this->httpRequest,
+            mailer: $mailer,
+            clock: $clock,
+            mailSenderAddress: $mailSenderAddress,
+            responseSender: $this->responseSender,
+        );
+    }
+
+    /**
+     * The default session handler of `prepareHttpResponse()`: session files in `<cache directory>sessions`, unless the
+     * settings name a `savePath`.
+     */
+    public function createFileSessionHandler(
+        SessionSettings $sessionSettings = new SessionSettings(),
+        Clock $clock = new SystemClock(),
+    ): FileSessionHandler {
+        return new FileSessionHandler(
+            httpRequest: $this->httpRequest,
+            sessionSettings: $sessionSettings,
+            defaultSavePath: $this->cacheDirectory . 'sessions',
+            clock: $clock,
+        );
     }
 
     /**

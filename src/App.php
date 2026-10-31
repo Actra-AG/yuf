@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace actra\yuf;
 
+use actra\yuf\clock\Clock;
+use actra\yuf\clock\SystemClock;
 use actra\yuf\core\ContentType;
 use actra\yuf\core\HtmlFileExtensionEnum;
 use actra\yuf\core\HttpResponse;
@@ -21,8 +23,10 @@ use actra\yuf\core\ViewContext;
 use actra\yuf\core\ViewFactory;
 use actra\yuf\exception\ExceptionHandler;
 use actra\yuf\layout\NavigationItemCollection;
+use actra\yuf\mailer\AbstractMailer;
 use actra\yuf\security\CspPolicySettings;
 use actra\yuf\session\AbstractSessionHandler;
+use actra\yuf\session\SessionSettings;
 use actra\yuf\template\tag\TemplateTag;
 use Closure;
 use InvalidArgumentException;
@@ -227,6 +231,36 @@ final readonly class App
     }
 
     /**
+     * Adds a route of JSON responses whose paths have no extension (`/api/v1/domains`, a webhook, a cron call): a path
+     * with an extension (`.json`, `.html`) is a 404. Never the target of "/".
+     *
+     * @param ?string $languageCode A language added with `withLanguage()`; `null`: the first language (if any)
+     *
+     * @throws LogicException if the language is not added or the path is already used
+     */
+    public function withJsonRoute(
+        string $path,
+        string $viewGroup,
+        string $defaultFileName = '',
+        ?string $languageCode = null,
+        ?ViewFactory $viewFactory = null,
+    ): App {
+        return $this->withRoute(
+            route: new Route(
+                path: $path,
+                viewDirectory: $this->core->viewDirectory,
+                viewClassPrefix: $this->viewClassPrefix,
+                viewGroup: $viewGroup,
+                defaultFileName: $defaultFileName,
+                defaultContentType: ContentType::createJson(),
+                language: $this->resolveLanguage(languageCode: $languageCode),
+                acceptedExtension: '',
+                viewFactory: $viewFactory,
+            ),
+        );
+    }
+
+    /**
      * Adds a fully configured route (`viewCallback`, `forceFileName`, path variables, …). Its language must be the
      * object of `getLanguage()`.
      *
@@ -281,10 +315,47 @@ final readonly class App
         return clone($this, ['hasSession' => true, 'sessionHandler' => $sessionHandler]);
     }
 
-    /** Another logger than the default `FileLogger` (e.g. with an SMTP mailer, see `docs/setup.md`) */
+    /**
+     * The default `FileSessionHandler` with own session settings, e.g. a longer lifetime:
+     * `withFileSessions(sessionSettings: new SessionSettings(maxLifeTime: 43200))`. See
+     * `Core::createFileSessionHandler()`.
+     */
+    public function withFileSessions(SessionSettings $sessionSettings, Clock $clock = new SystemClock()): App
+    {
+        return $this->withSessionHandler(
+            sessionHandler: $this->core->createFileSessionHandler(sessionSettings: $sessionSettings, clock: $clock),
+        );
+    }
+
+    /** Another logger than the default `FileLogger` */
     public function withLogger(Logger $logger): App
     {
         return clone($this, ['logger' => $logger]);
+    }
+
+    /**
+     * The default `FileLogger` with a mailer for the new issues (e.g. `SmtpMailer`, see `docs/setup.md`) or a clock.
+     * See `Core::createFileLogger()`.
+     *
+     * @throws InvalidArgumentException for a mailer without a valid sender address
+     */
+    public function withFileLogger(
+        ?AbstractMailer $mailer = null,
+        string $mailSenderAddress = '',
+        Clock $clock = new SystemClock(),
+    ): App {
+        return $this->withLogger(
+            logger: $this->core->createFileLogger(mailer: $mailer, mailSenderAddress: $mailSenderAddress, clock: $clock),
+        );
+    }
+
+    /**
+     * The logger of `withLogger()` or `withFileLogger()`, for the project's own classes (e.g. a `LoginRateLimit`),
+     * so they log into the same tickets. Without one, a new default `FileLogger`.
+     */
+    public function getLogger(): Logger
+    {
+        return $this->logger ?? $this->core->createFileLogger();
     }
 
     /** @see Core::prepareHttpResponse() */

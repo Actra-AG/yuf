@@ -4,6 +4,18 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v8.5.0 (2026-10-31)
+
+- New `App` shortcuts for a shorter front controller ([docs/setup.md](docs/setup.md#application-entry-point)):
+  - `withJsonRoute(path:, viewGroup:)`: JSON at paths without extension (REST API, webhooks, cron calls), instead of an
+    own `Route` with `acceptedExtension: ''` in `withRoute()`.
+  - `withFileSessions(sessionSettings:)`: the default `FileSessionHandler` with own settings, instead of
+    `withSessionHandler(sessionHandler: new FileSessionHandler(…))`.
+  - `withFileLogger(mailer:, mailSenderAddress:, clock:)`: the default `FileLogger` with a mailer or a clock, instead
+    of `withLogger(logger: new FileLogger(…))`; `getLogger()` returns the logger for the project's own classes.
+- New `Core::createFileLogger()` and `Core::createFileSessionHandler()`: the defaults of `prepareHttpResponse()`
+  (same behaviour), with own mailer, clock or session settings.
+
 ## v8.4.0 (2026-10-29)
 
 - New `actra\yuf\mailbox`: reads and moves the messages of one IMAP mailbox without `ext-imap` (not bundled with PHP

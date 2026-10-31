@@ -10,9 +10,11 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit;
 
 use actra\yuf\App;
+use actra\yuf\clock\FixedClock;
 use actra\yuf\Core;
 use actra\yuf\core\BaseView;
 use actra\yuf\core\ContentType;
+use actra\yuf\core\FileLogger;
 use actra\yuf\core\HtmlFileExtensionEnum;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
@@ -25,6 +27,9 @@ use actra\yuf\core\ViewMap;
 use actra\yuf\exception\ExceptionHandler;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\layout\NavigationItemCollection;
+use actra\yuf\session\FileSessionHandler;
+use actra\yuf\session\SessionSettings;
+use actra\yuf\tests\Double\core\ConfigurableTestView;
 use actra\yuf\tests\Double\core\CoreWorkDirectory;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\core\RecordingLogger;
@@ -32,6 +37,7 @@ use actra\yuf\tests\Double\core\TestView;
 use actra\yuf\tests\Double\session\NonStartingSessionHandler;
 use actra\yuf\tests\Double\template\NamedTag;
 use Closure;
+use DateTimeImmutable;
 use InvalidArgumentException;
 use LogicException;
 use Override;
@@ -253,6 +259,44 @@ final class AppTest extends TestCase
         $app->prepare();
     }
 
+    public function testJsonRouteServesPathsWithoutExtensionAsJsonInTheFirstLanguage(): void
+    {
+        $route = null;
+        $app = $this->createApp(uri: '/api/status')
+            ->withLanguage(code: 'de', locale: 'de_CH.UTF-8')
+            ->withJsonRoute(
+                path: '/api/',
+                viewGroup: 'frontend',
+                viewFactory: new ViewMap()->add(
+                    fileTitle: 'status',
+                    create: static function (ViewContext $context) use (&$route): BaseView {
+                        $route = $context->route;
+                        $view = new ConfigurableTestView(context: $context);
+                        $view->callSetContent(contentString: '{"ok":true}');
+
+                        return $view;
+                    },
+                ),
+            );
+
+        $httpResponse = $app->prepare();
+
+        $this->assertSame('{"ok":true}', $httpResponse->getContentString());
+        $this->assertSame('application/json; charset=utf-8', $httpResponse->getHeader(key: 'Content-Type'));
+        $this->assertInstanceOf(Route::class, $route);
+        $this->assertSame($app->getLanguage(code: 'de'), $route->language);
+        $this->assertFalse($route->isDefaultForLanguage);
+    }
+
+    public function testJsonRouteRejectsPathsWithExtension(): void
+    {
+        $app = $this->createApp(uri: '/api/status.json')->withJsonRoute(path: '/api/', viewGroup: 'frontend');
+
+        $this->expectException(NotFoundException::class);
+
+        $app->prepare();
+    }
+
     public function testLanguagesAreAddedToCore(): void
     {
         $app = $this->createApp()
@@ -423,6 +467,45 @@ final class AppTest extends TestCase
 
         $this->assertSame($sessionHandler, $app->core->sessionHandler);
         $this->assertNotNull($app->core->session);
+    }
+
+    public function testWithFileSessionsUsesAFileSessionHandler(): void
+    {
+        $app = $this->createApp()->withFileSessions(sessionSettings: new SessionSettings(maxLifeTime: 43200));
+
+        $app->prepare();
+
+        $this->assertInstanceOf(FileSessionHandler::class, $app->core->sessionHandler);
+        $this->assertNotNull($app->core->session);
+    }
+
+    public function testGetLoggerIsTheLoggerOfWithLogger(): void
+    {
+        $logger = new RecordingLogger();
+
+        $this->assertSame($logger, $this->createApp()->withLogger(logger: $logger)->getLogger());
+    }
+
+    public function testGetLoggerIsTheLoggerOfWithFileLogger(): void
+    {
+        $app = $this->createApp()->withFileLogger(clock: new FixedClock(now: new DateTimeImmutable()));
+
+        $logger = $app->getLogger();
+
+        $this->assertInstanceOf(FileLogger::class, $logger);
+        $this->assertSame($logger, $app->getLogger());
+    }
+
+    public function testGetLoggerWithoutLoggerIsTheDefaultFileLogger(): void
+    {
+        $app = App::fromCore(
+            core: new Core(
+                settings: $this->workDirectory->createSettings(),
+                httpRequest: HttpRequestFactory::create(uri: '/'),
+            ),
+        );
+
+        $this->assertInstanceOf(FileLogger::class, $app->getLogger());
     }
 
     public function testWithMethodsReturnACopy(): void

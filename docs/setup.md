@@ -34,8 +34,15 @@ App::fromEnvironment(envFilePath: __DIR__ . '/../.env.php', copyrightYear: 2026)
   - A `-` in the file name always separates path variables ([views.md](views.md#path-variables)): `/about-us` is the
     page `about` with the variable `us`, so a view must allow it (`maxAllowedPathVars`) or the request is a 404.
 - `withFileRoute()`: CSV, PDF, JSON and other files, only with the extension of the content type.
+- `withJsonRoute()`: JSON at paths without extension (`/api/v1/domains`: REST API, webhooks, cron calls); a path with
+  extension is a 404.
 - `withCsp()`, `withoutSession()`, `withSessionHandler()`, `withLogger()`, `withLoginPath()`, `withTemplateTags()`,
   `withNavigation()`, `withExceptionHandler()`: the arguments of `Core::prepareHttpResponse()`.
+- `withFileSessions(sessionSettings: new SessionSettings(maxLifeTime: 43200))`: the default session files with own
+  settings.
+- `withFileLogger(mailer:, mailSenderAddress:, clock:)`: the default `FileLogger` with a mailer or a clock
+  ([Error log](#error-log)). `getLogger()` returns the logger of the `App` for the project's own classes (e.g. a
+  `LoginRateLimit`), so they write the same tickets.
 - `fromEnvironment()` takes the directories of `Core::fromEnvironment()` and `viewClassPrefix:` (the namespace of the
   view classes, default `app`).
 - Special cases: `withRoute()` with an own `Route` (its language from `$app->getLanguage(code:)`), `$app->core` for
@@ -139,19 +146,10 @@ value cannot forge lines of the log. A ticket is one distinct issue: its hash co
 and trace, not the message.
 
 By default, new issues are mailed with PHP's `mail()`. To send them with `SmtpMailer` or `GraphMailer`
-(see [mail.md](mail.md)), pass a `FileLogger` with a mailer and a sender address:
+(see [mail.md](mail.md)), pass a mailer and a sender address:
 
 ```php
-$core->prepareHttpResponse(
-    logger: new FileLogger(
-        logEmailRecipient: $core->environmentSettings->logEmailRecipient,
-        logDirectory: $core->logDirectory,
-        httpRequest: $core->httpRequest,
-        mailer: $mailer,
-        mailSenderAddress: 'noreply@example.com',
-    ),
-    routeCollection: $routes,
-);
+$app->withFileLogger(mailer: $mailer, mailSenderAddress: 'noreply@example.com');
 ```
 
 The mail contains the ticket file name, the issue and the request description. If the mailer fails (SMTP server or
@@ -159,6 +157,6 @@ Graph API not reachable), the failure is noted in the ticket file and the issue 
 the notification still arrives. The mail is sent after the response (shutdown function), so the error page does not
 wait for the mail server; the ticket file is written at once.
 
-With `App`, pass the logger with `withLogger(logger: …)`; `$app->core` has the directories and the request. For
-another destination, implement `actra\yuf\core\Logger` and pass it as `prepareHttpResponse(logger: …)` or
-`withLogger(logger: …)`.
+Without `App`: `$core->prepareHttpResponse(logger: $core->createFileLogger(mailer: …, mailSenderAddress: …), …)`.
+For another destination, implement `actra\yuf\core\Logger` and pass it as
+`prepareHttpResponse(logger: …)` or `withLogger(logger: …)`.
