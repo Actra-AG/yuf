@@ -60,7 +60,7 @@ See [.env.example.php](.env.example.php), [index.example.php](index.example.php)
 - [Forms](docs/forms.md): typed values, formatting amounts, rules, spam protection, uploads, extension points
 - [CAPTCHA](docs/captcha.md): Cloudflare Turnstile in public forms, CSP, privacy
 - [Database](docs/database.md): connection, typed rows, query builder, boolean search
-- [Mail](docs/mail.md): SMTP (STARTTLS or implicit TLS) and Microsoft 365
+- [Mail](docs/mail.md): SMTP (STARTTLS or implicit TLS), Microsoft 365, log of sent mails
 - [Mailbox](docs/mailbox.md): reading and moving the messages of an IMAP mailbox, text of HTML mails
 - [Phone numbers](docs/phone-numbers.md): parsing, formats, validation
 - [Rate limiting](docs/rate-limiting.md): limits per IP address or globally, public forms and logins, without

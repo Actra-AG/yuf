@@ -108,6 +108,32 @@ The same token provider serves `SmtpMailer` with `scope: 'https://outlook.office
 permission `SMTP.SendAsApp` of Office 365 Exchange Online, and its service principal must be registered in Exchange
 Online (`New-ServicePrincipal`) with full access to the mailbox (`Add-MailboxPermission`).
 
+## Log of sent mails
+
+A `SentMailListener` attached with `addSentMailListener()` to any mailer is told about every mail that the mailer
+sends (e.g. to write it to a table). It gets a `SentMail`: `sentAt` (from the clock of the mailer), `fromEmail`,
+`toEmails`, `ccEmails`, `bccEmails` (lists of addresses, lower case, domain in punycode) and `subject`. yuf stores
+nothing itself.
+
+```php
+final readonly class SentMailLogger implements SentMailListener
+{
+    #[Override]
+    public function onMailSent(SentMail $sentMail): void
+    {
+        // insert $sentMail->sentAt, $sentMail->toEmails, $sentMail->subject …
+    }
+}
+
+$mailer->addSentMailListener(sentMailListener: new SentMailLogger(…));
+```
+
+- The listener is called after the mailer handed over the message without an exception (for Graph: `202 Accepted`,
+  no later bounces), never for a failed delivery; several listeners are called in the order they were added.
+- The mail is already sent then: an exception of a listener propagates out of `send()`, but the mail counts as sent
+  and cannot be sent again. Handle expected errors (e.g. of the database) in the listener, so that callers do not
+  send the mail a second time.
+
 ## Tests
 
 `RecordingMailer` records the sent `AbstractMail` objects instead of delivering them (no network, no DNS). Pass it

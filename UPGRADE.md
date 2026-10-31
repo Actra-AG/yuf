@@ -4,6 +4,13 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v8.7.0 (2026-10-31)
+
+- New `SentMailListener` for a log of sent mails ([docs/mail.md](docs/mail.md#log-of-sent-mails)):
+  `AbstractMailer::addSentMailListener()` attaches it to any mailer, `AbstractMail::send()` calls it with a `SentMail`
+  (time, from, To/Cc/Bcc addresses, subject) after a successful delivery, never after a failed one. An exception of the
+  listener propagates, but the mail counts as sent. Without a listener nothing changes.
+
 ## v8.6.0 (2026-10-31)
 
 - New routes with the language of the request: one path for all languages (e.g. a backend) instead of one path per

@@ -209,6 +209,8 @@ abstract class AbstractMail
             ),
         );
         $this->isSent = true;
+        // The mail is sent: an exception of a listener must not let it be sent again
+        $abstractMailer->notifySentMailListeners(abstractMail: $this);
     }
 
     /**

@@ -21,6 +21,8 @@ use actra\yuf\clock\SystemClock;
 abstract class AbstractMailer
 {
     private ?string $serverName = null;
+    /** @var list<SentMailListener> */
+    private array $sentMailListeners = [];
 
     /**
      * @param string $serverAddress The IP address of this server (`HttpRequest::getServerAddress()`): its host name
@@ -65,6 +67,28 @@ abstract class AbstractMailer
         $this->serverName ??= $this->serverNameResolver->resolve(serverAddress: $this->serverAddress);
 
         return $this->serverName;
+    }
+
+    /**
+     * The listener is told about every mail that this mailer sends from now on, in the order the listeners were added.
+     */
+    public function addSentMailListener(SentMailListener $sentMailListener): void
+    {
+        $this->sentMailListeners[] = $sentMailListener;
+    }
+
+    /**
+     * Called by `AbstractMail::send()` after `sendMail()` returned without an exception.
+     */
+    public function notifySentMailListeners(AbstractMail $abstractMail): void
+    {
+        if ($this->sentMailListeners === []) {
+            return;
+        }
+        $sentMail = SentMail::fromMail(abstractMail: $abstractMail, sentAt: $this->clock->now());
+        foreach ($this->sentMailListeners as $sentMailListener) {
+            $sentMailListener->onMailSent(sentMail: $sentMail);
+        }
     }
 
     public function getClock(): Clock
