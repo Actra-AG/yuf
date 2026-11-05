@@ -17,7 +17,8 @@ use Dom\Text;
 /**
  * A readable text version of an HTML mail: the text without tags, styles, scripts and comments, entities decoded.
  * Paragraphs, headings, lists and tables are separated by an empty line, other blocks (rows, list items, `div`) and
- * `<br>` start a new line, table cells are separated by a space.
+ * `<br>` start a new line, table cells are separated by a space. Links with text and an absolute http/https target
+ * keep it as `text <url>`, unless the text already is the URL.
  *
  * @internal
  */
@@ -74,6 +75,10 @@ final class HtmlTextConverter
             $text .= HtmlTextConverter::textOf(node: $child, isPreformatted: $isPreformatted || $name === 'pre');
         }
 
+        if ($name === 'a') {
+            $text = HtmlTextConverter::withLinkTarget(text: $text, href: $node->getAttribute(qualifiedName: 'href'));
+        }
+
         return match (true) {
             in_array(needle: $name, haystack: HtmlTextConverter::PARAGRAPH_ELEMENTS, strict: true)
                 => HtmlTextConverter::PARAGRAPH_MARK . $text . HtmlTextConverter::PARAGRAPH_MARK,
@@ -81,6 +86,51 @@ final class HtmlTextConverter
             $name === 'td', $name === 'th' => ' ' . $text . ' ',
             default => $text,
         };
+    }
+
+    /**
+     * Adds ` <url>` after the text of a link (before its trailing whitespace and marks), if the link has text and an
+     * absolute http/https target that differs from the text
+     */
+    private static function withLinkTarget(string $text, ?string $href): string
+    {
+        if ($href === null) {
+            return $text;
+        }
+        $url = preg_replace(pattern: '/\s+/u', replacement: '', subject: $href) ?? '';
+        if (preg_match(pattern: '#^https?://[^/?\#]#i', subject: $url) !== 1) {
+            return $text;
+        }
+        $visibleText = trim(
+            string: preg_replace(
+                pattern: '/[\s\x{A0}' . HtmlTextConverter::PARAGRAPH_MARK . ']+/u',
+                replacement: ' ',
+                subject: $text,
+            ) ?? '',
+        );
+        if (
+            $visibleText === ''
+            || HtmlTextConverter::comparableUrl(url: $visibleText) === HtmlTextConverter::comparableUrl(url: $url)
+        ) {
+            return $text;
+        }
+        $trailingLength = strlen(string: $text) - strlen(
+            string: rtrim(string: $text, characters: " \t\n\r\f\v" . HtmlTextConverter::PARAGRAPH_MARK),
+        );
+
+        return substr(string: $text, offset: 0, length: strlen(string: $text) - $trailingLength)
+            . ' <' . $url . '>'
+            . substr(string: $text, offset: strlen(string: $text) - $trailingLength);
+    }
+
+    /**
+     * Lower case, without scheme and trailing slash
+     */
+    private static function comparableUrl(string $url): string
+    {
+        $url = strtolower(string: $url);
+
+        return rtrim(string: preg_replace(pattern: '#^https?://#', replacement: '', subject: $url) ?? $url, characters: '/');
     }
 
     private static function normalizeLines(string $text): string

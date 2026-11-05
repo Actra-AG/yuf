@@ -4,6 +4,15 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v8.8.0 (2026-11-05)
+
+### ⚠️ Links in the text version of HTML-only mails
+
+`ReceivedMail::$textBody` of HTML-only messages keeps link targets as `text <url>` (absolute http/https links with
+text). Code that matches or compares this text (alert patterns, fingerprints, stored texts) may see the added URLs.
+Before: `Vulnerabilities were found on a site.` After:
+`Vulnerabilities were found on a site <https://host.example.com:8443/…/id/23>.`
+
 ## v8.7.2 (2026-10-31)
 
 - Fix: the error page of a path without route (`/unknown/page.html` next to a route at `/`, or a path with `//`) has

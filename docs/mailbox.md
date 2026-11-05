@@ -81,7 +81,8 @@ a malformed message never throws, what cannot be read is `null` or empty.
 The text body is decoded (quoted-printable, base64, 7bit/8bit) and converted from its charset (ISO-8859-1 as
 Windows-1252, unknown charsets as UTF-8 or Windows-1252). Attachments are ignored. The text version of HTML has no
 tags, styles, scripts or comments, entities are decoded; paragraphs, headings, lists and tables are separated by an
-empty line, rows, list items, `div` and `<br>` start a new line, table cells are separated by a space.
+empty line, rows, list items, `div` and `<br>` start a new line, table cells are separated by a space; links with
+text and an absolute http/https target are written as `text <url>` (once if the text is the URL).
 
 ## Tests
 

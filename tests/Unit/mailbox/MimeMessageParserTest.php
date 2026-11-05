@@ -102,6 +102,20 @@ final class MimeMessageParserTest extends TestCase
         );
     }
 
+    public function testHtmlOnlyQuotedPrintableMessageKeepsLinkTargets(): void
+    {
+        $mail = MimeMessageParserTest::parseFixture(name: 'html-only-quoted-printable-links.eml');
+
+        $this->assertSame(
+            'Vulnerabilities were found on a site'
+            . ' <https://host.example.com:8443/modules/wp-toolkit/index.php/index/list/id/23/checkSecurity/1/activeTab'
+            . "/vulnerable-components>.\n\n"
+            . "Plugin Version\nexample-plugin <https://example.com/plugins/example-plugin?ref=mail&lang=en> 1.2.3"
+            . "\n\nContact us",
+            $mail->textBody,
+        );
+    }
+
     public function testLfLineBreaksAreReadLikeCrlf(): void
     {
         $lf = MimeMessageParserTest::fixture(name: 'multipart-mixed.eml', lineBreak: "\n");
