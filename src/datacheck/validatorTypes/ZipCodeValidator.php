@@ -20,6 +20,9 @@ namespace actra\yuf\datacheck\validatorTypes;
  * -------------------------------------------------------------
  * RegEx for CH from https://jonaswitmer.ch/projekte/18-regex-fuer-schweizer-postleitzahlen-und-telefonnummern ,
  * licensed under https://creativecommons.org/licenses/by/3.0/ch/deed.de_CH , adapted to code
+ * -------------------------------------------------------------
+ * LI: the Swiss postcodes 9485–9498 of Swiss Post (9499 is unused), list at
+ * https://en.wikipedia.org/wiki/Postal_codes_in_Switzerland_and_Liechtenstein
  * =============================================================
  */
 final readonly class ZipCodeValidator
@@ -34,6 +37,7 @@ final readonly class ZipCodeValidator
         'DE' => '0[1-46-9]\d{3}|[1-357-9]\d{4}|4[0-24-9]\d{3}|6[013-9]\d{3}',
         'CH' => '([1-468][0-9]|[57][0-7]|9[0-6])[0-9]{2}',
         'AT' => '[1-9][0-9]{3}',
+        'LI' => '94(8[5-9]|9[0-8])',
     ];
 
     /**

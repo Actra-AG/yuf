@@ -145,6 +145,14 @@ final class ZipCodeFieldValueTest extends TestCase
         $this->assertSame('AT', $field->countryCode);
     }
 
+    public function testLiechtensteinZipCodesAreChecked(): void
+    {
+        $field = new ZipCodeField(name: 'zip', label: HtmlText::fromHtml(html: 'Zip'), countryCode: 'LI');
+
+        $this->assertTrue($field->validate(input: FormInput::fromArray(data: ['zip' => '9490'])));
+        $this->assertFalse($field->validate(input: FormInput::fromArray(data: ['zip' => '8500'])));
+    }
+
     public function testCountryCodeFieldNameIsConfigurable(): void
     {
         $field = new ZipCodeField(

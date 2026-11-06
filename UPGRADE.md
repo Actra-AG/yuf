@@ -4,6 +4,11 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v8.9.0 (2026-11-06)
+
+- `ZipCodeValidator` (and `ZipCodeField`) checks Liechtenstein (`LI`): only 9485–9498 are valid. Before, every LI zip
+  code was accepted. Checked countries: CH, LI, DE, AT; others accept every zip code.
+
 ## v8.8.0 (2026-11-05)
 
 ### ⚠️ Links in the text version of HTML-only mails

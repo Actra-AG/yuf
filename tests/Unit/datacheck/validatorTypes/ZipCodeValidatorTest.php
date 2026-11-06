@@ -76,6 +76,14 @@ final class ZipCodeValidatorTest extends TestCase
         yield 'CH trailing line break is trimmed' => ["8000\n", 'CH', true];
         yield 'AT highest' => ['9999', 'AT', true];
         yield 'AT trailing letter' => ['1000x', 'AT', false];
+        yield 'LI lowest' => ['9485', 'LI', true];
+        yield 'LI Vaduz' => ['9490', 'LI', true];
+        yield 'LI highest' => ['9498', 'LI', true];
+        yield 'LI below the range' => ['9484', 'LI', false];
+        yield 'LI above the range' => ['9499', 'LI', false];
+        yield 'LI Swiss zip code' => ['8500', 'LI', false];
+        yield 'LI letters' => ['abc', 'LI', false];
+        yield 'LI five digits' => ['94900', 'LI', false];
         yield 'country without format accepts anything' => ['any text', 'FR', true];
         yield 'lower case country code is no known country' => ['x', 'ch', true];
         yield 'empty country code' => ['x', '', true];
