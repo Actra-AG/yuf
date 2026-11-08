@@ -25,4 +25,10 @@ interface TemplateCache
      * Stores the compiled PHP code of the template and returns the path of the compiled PHP file.
      */
     public function store(string $templateFile, string $compiledCode): string;
+
+    /**
+     * Removes the compiled code of the template, if there is any: the next `find()` returns `null`, so the template is
+     * compiled again. Call it after changing a template file at runtime when changes are not checked.
+     */
+    public function remove(string $templateFile): void;
 }

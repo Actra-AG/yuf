@@ -13,6 +13,7 @@ use actra\yuf\template\cache\DirectoryTemplateCache;
 use actra\yuf\template\compiler\TemplateCompiler;
 use actra\yuf\tests\Double\template\TemplateWorkDirectory;
 use Override;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class DirectoryTemplateCacheTest extends TestCase
@@ -239,5 +240,69 @@ final class DirectoryTemplateCacheTest extends TestCase
         $templateFile = $this->writeTemplate(relativePath: 'page.html', modificationTime: 1_000);
 
         $this->assertNull($cache->find(templateFile: $templateFile));
+    }
+
+    public static function checkTemplateChangesProvider(): iterable
+    {
+        yield 'changes checked' => [true];
+        yield 'changes not checked' => [false];
+    }
+
+    #[DataProvider('checkTemplateChangesProvider')]
+    public function testRemovedCodeIsNotFoundAnymore(bool $checkTemplateChanges): void
+    {
+        $cache = new DirectoryTemplateCache(
+            cacheDirectory: $this->workDirectory->cacheDirectory,
+            templateBaseDirectory: $this->workDirectory->templateDirectory,
+            checkTemplateChanges: $checkTemplateChanges,
+        );
+        $templateFile = $this->writeTemplate(relativePath: 'page.html', modificationTime: 1_000);
+        $compiledFile = $cache->store(templateFile: $templateFile, compiledCode: 'x');
+        $this->assertSame($compiledFile, $cache->find(templateFile: $templateFile));
+
+        $cache->remove(templateFile: $templateFile);
+        clearstatcache();
+
+        $this->assertFileDoesNotExist($compiledFile);
+        $this->assertNull($cache->find(templateFile: $templateFile));
+    }
+
+    public function testRemovingATemplateWithoutCompiledFileDoesNothing(): void
+    {
+        $templateFile = $this->writeTemplate(relativePath: 'page.html', modificationTime: 1_000);
+
+        $this->cache->remove(templateFile: $templateFile);
+        $this->cache->remove(templateFile: $this->templatePath(relativePath: 'missing.html'));
+
+        $this->assertDirectoryDoesNotExist(
+            $this->workDirectory->cacheDirectory . 'v' . TemplateCompiler::FORMAT_VERSION,
+        );
+    }
+
+    public function testRemovingLeavesTheCodeOfOtherTemplates(): void
+    {
+        $templateFile = $this->writeTemplate(relativePath: 'page.html', modificationTime: 1_000);
+        $otherFile = $this->writeTemplate(relativePath: 'other.html', modificationTime: 1_000);
+        $this->cache->store(templateFile: $templateFile, compiledCode: 'x');
+        $otherCompiledFile = $this->cache->store(templateFile: $otherFile, compiledCode: 'y');
+
+        $this->cache->remove(templateFile: $templateFile);
+        clearstatcache();
+
+        $this->assertSame($otherCompiledFile, $this->cache->find(templateFile: $otherFile));
+    }
+
+    public function testATemplateOutsideTheBaseDirectoryIsRemoved(): void
+    {
+        $outsideFile = $this->workDirectory->cacheDirectory . 'outside.html';
+        file_put_contents(filename: $outsideFile, data: 'template');
+        $compiledFile = $this->cache->store(templateFile: $outsideFile, compiledCode: 'x');
+        $this->assertStringContainsString('/external/', $compiledFile);
+
+        $this->cache->remove(templateFile: $outsideFile);
+        clearstatcache();
+
+        $this->assertFileDoesNotExist($compiledFile);
+        $this->assertNull($this->cache->find(templateFile: $outsideFile));
     }
 }

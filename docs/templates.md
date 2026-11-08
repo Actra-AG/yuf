@@ -134,6 +134,9 @@ $html = $engine->render(
 `TemplateData::fromReplacements($replacements)` takes an `HtmlReplacementCollection`. Errors are `TemplateException`s
 with the template file and line.
 
+A template file changed or deleted at runtime: call `$engine->removeCompiled(templateFile: $templateFile)` afterwards,
+else its old compiled code is used where changes are not checked (`checkTemplateChanges`, see [setup.md](setup.md)).
+
 ## Own template tags
 
 A project adds tags by implementing `TemplateTag` and passing them to `Core::prepareHttpResponse()`. Views, snippets,

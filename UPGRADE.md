@@ -4,6 +4,17 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v7](docs/upgrade/v7.md), [v6](docs/upgrade/v6.md), [v5](docs/upgrade/v5.md), [v4](docs/upgrade/v4.md),
 [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md), [v0](docs/upgrade/v0.md).
 
+## v8.18.0 (2026-11-08)
+
+- ⚠️ `TemplateCache` has the new method `remove(templateFile:)`: own implementations of the interface add it (remove
+  the compiled code of the template, if any). `DirectoryTemplateCache::remove()` deletes the compiled file and
+  invalidates it in the OPcache.
+- New `TemplateEngine::removeCompiled(templateFile:)`: call it after an application changed or deleted a template file
+  at runtime with `checkTemplateChanges` off, instead of deleting `DirectoryTemplateCache::getCompiledFile()` yourself;
+  the same engine compiles the template again, too.
+
+---
+
 ## v8.17.1 (2026-11-08)
 
 No migration needed. Documentation only.

@@ -49,4 +49,14 @@ final readonly class TemplateEngine
             templateFile: $templateFile,
         );
     }
+
+    /**
+     * Removes the compiled code of the template (`TemplateCache::remove()`), so the next rendering, also by this
+     * engine, compiles it again. Call it after changing or deleting a template file at runtime: with
+     * `checkTemplateChanges` off, the old compiled code is used otherwise.
+     */
+    public function removeCompiled(string $templateFile): void
+    {
+        $this->loader->removeCompiled(templateFile: $templateFile);
+    }
 }

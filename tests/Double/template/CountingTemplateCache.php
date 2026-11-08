@@ -13,11 +13,12 @@ use actra\yuf\template\cache\TemplateCache;
 use Override;
 
 /**
- * Counts the lookups of a template cache it wraps.
+ * Counts the lookups and removals of a template cache it wraps.
  */
 final class CountingTemplateCache implements TemplateCache
 {
     public private(set) int $finds = 0;
+    public private(set) int $removals = 0;
 
     public function __construct(private readonly TemplateCache $cache) {}
 
@@ -33,5 +34,12 @@ final class CountingTemplateCache implements TemplateCache
     public function store(string $templateFile, string $compiledCode): string
     {
         return $this->cache->store(templateFile: $templateFile, compiledCode: $compiledCode);
+    }
+
+    #[Override]
+    public function remove(string $templateFile): void
+    {
+        $this->removals++;
+        $this->cache->remove(templateFile: $templateFile);
     }
 }

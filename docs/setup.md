@@ -144,7 +144,9 @@ type or an unknown enum value throws an `UnexpectedValueException`. Pass the val
 - Without `debug`, compiled templates are used without comparing them with the templates (no file checks per render,
   `checkTemplateChanges` follows `debug`). Delete `app/cache/v[0-9]*/` on every deployment (`clearDirectories` of
   `deploy.json`), else changed templates are not compiled again; or set `'checkTemplateChanges' => true`. Not
-  `app/cache/v*/`: that also deletes `app/cache/values/` (`FileCache`, e.g. access tokens).
+  `app/cache/v*/`: that also deletes `app/cache/values/` (`FileCache`, e.g. access tokens). An application that
+  changes or deletes a template file at runtime (e.g. a CMS publishing a page) calls
+  `$templateEngine->removeCompiled(templateFile:)` afterwards (or `remove()` of its `TemplateCache`).
 - `zend.exception_ignore_args=On` (the default of the `php.ini-production`): the stack traces of exceptions then carry
   no arguments (passwords, tokens) into the error log and the tickets.
 - `debug` is `false`: the error pages show no details of the exception.

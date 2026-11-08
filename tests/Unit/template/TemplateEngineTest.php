@@ -409,4 +409,42 @@ final class TemplateEngineTest extends TemplateEngineTestCase
             $workDirectory->cleanUp();
         }
     }
+
+    public function testARemovedTemplateIsCompiledAgainWithoutCheckingChanges(): void
+    {
+        $workDirectory = new TemplateWorkDirectory();
+
+        try {
+            $cache = new CountingTemplateCache(
+                cache: new DirectoryTemplateCache(
+                    cacheDirectory: $workDirectory->cacheDirectory,
+                    templateBaseDirectory: $workDirectory->templateDirectory,
+                    checkTemplateChanges: false,
+                ),
+            );
+            $engine = new TemplateEngine(cache: $cache, tags: new TemplateTagCollection());
+            $templateFile = $workDirectory->writeTemplate(source: 'first');
+            $this->assertSame('first', $engine->render(templateFile: $templateFile, data: new TemplateData()));
+
+            // Without checking changes, a newer template is not compiled again, also not by the next request
+            file_put_contents(filename: $templateFile, data: 'second');
+            touch(filename: $templateFile, mtime: time() + 100);
+            clearstatcache();
+            $otherEngine = new TemplateEngine(cache: $cache, tags: new TemplateTagCollection());
+            $this->assertSame('first', $otherEngine->render(templateFile: $templateFile, data: new TemplateData()));
+
+            // Removed: the same engine compiles it again, and so does the next request
+            $engine->removeCompiled(templateFile: $templateFile);
+            clearstatcache();
+            $this->assertSame('second', $engine->render(templateFile: $templateFile, data: new TemplateData()));
+            $this->assertSame(1, $cache->removals);
+            file_put_contents(filename: $templateFile, data: 'third');
+            $cache->remove(templateFile: $templateFile);
+            clearstatcache();
+            $nextEngine = new TemplateEngine(cache: $cache, tags: new TemplateTagCollection());
+            $this->assertSame('third', $nextEngine->render(templateFile: $templateFile, data: new TemplateData()));
+        } finally {
+            $workDirectory->cleanUp();
+        }
+    }
 }

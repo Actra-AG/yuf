@@ -46,6 +46,16 @@ final class TemplateLoader
     }
 
     /**
+     * Removes the compiled code of the template from the cache and from this loader: the next rendering compiles it
+     * again.
+     */
+    public function removeCompiled(string $templateFile): void
+    {
+        unset($this->compiledFiles[$templateFile]);
+        $this->cache->remove(templateFile: $templateFile);
+    }
+
+    /**
      * @throws TemplateException if the template does not exist or has a syntax error
      */
     private function findOrCompile(string $templateFile): string

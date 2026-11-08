@@ -83,6 +83,33 @@ final readonly class DirectoryTemplateCache implements TemplateCache
     }
 
     /**
+     * Deletes the compiled file and invalidates it in the OPcache. A file that is already gone (also removed by another
+     * request in the meantime) is no error.
+     */
+    #[Override]
+    public function remove(string $templateFile): void
+    {
+        $compiledFile = $this->getCompiledFile(templateFile: $templateFile);
+        if (!is_file(filename: $compiledFile)) {
+            return;
+        }
+        // Another request may delete the file between the check and unlink() (a warning, an exception with the
+        // ErrorHandler): only a file that still exists afterwards is an error
+        set_error_handler(callback: static fn(): bool => true);
+
+        try {
+            $deleted = unlink(filename: $compiledFile);
+        } finally {
+            restore_error_handler();
+        }
+        clearstatcache(clear_realpath_cache: false, filename: $compiledFile);
+        if (!$deleted && is_file(filename: $compiledFile)) {
+            throw new TemplateException(reason: 'Could not delete the compiled template ' . $compiledFile);
+        }
+        $this->invalidateOpcache(compiledFile: $compiledFile);
+    }
+
+    /**
      * Path of the compiled file: `<cache directory>/v<format version>/<relative template path>.php`.
      */
     public function getCompiledFile(string $templateFile): string
