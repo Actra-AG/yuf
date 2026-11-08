@@ -235,23 +235,83 @@ cookie keeps `Strict`.
 
 ### Login on another host
 
-`LoginTarget::remote()` sends visitors to a login page on another host and `LoginRedirect::findReturnUrl()` sends them
-back ([views.md](views.md#login-page-on-another-host)). This is the redirect only, not a shared login:
+Sites on one server can share a login page on another host (`LoginTarget::remote()`,
+[views.md](views.md#login-page-on-another-host)). The session cookie belongs to one host, so `LoginHandOver` hands the
+login over through a directory that the login host and the sites share. URLs carry only random IDs (32 bytes); the
+requested page, the user and the hosts stay on the server:
 
-- The session cookie belongs to the host that set it (no `Domain` attribute) and is `SameSite`. A login on
-  `login.example.net` creates a session there; back on `site-a.example.com` the visitor has no session and is sent to the login
-  page again, as long as `site-a.example.com` does not take the login over.
-- The hand-over is a separate step that each project builds today: the login host appends a one-time ticket to the
-  return URL; `site-a.example.com` checks it (signature, audience = its own host, expiry of seconds, used once) and calls
-  `logInIdentifiedUser()` of its `Authenticator`. Never put a session ID or user ID unsigned into the URL.
-- With `SameSite=Strict` (default) browsers send no session cookie on a navigation that comes from another site, also
-  not on the redirects that follow it within the target site: after the way back, the first page of `site-a.example.com` sees
-  no session, also if one exists. Sites with a login page on another host use `SessionSettings(isSameSiteStrict:
-  false)` (`Lax`), or end the hand-over with a page of their own (a link or a form) instead of a redirect.
+1. **Site:** a visitor without login is redirected to `https://login.example.net/login.html?loginRequest=<ID>`; the
+   login request stores the host of the site, the requested path and its hand-over path (valid 15 minutes).
+2. **Login host:** the login page checks the request with `findLoginRequest()` (unknown, expired, used, other host or
+   other browser: `null`, show the normal login), carries the ID through the steps of the login and, after the login,
+   redirects to `createHandOverUrl()`: it uses the request up and stores a ticket for the user (valid 60 seconds).
+3. **Site:** the hand-over page redeems the ticket with `redeemTicket()`, logs the user in and returns to the stored
+   path.
 
-The hand-over is not part of yuf yet. A generic ticket (signed with a shared secret, bound to the target host, short
-expiry, single use through a store of used ticket IDs) fits yuf; looking up the user and its login belong to the
-application (users and sessions, e.g. `actra/backend`).
+```php
+// Login host (allowedHosts: the sites it serves)
+$requestId = $httpRequest->getQueryString(name: LoginHandOver::REQUEST_PARAMETER) ?? ''; // or the hidden form field
+$loginRequest = $loginHandOver->findLoginRequest(
+    httpRequest: $httpRequest,
+    requestId: $requestId,
+    allowedHosts: ['site-a.example.com', 'www.example.net'],
+);
+// after a successful login with a login request:
+HttpResponse::redirectAndExit(
+    relativeOrAbsoluteUri: $loginHandOver->createHandOverUrl(
+        httpRequest: $httpRequest,
+        requestId: $loginRequest->id,
+        subject: (string) $userId,
+        allowedHosts: ['site-a.example.com', 'www.example.net'],
+    ),
+    httpRequest: $httpRequest,
+);
+
+// Site: the hand-over page (a public view, GET)
+try {
+    $ticket = $loginHandOver->redeemTicket(httpRequest: $httpRequest);
+} catch (UnauthorizedException) {
+    // unknown, used, expired, other host or other browser: show a link to the login page
+}
+if ($authenticator->ticketLogin(subject: $ticket->subject)) {
+    HttpResponse::redirectAndExit(
+        relativeOrAbsoluteUri: $ticket->returnPath,
+        httpRequest: $httpRequest,
+        sameSiteLaxSessionHandler: $sessionHandler, // see below
+    );
+}
+
+// AppAuthenticator extends Authenticator
+public function ticketLogin(string $subject): bool
+{
+    return $this->logInIdentifiedUser(
+        authMethod: AuthMethodEnum::SSO,
+        authUser: $this->findAuthUserById(id: $subject), // the project's lookup
+        identifier: $subject,
+    );
+}
+```
+
+- **Browser binding (login CSRF):** the site and the login host each set a random secret in the cookie
+  `__Host-yuf-login-browser` (only its hash is stored). The first `findLoginRequest()` binds the request to the browser
+  on the login host, `createHandOverUrl()` checks it, and `redeemTicket()` accepts the ticket only in the browser that
+  started the login on the site. A ticket of another account cannot be pushed to a visitor.
+- **Single use:** requests and tickets are used up by an atomic rename, also when a check fails afterwards.
+- **Return target:** the path comes from the request the site stored itself, never from the URL, so there is no open
+  redirect. The login host accepts requests only for its allowed hosts.
+- **Session cookie:** with `SameSite=Strict` (default) browsers send no session cookie on a navigation that comes from
+  another site, also not on the redirects that follow it within the site. The hand-over page therefore sends the new
+  session cookie as `Lax` (`redirectAndExit(sameSiteLaxSessionHandler:)`), otherwise the return path would see no
+  session.
+- **The directory is the trust boundary:** whoever can write it can log in on every site. Keep it outside the document
+  roots, owned by the user of the web server (`0700`, files `0600`; a directory that group or others may write is
+  refused); all hosts must run on one server as this user. Reading it reveals no usable secret: only hashes of the
+  IDs and browser secrets are stored.
+  `subject` must mean the same user on the login host and on the sites (shared user database or a stable shared ID).
+- Every redirect to the login page stores a small file; expired files are deleted with a chance of 1 % per login
+  request (`purgeProbabilityPercent:`) or by `purgeExpired()` (e.g. a cron job).
+- Sites on other servers are not supported yet (signed tickets:
+  [plans/signed-login-tickets/plan.md](plans/signed-login-tickets/plan.md)).
 
 ### Users without password
 

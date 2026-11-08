@@ -4,6 +4,23 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v8.12.0 (2026-11-08)
+
+### ⚠️ Login page on another host: server-side hand-over
+
+The login on another host is handed over to the site through a directory the hosts share
+([docs/session-and-login.md](docs/session-and-login.md#login-on-another-host)); the absolute `returnTo` URL of v8.11.0
+is gone, URLs carry only random IDs.
+
+- `LoginTarget::remote(url:)` requires `loginHandOver:` (`LoginHandOver`) and `handOverPath:`; the redirect sends
+  `?loginRequest=<ID>` instead of `?returnTo=<absolute URL>`.
+- Removed: `LoginRedirect::findReturnUrl()`, `isAllowedReturnUri()` and `createLoginUri(allowedHosts:)`. The login
+  page uses `LoginHandOver::findLoginRequest()` and `createHandOverUrl()`, the site's hand-over page `redeemTicket()`.
+
+Before: `LoginTarget::remote(url: 'https://login.example.net/login.html')`.
+After: `LoginTarget::remote(url: 'https://login.example.net/login.html', loginHandOver: new LoginHandOver(directory:
+'/var/www/shared/login-hand-over'), handOverPath: '/login-ticket.html')`.
+
 ## v8.11.0 (2026-11-08)
 
 ### ⚠️ Typed login target

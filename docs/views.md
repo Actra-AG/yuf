@@ -117,30 +117,23 @@ characters), then redirect to the default page. Never redirect to the raw query 
 
 #### Login page on another host
 
-Several sites of one operator can share one login page on another host:
+Sites on one server can share one login page on another host. The site and the login host share a directory
+(`LoginHandOver`); the URLs carry only random IDs:
 
 ```php
-$app->withLoginTarget(loginTarget: LoginTarget::remote(url: 'https://login.example.net/login.html'));
+$loginHandOver = new LoginHandOver(directory: '/var/www/shared/login-hand-over');
+$app->withLoginTarget(loginTarget: LoginTarget::remote(
+    url: 'https://login.example.net/login.html',
+    loginHandOver: $loginHandOver,
+    handOverPath: '/login-ticket.html', // the page of this site that redeems the ticket
+));
 ```
 
-The redirect then goes to `https://login.example.net/login.html?returnTo=https%3A%2F%2Fsite-a.example.com%2Fde%2Fpage.html`:
-the return target is the absolute URL of the request (protocol, `Host`, URI). The login page itself is recognized by
-host and path. `LoginTarget::remote()` throws unless the URL is `https://<host>/<path>`, without user info, port,
-white space, backslash or control characters, with an ASCII host (punycode for IDN).
-
-The login page reads the return target with an explicit list of the hosts it may send visitors back to:
-
-```php
-$returnTo = LoginRedirect::findReturnUrl(httpRequest: $httpRequest, allowedHosts: ['site-a.example.com', 'www.example.net']);
-```
-
-It returns a local path, an `https` URL whose host is exactly one of the allowed hosts (case-insensitive; no
-subdomains, no port, no user info, no `%`, IDN only as punycode), else `null`. `isAllowedReturnUri(uri:,
-allowedHosts:)` checks a value carried through the login form. An allowed host must be a lowercase host name, not a
-URL. `findReturnPath()` still accepts local paths only.
-
-A login on the login host does **not** log the visitor in on the other host: the session cookie belongs to one host
-([session-and-login.md](session-and-login.md#login-on-another-host)).
+The redirect stores the requested page as login request and goes to
+`https://login.example.net/login.html?loginRequest=<ID>`. The login page itself is recognized by host and path.
+`LoginTarget::remote()` throws unless the URL is `https://<host>/<path>` (no user info, port, white space, backslash
+or control characters, ASCII host) and the hand-over path is a local path without query. The login on the other host
+and the way back: [session-and-login.md](session-and-login.md#login-on-another-host).
 
 ## The request
 

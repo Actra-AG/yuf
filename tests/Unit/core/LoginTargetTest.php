@@ -9,15 +9,45 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\core;
 
+use actra\yuf\auth\LoginHandOver;
 use actra\yuf\core\LoginTarget;
-use actra\yuf\core\ProtocolEnum;
+use actra\yuf\tests\Double\auth\RecordingSsoNonceCookieWriter;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\template\TemplateWorkDirectory;
 use InvalidArgumentException;
+use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class LoginTargetTest extends TestCase
 {
+    private TemplateWorkDirectory $workDirectory;
+    private RecordingSsoNonceCookieWriter $cookieWriter;
+    private LoginHandOver $loginHandOver;
+
+    #[Override]
+    protected function setUp(): void
+    {
+        $this->workDirectory = new TemplateWorkDirectory();
+        $this->cookieWriter = new RecordingSsoNonceCookieWriter();
+        $this->loginHandOver = new LoginHandOver(
+            directory: $this->workDirectory->cacheDirectory . 'hand-over',
+            cookieWriter: $this->cookieWriter,
+            purgeProbabilityPercent: 0,
+        );
+    }
+
+    #[Override]
+    protected function tearDown(): void
+    {
+        $this->workDirectory->cleanUp();
+    }
+
+    private function createRemoteTarget(string $url = 'https://login.example.net/login.html'): LoginTarget
+    {
+        return LoginTarget::remote(url: $url, loginHandOver: $this->loginHandOver, handOverPath: '/login-ticket.html');
+    }
+
     public function testLocalTarget(): void
     {
         $loginTarget = LoginTarget::local(path: '/de/login.html?lang=de');
@@ -30,7 +60,7 @@ final class LoginTargetTest extends TestCase
 
     public function testRemoteTarget(): void
     {
-        $loginTarget = LoginTarget::remote(url: 'https://Login.Example.net/login.html?lang=de');
+        $loginTarget = $this->createRemoteTarget(url: 'https://Login.Example.net/login.html?lang=de');
 
         $this->assertSame('https://Login.Example.net/login.html?lang=de', $loginTarget->uri);
         $this->assertSame('login.example.net', $loginTarget->host);
@@ -63,7 +93,7 @@ final class LoginTargetTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        LoginTarget::remote(url: $url);
+        $this->createRemoteTarget(url: $url);
     }
 
     /**
@@ -89,6 +119,30 @@ final class LoginTargetTest extends TestCase
         yield 'trailing dot' => ['https://login.example.net./login.html'];
     }
 
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function invalidHandOverPaths(): iterable
+    {
+        yield 'empty' => [''];
+        yield 'relative' => ['login-ticket.html'];
+        yield 'absolute URL' => ['https://example.net/login-ticket.html'];
+        yield 'protocol relative' => ['//example.net/'];
+        yield 'with query' => ['/login-ticket.html?a=1'];
+    }
+
+    #[DataProvider('invalidHandOverPaths')]
+    public function testInvalidHandOverPathThrows(string $handOverPath): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        LoginTarget::remote(
+            url: 'https://login.example.net/login.html',
+            loginHandOver: $this->loginHandOver,
+            handOverPath: $handOverPath,
+        );
+    }
+
     public function testLocalLoginUriHasTheRequestUriAsReturnTarget(): void
     {
         $httpRequest = HttpRequestFactory::create(uri: '/a/?b=1');
@@ -97,37 +151,32 @@ final class LoginTargetTest extends TestCase
             '/login/?returnTo=%2Fa%2F%3Fb%3D1',
             LoginTarget::local(path: '/login/')->createLoginUri(httpRequest: $httpRequest),
         );
+        $this->assertSame([], $this->cookieWriter->setCookies);
     }
 
-    public function testRemoteLoginUriHasTheRequestUrlAsReturnTarget(): void
+    public function testRemoteLoginUriHasOnlyTheIdOfANewLoginRequest(): void
     {
-        $httpRequest = HttpRequestFactory::create(host: 'site-a.example.com', uri: '/de/page.html');
+        $httpRequest = HttpRequestFactory::create(host: 'site-a.example.com', uri: '/de/page.html?a=1');
 
-        $this->assertSame(
-            'https://login.example.net/login.html?lang=de&returnTo=https%3A%2F%2Fsite-a.example.com%2Fde%2Fpage.html',
-            LoginTarget::remote(url: 'https://login.example.net/login.html?lang=de')->createLoginUri(
-                httpRequest: $httpRequest,
-            ),
+        $loginUri = $this->createRemoteTarget(url: 'https://login.example.net/login.html?lang=de')->createLoginUri(
+            httpRequest: $httpRequest,
         );
+
+        $this->assertMatchesRegularExpression(
+            '#^https://login\.example\.net/login\.html\?lang=de&loginRequest=[0-9a-f]{64}$#D',
+            $loginUri,
+        );
+        $this->assertCount(1, $this->cookieWriter->setCookies);
+        $this->assertSame('__Host-yuf-login-browser', $this->cookieWriter->setCookies[0]['name']);
     }
 
-    public function testRemoteLoginUriKeepsTheProtocolOfTheRequest(): void
-    {
-        $httpRequest = HttpRequestFactory::create(host: 'site-a.example.com', uri: '/', protocol: ProtocolEnum::HTTP);
-
-        $this->assertSame(
-            'https://login.example.net/login.html?returnTo=http%3A%2F%2Fsite-a.example.com%2F',
-            LoginTarget::remote(url: 'https://login.example.net/login.html')->createLoginUri(httpRequest: $httpRequest),
-        );
-    }
-
-    public function testRemoteLoginUriOmitsAnInvalidRequestUri(): void
+    public function testRemoteLoginUriOfAnInvalidRequestUriReturnsToTheRoot(): void
     {
         $httpRequest = HttpRequestFactory::create(host: 'site-a.example.com', uri: '//example.net/');
 
-        $this->assertSame(
-            'https://login.example.net/login.html',
-            LoginTarget::remote(url: 'https://login.example.net/login.html')->createLoginUri(httpRequest: $httpRequest),
+        $this->assertStringStartsWith(
+            'https://login.example.net/login.html?loginRequest=',
+            $this->createRemoteTarget()->createLoginUri(httpRequest: $httpRequest),
         );
     }
 
@@ -135,7 +184,9 @@ final class LoginTargetTest extends TestCase
     {
         $loginTarget = LoginTarget::local(path: '/login.html?lang=de');
 
-        $this->assertTrue($loginTarget->isLoginRequest(httpRequest: HttpRequestFactory::create(uri: '/login.html?x=1')));
+        $this->assertTrue($loginTarget->isLoginRequest(
+            httpRequest: HttpRequestFactory::create(uri: '/login.html?x=1'),
+        ));
         $this->assertTrue($loginTarget->isLoginRequest(
             httpRequest: HttpRequestFactory::create(host: 'other.example.com', uri: '/login.html'),
         ));
@@ -144,10 +195,10 @@ final class LoginTargetTest extends TestCase
 
     public function testRemoteLoginRequestIsRecognizedByHostAndPath(): void
     {
-        $loginTarget = LoginTarget::remote(url: 'https://login.example.net/login.html');
+        $loginTarget = $this->createRemoteTarget();
 
         $this->assertTrue($loginTarget->isLoginRequest(
-            httpRequest: HttpRequestFactory::create(host: 'login.example.net', uri: '/login.html?returnTo=x'),
+            httpRequest: HttpRequestFactory::create(host: 'login.example.net', uri: '/login.html?loginRequest=x'),
         ));
         $this->assertTrue($loginTarget->isLoginRequest(
             httpRequest: HttpRequestFactory::create(host: 'LOGIN.example.net', uri: '/login.html'),

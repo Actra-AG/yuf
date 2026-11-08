@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\exception;
 
+use actra\yuf\auth\LoginHandOver;
 use actra\yuf\auth\UnauthorizedAccessRightException;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentType;
@@ -36,6 +37,7 @@ use actra\yuf\security\CspPolicySettings;
 use actra\yuf\security\SessionCsrfTokenSource;
 use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
+use actra\yuf\tests\Double\auth\RecordingSsoNonceCookieWriter;
 use actra\yuf\tests\Double\core\FixedRequestLanguageProvider;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\core\RecordingLogger;
@@ -402,6 +404,19 @@ final class ExceptionHandlerTest extends TestCase
         $this->assertStringContainsString('<h1>Unauthorized page</h1>', ExceptionHandlerTest::content(response: $response));
     }
 
+    private function createRemoteLoginTarget(): LoginTarget
+    {
+        return LoginTarget::remote(
+            url: 'https://login.example.net/login.html',
+            loginHandOver: new LoginHandOver(
+                directory: $this->workDirectory->cacheDirectory . 'hand-over',
+                cookieWriter: new RecordingSsoNonceCookieWriter(),
+                purgeProbabilityPercent: 0,
+            ),
+            handOverPath: '/login-ticket.html',
+        );
+    }
+
     private function createLoginRedirectHandler(
         string $uri = '/en/secret.html?id=7',
         RequestMethodEnum $method = RequestMethodEnum::GET,
@@ -511,20 +526,20 @@ final class ExceptionHandlerTest extends TestCase
         $this->assertSame(HttpStatusCodeEnum::HTTP_UNAUTHORIZED, $response->httpStatusCode);
     }
 
-    public function testNotLoggedInUserIsRedirectedToTheRemoteLoginPageWithTheRequestedUrl(): void
+    public function testNotLoggedInUserIsRedirectedToTheRemoteLoginPageWithALoginRequest(): void
     {
         $handler = $this->createLoginRedirectHandler(
             uri: '/de/page.html?a=1',
             host: 'site-a.example.com',
-            remoteLoginTarget: LoginTarget::remote(url: 'https://login.example.net/login.html'),
+            remoteLoginTarget: $this->createRemoteLoginTarget(),
         );
 
         $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_SEE_OTHER, $response->httpStatusCode);
-        $this->assertSame(
-            'https://login.example.net/login.html?returnTo=https%3A%2F%2Fsite-a.example.com%2Fde%2Fpage.html%3Fa%3D1',
-            $response->getHeader(key: 'Location'),
+        $this->assertMatchesRegularExpression(
+            '#^https://login\.example\.net/login\.html\?loginRequest=[0-9a-f]{64}$#D',
+            (string) $response->getHeader(key: 'Location'),
         );
     }
 
@@ -533,7 +548,7 @@ final class ExceptionHandlerTest extends TestCase
         $handler = $this->createLoginRedirectHandler(
             uri: '/login.html',
             host: 'site-a.example.com',
-            remoteLoginTarget: LoginTarget::remote(url: 'https://login.example.net/login.html'),
+            remoteLoginTarget: $this->createRemoteLoginTarget(),
         );
 
         $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
@@ -546,7 +561,7 @@ final class ExceptionHandlerTest extends TestCase
         $handler = $this->createLoginRedirectHandler(
             uri: '/login.html?returnTo=x',
             host: 'Login.Example.net',
-            remoteLoginTarget: LoginTarget::remote(url: 'https://login.example.net/login.html'),
+            remoteLoginTarget: $this->createRemoteLoginTarget(),
         );
 
         $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
@@ -558,7 +573,7 @@ final class ExceptionHandlerTest extends TestCase
     {
         $handler = $this->createLoginRedirectHandler(
             method: RequestMethodEnum::POST,
-            remoteLoginTarget: LoginTarget::remote(url: 'https://login.example.net/login.html'),
+            remoteLoginTarget: $this->createRemoteLoginTarget(),
         );
 
         $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
