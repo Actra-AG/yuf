@@ -11,8 +11,8 @@ namespace actra\yuf\auth;
 
 /**
  * The texts of the results of a login (`AuthResultEnum::label()`), e.g. for a list of login attempts. Plain text,
- * encoded when it is rendered. The defaults are German; `AuthResultMessages::english()` has the English
- * ones. Pass an own instance for another language.
+ * encoded when it is rendered. The defaults are German; `AuthResultMessages::english()`, `french()` and `italian()`
+ * have the English, French and Italian ones. Pass an own instance for another language.
  */
 final readonly class AuthResultMessages
 {
@@ -52,6 +52,48 @@ final readonly class AuthResultMessages
             successfulOtpLogin: 'OTP login',
             successfulMicrosoftLogin: 'Microsoft login',
             errorRateLimited: 'Too many login attempts',
+        );
+    }
+
+    public static function french(): AuthResultMessages
+    {
+        return new AuthResultMessages(
+            undefined: 'Inconnu',
+            successfulPasswordLogin: 'Connexion par mot de passe',
+            errorNoEmailAddress: 'Aucune adresse e-mail',
+            errorNoPassword: 'Aucun mot de passe',
+            errorUnknownUserName: 'Adresse e-mail non valable',
+            errorInactive: 'Accès inactif',
+            errorIpNotAllowed: 'Adresse IP non autorisée',
+            errorOutTried: 'Trop de tentatives erronées',
+            errorWrongPassword: 'Mot de passe erroné',
+            successfulSsoLogin: 'Connexion SSO',
+            errorNoPasswordLoginActive: 'Connexion par mot de passe inactive',
+            failedSsoLogin: 'Échec SSO',
+            successfulOtpLogin: 'Connexion OTP',
+            successfulMicrosoftLogin: 'Connexion Microsoft',
+            errorRateLimited: 'Trop de tentatives de connexion',
+        );
+    }
+
+    public static function italian(): AuthResultMessages
+    {
+        return new AuthResultMessages(
+            undefined: 'Sconosciuto',
+            successfulPasswordLogin: 'Accesso con password',
+            errorNoEmailAddress: 'Nessun indirizzo e-mail',
+            errorNoPassword: 'Nessuna password',
+            errorUnknownUserName: 'Indirizzo e-mail non valido',
+            errorInactive: 'Accesso inattivo',
+            errorIpNotAllowed: 'Indirizzo IP non consentito',
+            errorOutTried: 'Troppi tentativi errati',
+            errorWrongPassword: 'Password errata',
+            successfulSsoLogin: 'Accesso SSO',
+            errorNoPasswordLoginActive: 'Accesso con password inattivo',
+            failedSsoLogin: 'SSO non riuscito',
+            successfulOtpLogin: 'Accesso OTP',
+            successfulMicrosoftLogin: 'Accesso Microsoft',
+            errorRateLimited: 'Troppi tentativi di accesso',
         );
     }
 }

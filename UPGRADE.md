@@ -31,6 +31,12 @@ page of the login host. Same directory as `LoginHandOver`, which is unchanged.
   and test-only steps in views.
 - `RecordingResponseSender::capture(runAfterResponseCallbacks: true)` runs the work registered with `afterResponse()`.
 
+### French and Italian texts
+
+New, optional: `FormMessages::french()`, `italian()`, `TableMessages::french()`, `italian()` and
+`AuthResultMessages::french()`, `italian()` (formal address, Swiss usage). Projects that pass own French or Italian
+texts may replace them.
+
 ### Upgrade notes
 
 - The notes of v5 to v7 moved to [docs/upgrade/](docs/upgrade/v7.md).

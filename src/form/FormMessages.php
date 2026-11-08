@@ -10,8 +10,9 @@ declare(strict_types=1);
 namespace actra\yuf\form;
 
 /**
- * The texts the form code creates itself. Plain text, encoded when it is rendered. The defaults are English,
- * `FormMessages::german()` has the German texts (Sie-form, Swiss spelling). Pass it to `Form(messages: ...)`.
+ * The texts the form code creates itself. Plain text, encoded when it is rendered. The defaults are English;
+ * `FormMessages::german()`, `french()` and `italian()` have the German, French and Italian texts (formal address, Swiss
+ * usage). Pass it to `Form(messages: ...)`.
  *
  * Placeholders: `[field]` in `invalidOption`, `[max]` in `tooManyFiles`, `[fileName]` in `duplicateFile`,
  * `[maxSize]` in `fileExceedsMaxSize`, `[min]` in `passwordTooShort`, `[max]` in `tooLong`. `spamHoneypotFilled` names
@@ -82,6 +83,73 @@ final readonly class FormMessages
             . ' sind.',
             captchaUnavailable: 'Die Sicherheitsprüfung ist im Moment nicht verfügbar. Bitte versuchen Sie es später'
             . ' erneut.',
+        );
+    }
+
+    public static function french(): FormMessages
+    {
+        return new FormMessages(
+            invalidInput: 'La saisie non valable a été ignorée.',
+            invalidValue: 'La valeur indiquée n’est pas valable.',
+            invalidZipCode: 'Le NPA saisi n’est pas valable.',
+            selectOneOption: 'Veuillez sélectionner l’une des options.',
+            selectEmptyOption: '-- Veuillez sélectionner --',
+            invalidOption: 'Sélection non valable dans le champ [field].',
+            invalidCsrfToken: 'Le formulaire n’a pas pu être envoyé en raison d’un problème technique (jeton CSRF '
+                . 'non valable). Veuillez réessayer.',
+            cancel: 'Annuler',
+            removeFile: 'supprimer',
+            fileEmpty: 'Le fichier était vide:',
+            fileIncomplete: 'Le fichier n’a été que partiellement téléchargé:',
+            fileTooBig: 'Le fichier était trop volumineux:',
+            fileTechnicalError: 'Une erreur technique s’est produite lors du téléchargement du fichier:',
+            fileExceedsMaxSize: 'Le fichier dépasse [maxSize]:',
+            fileTypeNotAllowed: 'Ce type de fichier n’est pas autorisé:',
+            tooManyFiles: '[max] fichier(s) au maximum.',
+            duplicateFile: 'Un fichier nommé «[fileName]» a déjà été téléchargé.',
+            passwordTooShort: 'Le mot de passe doit comporter au moins [min] caractères.',
+            spamHoneypotLabel: 'Réservé à un usage interne',
+            spamHoneypotFilled: 'Veuillez laisser vide le champ «Réservé à un usage interne».',
+            spamRetry: 'Veuillez réessayer.',
+            spamRejectedEmailAddress: 'Veuillez saisir une adresse e-mail valable.',
+            tooLong: 'Le texte ne doit pas dépasser [max] caractères.',
+            rateLimited: 'Trop d’envois. Veuillez réessayer dans quelques minutes.',
+            captchaFailed: 'Le contrôle de sécurité a échoué. Veuillez confirmer à nouveau que vous êtes un humain.',
+            captchaUnavailable: 'Le contrôle de sécurité n’est pas disponible pour le moment. Veuillez réessayer '
+                . 'plus tard.',
+        );
+    }
+
+    public static function italian(): FormMessages
+    {
+        return new FormMessages(
+            invalidInput: 'L’inserimento non valido è stato ignorato.',
+            invalidValue: 'Il valore indicato non è valido.',
+            invalidZipCode: 'Il NPA inserito non è valido.',
+            selectOneOption: 'Selezioni una delle opzioni.',
+            selectEmptyOption: '-- Selezionare --',
+            invalidOption: 'Selezione non valida nel campo [field].',
+            invalidCsrfToken: 'Non è stato possibile inviare il modulo a causa di un problema tecnico (token CSRF '
+                . 'non valido). Riprovi.',
+            cancel: 'Annullare',
+            removeFile: 'eliminare',
+            fileEmpty: 'Il file era vuoto:',
+            fileIncomplete: 'Il file è stato caricato in modo incompleto:',
+            fileTooBig: 'Il file era troppo grande:',
+            fileTechnicalError: 'Si è verificato un errore tecnico durante il caricamento del file:',
+            fileExceedsMaxSize: 'Il file è più grande di [maxSize]:',
+            fileTypeNotAllowed: 'Il tipo di file non è consentito:',
+            tooManyFiles: 'Al massimo [max] file.',
+            duplicateFile: 'È già stato caricato un file con il nome «[fileName]».',
+            passwordTooShort: 'La password deve contenere almeno [min] caratteri.',
+            spamHoneypotLabel: 'Solo per uso interno',
+            spamHoneypotFilled: 'Lasci vuoto il campo «Solo per uso interno».',
+            spamRetry: 'Riprovi.',
+            spamRejectedEmailAddress: 'Inserisca un indirizzo e-mail valido.',
+            tooLong: 'Il testo non può superare [max] caratteri.',
+            rateLimited: 'Troppi invii. Riprovi tra qualche minuto.',
+            captchaFailed: 'Il controllo di sicurezza non è riuscito. Confermi di nuovo di essere una persona.',
+            captchaUnavailable: 'Il controllo di sicurezza non è disponibile al momento. Riprovi più tardi.',
         );
     }
 }

@@ -85,9 +85,9 @@ $html = $snippet->render(templateEngine: $this->context->templateEngine);
 
 - The texts a table creates itself ("no entries", the number of results) come from a `TableMessages`
   (`messages:` of `SmartTable`, `DbResultTable`, `TableHelper::createDbResultTable()`). The defaults are German;
-  `TableMessages::english()` has English texts. `[amount]` in `oneResult` and `numResults` is the amount, output in
-  `<strong>`. The texts are plain text and encoded. The HTML templates of the table (`fullHtml`, `oddRowHtml`, …) are
-  properties; the texts are not.
+  `TableMessages::english()`, `french()` and `italian()` have English, French and Italian texts. `[amount]` in
+  `oneResult` and `numResults` is the amount, output in `<strong>`. The texts are plain text and encoded. The HTML
+  templates of the table (`fullHtml`, `oddRowHtml`, …) are properties; the texts are not.
 - A row (`TableItem`) holds scalars and `NULL` only; an array or object throws an `UnexpectedValueException` when the
   row is created. Render other values with a `CallbackColumn`.
 - `DbResultTable::exportCsv(fileName: 'users.csv')` sends all rows of the table as CSV download and ends the script,

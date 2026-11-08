@@ -1,8 +1,8 @@
 # Forms
 
 A `Form` holds fields. Every field stores and returns its value with a precise type, so no casting is needed. The texts
-a form creates itself (e.g. "The invalid input was ignored.") are English; `FormMessages::german()` has the German
-texts, own texts are named arguments of `FormMessages`.
+a form creates itself (e.g. "The invalid input was ignored.") are English; `FormMessages::german()`, `french()` and
+`italian()` have the German, French and Italian texts, own texts are named arguments of `FormMessages`.
 
 ```php
 $form = new Form(context: $this->context->formContext, name: 'order', messages: FormMessages::german());

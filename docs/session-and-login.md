@@ -429,8 +429,9 @@ have no password. All other login methods (`doLogin()` with `null`, `verifyCrede
 ### Texts of the login results
 
 `AuthResultEnum::label(messages: new AuthResultMessages())` returns the text of a result as `HtmlText` (plain text,
-escaped), e.g. for a list of login attempts. The defaults are German, `AuthResultMessages::english()` has English
-texts, and an own instance (named arguments, one per result) gives any language.
+escaped), e.g. for a list of login attempts. The defaults are German, `AuthResultMessages::english()`, `french()` and
+`italian()` have English, French and Italian texts, and an own instance (named arguments, one per result) gives any
+language.
 
 ## Passwords and secret tokens
 

@@ -11,8 +11,8 @@ namespace actra\yuf\table;
 
 /**
  * The texts that `SmartTable` and `DbResultTable` create themselves. Plain text, encoded when it is rendered. The
- * defaults are German; pass an own instance to `SmartTable(messages: ...)` or
- * `DbResultTable(messages: ...)` for another language.
+ * defaults are German; `TableMessages::english()`, `french()` and `italian()` have the English, French and Italian
+ * ones. Pass it to `SmartTable(messages: ...)` or `DbResultTable(messages: ...)`.
  *
  * `[amount]` in `oneResult` and `numResults` is replaced with the amount, which is output in `<strong>` (the amount of
  * `numResults` with the apostrophe as thousands separator).
@@ -33,6 +33,24 @@ final readonly class TableMessages
             noData: 'No entries found.',
             oneResult: '[amount] result found.',
             numResults: '[amount] results found.',
+        );
+    }
+
+    public static function french(): TableMessages
+    {
+        return new TableMessages(
+            noData: 'Aucune entrée trouvée.',
+            oneResult: '[amount] résultat trouvé.',
+            numResults: '[amount] résultats trouvés.',
+        );
+    }
+
+    public static function italian(): TableMessages
+    {
+        return new TableMessages(
+            noData: 'Nessuna voce trovata.',
+            oneResult: '[amount] risultato trovato.',
+            numResults: '[amount] risultati trovati.',
         );
     }
 }
