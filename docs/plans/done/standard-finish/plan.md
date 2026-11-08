@@ -423,7 +423,7 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   PHPDoc now names it a builder (one file per instance, rows only added).
 - Other projects (read only): no read or write of `->data` on an `HtmlDataObject` found in `backend` (apart from
   `backend/tests/Unit/libs/common/LanguageSwitcherTest.php` lines 93-95: `$data[1]->data->label|href|isCurrent`),
-  nor in the projects using yuf 4. Subclasses: `drogeriehaas.ch` `GlobalNote`. Other `->data` hits are `FormOptions` /
+  nor in the projects using yuf 4. Subclasses: one in a project. Other `->data` hits are `FormOptions` /
   `TableItem`, which are unchanged.
 - `UPGRADE.md`: `## [v4.50.0]`. `ddev composer check` green, baseline empty, `curl https://yuf.ddev.site/` 200.
 - Open: none.
@@ -451,13 +451,12 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   creates `ToggleChildren` lazily (`?ToggleChildren` plus private `getToggleChildren()`), because PHPStan reports a
   readonly property initialised from a trait method and a property hook with `??=` as uninitialised. Public API
   unchanged.
-- **Other projects (read only, yuf 4: `backend` ^4.10, `drogeriehaas.ch` ^4.7; `yuf-skeleton` `^3.2 || ^4.0` has no hit):**
+- **Other projects (read only, yuf 4: `backend` ^4.10, one project ^4.7; `yuf-skeleton` `^3.2 || ^4.0` has no hit):**
   no class extends `FormRenderer` or `InputFieldRenderer` and nobody calls `prepare()`, `setHtmlTag()` or `getHtmlTag()`
   on a renderer. Callers of `prepareHtmlTag()`: `backend/src/libs/form/component/SearchQueryField.php:34`,
   `backend/src/libs/form/component/SearchSelectOptionsField.php:24`,
-  `drogeriehaas.ch/app/libs/form/component/SearchQueryField.php:34`,
-  `drogeriehaas.ch/app/libs/form/component/SearchSelectOptionsField.php:25` (all in an overridden `getHtmlTag()`:
-  `$this->getDefaultRenderer()->prepareHtmlTag()` -> `createHtmlTag()`). `drogeriehaas.ch/.../QuillEditorField.php` only
+  and the same two fields in the project (all in an overridden `getHtmlTag()`:
+  `$this->getDefaultRenderer()->prepareHtmlTag()` -> `createHtmlTag()`). An editor field of the project only
   uses `FormRenderer::addErrorsToParentHtmlTag()` (unchanged). Those files still use the old
   `new HtmlTagAttribute(...)` (v4.41.0 change, see its UPGRADE section).
 - `UPGRADE.md`: `## [v4.51.0]`. `ddev composer check` green, baseline empty, `curl https://yuf.ddev.site/` 200 (`example/`
@@ -481,13 +480,13 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   IPv4 clients (decision; documented). Not treated as IPv4: `::a.b.c.d` (compatible), `64:ff9b::/96` (NAT64),
   `::ffff:0:a.b.c.d` (translated), `ffff` in other positions (all tested). PHPDoc updated.
 - **`CountryCodeEnum`:** `AA` and `UR` removed. Usages: none in `src/`, `tests/`, `example/`, `backend`,
-  `drogeriehaas.ch`, `yuf-skeleton` (grep of `::AA`, `::UR`, `'AA'`, `'UR'`).
+  the project on yuf 4, `yuf-skeleton` (grep of `::AA`, `::UR`, `'AA'`, `'UR'`).
 - **`TableFilter`:** `assertIdentifierIsFree()` (checks `$allFilterFields`, i.e. both lists) before `init()` in
   `addPrimaryField()` / `addSecondaryField()`; the rejected field is not initialised and not added.
 - **`NavigationItemCollection::addItem()`:** throws for a second `navKey`. The old test
   `testAddingTheSameKeyReplacesTheItem` (characterization of replacing) is replaced by rejection tests. Usages (read
   only): yuf has no caller besides the tests; `backend` (`ActraBackend`: one `users` item, children `userList`,
-  `tokens`, `visits`, `notifications`) and `drogeriehaas.ch` (`BackendNavigationItemCollection`, frontend collection)
+  `tokens`, `visits`, `notifications`) and the project on yuf 4 (backend and frontend collection)
   use distinct keys per collection, nothing relies on replacing. `backend` adds its item to a collection the project
   passes in: a project that already has a `users` item there would now throw. Neither project uses `TableFilter`.
 - **`DateFilterField`:** the field renders `<input type="text">` (not `type="date"`) with the value in `renderFormat`
@@ -497,7 +496,7 @@ each small enough to release on its own. `actra/backend` follows when the plan i
   `1.3.2026`, as the form `DateField` and as Swiss users type it).
   A date without `:` still gets 00:00:00 / 23:59:59. The session value is parsed with `Y-m-d H:i:s` only and ignored
   if it does not fit (before: `DateMalformedStringException`). Whitespace around the input is trimmed by
-  `HttpRequest::getPostString()` (unchanged). Used in `my.cmas.ch` / `artplattform.com` (old framework, not yuf 4).
+  `HttpRequest::getPostString()` (unchanged). Used in two projects on the old framework (not yuf 4).
 - `UPGRADE.md`: `## [v4.52.0]`. `ddev composer check` green, baseline empty, `curl https://yuf.ddev.site/` 200.
 - Tests: 12248 -> 12593.
 - Open: none.

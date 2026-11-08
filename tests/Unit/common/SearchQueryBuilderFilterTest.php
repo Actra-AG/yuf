@@ -91,7 +91,7 @@ final class SearchQueryBuilderFilterTest extends TestCase
     public function testCreateSQLFiltersCombinesColumns(): void
     {
         $data = SearchQueryBuilder::createSqlFilters(filterArr: [
-            'a.firstName' => 'haas',
+            'a.firstName' => 'term',
             'b.city' => '',
             'b.zip' => 80,
         ]);
@@ -101,7 +101,7 @@ final class SearchQueryBuilderFilterTest extends TestCase
             . SearchQueryBuilderFilterTest::LIKE . ')',
             $data->query,
         );
-        $this->assertSame(['%haas%', '%80%'], $data->params);
+        $this->assertSame(['%term%', '%80%'], $data->params);
     }
 
     /**
@@ -125,7 +125,7 @@ final class SearchQueryBuilderFilterTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        SearchQueryBuilder::createSqlFilters(filterArr: [$column => 'haas']);
+        SearchQueryBuilder::createSqlFilters(filterArr: [$column => 'term']);
     }
 
     /**
@@ -134,13 +134,13 @@ final class SearchQueryBuilderFilterTest extends TestCase
     public static function databaseFilterProvider(): array
     {
         return [
-            'question mark' => ['?haas', [1]],
+            'question mark' => ['?term', [1]],
             'percent is literal' => ['50%', [3]],
             'underscore is literal' => ['a_b', [4]],
             'star is a wildcard' => ['5*0', [3, 5]],
-            'combined column' => ['haas zürich', [1, 2]],
-            'operators' => ['haas -kapelle', [2]],
-            'equal' => ['"Haas zürich"', [2]],
+            'combined column' => ['term zürich', [1, 2]],
+            'operators' => ['term -kapelle', [2]],
+            'equal' => ['"Term zürich"', [2]],
         ];
     }
 
@@ -154,7 +154,7 @@ final class SearchQueryBuilderFilterTest extends TestCase
         $pdo = new PDO(dsn: 'sqlite::memory:', options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         $pdo->exec(statement: 'CREATE TABLE item (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL)');
         $pdo->exec(
-            statement: "INSERT INTO item (id, name, city) VALUES (1, '?Haas Kapelle', 'Bern'), (2, 'Haas', 'zürich'),"
+            statement: "INSERT INTO item (id, name, city) VALUES (1, '?Term Kapelle', 'Bern'), (2, 'Term', 'zürich'),"
             . " (3, '50% Rabatt', ''), (4, 'a_b', ''), (5, '500', ''), (6, 'axb', '')",
         );
         $dbQuery = DbQuery::createFromSqlQuery(

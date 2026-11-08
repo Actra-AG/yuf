@@ -5,7 +5,7 @@ since v5.0.0, yuf wherever `vendor/autoload.php` is included) and `actra/autoloa
 `Core::fromEnvironment()`, today mostly for the classes of `app/`). One loader is simpler and faster: Composer's class
 map, generated at deploy time, is one array lookup per class, held in OPcache, without writes at runtime.
 
-Status: done for yuf (v5.1.0), the skeleton and drogeriehaas.ch (2026-10-10); the other projects follow with their
+Status: done for yuf (v5.1.0), the skeleton and one project (2026-10-10); the other projects follow with their
 own migration to yuf 5.
 
 ## Why `actra/autoloader` is not extended instead
@@ -44,7 +44,7 @@ that PHPStan, PHPUnit and IDEs get from `vendor/autoload.php`. That is a rebuild
   remove `actra/autoloader`. Check `/` and `/auto/` (`ClassNameViewFactory` relies on `class_exists()` of lowercase
   view classes: check that PSR-4 finds them; otherwise a class map or a fixed naming rule).
 
-### Step 3 – projects (actra.ch, drogeriehaas.ch, all others on yuf)
+### Step 3 – projects (all on yuf)
 
 - Same migration as the skeleton; remove `actra/autoloader`. actra/backend needs no change (already Composer only).
 
@@ -72,6 +72,6 @@ that PHPStan, PHPUnit and IDEs get from `vendor/autoload.php`. That is a rebuild
 
 ### Steps 2 and 3 (2026-10-10)
 
-- Skeleton (v1.14.0) and drogeriehaas.ch load all classes with Composer; actra/backend already did. The other projects
-  on yuf (actra.ch and the projects without a version constraint) were postponed by the user: they take the Composer
+- Skeleton (v1.14.0) and one project load all classes with Composer; actra/backend already did. The other projects
+  on yuf (including the projects without a version constraint) were postponed by the user: they take the Composer
   migration with their move to yuf 5 (yuf UPGRADE.md v5.1.0).

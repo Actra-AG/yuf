@@ -140,7 +140,7 @@ $query->addOrderPart(
 ```php
 $data = SearchQueryBuilder::createBooleanQuery(
     spaceSeparatedFieldNames: 'person.firstName person.lastName',
-    queryText: $searchTerm, // e.g. 'haas +kap -"old address"'
+    queryText: $searchTerm, // e.g. 'term +kap -"old address"'
 );
 $query->addWherePart(wherePart: $data->query, parameters: $data->params);
 ```

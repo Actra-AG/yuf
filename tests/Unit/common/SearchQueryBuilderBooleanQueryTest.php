@@ -40,7 +40,7 @@ final class SearchQueryBuilderBooleanQueryTest extends TestCase
 
     public function testSingleWordIsLowercasedAndWrappedInWildcards(): void
     {
-        $this->assertBooleanQuery('((name' . SearchQueryBuilderBooleanQueryTest::LIKE . '))', ['%haas%'], 'Haas');
+        $this->assertBooleanQuery('((name' . SearchQueryBuilderBooleanQueryTest::LIKE . '))', ['%term%'], 'Term');
     }
 
     public function testEveryFieldGetsItsOwnCondition(): void
@@ -48,8 +48,8 @@ final class SearchQueryBuilderBooleanQueryTest extends TestCase
         $this->assertBooleanQuery(
             '((a.name' . SearchQueryBuilderBooleanQueryTest::LIKE . ' OR b.city'
                 . SearchQueryBuilderBooleanQueryTest::LIKE . '))',
-            ['%haas%', '%haas%'],
-            'haas',
+            ['%term%', '%term%'],
+            'term',
             'a.name b.city',
         );
     }
@@ -59,8 +59,8 @@ final class SearchQueryBuilderBooleanQueryTest extends TestCase
         $this->assertBooleanQuery(
             '((name' . SearchQueryBuilderBooleanQueryTest::LIKE . ') OR (name'
                 . SearchQueryBuilderBooleanQueryTest::LIKE . '))',
-            ['%haas%', '%kap%'],
-            'haas  kap',
+            ['%term%', '%kap%'],
+            'term  kap',
         );
     }
 
@@ -72,33 +72,33 @@ final class SearchQueryBuilderBooleanQueryTest extends TestCase
         $word = '(name' . SearchQueryBuilderBooleanQueryTest::LIKE . ')';
 
         return [
-            'and' => ['haas and kap', '(' . $word . ' AND ' . $word . ')', ['%haas%', '%kap%']],
-            'or' => ['haas OR kap', '(' . $word . ' OR ' . $word . ')', ['%haas%', '%kap%']],
-            'not' => ['haas not kap', '(' . $word . ' AND (NOT ' . $word . '))', ['%haas%', '%kap%']],
+            'and' => ['term and kap', '(' . $word . ' AND ' . $word . ')', ['%term%', '%kap%']],
+            'or' => ['term OR kap', '(' . $word . ' OR ' . $word . ')', ['%term%', '%kap%']],
+            'not' => ['term not kap', '(' . $word . ' AND (NOT ' . $word . '))', ['%term%', '%kap%']],
             'shorthands' => [
-                'haas +kap -bar',
+                'term +kap -bar',
                 '(' . $word . ' AND ' . $word . ' AND (NOT ' . $word . '))',
-                ['%haas%', '%kap%', '%bar%'],
+                ['%term%', '%kap%', '%bar%'],
             ],
             'shorthand before a phrase' => [
-                'haas -"a b"',
+                'term -"a b"',
                 '(' . $word . ' AND (NOT ' . $word . '))',
-                ['%haas%', '%a b%'],
+                ['%term%', '%a b%'],
             ],
             'operator word after an operator' => [
-                'haas and or',
+                'term and or',
                 '(' . $word . ' AND ' . $word . ')',
-                ['%haas%', '%or%'],
+                ['%term%', '%or%'],
             ],
-            'leading operator is a word' => ['not haas', '(' . $word . ' OR ' . $word . ')', ['%not%', '%haas%']],
-            'leading shorthand is a word' => ['+haas', '(' . $word . ')', ['%+haas%']],
-            'trailing operator is ignored' => ['haas and', '(' . $word . ')', ['%haas%']],
+            'leading operator is a word' => ['not term', '(' . $word . ' OR ' . $word . ')', ['%not%', '%term%']],
+            'leading shorthand is a word' => ['+term', '(' . $word . ')', ['%+term%']],
+            'trailing operator is ignored' => ['term and', '(' . $word . ')', ['%term%']],
             'lone shorthand applies to the next word' => [
-                'haas + kap',
+                'term + kap',
                 '(' . $word . ' AND ' . $word . ')',
-                ['%haas%', '%kap%'],
+                ['%term%', '%kap%'],
             ],
-            'shorthand within a word is literal' => ['haas-kap', '(' . $word . ')', ['%haas-kap%']],
+            'shorthand within a word is literal' => ['term-kap', '(' . $word . ')', ['%term-kap%']],
         ];
     }
 
@@ -116,8 +116,8 @@ final class SearchQueryBuilderBooleanQueryTest extends TestCase
         $word = '(name' . SearchQueryBuilderBooleanQueryTest::LIKE . ')';
         $this->assertBooleanQuery(
             '(' . $word . ' OR ' . $word . ' OR ' . $word . ' OR ' . $word . ')',
-            ['%foo%', '%haas kap%', '%and%', '%a -b%'],
-            'foo "Haas Kap" "and" "a -b"',
+            ['%foo%', '%term kap%', '%and%', '%a -b%'],
+            'foo "Term Kap" "and" "a -b"',
         );
     }
 
@@ -127,7 +127,7 @@ final class SearchQueryBuilderBooleanQueryTest extends TestCase
     public static function specialCharacterProvider(): array
     {
         return [
-            'question mark' => ['?haas', '%?haas%'],
+            'question mark' => ['?term', '%?term%'],
             'percent' => ['50%', '%50!%%'],
             'underscore' => ['a_b', '%a!_b%'],
             'escape character' => ['wow!', '%wow!!%'],
@@ -169,8 +169,8 @@ final class SearchQueryBuilderBooleanQueryTest extends TestCase
     {
         $this->assertBooleanQuery(
             '((name' . SearchQueryBuilderBooleanQueryTest::LIKE . '))',
-            ['%haas%'],
-            ' <b>Haas</b> ',
+            ['%term%'],
+            ' <b>Term</b> ',
         );
     }
 
@@ -196,14 +196,14 @@ final class SearchQueryBuilderBooleanQueryTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        $_ = SearchQueryBuilder::createBooleanQuery(spaceSeparatedFieldNames: $fieldNames, queryText: 'haas');
+        $_ = SearchQueryBuilder::createBooleanQuery(spaceSeparatedFieldNames: $fieldNames, queryText: 'term');
     }
 
     public function testValidFieldNames(): void
     {
         $data = SearchQueryBuilder::createBooleanQuery(
             spaceSeparatedFieldNames: '2011_module.titel `order` db.t.c $col',
-            queryText: 'haas',
+            queryText: 'term',
         );
 
         $this->assertSame(
@@ -215,7 +215,7 @@ final class SearchQueryBuilderBooleanQueryTest extends TestCase
 
     public function testDbQueryAcceptsQueryWithQuestionMark(): void
     {
-        $data = SearchQueryBuilder::createBooleanQuery(spaceSeparatedFieldNames: 'name', queryText: '?haas kap');
+        $data = SearchQueryBuilder::createBooleanQuery(spaceSeparatedFieldNames: 'name', queryText: '?term kap');
         $dbQuery = DbQuery::createFromSqlQuery(query: 'SELECT id FROM item');
 
         $dbQuery->addWherePart(wherePart: $data->query, parameters: $data->params);
@@ -223,7 +223,7 @@ final class SearchQueryBuilderBooleanQueryTest extends TestCase
         $this->assertEquals(
             new DbQueryData(
                 query: "SELECT id FROM item WHERE((name LIKE ? ESCAPE '!') OR(name LIKE ? ESCAPE '!')) LIMIT ?, ?",
-                params: ['%?haas%', '%kap%', 0, 10],
+                params: ['%?term%', '%kap%', 0, 10],
             ),
             $dbQuery->getDbQueryData(offset: 0, rowCount: 10),
         );
@@ -235,14 +235,14 @@ final class SearchQueryBuilderBooleanQueryTest extends TestCase
     public static function databaseSearchProvider(): array
     {
         return [
-            'question mark' => ['?haas', [1]],
+            'question mark' => ['?term', [1]],
             'percent is literal' => ['50%', [3]],
             'underscore is literal' => ['a_b', [4]],
             'escape character is literal' => ['wow!', [6]],
             'backslash is literal' => ['c:\\temp', [7]],
-            'case-insensitive or' => ['HAAS 500', [1, 2, 5]],
-            'and not' => ['haas -kapelle', [2]],
-            'phrase' => ['"haas kapelle"', [1]],
+            'case-insensitive or' => ['TERM 500', [1, 2, 5]],
+            'and not' => ['term -kapelle', [2]],
+            'phrase' => ['"term kapelle"', [1]],
         ];
     }
 
@@ -258,7 +258,7 @@ final class SearchQueryBuilderBooleanQueryTest extends TestCase
         $pdo = new PDO(dsn: 'sqlite::memory:', options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         $pdo->exec(statement: 'CREATE TABLE item (id INTEGER PRIMARY KEY, name TEXT NOT NULL)');
         $pdo->exec(
-            statement: "INSERT INTO item (id, name) VALUES (1, '?Haas Kapelle'), (2, 'Haas'), (3, '50% Rabatt'),"
+            statement: "INSERT INTO item (id, name) VALUES (1, '?Term Kapelle'), (2, 'Term'), (3, '50% Rabatt'),"
             . " (4, 'a_b'), (5, '500'), (6, 'wow!'), (7, 'C:\\Temp'), (8, 'axb'), (9, 'c:temp')",
         );
         $dbQuery = DbQuery::createFromSqlQuery(query: 'SELECT id FROM item');

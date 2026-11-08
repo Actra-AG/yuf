@@ -14,8 +14,7 @@ Status: done (2026-10-23), see "Handover notes" for the deviations from the prop
   all other fields are valid: rejected e-mail address, honeypot, too fast, expired) → `globalErrorMessage`.
 - No rate limit: a client can submit a public form as often as it likes; every submit runs all rules, including the DNS
   and SMTP checks of `EmailField` (`SystemMailDomainResolver`), the project's processing and its mails.
-- Projects limit by hand (actra.ch: `domain_bestellen.php` consumes `'domainOrder|' . ipBucket` with its own limits
-  and fails open on storage errors).
+- Projects limit by hand (e.g. a rate limit per form and IP bucket with their own limits).
 
 ### Login (`auth\Authenticator`)
 

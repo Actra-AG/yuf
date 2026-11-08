@@ -392,8 +392,8 @@ too large.
   `headerHasBcc()`. (2) Header injection through the type of an attachment (`Content-Type` of the part): validated as
   `type/subtype`; custom header names validated (no colon, no space); line breaks in header values rejected before the
   encoder (an encoder fold `\r\n ` is the only line break a header may have). (3) `STARTTLS`: the result of
-  `stream_socket_enable_crypto()` was ignored (credentials and message in plain text after a failed handshake):
-  fails closed now, certificate chain and host name verified explicitly, TLS 1.2+; checked against a self-signed
+  `stream_socket_enable_crypto()` is checked: fails closed now, certificate chain and host name verified explicitly,
+  TLS 1.2+; checked against a self-signed
   server (handshake refused). (4) Credentials: the log (public `$log`) held the base64 user name and password; exceptions
   never contained them, now they also do not contain addresses or header values (personal data, log forging). (5) SMTP
   command injection: addresses cannot contain line breaks (validated, tested), the `EHLO` name comes from reverse DNS
@@ -453,10 +453,9 @@ too large.
   1. *Passwords* were a salted SHA-256 (fast hash): `password_hash()` Argon2id now, legacy passwords verified with
      `hash_equals()` and upgraded at the login (`AuthUser::rehashPassword()`, new abstract `dbUpdatePassword()`); a login
      for an unknown user spends the time of a verification against a dummy hash.
-  2. *Session fixation:* `use_strict_mode` has no effect for a `SessionHandler` subclass without `validateId()` (PHP then
-     treats every ID as valid, checked with a probe: a well-formed unknown cookie ID was kept). `AbstractSessionHandler`
-     implements `SessionUpdateTimestampHandlerInterface` with the abstract `sessionExists()`. `AuthSession::logIn()` did
-     not regenerate the ID: it does now.
+  2. *Session fixation:* `use_strict_mode` has no effect for a `SessionHandler` subclass without `validateId()`.
+     `AbstractSessionHandler` implements `SessionUpdateTimestampHandlerInterface` with the abstract `sessionExists()`.
+     `AuthSession::logIn()` did not regenerate the ID: it does now.
   3. *Session replacement* (other client or expired): the old data is removed before anything else, an unchanged ID is an
      error, missing handler data counts as untrusted (fail closed); `use_only_cookies` / `use_trans_sid` set.
   4. *JWT:* algorithm fixed to RS256 (checked: `none`, HS256, RS512, lower case), `iss` check added, exactly three
@@ -465,7 +464,7 @@ too large.
      parses, refreshed at most every 5 minutes; the download uses verified HTTPS without redirects, timeout and size
      limit; the tenant ID is validated (URL and file name).
   5. *Logs:* the Microsoft SSO log contained the raw ID token and the nonce: exception class and message only now.
-  6. *CSP:* `Host` header injected into the policy (sanitized); nonce rules unchanged and tested (no `unsafe-inline` /
+  6. *CSP:* the `Host` header in the policy is sanitized; nonce rules unchanged and tested (no `unsafe-inline` /
      `unsafe-eval` by default). *CSRF:* the hidden field encodes the token; token generation (`random_bytes(32)`) and
      `hash_equals()` were fine.
   7. The Microsoft login URL did not encode its parameters.
@@ -504,15 +503,13 @@ too large.
 
 - Area `api`. Baseline 75 -> 48 (all 27 entries of `src/api/` removed, no new entry). Tests now 11345
   (`tests/Unit/api/`: 249). Details and before/after in `UPGRADE.md`.
-- **Usage in other projects (read-only search, `actra\yuf\api`):** `crm.actra.ch` (`AbaNinja*`: `CurlGetRequest::prepare` (renamed `create`, see below),
-  `CurlPostRequest::prepareWithJsonBody`, `useTokenAuthentication`, `setHttpHeader`, `setTimeoutInSeconds`, `execute`,
-  `rawResponseBody`, `hasErrors`, `errorMessage`, `getJsonResponse`), `actra.domains` (`OpusClient`, `RealtimeClient`,
-  `OpenProviderClient`, `Crm*`, `ExternalApiRequest` (takes `AbstractCurlRequest`), `CronApiRequest`,
-  `ActionSyncSwitchErrors` (`useBasicHttpAuthentication`, `responseHttpCode`), `HttpApiCommand`, `syncExchangeRates`:
-  the same calls plus `prepareWithPostBody`, `prepareWithoutBody`, Put / Patch / Delete requests, `curlInfo`, `errorCode`),
-  `drogeriehaas.ch` (`hciSync`: `prepareWithPostBody`, `getXmlResponse`, `curlInfo`). Nobody uses `setCurlOption`,
+- **Usage in other projects (read-only search, `actra\yuf\api`):** three projects use `CurlGetRequest::prepare`
+  (renamed `create`, see below), `CurlPostRequest::prepareWithJsonBody`, `prepareWithPostBody`, `prepareWithoutBody`,
+  Put / Patch / Delete requests, `useTokenAuthentication`, `useBasicHttpAuthentication`, `setHttpHeader`,
+  `setTimeoutInSeconds`, `execute`, `rawResponseBody`, `hasErrors`, `errorMessage`, `errorCode`, `responseHttpCode`,
+  `curlInfo`, `getJsonResponse`, `getXmlResponse`; one type takes `AbstractCurlRequest`. Nobody uses `setCurlOption`,
   `removeCurlOption`, `disableSslCheck`, `acceptRedirectionResponseCode`, `CurlHeadRequest`,
-  `createFromPreparedCurlHandle` or extends a request class. `my.cmas.ch` and `cron.actra.ch` have an old own copy
+  `createFromPreparedCurlHandle` or extends a request class. Two projects have an old own copy
   (`framework\api`), not yuf. **Follow-up in projects:** rename `prepare…` to `create…` for the request classes; check that their API URLs are `https://` (credentials over plain
   HTTP are refused now) and that no server needs TLS 1.0 / 1.1 or an untrusted certificate; nothing else changes.
 - **Characterization first** (`CurlRequestCharacterizationTest`, 54 tests, passed against the old code before the
@@ -534,9 +531,9 @@ too large.
   `CurlResponseCollector` (pure) collects body and headers and enforces the size limit; `CurlErrorEvaluator` (pure) decides
   about errors; `CurlFormEncoder` (pure) encodes post fields. No static property in the area. The static factories stay
   (stateless); decision of the user: renamed `prepare…()` -> `create…()` in this release (no aliases, table in
-  `UPGRADE.md`; about 35 call sites in `crm.actra.ch`, `actra.domains`, `drogeriehaas.ch` to follow).
+  `UPGRADE.md`; about 35 call sites in three projects to follow).
 - **final / extension points:** the six request classes and `CurlResponse` (`final readonly`) and `CurlClient` are `final`;
-  `AbstractCurlRequest` stays an abstract type for signatures (`ExternalApiRequest`), documented as no extension point.
+  `AbstractCurlRequest` stays an abstract type for signatures (used in a project), documented as no extension point.
   `@internal`: `CurlBodyTypeEnum`, `CurlAuthentication`, `CurlAuthenticationMethodEnum`, `CurlTargetUrl`, `CurlFormEncoder`,
   `CurlOptionsBuilder`, `CurlResponseCollector`, `CurlErrorEvaluator`, `CurlResponseError`.
 - **Enums:** `RequestMethodEnum` is reused for the methods (all six classes map to a case; `OPTIONS` has no request class
@@ -558,8 +555,8 @@ too large.
   never contain a URL (query tokens), header value, token or body; `CurlResponse::$errorMessage` has the text of cURL
   (host names, no query). **Not changed / for the user:** the application must validate target URLs that come from user
   input (SSRF: yuf does not know the allowed hosts); an API key in `setHttpHeader('X-Api-Key')` over `http://` is not
-  detected; `curlInfo` contains the full URL (query included), the callers who log it (`OpusClient`, `RealtimeClient`,
-  `OpenProviderClient` do) should know; proxy variables of the environment (`https_proxy`) are still honoured by libcurl.
+  detected; `curlInfo` contains the full URL (query included), the callers who log it (some projects do)
+  should know; proxy variables of the environment (`https_proxy`) are still honoured by libcurl.
 - **Bugs found and fixed:** status codes missing from `HttpStatusCodeEnum` (`429`, `418`, ...) were no error; `content-type`
   spelling bypass; `getJsonResponse()` / `getXmlResponse()` of a failed request threw a `TypeError`; HEAD requests returned
   the raw header text as body (now headers are parsed for every request).
@@ -603,8 +600,8 @@ too large.
   and the template engine and its tests add arrays and objects to it; the values `HtmlReplacement` hands over are
   `RendererValue` (string, int, float, bool, `stdClass`, lists, `null`).
 - **Security findings and fixes:** (1) `HtmlDocument` added values of the request (`bodyClassName`, `requestedFileName`)
-  as HTML: reflected XSS when a view renders a page for a URL-controlled name; all of them go through `addText()` now
-  (`charset`, `scripts` and the CSRF field are HTML of ours). (2) The file group and title of the request were appended
+  as HTML; all of them go through `addText()` now (`charset`, `scripts` and the CSRF field are HTML of ours). (2) The
+  file group and title of the request were appended
   to the content directory without a check (`..`): 404 for `..` segments, absolute paths, backslash, null byte.
   (3) Tag and attribute names were output as they are: validated. (4) `valueIsEncodedForRendering: true` with a double
   quote made broken or injectable HTML: rejected. (5) `HtmlEncoder::encode()` lacked `ENT_SUBSTITUTE` (invalid UTF-8 gave an empty string,
@@ -662,8 +659,8 @@ too large.
   `IpValidator::` statically).
 - **Enums:** `IpTypeEnum` cases upper case (⚠️); new internal `ErrorKindEnum`, `ErrorOutputFormatEnum`. The zip code formats
   are a map by country code (open set, input is a string), not an enum.
-- **Security findings and fixes:** (1) debug page output of message / file / trace was raw HTML (XSS in debug mode): escaped;
-  (2) production JSON / text showed exception messages (JWT details) and codes (SQLSTATE): fixed texts and the HTTP status
+- **Security findings and fixes:** (1) debug page output of message / file / trace is escaped; (2) production
+  JSON / text showed exception messages (JWT details) and codes (SQLSTATE): fixed texts and the HTTP status
   as code; (3) a missing error page file showed its path in production: logged instead; (4) `IpValidator::isInWhitelist()`
   accepted an invalid address that equals an entry (`''` / `''`): fails closed; (5) `ErrorPageRenderer` rejects file names
   with a path; (6) `requestedFileName` (user input) was added as HTML to the error pages: escaped. Debug mode still dumps
@@ -697,8 +694,8 @@ too large.
   The tests (`HtmlTagTest`, 16 call sites) were converted by hand. HTML output is byte-identical for values without
   special characters (all form, template and `example/` tests unchanged); with special characters the attributes are
   escaped now (see "Security").
-- **Extends in the other projects (read-only grep of `/Users/christof/development/*` without `vendor`, `cache`, `yuf`,
-  `framework`; many projects still run yuf v3):** `Form` 187, `TextField` 15, `SelectOptionsField` 14, `FormComponent` 9,
+- **Extends in the other projects (read-only grep of the local projects without `vendor`, `cache`, `yuf`,
+  `framework`):** `Form` 187, `TextField` 15, `SelectOptionsField` 14, `FormComponent` 9,
   `FormRenderer` 7, `FormField` 5, `TextAreaField` 4, `CheckboxOptionsField` 4, `FormOptions` 3 (final since v4.0.0), `FileField` 3
   (final since v4.0.0), `FormRule` 2, `DateField` 2 (final since v4.0.0), `StringRule` 1, `RadioOptionsField`, `OptionsField`,
   `TextualField`, `FormControl`, `FormCollection`, `BooleanField` 1 each. `actra/backend`: `Form` 15,
@@ -719,8 +716,8 @@ too large.
   (narrowing of request / session data).
 - **Security findings and fixes:** (1) every plain text value of the markup was output as HTML (`valueIsEncodedForRendering:
   true`): `placeholder`, `name`, `id`, option keys, CSS classes, `data-*` values, the cancel link, the form `action`; a `"`
-  threw, `&` / `<` were raw (HTML injection for a value that comes from data, e.g. an option key from a database). All
-  are `fromText()` now. (2) The remove button of `FileFieldRenderer` output the field name without encoding. (3)
+  threw, `&` / `<` were raw. All are `fromText()` now. (2) The remove button of `FileFieldRenderer` output the field
+  name without encoding. (3)
   `FormControl` output `FormMessages::$cancel` (plain text) as HTML. Checked and fine: labels / info texts / error texts
   are `HtmlText` (the caller says text or HTML; messages of `FormMessages` and `rejectInput()` are `fromText()`), file
   names in errors and the remove button are encoded, the CSRF token is read from the posted data only and compared by
@@ -736,7 +733,7 @@ too large.
   `MultiToggleField` duplicate their child methods (a trait or a delegating base would remove it; both are `final`
   now). `actra/backend`: `SearchQueryField` and `SearchSelectOptionsField` use `new HtmlTagAttribute(name: 'for', value:
   $this->name, valueIsEncodedForRendering: true)` -> `HtmlTagAttribute::fromText(name: 'for', text: $this->name)`; projects
-  with their own renderers (`intern.public-health-edu.ch`, `my.cmas.ch`) have the same pattern.
+  with their own renderers have the same pattern.
 
 ### Plan complete
 
