@@ -152,9 +152,9 @@ $app->withLoginTarget(loginTarget: LoginTarget::shared(
 ));
 ```
 
-A page that needs a login redirects a browser that was not checked yet to the login host
-(`https://login.example.net/login-hand-over.html?loginCheck=<ID>`), which returns it logged in or to the login page of
-the site; a checked browser goes to the login page directly, like `LoginTarget::local()`.
+A page that needs a login redirects a visitor without login to the login host
+(`https://login.example.net/login-hand-over.html?loginCheck=<ID>`), at every request, which returns them logged in or
+to the login page of the site.
 
 ## The request
 

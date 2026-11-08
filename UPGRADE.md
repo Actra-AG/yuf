@@ -4,6 +4,19 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v7](docs/upgrade/v7.md), [v6](docs/upgrade/v6.md), [v5](docs/upgrade/v5.md), [v4](docs/upgrade/v4.md),
 [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md), [v0](docs/upgrade/v0.md).
 
+## v8.15.0 (2026-11-08)
+
+### ⚠️ Shared login: check at every request that needs a login
+
+A site no longer remembers a check at the login host for 30 minutes: a login on another site after a check without
+login was not found. Every GET of the login page or of a page that needs a login checks again (two invisible
+redirects); only the login page that returns from a check (`loginChecked=1`) makes no hop, so there is no loop.
+
+- `SharedLogin::isChecked()` reads only the URL parameter; no code change needed for its callers.
+- Removed: `SharedLogin::CHECKED_COOKIE_NAME` and `CHECKED_LIFETIME_IN_SECONDS`; the cookie `__Host-yuf-login-checked`
+  is no longer set (an old one is ignored and expires).
+- Call the check only on GET (not on the POST of the login form and its redisplay with errors), as documented.
+
 ## v8.14.1 (2026-11-08)
 
 No migration needed; no changes visible to consumers. v8.13.0 and v8.14.0 are withdrawn: v8.14.1 contains their

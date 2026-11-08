@@ -237,17 +237,31 @@ final class LoginTargetTest extends TestCase
         );
     }
 
-    public function testSharedLoginUriOfACheckedBrowserIsTheLocalLoginPage(): void
+    public function testSharedLoginUriChecksAgainAfterAnEarlierCheck(): void
     {
+        // A login on another host since the last check is found: no state of an earlier check skips the check
         $loginUri = $this->createSharedTarget()->createLoginUri(
             httpRequest: HttpRequestFactory::create(
                 host: 'site-a.example.com',
                 uri: '/fr/account.html',
-                cookies: [SharedLogin::CHECKED_COOKIE_NAME => '1'],
+                cookies: ['__Host-yuf-login-checked' => '1'],
             ),
         );
 
-        $this->assertSame('/fr/login.html?a=1&returnTo=%2Ffr%2Faccount.html', $loginUri);
+        $this->assertStringStartsWith('https://login.example.net/login-hand-over.html?loginCheck=', $loginUri);
+    }
+
+    public function testSharedLoginUriOfTheReturnOfACheckIsTheLocalLoginPage(): void
+    {
+        $loginUri = $this->createSharedTarget()->createLoginUri(
+            httpRequest: HttpRequestFactory::create(
+                host: 'site-a.example.com',
+                uri: '/fr/account.html?loginChecked=1',
+                queryParameters: [SharedLogin::CHECKED_PARAMETER => '1'],
+            ),
+        );
+
+        $this->assertSame('/fr/login.html?a=1&returnTo=%2Ffr%2Faccount.html%3FloginChecked%3D1', $loginUri);
         $this->assertSame([], $this->cookieWriter->setCookies);
     }
 

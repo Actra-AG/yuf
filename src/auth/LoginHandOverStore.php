@@ -157,11 +157,6 @@ final readonly class LoginHandOverStore
             && hash_equals(known_string: $browserHash, user_string: LoginHandOverStore::hash(secret: $secret));
     }
 
-    public function setCookie(string $name, string $value, int $maxAgeInSeconds): void
-    {
-        $this->cookieWriter->set(name: $name, value: $value, maxAgeInSeconds: $maxAgeInSeconds, path: '/');
-    }
-
     /**
      * Deletes expired files with the purge probability of the constructor.
      */

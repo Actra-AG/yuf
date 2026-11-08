@@ -23,9 +23,9 @@ use RuntimeException;
  * own login page, only redirects pass the login host (on its hand-over page, which shows nothing). Same directory and
  * trust boundary as `LoginHandOver` (docs/session-and-login.md, "Shared login"):
  *
- * - **Check** (site without login, on the login page or a page that needs a login, once per browser session): site
+ * - **Check** (site without login, at every GET of the login page or of a page that needs a login): site
  *   (`createCheckUrl()`) → login host (`receiveOnLoginHost()`: answers with the login it has or "none") → site
- *   (`receiveOnSite()`: logs the user in and returns to the page, or remembers the check and shows its login page).
+ *   (`receiveOnSite()`: logs the user in and returns to the page, or shows its login page marked as checked).
  * - **Push** (after a login on the site): site (`createPushUrl()`) → login host (binds the step to its browser) → site
  *   (checks its browser) → login host (logs the same user in) → site (the requested page).
  * - **Logout**: `end()` on any host; every host logs out at its next request when `isEnded()` is `true`.
@@ -39,9 +39,7 @@ final readonly class SharedLogin
     public const string ANSWER_PARAMETER = 'loginAnswer';
     public const string PUSH_PARAMETER = 'loginPush';
     public const string CHECKED_PARAMETER = 'loginChecked';
-    public const string CHECKED_COOKIE_NAME = '__Host-yuf-login-checked';
     public const int STEP_LIFETIME_IN_SECONDS = 60;
-    public const int CHECKED_LIFETIME_IN_SECONDS = 1800;
     private const string CHECK_PREFIX = 'check';
     private const string ANSWER_PREFIX = 'answer';
     private const string PUSH_PREFIX = 'push';
@@ -90,13 +88,13 @@ final readonly class SharedLogin
     }
 
     /**
-     * Site: whether this browser was checked at the login host already (cookie `CHECKED_COOKIE_NAME`, or
-     * `CHECKED_PARAMETER` in the URL for browsers without cookies): then the site shows its login page without hop.
+     * Site: whether the request returns from a check (`CHECKED_PARAMETER` in the URL of the login page): then the site
+     * shows its login page without hop (no loop). Nothing else is remembered: every other GET of the login page or of a
+     * page that needs a login checks again, so a login on another host since the last check is found.
      */
     public function isChecked(HttpRequest $httpRequest): bool
     {
-        return $httpRequest->getCookie(name: SharedLogin::CHECKED_COOKIE_NAME) === '1'
-            || $httpRequest->getQueryString(name: SharedLogin::CHECKED_PARAMETER) === '1';
+        return $httpRequest->getQueryString(name: SharedLogin::CHECKED_PARAMETER) === '1';
     }
 
     /**
@@ -168,7 +166,7 @@ final readonly class SharedLogin
     /**
      * Site, on its hand-over page (a public view, GET): the answer of a check or the second step of a push. Never
      * throws for a bad step: a refused step (unknown, used, expired, other host, other browser, ended login) leads to
-     * the login page with `failure` set, and is remembered as check, so there is no loop.
+     * the login page with `failure` set, marked as checked, so there is no loop.
      *
      * @throws RuntimeException if the directory cannot be written
      */
@@ -464,16 +462,10 @@ final readonly class SharedLogin
     }
 
     /**
-     * The login page of the site, remembered as checked (cookie and URL parameter), with the return path if it is
-     * known.
+     * The login page of the site, marked as checked (`CHECKED_PARAMETER`), with the return path if it is known.
      */
     private function refuse(SharedLoginSite $site, ?string $returnPath, ?string $failure): SharedLoginStep
     {
-        $this->store->setCookie(
-            name: SharedLogin::CHECKED_COOKIE_NAME,
-            value: '1',
-            maxAgeInSeconds: SharedLogin::CHECKED_LIFETIME_IN_SECONDS,
-        );
         $loginUri = $returnPath === null
             ? $site->loginPath
             : LoginRedirect::createLoginUri(loginPath: $site->loginPath, returnUri: $returnPath);

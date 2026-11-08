@@ -97,28 +97,62 @@ final class SharedLoginTest extends TestCase
         $this->assertSame('/fr/login.html?returnTo=%2Ffr%2Fpage.html%3Fa%3D1&loginChecked=1', $step->redirectUrl);
         $this->assertNull($step->logIn);
         $this->assertNull($step->failure);
+        // Nothing is remembered: only the browser cookie of the check
         $this->assertSame(
-            ['name' => '__Host-yuf-login-checked', 'value' => '1', 'maxAge' => 1800, 'path' => '/'],
-            array_last(array: $this->cookieWriter->setCookies),
+            [SharedLoginTest::BROWSER_COOKIE],
+            array_values(array: array_unique(array: array_column(array: $this->cookieWriter->setCookies, column_key: 'name'))),
         );
     }
 
-    public function testCheckedBrowserMakesNoSecondHop(): void
+    public function testLoginPageOfTheAnswerMakesNoHop(): void
+    {
+        [$answerUrl, $siteBrowser] = $this->check(user: null);
+        $step = $this->sharedLogin->receiveOnSite(
+            httpRequest: $this->siteRequest(url: $answerUrl, browser: $siteBrowser),
+            site: $this->site,
+        );
+
+        // Also for browsers without cookies: the URL carries the mark (no loop)
+        $this->assertTrue($this->sharedLogin->isChecked(httpRequest: $this->siteRequest(url: $step->redirectUrl)));
+    }
+
+    public function testEveryOtherRequestChecksAgain(): void
     {
         $this->assertFalse($this->sharedLogin->isChecked(httpRequest: $this->siteRequest(url: '/fr/login.html')));
-        $this->assertTrue($this->sharedLogin->isChecked(
+        $this->assertFalse($this->sharedLogin->isChecked(
+            httpRequest: $this->siteRequest(url: '/fr/login.html?loginChecked=0'),
+        ));
+        // The cookie of v8.13.0 to v8.14.1 is ignored
+        $this->assertFalse($this->sharedLogin->isChecked(
             httpRequest: HttpRequestFactory::create(
                 host: SharedLoginTest::SITE,
+                uri: '/fr/login.html',
                 cookies: ['__Host-yuf-login-checked' => '1'],
             ),
         ));
-        // Browsers without cookies: the login page of the answer carries the parameter, so it makes no hop (no loop)
-        $this->assertTrue($this->sharedLogin->isChecked(
-            httpRequest: HttpRequestFactory::create(
-                host: SharedLoginTest::SITE,
-                queryParameters: ['loginChecked' => '1'],
-            ),
-        ));
+    }
+
+    public function testLoginOnAnotherSiteAfterACheckWithoutLoginIsFoundAtTheNextCheck(): void
+    {
+        // Site A: the check finds no login, the visitor sees the login page of site A
+        [$answerUrl, $siteBrowser] = $this->check(user: null);
+        $loginPage = $this->sharedLogin->receiveOnSite(
+            httpRequest: $this->siteRequest(url: $answerUrl, browser: $siteBrowser),
+            site: $this->site,
+        );
+        $this->assertNull($loginPage->logIn);
+
+        // The visitor logs in on another site, which pushes the login to the login host. Back on site A, the next GET
+        // of its login page (or of a page that needs a login) has no mark and checks again.
+        $this->assertFalse($this->sharedLogin->isChecked(httpRequest: $this->siteRequest(url: '/fr/login.html')));
+        [$answerUrl, $siteBrowser] = $this->check(user: $this->user);
+        $step = $this->sharedLogin->receiveOnSite(
+            httpRequest: $this->siteRequest(url: $answerUrl, browser: $siteBrowser),
+            site: $this->site,
+        );
+
+        $this->assertEquals($this->user, $step->logIn);
+        $this->assertSame('/fr/page.html?a=1', $step->redirectUrl);
     }
 
     public function testCheckUrlCarriesOnlyARandomId(): void

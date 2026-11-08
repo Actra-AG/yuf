@@ -323,7 +323,7 @@ redirects pass the login host, on a hand-over page that shows nothing. Same dire
 
 | Flow | When | Redirects |
 |:-----|:-----|:----------|
-| Check | A site without login, on its login page or a page that needs a login, once per browser session | site → login host → site (logged in on the requested page, or its login page) |
+| Check | A site without login, at every GET of its login page or of a page that needs a login | site → login host → site (logged in on the requested page, or its login page) |
 | Push | Right after the login on the site's login page | site → login host → site → login host → site (requested page) |
 | Logout | Logout on any host | none: every host logs out at its next request |
 
@@ -340,7 +340,7 @@ $site = new SharedLoginSite(
     loginHostUrl: 'https://login.example.net/login-hand-over.html',
 );
 
-// Site, login page (GET) without login: check once at the login host
+// Site, login page, GET without login: check at the login host unless the request returns from a check
 if (!$sharedLogin->isChecked(httpRequest: $httpRequest)) {
     HttpResponse::redirectAndExit(
         relativeOrAbsoluteUri: $sharedLogin->createCheckUrl(
@@ -401,10 +401,12 @@ $sharedLogin->end(sharedLoginId: $storedSharedLoginId);
   ended in the directory, `isEnded()` is one file check per request. Logging out ends the login of this browser on all
   hosts, not the logins of the user in other browsers.
 - **Check:** the login host answers with its login (`user:`) or "none"; the site logs the answer's user in and
-  returns to the requested page, or goes to its login page. The check is remembered for 30 minutes (cookie
-  `__Host-yuf-login-checked`; the login page of an answer also carries `loginChecked=1`, so a browser without cookies
-  makes no loop). Only the login page and pages that need a login check, never other pages (crawlers, visitors
-  without login).
+  returns to the requested page, or goes to its login page marked with `loginChecked=1` (`isChecked()`), which makes
+  no hop, also in a browser without cookies (no loop). Nothing else is remembered: every other GET of the login page
+  or of a page that needs a login checks again (two invisible redirects), so a login on another host since the last
+  check is always found. Only the login page and pages that need a login check, never other pages (crawlers,
+  visitors without login); never on a POST (a sent login form and its redisplay with errors). A reload of the marked
+  login page shows the form again, the next link without the mark checks.
 - **Push:** the login host binds the push to its browser cookie, the site confirms it in the browser that started it,
   then the login host logs the same user in. A push of an attacker's account cannot be completed in the visitor's
   browser (login CSRF): each hop has a new ID that only the browser following the redirects sees, and both browser

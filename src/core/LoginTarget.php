@@ -22,7 +22,7 @@ use RuntimeException;
  * (`RouteCollection::$loginTarget`): a local path on the same host (the requested URI is the return target,
  * `LoginRedirect::RETURN_PARAMETER`), an absolute `https` URL of a login page on another host on the same server
  * (the request is stored as login request of `LoginHandOver`, the URL carries only its ID), or a local login page that
- * shares the login of a login host (`SharedLogin`: a browser that was not checked yet passes the login host first).
+ * shares the login of a login host (`SharedLogin`: the request passes the login host first).
  */
 final readonly class LoginTarget
 {
@@ -99,8 +99,8 @@ final readonly class LoginTarget
 
     /**
      * The local login page of a site that shares the login of a login host (`SharedLoginSite::$loginPath`): a request
-     * of a browser that was not checked at the login host yet (`SharedLogin::isChecked()`) is redirected to the login
-     * host first (`SharedLogin::createCheckUrl()`), which returns the visitor logged in or to this login page.
+     * without login is redirected to the login host first (`SharedLogin::createCheckUrl()`), at every request, which
+     * returns the visitor logged in or to this login page.
      */
     public static function shared(SharedLogin $sharedLogin, SharedLoginSite $site): LoginTarget
     {
@@ -131,8 +131,9 @@ final readonly class LoginTarget
     /**
      * The URI of the login page: for a local login page with the requested URI as return target (not added if it is
      * no local path); for a remote one with the ID of a new login request (`LoginHandOver::startLogin()`, which also
-     * sends the browser cookie); for a shared one the URL of the check at the login host if the browser was not checked
-     * yet (`SharedLogin::createCheckUrl()`), else the local login page.
+     * sends the browser cookie); for a shared one the URL of the check at the login host
+     * (`SharedLogin::createCheckUrl()`), or the local login page if the request returns from a check
+     * (`SharedLogin::isChecked()`).
      *
      * @throws LogicException if the host of the request has a port or is no host name (remote or shared login page)
      * @throws RuntimeException if the directory of the hand-over cannot be written (remote or shared login page)
