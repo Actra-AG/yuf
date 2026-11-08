@@ -65,7 +65,7 @@ See [.env.example.php](.env.example.php), [index.example.php](index.example.php)
 - [Phone numbers](docs/phone-numbers.md): parsing, formats, validation
 - [Rate limiting](docs/rate-limiting.md): limits per IP address or globally, public forms and logins, without
   database
-- [Testing](docs/testing.md): PHPStan and PHPUnit in projects using yuf, test objects, clock
+- [Testing](docs/testing.md): PHPStan and PHPUnit in projects using yuf, test objects, views, clock
 
 ## Upgrading
 

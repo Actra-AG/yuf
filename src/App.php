@@ -456,7 +456,7 @@ final readonly class App
     }
 
     /**
-     * @param LoginTarget $loginTarget The login page (`LoginTarget::local()` or `LoginTarget::remote()`): a view with
+     * @param LoginTarget $loginTarget The login page (`LoginTarget::local()`, `remote()` or `shared()`): a view with
      *     required access rights redirects a request without user there
      */
     public function withLoginTarget(LoginTarget $loginTarget): App

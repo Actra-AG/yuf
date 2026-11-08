@@ -310,8 +310,112 @@ public function ticketLogin(string $subject): bool
   `subject` must mean the same user on the login host and on the sites (shared user database or a stable shared ID).
 - Every redirect to the login page stores a small file; expired files are deleted with a chance of 1 % per login
   request (`purgeProbabilityPercent:`) or by `purgeExpired()` (e.g. a cron job).
+- To keep the visitor on the site (its own login page, no page of the login host), use the shared login below.
 - Sites on other servers are not supported yet (signed tickets:
   [plans/signed-login-tickets/plan.md](plans/signed-login-tickets/plan.md)).
+
+### Shared login
+
+`LoginHandOver` sends the visitor to the login page of the login host. With `SharedLogin` the visitor stays on the
+site: the login (e.g. email and code) runs on the site's own login page, in its language and brand, and only
+redirects pass the login host, on a hand-over page that shows nothing. Same directory and trust boundary as above
+(the directory may be the same); every host has a hand-over page (a public view, GET):
+
+| Flow | When | Redirects |
+|:-----|:-----|:----------|
+| Check | A site without login, on its login page or a page that needs a login, once per browser session | site → login host → site (logged in on the requested page, or its login page) |
+| Push | Right after the login on the site's login page | site → login host → site → login host → site (requested page) |
+| Logout | Logout on any host | none: every host logs out at its next request |
+
+```php
+// Every host
+$sharedLogin = new SharedLogin(
+    directory: '/var/www/shared/login-hand-over',
+    loginLifetimeInSeconds: 86400, // the longest session of all hosts: an ended login is remembered that long
+);
+// A site (also its LoginTarget::shared(), views.md)
+$site = new SharedLoginSite(
+    loginPath: '/fr/login.html',
+    handOverPath: '/login-hand-over.html',
+    loginHostUrl: 'https://login.example.net/login-hand-over.html',
+);
+
+// Site, login page (GET) without login: check once at the login host
+if (!$sharedLogin->isChecked(httpRequest: $httpRequest)) {
+    HttpResponse::redirectAndExit(
+        relativeOrAbsoluteUri: $sharedLogin->createCheckUrl(
+            httpRequest: $httpRequest,
+            site: $site,
+            returnPath: LoginRedirect::findReturnPath(httpRequest: $httpRequest) ?? '/',
+        ),
+        httpRequest: $httpRequest,
+    );
+}
+
+// Site, login page, after the correct code: log in, then push the login to the login host
+$user = new SharedLoginUser(subject: (string) $userId, sharedLoginId: SharedLogin::createSharedLoginId());
+// … log in and store $user->sharedLoginId in the session
+HttpResponse::redirectAndExit(
+    relativeOrAbsoluteUri: $sharedLogin->createPushUrl(
+        httpRequest: $httpRequest,
+        site: $site,
+        user: $user,
+        returnPath: $returnPath,
+    ),
+    httpRequest: $httpRequest,
+    sameSiteLaxSessionHandler: $sessionHandler, // the browser returns from the login host
+);
+
+// Site, hand-over page: never throws for a bad step, leads to the login page then
+$step = $sharedLogin->receiveOnSite(httpRequest: $httpRequest, site: $site);
+// Login host, hand-over page; $user: its login (subject and shared login ID from its session) or null
+$step = $sharedLogin->receiveOnLoginHost(
+    httpRequest: $httpRequest,
+    allowedHosts: ['www.example.net', 'site-a.example.com'],
+    user: $user,
+); // UnauthorizedException for a bad step: there is no safe page of the site to return to
+
+// Both hand-over pages
+if ($step->failure !== null) {
+    $logger->logMessage(message: 'Shared login: ' . $step->failure);
+}
+if ($step->logIn !== null) {
+    // log $step->logIn->subject in (AuthMethodEnum::SSO), store $step->logIn->sharedLoginId in the session
+}
+HttpResponse::redirectAndExit(
+    relativeOrAbsoluteUri: $step->redirectUrl,
+    httpRequest: $httpRequest,
+    sameSiteLaxSessionHandler: $sessionHandler,
+);
+
+// Every host, at every request with a login: log out if the login was ended on another host
+if ($sharedLogin->isEnded(sharedLoginId: $storedSharedLoginId)) {
+    // log out
+}
+// Every host, on logout
+$sharedLogin->end(sharedLoginId: $storedSharedLoginId);
+```
+
+- **Shared login ID:** every login that is not handed over (the login page of a host) gets a new ID
+  (`SharedLogin::createSharedLoginId()`); the check and the push carry it to the other hosts. `end()` marks it as
+  ended in the directory, `isEnded()` is one file check per request. Logging out ends the login of this browser on all
+  hosts, not the logins of the user in other browsers.
+- **Check:** the login host answers with its login (`user:`) or "none"; the site logs the answer's user in and
+  returns to the requested page, or goes to its login page. The check is remembered for 30 minutes (cookie
+  `__Host-yuf-login-checked`; the login page of an answer also carries `loginChecked=1`, so a browser without cookies
+  makes no loop). Only the login page and pages that need a login check, never other pages (crawlers, visitors
+  without login).
+- **Push:** the login host binds the push to its browser cookie, the site confirms it in the browser that started it,
+  then the login host logs the same user in. A push of an attacker's account cannot be completed in the visitor's
+  browser (login CSRF): each hop has a new ID that only the browser following the redirects sees, and both browser
+  cookies must match.
+- **Protections:** URLs carry only random IDs (single use, new at every hop, valid 60 seconds); the login host accepts
+  only its allowed hosts and returns only to the hand-over page or the stored local return path of the requesting site;
+  an answer is redeemed only on its host and in its browser; an ended login is neither answered nor pushed.
+- **Session cookies:** the login host must see its session on a request that comes from a site, and the site its
+  session on the way back: send the session cookie as `Lax` after every login
+  (`redirectAndExit(sameSiteLaxSessionHandler:)`), on the login host also after the login on its own login page. A `Strict` session of a visitor without login is not
+  sent on the way back; the hand-over page then starts a new one.
 
 ### Users without password
 

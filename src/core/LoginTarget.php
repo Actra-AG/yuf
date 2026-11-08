@@ -10,6 +10,8 @@ declare(strict_types=1);
 namespace actra\yuf\core;
 
 use actra\yuf\auth\LoginHandOver;
+use actra\yuf\auth\SharedLogin;
+use actra\yuf\auth\SharedLoginSite;
 use actra\yuf\common\StringUtils;
 use InvalidArgumentException;
 use LogicException;
@@ -18,8 +20,9 @@ use RuntimeException;
 /**
  * The login page that a request of a view with required access rights without a user is redirected to
  * (`RouteCollection::$loginTarget`): a local path on the same host (the requested URI is the return target,
- * `LoginRedirect::RETURN_PARAMETER`), or an absolute `https` URL of a login page on another host on the same server
- * (the request is stored as login request of `LoginHandOver`, the URL carries only its ID).
+ * `LoginRedirect::RETURN_PARAMETER`), an absolute `https` URL of a login page on another host on the same server
+ * (the request is stored as login request of `LoginHandOver`, the URL carries only its ID), or a local login page that
+ * shares the login of a login host (`SharedLogin`: a browser that was not checked yet passes the login host first).
  */
 final readonly class LoginTarget
 {
@@ -29,6 +32,8 @@ final readonly class LoginTarget
      * @param string $path The path of the login page without the query
      * @param ?LoginHandOver $loginHandOver The hand-over of a remote login page, `null` for a local one
      * @param ?string $handOverPath The local path of the hand-over page of this site, `null` for a local login page
+     * @param ?SharedLogin $sharedLogin The shared login of a local login page, `null` for none
+     * @param ?SharedLoginSite $sharedLoginSite The pages of the shared login, `null` for none
      */
     private function __construct(
         public string $uri,
@@ -36,6 +41,8 @@ final readonly class LoginTarget
         public string $path,
         private ?LoginHandOver $loginHandOver = null,
         private ?string $handOverPath = null,
+        private ?SharedLogin $sharedLogin = null,
+        private ?SharedLoginSite $sharedLoginSite = null,
     ) {}
 
     /**
@@ -90,6 +97,22 @@ final readonly class LoginTarget
         );
     }
 
+    /**
+     * The local login page of a site that shares the login of a login host (`SharedLoginSite::$loginPath`): a request
+     * of a browser that was not checked at the login host yet (`SharedLogin::isChecked()`) is redirected to the login
+     * host first (`SharedLogin::createCheckUrl()`), which returns the visitor logged in or to this login page.
+     */
+    public static function shared(SharedLogin $sharedLogin, SharedLoginSite $site): LoginTarget
+    {
+        return new LoginTarget(
+            uri: $site->loginPath,
+            host: null,
+            path: StringUtils::beforeFirst(string: $site->loginPath, before: '?'),
+            sharedLogin: $sharedLogin,
+            sharedLoginSite: $site,
+        );
+    }
+
     public function isRemote(): bool
     {
         return $this->host !== null;
@@ -108,13 +131,25 @@ final readonly class LoginTarget
     /**
      * The URI of the login page: for a local login page with the requested URI as return target (not added if it is
      * no local path); for a remote one with the ID of a new login request (`LoginHandOver::startLogin()`, which also
-     * sends the browser cookie).
+     * sends the browser cookie); for a shared one the URL of the check at the login host if the browser was not checked
+     * yet (`SharedLogin::createCheckUrl()`), else the local login page.
      *
-     * @throws LogicException if the host of the request has a port or is no host name (remote login page)
-     * @throws RuntimeException if the directory of the hand-over cannot be written (remote login page)
+     * @throws LogicException if the host of the request has a port or is no host name (remote or shared login page)
+     * @throws RuntimeException if the directory of the hand-over cannot be written (remote or shared login page)
      */
     public function createLoginUri(HttpRequest $httpRequest): string
     {
+        if (
+            $this->sharedLogin !== null
+            && $this->sharedLoginSite !== null
+            && !$this->sharedLogin->isChecked(httpRequest: $httpRequest)
+        ) {
+            return $this->sharedLogin->createCheckUrl(
+                httpRequest: $httpRequest,
+                site: $this->sharedLoginSite,
+                returnPath: $httpRequest->getUri(),
+            );
+        }
         if ($this->loginHandOver === null || $this->handOverPath === null) {
             return LoginRedirect::createLoginUri(loginPath: $this->uri, returnUri: $httpRequest->getUri());
         }

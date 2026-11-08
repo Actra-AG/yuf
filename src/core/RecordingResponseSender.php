@@ -28,16 +28,21 @@ final class RecordingResponseSender implements ResponseSender
      * Runs the action with a new sender; the action has to send a response, which is returned.
      *
      * @param Closure(ResponseSender): void $action
+     * @param bool $runAfterResponseCallbacks Whether the work the action registered with `afterResponse()` runs after
+     *     the response (e.g. a mail), as at the end of the script
      *
      * @throws LogicException if the action returns without sending a response
      */
-    public static function capture(Closure $action): HttpResponse
+    public static function capture(Closure $action, bool $runAfterResponseCallbacks = false): HttpResponse
     {
         $responseSender = new RecordingResponseSender();
         try {
             $action($responseSender);
         } catch (ResponseSentException) {
             // The double throws instead of ending the process
+        }
+        if ($runAfterResponseCallbacks) {
+            $responseSender->runAfterResponseCallbacks();
         }
         if ($responseSender->sentResponse === null) {
             throw new LogicException(message: 'The action did not send a response.');

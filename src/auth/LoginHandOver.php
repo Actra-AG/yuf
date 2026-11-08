@@ -15,7 +15,6 @@ use actra\yuf\core\HttpRequest;
 use actra\yuf\core\LoginRedirect;
 use actra\yuf\exception\UnauthorizedException;
 use InvalidArgumentException;
-use JsonException;
 use LogicException;
 use RuntimeException;
 
@@ -37,25 +36,20 @@ use RuntimeException;
  * Whoever can write the directory can log in on every site: give it to the user of the web server only (`0700`,
  * outside the document root; a directory that group or others may write is refused). Reading it reveals no usable
  * secret (only hashes of IDs and browser secrets are stored). All hosts must run on one server as the same user.
+ *
+ * To keep the visitor on the site (its own login page, only redirects over the login host), use `SharedLogin`.
  */
 final readonly class LoginHandOver
 {
     public const string REQUEST_PARAMETER = 'loginRequest';
     public const string TICKET_PARAMETER = 'loginTicket';
-    public const string BROWSER_COOKIE_NAME = '__Host-yuf-login-browser';
+    public const string BROWSER_COOKIE_NAME = LoginHandOverStore::BROWSER_COOKIE_NAME;
     public const int REQUEST_LIFETIME_IN_SECONDS = 900;
     public const int TICKET_LIFETIME_IN_SECONDS = 60;
-    private const int ID_BYTES = 32;
-    private const string ID_PATTERN = '/^[0-9a-f]{64}$/D';
-    private const string FILE_PATTERN = '/^(?:request|ticket)-[0-9a-f]{64}\.json(?:\.[0-9a-f]{16}\.claimed)?$'
-        . '|^\.tmp-[0-9a-f]{16}$/D';
-    private const string REQUEST_PREFIX = 'request-';
-    private const string TICKET_PREFIX = 'ticket-';
-    private const int DIRECTORY_MODE = 0o700;
-    private const int FILE_MODE = 0o600;
-    private const int MAX_PURGED_FILES = 1000;
+    private const string REQUEST_PREFIX = 'request';
+    private const string TICKET_PREFIX = 'ticket';
 
-    private string $directory;
+    private LoginHandOverStore $store;
 
     /**
      * @param string $directory The directory shared by the login host and the sites, outside the document root;
@@ -66,14 +60,16 @@ final readonly class LoginHandOver
      */
     public function __construct(
         string $directory,
-        private Clock $clock = new SystemClock(),
-        private SsoNonceCookieWriter $cookieWriter = new NativeSsoNonceCookieWriter(),
-        private int $purgeProbabilityPercent = 1,
+        Clock $clock = new SystemClock(),
+        SsoNonceCookieWriter $cookieWriter = new NativeSsoNonceCookieWriter(),
+        int $purgeProbabilityPercent = 1,
     ) {
-        if ($purgeProbabilityPercent < 0 || $purgeProbabilityPercent > 100) {
-            throw new InvalidArgumentException(message: 'The purge probability must be between 0 and 100.');
-        }
-        $this->directory = rtrim(string: $directory, characters: '/\\') . DIRECTORY_SEPARATOR;
+        $this->store = new LoginHandOverStore(
+            directory: $directory,
+            clock: $clock,
+            cookieWriter: $cookieWriter,
+            purgeProbabilityPercent: $purgeProbabilityPercent,
+        );
     }
 
     /**
@@ -88,27 +84,28 @@ final readonly class LoginHandOver
      */
     public function startLogin(HttpRequest $httpRequest, string $handOverPath): string
     {
-        LoginHandOver::assertHandOverPath(handOverPath: $handOverPath);
+        if (!LoginHandOverStore::isPathWithoutQuery(path: $handOverPath)) {
+            throw new InvalidArgumentException(message: 'The hand-over path must be a local path without query.');
+        }
         $host = strtolower(string: $httpRequest->getHost());
-        if (!LoginHandOver::isHostName(host: $host)) {
+        if (!LoginHandOverStore::isHostName(host: $host)) {
             throw new LogicException(message: 'The hand-over of a login needs a host name without port.');
         }
         $returnPath = LoginRedirect::isLocalPath(uri: $httpRequest->getUri()) ? $httpRequest->getUri() : '/';
-        $requestId = LoginHandOver::createId();
-        $this->write(
-            fileName: LoginHandOver::fileName(prefix: LoginHandOver::REQUEST_PREFIX, id: $requestId),
+        $requestId = LoginHandOverStore::createId();
+        $this->store->write(
+            prefix: LoginHandOver::REQUEST_PREFIX,
+            id: $requestId,
             record: [
                 'host' => $host,
                 'returnPath' => $returnPath,
                 'handOverPath' => $handOverPath,
-                'siteBrowserHash' => LoginHandOver::hash(secret: $this->issueBrowserSecret(httpRequest: $httpRequest)),
+                'siteBrowserHash' => $this->store->bindBrowser(httpRequest: $httpRequest),
                 'loginBrowserHash' => null,
             ],
-            expiresAt: $this->now() + LoginHandOver::REQUEST_LIFETIME_IN_SECONDS,
+            expiresAt: $this->store->now() + LoginHandOver::REQUEST_LIFETIME_IN_SECONDS,
         );
-        if ($this->purgeProbabilityPercent > 0 && random_int(min: 1, max: 100) <= $this->purgeProbabilityPercent) {
-            $this->purgeExpired();
-        }
+        $this->store->purgeByChance();
 
         return $requestId;
     }
@@ -125,14 +122,10 @@ final readonly class LoginHandOver
      */
     public function findLoginRequest(HttpRequest $httpRequest, string $requestId, array $allowedHosts): ?LoginRequest
     {
-        LoginHandOver::assertAllowedHosts(allowedHosts: $allowedHosts);
-        if (preg_match(pattern: LoginHandOver::ID_PATTERN, subject: $requestId) !== 1) {
-            return null;
-        }
-        $fileName = LoginHandOver::fileName(prefix: LoginHandOver::REQUEST_PREFIX, id: $requestId);
-        $record = $this->read(fileName: $fileName);
-        $host = LoginHandOver::readString(record: $record, key: 'host');
-        $expiresAt = LoginHandOver::readInt(record: $record, key: 'expiresAt');
+        LoginHandOverStore::assertAllowedHosts(allowedHosts: $allowedHosts);
+        $record = $this->store->read(prefix: LoginHandOver::REQUEST_PREFIX, id: $requestId);
+        $host = LoginHandOverStore::readString(record: $record, key: 'host');
+        $expiresAt = LoginHandOverStore::readInt(record: $record, key: 'expiresAt');
         if (
             $record === null
             || $host === null
@@ -141,11 +134,12 @@ final readonly class LoginHandOver
         ) {
             return null;
         }
-        $browserHash = LoginHandOver::hash(secret: $this->issueBrowserSecret(httpRequest: $httpRequest));
-        $loginBrowserHash = LoginHandOver::readString(record: $record, key: 'loginBrowserHash');
+        $browserHash = $this->store->bindBrowser(httpRequest: $httpRequest);
+        $loginBrowserHash = LoginHandOverStore::readString(record: $record, key: 'loginBrowserHash');
         if ($loginBrowserHash === null) {
-            $this->write(
-                fileName: $fileName,
+            $this->store->write(
+                prefix: LoginHandOver::REQUEST_PREFIX,
+                id: $requestId,
                 record: [...$record, 'loginBrowserHash' => $browserHash],
                 expiresAt: $expiresAt,
             );
@@ -178,17 +172,15 @@ final readonly class LoginHandOver
         if ($subject === '') {
             throw new InvalidArgumentException(message: 'The subject must not be empty.');
         }
-        LoginHandOver::assertAllowedHosts(allowedHosts: $allowedHosts);
-        if (preg_match(pattern: LoginHandOver::ID_PATTERN, subject: $requestId) !== 1) {
+        LoginHandOverStore::assertAllowedHosts(allowedHosts: $allowedHosts);
+        if (!LoginHandOverStore::isId(id: $requestId)) {
             throw new UnauthorizedException(message: 'Invalid login request');
         }
-        $record = $this->claim(
-            fileName: LoginHandOver::fileName(prefix: LoginHandOver::REQUEST_PREFIX, id: $requestId),
-        );
-        $host = LoginHandOver::readString(record: $record, key: 'host');
-        $returnPath = LoginHandOver::readString(record: $record, key: 'returnPath');
-        $handOverPath = LoginHandOver::readString(record: $record, key: 'handOverPath');
-        $siteBrowserHash = LoginHandOver::readString(record: $record, key: 'siteBrowserHash');
+        $record = $this->store->claim(prefix: LoginHandOver::REQUEST_PREFIX, id: $requestId);
+        $host = LoginHandOverStore::readString(record: $record, key: 'host');
+        $returnPath = LoginHandOverStore::readString(record: $record, key: 'returnPath');
+        $handOverPath = LoginHandOverStore::readString(record: $record, key: 'handOverPath');
+        $siteBrowserHash = LoginHandOverStore::readString(record: $record, key: 'siteBrowserHash');
         if (
             $record === null
             || $host === null
@@ -199,23 +191,25 @@ final readonly class LoginHandOver
         ) {
             throw new UnauthorizedException(message: 'Unknown, expired or used login request');
         }
-        $loginBrowserHash = LoginHandOver::readString(record: $record, key: 'loginBrowserHash');
         if (
-            $loginBrowserHash === null
-            || !$this->isBrowser(httpRequest: $httpRequest, browserHash: $loginBrowserHash)
+            !$this->store->isBrowser(
+                httpRequest: $httpRequest,
+                browserHash: LoginHandOverStore::readString(record: $record, key: 'loginBrowserHash'),
+            )
         ) {
             throw new UnauthorizedException(message: 'Login request of another browser');
         }
-        $ticketId = LoginHandOver::createId();
-        $this->write(
-            fileName: LoginHandOver::fileName(prefix: LoginHandOver::TICKET_PREFIX, id: $ticketId),
+        $ticketId = LoginHandOverStore::createId();
+        $this->store->write(
+            prefix: LoginHandOver::TICKET_PREFIX,
+            id: $ticketId,
             record: [
                 'host' => $host,
                 'returnPath' => $returnPath,
                 'subject' => $subject,
                 'siteBrowserHash' => $siteBrowserHash,
             ],
-            expiresAt: $this->now() + LoginHandOver::TICKET_LIFETIME_IN_SECONDS,
+            expiresAt: $this->store->now() + LoginHandOver::TICKET_LIFETIME_IN_SECONDS,
         );
 
         return 'https://' . $host . $handOverPath . '?' . LoginHandOver::TICKET_PARAMETER . '=' . $ticketId;
@@ -232,29 +226,33 @@ final readonly class LoginHandOver
     public function redeemTicket(HttpRequest $httpRequest): LoginHandOverTicket
     {
         $ticketId = $httpRequest->getQueryString(name: LoginHandOver::TICKET_PARAMETER);
-        if ($ticketId === null || preg_match(pattern: LoginHandOver::ID_PATTERN, subject: $ticketId) !== 1) {
+        if ($ticketId === null || !LoginHandOverStore::isId(id: $ticketId)) {
             throw new UnauthorizedException(message: 'Missing or invalid login ticket');
         }
-        $record = $this->claim(fileName: LoginHandOver::fileName(prefix: LoginHandOver::TICKET_PREFIX, id: $ticketId));
+        $record = $this->store->claim(prefix: LoginHandOver::TICKET_PREFIX, id: $ticketId);
         if ($record === null) {
             throw new UnauthorizedException(message: 'Unknown or used login ticket');
         }
-        $subject = LoginHandOver::readString(record: $record, key: 'subject');
-        $returnPath = LoginHandOver::readString(record: $record, key: 'returnPath');
-        $expiresAt = LoginHandOver::readInt(record: $record, key: 'expiresAt');
-        $siteBrowserHash = LoginHandOver::readString(record: $record, key: 'siteBrowserHash');
+        $subject = LoginHandOverStore::readString(record: $record, key: 'subject');
+        $returnPath = LoginHandOverStore::readString(record: $record, key: 'returnPath');
         if (
             $subject === null
             || $subject === ''
             || $returnPath === null
             || !LoginRedirect::isLocalPath(uri: $returnPath)
-            || $expiresAt === null
-            || $expiresAt <= $this->now()
-            || LoginHandOver::readString(record: $record, key: 'host') !== strtolower(string: $httpRequest->getHost())
+            || !$this->store->isUnexpired(record: $record)
+            || LoginHandOverStore::readString(record: $record, key: 'host') !== strtolower(
+                string: $httpRequest->getHost(),
+            )
         ) {
             throw new UnauthorizedException(message: 'Expired login ticket or ticket of another host');
         }
-        if ($siteBrowserHash === null || !$this->isBrowser(httpRequest: $httpRequest, browserHash: $siteBrowserHash)) {
+        if (
+            !$this->store->isBrowser(
+                httpRequest: $httpRequest,
+                browserHash: LoginHandOverStore::readString(record: $record, key: 'siteBrowserHash'),
+            )
+        ) {
             throw new UnauthorizedException(message: 'Login ticket of another browser');
         }
 
@@ -262,42 +260,14 @@ final readonly class LoginHandOver
     }
 
     /**
-     * Deletes expired requests and tickets (and left-overs of interrupted writes), at most 1000 per call.
+     * Deletes expired requests and tickets (and left-overs of interrupted writes, also of `SharedLogin`), at most
+     * 1000 per call.
      *
      * @return int The number of deleted files
      */
     public function purgeExpired(): int
     {
-        if (!is_dir(filename: $this->directory)) {
-            return 0;
-        }
-        $now = $this->now();
-        $purged = 0;
-        set_error_handler(callback: static fn(): bool => true);
-        try {
-            $directoryHandle = opendir(directory: $this->directory);
-            if ($directoryHandle === false) {
-                return 0;
-            }
-            clearstatcache();
-            while (
-                $purged < LoginHandOver::MAX_PURGED_FILES
-                && ($fileName = readdir(dir_handle: $directoryHandle)) !== false
-            ) {
-                if (preg_match(pattern: LoginHandOver::FILE_PATTERN, subject: $fileName) !== 1) {
-                    continue;
-                }
-                $expiresAt = filemtime(filename: $this->directory . $fileName);
-                if ($expiresAt !== false && $expiresAt <= $now && unlink(filename: $this->directory . $fileName)) {
-                    $purged++;
-                }
-            }
-            closedir(dir_handle: $directoryHandle);
-        } finally {
-            restore_error_handler();
-        }
-
-        return $purged;
+        return $this->store->purgeExpired();
     }
 
     /**
@@ -308,237 +278,19 @@ final readonly class LoginHandOver
      */
     private function isValidRequest(array $record, array $allowedHosts): bool
     {
-        $expiresAt = LoginHandOver::readInt(record: $record, key: 'expiresAt');
-        $host = LoginHandOver::readString(record: $record, key: 'host');
-        $returnPath = LoginHandOver::readString(record: $record, key: 'returnPath');
-        $handOverPath = LoginHandOver::readString(record: $record, key: 'handOverPath');
+        $returnPath = LoginHandOverStore::readString(record: $record, key: 'returnPath');
+        $handOverPath = LoginHandOverStore::readString(record: $record, key: 'handOverPath');
 
-        return $expiresAt !== null
-            && $expiresAt > $this->now()
-            && in_array(needle: $host, haystack: $allowedHosts, strict: true)
+        return $this->store->isUnexpired(record: $record)
+            && in_array(
+                needle: LoginHandOverStore::readString(record: $record, key: 'host'),
+                haystack: $allowedHosts,
+                strict: true,
+            )
             && $returnPath !== null
             && LoginRedirect::isLocalPath(uri: $returnPath)
             && $handOverPath !== null
-            && LoginRedirect::isLocalPath(uri: $handOverPath)
-            && !str_contains(haystack: $handOverPath, needle: '?')
-            && LoginHandOver::readString(record: $record, key: 'siteBrowserHash') !== null;
-    }
-
-    /**
-     * @param ?array<string, string|int|null> $record
-     */
-    private static function readString(?array $record, string $key): ?string
-    {
-        $value = $record[$key] ?? null;
-
-        return is_string(value: $value) ? $value : null;
-    }
-
-    /**
-     * @param ?array<string, string|int|null> $record
-     */
-    private static function readInt(?array $record, string $key): ?int
-    {
-        $value = $record[$key] ?? null;
-
-        return is_int(value: $value) ? $value : null;
-    }
-
-    private function isBrowser(HttpRequest $httpRequest, string $browserHash): bool
-    {
-        $secret = $httpRequest->getCookie(name: LoginHandOver::BROWSER_COOKIE_NAME);
-
-        return $secret !== null
-            && preg_match(pattern: LoginHandOver::ID_PATTERN, subject: $secret) === 1
-            && hash_equals(known_string: $browserHash, user_string: LoginHandOver::hash(secret: $secret));
-    }
-
-    /**
-     * The browser secret of the cookie if it is valid, else a new one; the cookie is sent (again) in both cases, so
-     * logins in several tabs share it.
-     */
-    private function issueBrowserSecret(HttpRequest $httpRequest): string
-    {
-        $secret = $httpRequest->getCookie(name: LoginHandOver::BROWSER_COOKIE_NAME);
-        if ($secret === null || preg_match(pattern: LoginHandOver::ID_PATTERN, subject: $secret) !== 1) {
-            $secret = LoginHandOver::createId();
-        }
-        $this->cookieWriter->set(
-            name: LoginHandOver::BROWSER_COOKIE_NAME,
-            value: $secret,
-            maxAgeInSeconds: LoginHandOver::REQUEST_LIFETIME_IN_SECONDS,
-            path: '/',
-        );
-
-        return $secret;
-    }
-
-    /**
-     * @param array<string, string|int|null> $record
-     *
-     * @throws InvalidArgumentException if a value is no valid UTF-8
-     * @throws RuntimeException
-     */
-    private function write(string $fileName, array $record, int $expiresAt): void
-    {
-        try {
-            $json = json_encode(value: [...$record, 'expiresAt' => $expiresAt], flags: JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            throw new InvalidArgumentException(message: 'The login hand-over data is no valid UTF-8.');
-        }
-        $temporaryPath = $this->directory . '.tmp-' . bin2hex(string: random_bytes(length: 8));
-        set_error_handler(callback: static fn(): bool => true);
-        try {
-            $this->createDirectory();
-            if (
-                file_put_contents(filename: $temporaryPath, data: $json) !== strlen(string: $json)
-                || !chmod(filename: $temporaryPath, permissions: LoginHandOver::FILE_MODE)
-                || !touch(filename: $temporaryPath, mtime: $expiresAt)
-                || !rename(from: $temporaryPath, to: $this->directory . $fileName)
-            ) {
-                throw new RuntimeException(message: 'Cannot write to the directory "' . $this->directory . '".');
-            }
-        } finally {
-            if (is_file(filename: $temporaryPath)) {
-                unlink(filename: $temporaryPath);
-            }
-            restore_error_handler();
-        }
-    }
-
-    /**
-     * @return ?array<string, string|int|null>
-     */
-    private function read(string $fileName): ?array
-    {
-        set_error_handler(callback: static fn(): bool => true);
-        try {
-            $json = file_get_contents(filename: $this->directory . $fileName);
-        } finally {
-            restore_error_handler();
-        }
-
-        return $json === false ? null : LoginHandOver::decode(json: $json);
-    }
-
-    /**
-     * Reads the file and deletes it, atomically: of two parallel calls only one gets the record.
-     *
-     * @return ?array<string, string|int|null>
-     */
-    private function claim(string $fileName): ?array
-    {
-        $claimedPath = $this->directory . $fileName . '.' . bin2hex(string: random_bytes(length: 8)) . '.claimed';
-        set_error_handler(callback: static fn(): bool => true);
-        try {
-            if (!rename(from: $this->directory . $fileName, to: $claimedPath)) {
-                return null;
-            }
-            $json = file_get_contents(filename: $claimedPath);
-            unlink(filename: $claimedPath);
-        } finally {
-            restore_error_handler();
-        }
-
-        return $json === false ? null : LoginHandOver::decode(json: $json);
-    }
-
-    /**
-     * @return ?array<string, string|int|null>
-     */
-    private static function decode(string $json): ?array
-    {
-        try {
-            $data = json_decode(json: $json, associative: true, flags: JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            return null;
-        }
-        if (!is_array(value: $data)) {
-            return null;
-        }
-        $record = [];
-        foreach ($data as $key => $value) {
-            if (!is_string(value: $key) || !(is_string(value: $value) || is_int(value: $value) || $value === null)) {
-                return null;
-            }
-            $record[$key] = $value;
-        }
-
-        return $record;
-    }
-
-    /**
-     * Creates the directory (`0700`) if it is missing; refuses one that group or others may write.
-     *
-     * @throws RuntimeException
-     */
-    private function createDirectory(): void
-    {
-        if (is_dir(filename: $this->directory)) {
-            clearstatcache(clear_realpath_cache: false, filename: $this->directory);
-            $permissions = fileperms(filename: $this->directory);
-            if ($permissions === false || ($permissions & 0o022) !== 0) {
-                throw new RuntimeException(
-                    message: 'The directory "' . $this->directory . '" must not be writable by group or others.',
-                );
-            }
-
-            return;
-        }
-        if (
-            !mkdir(directory: $this->directory, permissions: LoginHandOver::DIRECTORY_MODE, recursive: true)
-            && !is_dir(filename: $this->directory)
-        ) {
-            throw new RuntimeException(message: 'Cannot create the directory "' . $this->directory . '".');
-        }
-    }
-
-    /**
-     * @throws InvalidArgumentException
-     */
-    private static function assertHandOverPath(string $handOverPath): void
-    {
-        if (!LoginRedirect::isLocalPath(uri: $handOverPath) || str_contains(haystack: $handOverPath, needle: '?')) {
-            throw new InvalidArgumentException(message: 'The hand-over path must be a local path without query.');
-        }
-    }
-
-    /**
-     * @param list<string> $allowedHosts
-     *
-     * @throws InvalidArgumentException
-     */
-    private static function assertAllowedHosts(array $allowedHosts): void
-    {
-        foreach ($allowedHosts as $allowedHost) {
-            if (!LoginHandOver::isHostName(host: $allowedHost)) {
-                throw new InvalidArgumentException(message: 'Invalid allowed host: ' . $allowedHost);
-            }
-        }
-    }
-
-    private static function isHostName(string $host): bool
-    {
-        return LoginRedirect::findHttpsHost(url: 'https://' . $host . '/') === $host;
-    }
-
-    private static function createId(): string
-    {
-        return bin2hex(string: random_bytes(length: LoginHandOver::ID_BYTES));
-    }
-
-    private static function fileName(string $prefix, string $id): string
-    {
-        return $prefix . LoginHandOver::hash(secret: $id) . '.json';
-    }
-
-    private static function hash(string $secret): string
-    {
-        return hash(algo: 'sha256', data: $secret);
-    }
-
-    private function now(): int
-    {
-        return $this->clock->now()->getTimestamp();
+            && LoginHandOverStore::isPathWithoutQuery(path: $handOverPath)
+            && LoginHandOverStore::readString(record: $record, key: 'siteBrowserHash') !== null;
     }
 }

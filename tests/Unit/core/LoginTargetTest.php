@@ -10,6 +10,8 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\core;
 
 use actra\yuf\auth\LoginHandOver;
+use actra\yuf\auth\SharedLogin;
+use actra\yuf\auth\SharedLoginSite;
 use actra\yuf\core\LoginTarget;
 use actra\yuf\tests\Double\auth\RecordingSsoNonceCookieWriter;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
@@ -209,5 +211,60 @@ final class LoginTargetTest extends TestCase
         $this->assertFalse($loginTarget->isLoginRequest(
             httpRequest: HttpRequestFactory::create(host: 'login.example.net', uri: '/other.html'),
         ));
+    }
+
+    public function testSharedTargetIsALocalLoginPage(): void
+    {
+        $loginTarget = $this->createSharedTarget();
+
+        $this->assertSame('/fr/login.html?a=1', $loginTarget->uri);
+        $this->assertSame('/fr/login.html', $loginTarget->path);
+        $this->assertFalse($loginTarget->isRemote());
+        $this->assertTrue($loginTarget->isLoginRequest(
+            httpRequest: HttpRequestFactory::create(host: 'site-a.example.com', uri: '/fr/login.html'),
+        ));
+    }
+
+    public function testSharedLoginUriChecksAtTheLoginHostFirst(): void
+    {
+        $loginUri = $this->createSharedTarget()->createLoginUri(
+            httpRequest: HttpRequestFactory::create(host: 'site-a.example.com', uri: '/fr/account.html'),
+        );
+
+        $this->assertMatchesRegularExpression(
+            '#^https://login\.example\.net/login-hand-over\.html\?loginCheck=[0-9a-f]{64}$#D',
+            $loginUri,
+        );
+    }
+
+    public function testSharedLoginUriOfACheckedBrowserIsTheLocalLoginPage(): void
+    {
+        $loginUri = $this->createSharedTarget()->createLoginUri(
+            httpRequest: HttpRequestFactory::create(
+                host: 'site-a.example.com',
+                uri: '/fr/account.html',
+                cookies: [SharedLogin::CHECKED_COOKIE_NAME => '1'],
+            ),
+        );
+
+        $this->assertSame('/fr/login.html?a=1&returnTo=%2Ffr%2Faccount.html', $loginUri);
+        $this->assertSame([], $this->cookieWriter->setCookies);
+    }
+
+    private function createSharedTarget(): LoginTarget
+    {
+        return LoginTarget::shared(
+            sharedLogin: new SharedLogin(
+                directory: $this->workDirectory->cacheDirectory . 'hand-over',
+                loginLifetimeInSeconds: 3600,
+                cookieWriter: $this->cookieWriter,
+                purgeProbabilityPercent: 0,
+            ),
+            site: new SharedLoginSite(
+                loginPath: '/fr/login.html?a=1',
+                handOverPath: '/login-hand-over.html',
+                loginHostUrl: 'https://login.example.net/login-hand-over.html',
+            ),
+        );
     }
 }

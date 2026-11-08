@@ -135,6 +135,27 @@ The redirect stores the requested page as login request and goes to
 or control characters, ASCII host) and the hand-over path is a local path without query. The login on the other host
 and the way back: [session-and-login.md](session-and-login.md#login-on-another-host).
 
+#### Login page of the site, shared login of a login host
+
+The visitor logs in on the site's own login page (language, brand), the login is shared with a login host on the
+same server (`SharedLogin`, [session-and-login.md](session-and-login.md#shared-login)):
+
+```php
+$sharedLogin = new SharedLogin(directory: '/var/www/shared/login-hand-over', loginLifetimeInSeconds: 86400);
+$app->withLoginTarget(loginTarget: LoginTarget::shared(
+    sharedLogin: $sharedLogin,
+    site: new SharedLoginSite(
+        loginPath: '/fr/login.html',
+        handOverPath: '/login-hand-over.html', // the page of this site that receives the steps
+        loginHostUrl: 'https://login.example.net/login-hand-over.html',
+    ),
+));
+```
+
+A page that needs a login redirects a browser that was not checked yet to the login host
+(`https://login.example.net/login-hand-over.html?loginCheck=<ID>`), which returns it logged in or to the login page of
+the site; a checked browser goes to the login page directly, like `LoginTarget::local()`.
+
 ## The request
 
 `HttpRequest` is an immutable snapshot of the request, created once by `Core` (`$core->httpRequest`,
