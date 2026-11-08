@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\mailer;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\common\FileCache;
 use actra\yuf\mailer\MailerException;
 use actra\yuf\mailer\MicrosoftClientCredentialsTokenProvider;
@@ -84,8 +85,8 @@ final class MicrosoftClientCredentialsTokenProviderTest extends TestCase
             clientId: 'client-1',
             clientSecret: MicrosoftClientCredentialsTokenProviderTest::SECRET,
             tokenCache: null,
-            authorityUrl: $this->server->url('/'),
             clock: $this->clock,
+            authorityUrl: $this->server->url('/'),
         );
 
         $this->assertSame('token-1', $provider->getAccessToken());
@@ -241,8 +242,8 @@ final class MicrosoftClientCredentialsTokenProviderTest extends TestCase
             clientId: 'client-1',
             clientSecret: MicrosoftClientCredentialsTokenProviderTest::SECRET,
             tokenCache: null,
-            authorityUrl: 'http://127.0.0.1:1',
             clock: $this->clock,
+            authorityUrl: 'http://127.0.0.1:1',
         );
 
         $this->expectException(MailerException::class);
@@ -307,6 +308,7 @@ final class MicrosoftClientCredentialsTokenProviderTest extends TestCase
             clientId: $clientId,
             clientSecret: $clientSecret,
             tokenCache: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
     }
 
@@ -319,9 +321,9 @@ final class MicrosoftClientCredentialsTokenProviderTest extends TestCase
             clientId: 'client-1',
             clientSecret: MicrosoftClientCredentialsTokenProviderTest::SECRET,
             tokenCache: $tokenCache,
+            clock: $this->clock,
             scope: $scope,
             authorityUrl: $this->server->url(''),
-            clock: $this->clock,
         );
     }
 

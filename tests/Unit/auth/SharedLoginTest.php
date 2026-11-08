@@ -13,6 +13,7 @@ use actra\yuf\auth\SharedLogin;
 use actra\yuf\auth\SharedLoginSite;
 use actra\yuf\auth\SharedLoginStep;
 use actra\yuf\auth\SharedLoginUser;
+use actra\yuf\clock\FixedClock;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\exception\UnauthorizedException;
 use actra\yuf\tests\Double\auth\RecordingSsoNonceCookieWriter;
@@ -517,7 +518,7 @@ final class SharedLoginTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new SharedLogin(directory: $this->directory, loginLifetimeInSeconds: 0);
+        new SharedLogin(directory: $this->directory, loginLifetimeInSeconds: 0, clock: new FixedClock(now: new DateTimeImmutable()));
     }
 
     /**

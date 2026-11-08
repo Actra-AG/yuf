@@ -167,11 +167,11 @@ final class MailMailerTest extends TestCase
     {
         $directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-mailer-cache-'
             . bin2hex(string: random_bytes(length: 8));
-        $cache = new FileCache(directory: $directory);
+        $cache = new FileCache(directory: $directory, clock: new FixedClock(now: new DateTimeImmutable()));
         $cache->set(key: 'yuf-server-name|192.0.2.1', value: 'cached.example.com', lifetimeInSeconds: 60);
 
         try {
-            $mailer = new MailMailer(serverAddress: '192.0.2.1', serverNameCache: $cache);
+            $mailer = new MailMailer(serverAddress: '192.0.2.1', serverNameCache: $cache, clock: new FixedClock(now: new DateTimeImmutable()));
 
             $this->assertSame('cached.example.com', $mailer->getServerName());
         } finally {
@@ -185,8 +185,8 @@ final class MailMailerTest extends TestCase
         return new MailMailer(
             serverAddress: '192.0.2.1',
             serverNameCache: null,
-            mailFunction: $mailFunction,
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-10-08 12:00:00 UTC')),
+            mailFunction: $mailFunction,
             mimeIdGenerator: new FixedMimeIdGenerator(),
             serverNameResolver: new FixedServerNameResolver(),
         );

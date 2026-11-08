@@ -86,6 +86,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
         foreach (['first message', 'second message'] as $message) {
             $logger->logException(throwable: new RuntimeException(message: $message)); // same file, line and trace
@@ -102,6 +103,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $logger->logException(throwable: new RuntimeException(message: "ok\nforged: line\r"));
@@ -162,6 +164,7 @@ final class FileLoggerTest extends TestCase
                 serverVariables: ['SERVER_NAME' => 'server-value', 'SECRET_ENV' => 'environment-secret'],
             ),
             mailer: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
         $logger->logMessage(message: 'with request');
 
@@ -186,6 +189,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $logger->logException(throwable: new RuntimeException(message: 'broken', code: 7));
@@ -207,6 +211,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $logger->logException(
@@ -231,6 +236,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $logger->logMessage(message: 'again');
@@ -250,6 +256,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: rtrim(string: $this->logDirectory, characters: DIRECTORY_SEPARATOR),
             httpRequest: HttpRequestFactory::create(),
             mailer: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $logger->logMessage(message: 'no slash');
@@ -267,6 +274,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory . 'missing',
             httpRequest: HttpRequestFactory::create(),
             mailer: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
     }
 
@@ -281,6 +289,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
             maxLogSize: 50,
         );
 
@@ -302,6 +311,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
             maxLogSize: 50,
         );
 
@@ -327,6 +337,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: $mailer,
+            clock: new FixedClock(now: new DateTimeImmutable()),
             mailSenderAddress: 'errors@example.com',
             mailFunction: $mailFunction,
             mailAfterResponse: false,
@@ -355,6 +366,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: $mailer,
+            clock: new FixedClock(now: new DateTimeImmutable()),
             mailSenderAddress: 'errors@example.com',
             mailAfterResponse: false,
         );
@@ -372,6 +384,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: $mailer,
+            clock: new FixedClock(now: new DateTimeImmutable()),
             mailSenderAddress: 'errors@example.com',
         );
 
@@ -389,6 +402,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: new FailingMailer(),
+            clock: new FixedClock(now: new DateTimeImmutable()),
             mailSenderAddress: 'errors@example.com',
             mailFunction: $mailFunction,
             mailAfterResponse: false,
@@ -450,6 +464,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
             mailFunction: $mailFunction,
             mailAfterResponse: false,
         );
@@ -469,6 +484,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: new CapturingMailer(),
+            clock: new FixedClock(now: new DateTimeImmutable()),
             mailAfterResponse: false,
         );
     }
@@ -481,6 +497,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
             mailFunction: $mailFunction,
         );
 
@@ -501,6 +518,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
             mailFunction: $mailFunction,
             responseSender: $responseSender,
         );
@@ -523,6 +541,7 @@ final class FileLoggerTest extends TestCase
             logDirectory: $this->logDirectory,
             httpRequest: HttpRequestFactory::create(),
             mailer: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
             mailFunction: new RecordingMailFunction(),
             responseSender: $responseSender,
         );

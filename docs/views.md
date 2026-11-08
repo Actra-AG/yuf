@@ -121,7 +121,7 @@ Sites on one server can share one login page on another host. The site and the l
 (`LoginHandOver`); the URLs carry only random IDs:
 
 ```php
-$loginHandOver = new LoginHandOver(directory: '/var/www/shared/login-hand-over');
+$loginHandOver = new LoginHandOver(directory: '/var/www/shared/login-hand-over', clock: new SystemClock());
 $app->withLoginTarget(loginTarget: LoginTarget::remote(
     url: 'https://login.example.net/login.html',
     loginHandOver: $loginHandOver,
@@ -141,7 +141,11 @@ The visitor logs in on the site's own login page (language, brand), the login is
 same server (`SharedLogin`, [session-and-login.md](session-and-login.md#shared-login)):
 
 ```php
-$sharedLogin = new SharedLogin(directory: '/var/www/shared/login-hand-over', loginLifetimeInSeconds: 86400);
+$sharedLogin = new SharedLogin(
+    directory: '/var/www/shared/login-hand-over',
+    loginLifetimeInSeconds: 86400,
+    clock: new SystemClock(),
+);
 $app->withLoginTarget(loginTarget: LoginTarget::shared(
     sharedLogin: $sharedLogin,
     site: new SharedLoginSite(

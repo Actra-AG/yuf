@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\common;
 
+use actra\yuf\clock\Clock;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\NativeResponseSender;
@@ -83,6 +84,7 @@ final readonly class FileHandler
      */
     public function output(
         HttpRequest $httpRequest,
+        Clock $clock,
         ?bool $forceDownload = null,
         ResponseSender $responseSender = new NativeResponseSender(),
     ): never {
@@ -92,6 +94,7 @@ final readonly class FileHandler
             individualFileName: $this->individualFileName,
             maxAge: $this->maxAge,
             httpRequest: $httpRequest,
+            clock: $clock,
         )->sendAndExit(responseSender: $responseSender);
     }
 }

@@ -9,10 +9,12 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\db;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\db\DbQueryLogList;
 use actra\yuf\db\DbRowCountException;
 use actra\yuf\db\DbRuntimeException;
 use actra\yuf\db\DbSelectStmt;
+use DateTimeImmutable;
 use Override;
 use PDO;
 use PDOStatement;
@@ -111,7 +113,7 @@ final class DbSelectStmtTest extends TestCase
 
     public function testExecutionsAreLoggedWithTheGivenLog(): void
     {
-        $queryLog = new DbQueryLogList();
+        $queryLog = new DbQueryLogList(clock: new FixedClock(now: new DateTimeImmutable()));
         $pdoStatement = $this->pdo->prepare(query: 'SELECT name FROM users WHERE id = ?');
         $this->assertInstanceOf(PDOStatement::class, $pdoStatement);
         $statement = new DbSelectStmt(pdoStatement: $pdoStatement, queryLog: $queryLog);

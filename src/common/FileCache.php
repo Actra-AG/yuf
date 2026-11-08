@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\common;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use InvalidArgumentException;
 use JsonException;
 use RuntimeException;
@@ -33,7 +32,7 @@ final readonly class FileCache
     /**
      * @param string $directory Created on the first write if it does not exist
      */
-    public function __construct(string $directory, private Clock $clock = new SystemClock())
+    public function __construct(string $directory, private Clock $clock)
     {
         $this->directory = rtrim(string: $directory, characters: '/\\') . DIRECTORY_SEPARATOR;
     }

@@ -11,6 +11,7 @@ namespace actra\yuf\tests\Unit\auth;
 
 use actra\yuf\auth\LoginHandOver;
 use actra\yuf\auth\LoginHandOverTicket;
+use actra\yuf\clock\FixedClock;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\exception\UnauthorizedException;
 use actra\yuf\tests\Double\auth\RecordingSsoNonceCookieWriter;
@@ -596,6 +597,6 @@ final class LoginHandOverTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new LoginHandOver(directory: $this->directory, purgeProbabilityPercent: 101);
+        new LoginHandOver(directory: $this->directory, clock: new FixedClock(now: new DateTimeImmutable()), purgeProbabilityPercent: 101);
     }
 }

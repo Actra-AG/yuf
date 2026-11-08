@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\mailer;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 
 /**
  * Extension point: delivers a message that `AbstractMail` built (`SmtpMailer`, `MailMailer`).
@@ -30,7 +29,7 @@ abstract class AbstractMailer
      */
     public function __construct(
         private readonly string $serverAddress,
-        private readonly Clock $clock = new SystemClock(),
+        private readonly Clock $clock,
         private readonly MimeIdGenerator $mimeIdGenerator = new RandomMimeIdGenerator(),
         private readonly ServerNameResolver $serverNameResolver = new ReverseDnsServerNameResolver(cache: null),
     ) {}

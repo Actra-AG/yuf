@@ -13,8 +13,10 @@ use actra\yuf\auth\AuthResultEnum;
 use actra\yuf\auth\AuthSession;
 use actra\yuf\auth\AuthUser;
 use actra\yuf\auth\MicrosoftAuthenticator;
+use actra\yuf\clock\FixedClock;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\ResponseSender;
+use DateTimeImmutable;
 use Override;
 
 /**
@@ -44,6 +46,7 @@ final class TestMicrosoftAuthenticator extends MicrosoftAuthenticator
             loginRateLimit: null,
             logDirectory: $logDirectory,
             cacheDirectory: $cacheDirectory,
+            clock: new FixedClock(now: new DateTimeImmutable()),
             nonceCookieWriter: $nonceCookieWriter,
         );
     }

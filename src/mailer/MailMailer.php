@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\mailer;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use actra\yuf\common\FileCache;
 use Override;
 
@@ -27,8 +26,8 @@ final class MailMailer extends AbstractMailer
     public function __construct(
         string $serverAddress,
         ?FileCache $serverNameCache,
+        Clock $clock,
         private readonly MailFunction $mailFunction = new NativeMailFunction(),
-        Clock $clock = new SystemClock(),
         MimeIdGenerator $mimeIdGenerator = new RandomMimeIdGenerator(),
         ?ServerNameResolver $serverNameResolver = null,
     ) {

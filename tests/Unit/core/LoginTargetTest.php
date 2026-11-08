@@ -12,10 +12,12 @@ namespace actra\yuf\tests\Unit\core;
 use actra\yuf\auth\LoginHandOver;
 use actra\yuf\auth\SharedLogin;
 use actra\yuf\auth\SharedLoginSite;
+use actra\yuf\clock\FixedClock;
 use actra\yuf\core\LoginTarget;
 use actra\yuf\tests\Double\auth\RecordingSsoNonceCookieWriter;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\template\TemplateWorkDirectory;
+use DateTimeImmutable;
 use InvalidArgumentException;
 use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -34,6 +36,7 @@ final class LoginTargetTest extends TestCase
         $this->cookieWriter = new RecordingSsoNonceCookieWriter();
         $this->loginHandOver = new LoginHandOver(
             directory: $this->workDirectory->cacheDirectory . 'hand-over',
+            clock: new FixedClock(now: new DateTimeImmutable()),
             cookieWriter: $this->cookieWriter,
             purgeProbabilityPercent: 0,
         );
@@ -271,6 +274,7 @@ final class LoginTargetTest extends TestCase
             sharedLogin: new SharedLogin(
                 directory: $this->workDirectory->cacheDirectory . 'hand-over',
                 loginLifetimeInSeconds: 3600,
+                clock: new FixedClock(now: new DateTimeImmutable()),
                 cookieWriter: $this->cookieWriter,
                 purgeProbabilityPercent: 0,
             ),

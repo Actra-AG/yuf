@@ -71,7 +71,7 @@ final class SentMailListenerTest extends TestCase
 
     public function testSendsWithoutListener(): void
     {
-        $mailer = new RecordingMailer();
+        $mailer = new RecordingMailer(clock: new FixedClock(now: new DateTimeImmutable()));
         $mail = $this->createMail();
 
         $mail->send(abstractMailer: $mailer);
@@ -81,7 +81,7 @@ final class SentMailListenerTest extends TestCase
 
     public function testAnExceptionOfTheListenerPropagatesButTheMailCountsAsSent(): void
     {
-        $mailer = new RecordingMailer();
+        $mailer = new RecordingMailer(clock: new FixedClock(now: new DateTimeImmutable()));
         $mailer->addSentMailListener(
             sentMailListener: new class implements SentMailListener {
                 #[Override]

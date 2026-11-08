@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\db;
 
 use actra\yuf\clock\Clock;
+use actra\yuf\clock\FixedClock;
 use actra\yuf\db\DbQueryLogItem;
 use DateTimeImmutable;
 use LogicException;
@@ -40,7 +41,7 @@ final class DbQueryLogItemTest extends TestCase
 
     public function testExecutionTimeOfAnUnfinishedQueryThrows(): void
     {
-        $item = new DbQueryLogItem(sqlQuery: 'SELECT 1', params: []);
+        $item = new DbQueryLogItem(sqlQuery: 'SELECT 1', params: [], clock: new FixedClock(now: new DateTimeImmutable()));
 
         $this->expectException(LogicException::class);
         $this->expectExceptionMessageIsOrContains('confirmFinishedExecution()');

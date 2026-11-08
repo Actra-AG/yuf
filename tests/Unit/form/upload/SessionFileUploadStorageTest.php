@@ -84,6 +84,7 @@ final class SessionFileUploadStorageTest extends TestCase
             session: $this->session,
             rootDirectory: $this->rootDirectory,
             documentRoot: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
     }
 
@@ -355,6 +356,7 @@ final class SessionFileUploadStorageTest extends TestCase
             session: $this->session,
             rootDirectory: $missingRoot,
             documentRoot: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
         )->removeExpired();
 
         $this->assertDirectoryDoesNotExist($missingRoot);
@@ -479,6 +481,7 @@ final class SessionFileUploadStorageTest extends TestCase
             session: new Session(storage: new ArraySessionStorage()),
             rootDirectory: $this->rootDirectory,
             documentRoot: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $this->assertFalse($otherStorage->isIssued(pointer: 'ptr'));
@@ -537,6 +540,7 @@ final class SessionFileUploadStorageTest extends TestCase
             session: $this->session,
             rootDirectory: $this->rootDirectory,
             documentRoot: dirname(path: $this->rootDirectory),
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
     }
 
@@ -546,6 +550,7 @@ final class SessionFileUploadStorageTest extends TestCase
             session: $this->session,
             rootDirectory: $this->rootDirectory,
             documentRoot: $this->rootDirectory . '-public',
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $storage->issue(pointer: 'ptr');

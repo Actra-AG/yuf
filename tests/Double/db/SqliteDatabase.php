@@ -9,9 +9,11 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Double\db;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\db\DbConnectionParameters;
 use actra\yuf\db\DbQueryLogList;
 use actra\yuf\db\FrameworkDb;
+use DateTimeImmutable;
 
 /**
  * A `FrameworkDb` on an in-memory SQLite database with a small `users` table, so that the real code of `FrameworkDb`
@@ -23,7 +25,7 @@ final class SqliteDatabase
     {
         $db = new FrameworkDb(
             connectionParameters: new DbConnectionParameters(dsn: 'sqlite::memory:'),
-            queryLog: $queryLog ?? new DbQueryLogList(),
+            queryLog: $queryLog ?? new DbQueryLogList(clock: new FixedClock(now: new DateTimeImmutable())),
         );
         $db->execute(
             sql: 'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL, age INTEGER NULL)',

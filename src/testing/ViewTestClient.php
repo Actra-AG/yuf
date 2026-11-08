@@ -11,7 +11,6 @@ namespace actra\yuf\testing;
 
 use actra\yuf\auth\AuthSession;
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use actra\yuf\common\AcceptingMailDomainResolver;
 use actra\yuf\common\MailDomainResolver;
 use actra\yuf\Core;
@@ -79,6 +78,7 @@ final class ViewTestClient
         private readonly string $viewGroup,
         private readonly string $templateBaseDirectory,
         private readonly string $cacheDirectory,
+        private readonly Clock $clock,
         private readonly string $host = 'example.com',
         private readonly ?Language $language = null,
         private readonly string $routePath = '/',
@@ -88,7 +88,6 @@ final class ViewTestClient
         private readonly array $templateTags = [],
         private readonly string $remoteAddress = '192.0.2.1',
         private readonly MailDomainResolver $mailDomainResolver = new AcceptingMailDomainResolver(),
-        private readonly Clock $clock = new SystemClock(),
     ) {
         $this->session = new Session(storage: new ArraySessionStorage());
         $this->documentRoot = $documentRoot ?? $templateBaseDirectory;

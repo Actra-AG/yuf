@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\testing;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\Language;
@@ -23,6 +24,7 @@ use actra\yuf\testing\ViewTestResult;
 use actra\yuf\tests\Double\template\TemplateWorkDirectory;
 use actra\yuf\tests\Double\testing\TwoStepTestView;
 use ArrayObject;
+use DateTimeImmutable;
 use LogicException;
 use Override;
 use PHPUnit\Framework\TestCase;
@@ -55,6 +57,7 @@ final class ViewTestClientTest extends TestCase
             viewGroup: 'frontend',
             templateBaseDirectory: $root,
             cacheDirectory: $this->workDirectory->cacheDirectory,
+            clock: new FixedClock(now: new DateTimeImmutable()),
             host: 'www.example.com',
             language: new Language(code: 'de', locale: 'de_CH.UTF-8'),
         );

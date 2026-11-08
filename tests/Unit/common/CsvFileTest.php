@@ -9,12 +9,14 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\common;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\common\CsvFile;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\RecordingResponseSender;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\core\ResponseSentException;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use DateTimeImmutable;
 use Generator;
 use InvalidArgumentException;
 use Override;
@@ -271,6 +273,7 @@ final class CsvFileTest extends TestCase
         $sentResponse = RecordingResponseSender::capture(
             action: static fn(ResponseSender $sender) => $csvFile->pushDownloadAndExit(
                 httpRequest: HttpRequestFactory::create(),
+                clock: new FixedClock(now: new DateTimeImmutable()),
                 responseSender: $sender,
             ),
         );
@@ -292,7 +295,7 @@ final class CsvFileTest extends TestCase
         $sender = new RecordingResponseSender();
 
         try {
-            $csvFile->pushDownloadAndExit(httpRequest: HttpRequestFactory::create(), responseSender: $sender);
+            $csvFile->pushDownloadAndExit(httpRequest: HttpRequestFactory::create(), clock: new FixedClock(now: new DateTimeImmutable()), responseSender: $sender);
         } catch (ResponseSentException) {
             // The double throws instead of ending the process
         }

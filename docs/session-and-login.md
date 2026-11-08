@@ -332,6 +332,7 @@ redirects pass the login host, on a hand-over page that shows nothing. Same dire
 $sharedLogin = new SharedLogin(
     directory: '/var/www/shared/login-hand-over',
     loginLifetimeInSeconds: 86400, // the longest session of all hosts: an ended login is remembered that long
+    clock: new SystemClock(),
 );
 // A site (also its LoginTarget::shared(), views.md)
 $site = new SharedLoginSite(

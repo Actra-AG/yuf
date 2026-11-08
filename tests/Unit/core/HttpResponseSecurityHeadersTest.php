@@ -9,11 +9,13 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\core;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CspPolicySettings;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
 final class HttpResponseSecurityHeadersTest extends TestCase
@@ -26,6 +28,7 @@ final class HttpResponseSecurityHeadersTest extends TestCase
             individualFileName: null,
             maxAge: 0,
             httpRequest: HttpRequestFactory::create(),
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $headers = $httpResponse->listHeaders();

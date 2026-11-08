@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\db;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use LogicException;
 
 /**
@@ -29,7 +28,7 @@ final class DbQueryLogItem
     public function __construct(
         public private(set) readonly string $sqlQuery,
         public private(set) readonly array $params,
-        private readonly Clock $clock = new SystemClock(),
+        private readonly Clock $clock,
     ) {
         $this->start = $this->nowAsFloat();
     }

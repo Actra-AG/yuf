@@ -11,6 +11,7 @@ namespace actra\yuf\tests\Unit\exception;
 
 use actra\yuf\auth\LoginHandOver;
 use actra\yuf\auth\UnauthorizedAccessRightException;
+use actra\yuf\clock\FixedClock;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpRequest;
@@ -47,6 +48,7 @@ use actra\yuf\tests\Double\exception\TeapotExceptionHandler;
 use actra\yuf\tests\Double\security\CountingCsrfTokenSource;
 use actra\yuf\tests\Double\session\FailingSessionStorage;
 use actra\yuf\tests\Double\template\TemplateWorkDirectory;
+use DateTimeImmutable;
 use JsonException;
 use LogicException;
 use Override;
@@ -410,6 +412,7 @@ final class ExceptionHandlerTest extends TestCase
             url: 'https://login.example.net/login.html',
             loginHandOver: new LoginHandOver(
                 directory: $this->workDirectory->cacheDirectory . 'hand-over',
+                clock: new FixedClock(now: new DateTimeImmutable()),
                 cookieWriter: new RecordingSsoNonceCookieWriter(),
                 purgeProbabilityPercent: 0,
             ),

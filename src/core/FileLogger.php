@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\core;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use actra\yuf\mailer\AbstractMailer;
 use actra\yuf\mailer\MailerAddress;
 use actra\yuf\mailer\MailerException;
@@ -59,7 +58,7 @@ final class FileLogger implements Logger
         string $logDirectory,
         private readonly HttpRequest $httpRequest,
         private readonly ?AbstractMailer $mailer,
-        private readonly Clock $clock = new SystemClock(),
+        private readonly Clock $clock,
         private readonly int $maxLogSize = FileLogger::DEFAULT_MAX_LOG_SIZE,
         private readonly string $mailSenderAddress = '',
         private readonly MailFunction $mailFunction = new NativeMailFunction(),

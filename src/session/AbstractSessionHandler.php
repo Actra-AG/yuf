@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\session;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\exception\UnauthorizedException;
 use LogicException;
@@ -58,7 +57,7 @@ abstract class AbstractSessionHandler extends SessionHandler implements SessionU
     protected function __construct(
         private readonly HttpRequest $httpRequest,
         private readonly SessionSettings $sessionSettings,
-        private readonly Clock $clock = new SystemClock(),
+        private readonly Clock $clock,
     ) {
         $this->currentTime = $this->clock->now()->getTimestamp();
         $this->clientRemoteAddress = $httpRequest->getRemoteAddress();

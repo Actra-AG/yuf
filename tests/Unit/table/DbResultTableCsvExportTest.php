@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\table;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\RecordingResponseSender;
 use actra\yuf\core\ResponseSentException;
@@ -25,6 +26,7 @@ use actra\yuf\table\TableItem;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\db\SqliteDatabase;
 use actra\yuf\tests\Double\template\TemplateEngineFactory;
+use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -80,7 +82,7 @@ final class DbResultTableCsvExportTest extends TestCase
     private function export(DbResultTable $table, RecordingResponseSender $sender): string
     {
         try {
-            $table->exportCsv(fileName: 'users.csv', responseSender: $sender);
+            $table->exportCsv(fileName: 'users.csv', clock: new FixedClock(now: new DateTimeImmutable()), responseSender: $sender);
         } catch (ResponseSentException) {
             // The double throws instead of ending the process
         }
@@ -256,6 +258,6 @@ final class DbResultTableCsvExportTest extends TestCase
         $table = $this->createTable(sql: 'SELECT id, name FROM users');
 
         $this->expectExceptionObject(new DbRowValueException(message: 'Column "age" does not exist in the row.'));
-        $table->exportCsv(fileName: 'users.csv', responseSender: new RecordingResponseSender());
+        $table->exportCsv(fileName: 'users.csv', clock: new FixedClock(now: new DateTimeImmutable()), responseSender: new RecordingResponseSender());
     }
 }

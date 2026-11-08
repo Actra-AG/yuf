@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\table\table;
 
+use actra\yuf\clock\Clock;
 use actra\yuf\common\CsvFile;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\NativeResponseSender;
@@ -188,8 +189,11 @@ class DbResultTable extends SmartTable
      *
      * @param string $fileName Name of the download, chosen by the application (never user input)
      */
-    public function exportCsv(string $fileName, ResponseSender $responseSender = new NativeResponseSender()): never
-    {
+    public function exportCsv(
+        string $fileName,
+        Clock $clock,
+        ResponseSender $responseSender = new NativeResponseSender(),
+    ): never {
         $exportColumns = array_filter(
             array: $this->columns,
             callback: static fn(AbstractTableColumn $column): bool => !$column instanceof ActionsColumn
@@ -211,6 +215,7 @@ class DbResultTable extends SmartTable
         );
         $csvFile->pushDownloadAndExit(
             httpRequest: $this->httpRequest,
+            clock: $clock,
             responseSender: $responseSender,
             moreRows: $this->iterateExportRows(columns: array_values(array: $exportColumns)),
         );

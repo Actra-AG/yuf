@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\common;
 
+use actra\yuf\clock\Clock;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\NativeResponseSender;
@@ -146,6 +147,7 @@ final class CsvFile
      */
     public function pushDownloadAndExit(
         HttpRequest $httpRequest,
+        Clock $clock,
         ResponseSender $responseSender = new NativeResponseSender(),
         iterable $moreRows = [],
     ): never {
@@ -161,6 +163,7 @@ final class CsvFile
             individualFileName: $this->fileName,
             maxAge: 0,
             httpRequest: $httpRequest,
+            clock: $clock,
         )->sendAndExit(responseSender: $responseSender);
     }
 

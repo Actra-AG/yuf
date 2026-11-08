@@ -276,6 +276,7 @@ final class SmtpMailerTest extends TestCase
             smtpUserName: '',
             smtpPassword: '',
             serverNameCache: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
             encryption: SmtpEncryptionEnum::NONE,
             transport: $transport,
             mimeIdGenerator: new FixedMimeIdGenerator(),
@@ -387,6 +388,7 @@ final class SmtpMailerTest extends TestCase
             smtpUserName: 'user',
             smtpPassword: SmtpMailerTest::PASSWORD,
             serverNameCache: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
             transport: $transport,
             mimeIdGenerator: new FixedMimeIdGenerator(),
             serverNameResolver: new FixedServerNameResolver(),
@@ -413,6 +415,7 @@ final class SmtpMailerTest extends TestCase
             smtpUserName: 'user',
             smtpPassword: SmtpMailerTest::PASSWORD,
             serverNameCache: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
             encryption: SmtpEncryptionEnum::IMPLICIT_TLS,
             transport: $transport,
             mimeIdGenerator: new FixedMimeIdGenerator(),
@@ -523,6 +526,7 @@ final class SmtpMailerTest extends TestCase
             smtpUserName: '',
             smtpPassword: '',
             serverNameCache: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
     }
 
@@ -536,6 +540,7 @@ final class SmtpMailerTest extends TestCase
             smtpUserName: '',
             smtpPassword: '',
             serverNameCache: null,
+            clock: new FixedClock(now: new DateTimeImmutable()),
             port: 70000,
         );
     }
@@ -568,10 +573,10 @@ final class SmtpMailerTest extends TestCase
             smtpUserName: $userName,
             smtpPassword: SmtpMailerTest::PASSWORD,
             serverNameCache: null,
+            clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-10-08 12:00:00 UTC')),
             encryption: $encryption,
             port: $port,
             transport: $transport,
-            clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-10-08 12:00:00 UTC')),
             mimeIdGenerator: new FixedMimeIdGenerator(),
             serverNameResolver: new FixedServerNameResolver(),
         );

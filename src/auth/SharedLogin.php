@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\auth;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\LoginRedirect;
 use actra\yuf\exception\UnauthorizedException;
@@ -63,7 +62,7 @@ final readonly class SharedLogin
     public function __construct(
         string $directory,
         private int $loginLifetimeInSeconds,
-        Clock $clock = new SystemClock(),
+        Clock $clock,
         SsoNonceCookieWriter $cookieWriter = new NativeSsoNonceCookieWriter(),
         int $purgeProbabilityPercent = 1,
     ) {

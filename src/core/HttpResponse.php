@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\core;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use actra\yuf\common\FileHandler;
 use actra\yuf\common\UrlHelper;
 use actra\yuf\security\CspPolicySettings;
@@ -351,7 +350,7 @@ final class HttpResponse
         ?string $individualFileName,
         int $maxAge,
         HttpRequest $httpRequest,
-        Clock $clock = new SystemClock(),
+        Clock $clock,
         bool $isPublic = false,
         bool $isImmutable = false,
     ): HttpResponse {

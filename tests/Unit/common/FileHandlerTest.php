@@ -9,11 +9,13 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\common;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\common\FileHandler;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\RecordingResponseSender;
 use actra\yuf\core\ResponseSender;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use DateTimeImmutable;
 use InvalidArgumentException;
 use Override;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -185,6 +187,7 @@ final class FileHandlerTest extends TestCase
             $sentResponse = RecordingResponseSender::capture(
                 action: static fn(ResponseSender $sender) => new FileHandler(path: $path)->output(
                     httpRequest: HttpRequestFactory::create(),
+                    clock: new FixedClock(now: new DateTimeImmutable()),
                     responseSender: $sender,
                 ),
             );
@@ -203,6 +206,7 @@ final class FileHandlerTest extends TestCase
         $sentResponse = RecordingResponseSender::capture(
             action: static fn(ResponseSender $sender) => new FileHandler(path: $path)->output(
                 httpRequest: HttpRequestFactory::create(),
+                clock: new FixedClock(now: new DateTimeImmutable()),
                 responseSender: $sender,
             ),
         );
@@ -231,9 +235,14 @@ final class FileHandlerTest extends TestCase
 
         $sentResponse = RecordingResponseSender::capture(
             action: static fn(ResponseSender $sender) => $forceDownload === null
-                ? new FileHandler(path: $path)->output(httpRequest: HttpRequestFactory::create(), responseSender: $sender)
+                ? new FileHandler(path: $path)->output(
+                    httpRequest: HttpRequestFactory::create(),
+                    clock: new FixedClock(now: new DateTimeImmutable()),
+                    responseSender: $sender,
+                )
                 : new FileHandler(path: $path)->output(
                     httpRequest: HttpRequestFactory::create(),
+                    clock: new FixedClock(now: new DateTimeImmutable()),
                     forceDownload: $forceDownload,
                     responseSender: $sender,
                 ),

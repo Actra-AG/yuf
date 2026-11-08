@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\auth;
 
+use actra\yuf\clock\Clock;
 use actra\yuf\common\LogFile;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
@@ -39,6 +40,7 @@ abstract class MicrosoftAuthenticator extends Authenticator
     /**
      * @param string $logDirectory The log directory of the project (`Core::$logDirectory`, with trailing slash)
      * @param string $cacheDirectory A writable directory for the cache of the signing keys of Microsoft
+     * @param Clock $clock Checks the validity period of the ID token
      */
     protected function __construct(
         HttpRequest $httpRequest,
@@ -47,6 +49,7 @@ abstract class MicrosoftAuthenticator extends Authenticator
         ?LoginRateLimit $loginRateLimit,
         private readonly string $logDirectory,
         private readonly string $cacheDirectory,
+        private readonly Clock $clock,
         SsoNonceCookieWriter $nonceCookieWriter = new NativeSsoNonceCookieWriter(),
     ) {
         parent::__construct(
@@ -114,6 +117,7 @@ abstract class MicrosoftAuthenticator extends Authenticator
                 ssoNonce: $this->nonceCookie->consume(redirectUri: $redirectUri),
                 jwtString: $microsoftIdToken,
                 cacheDirectory: $this->cacheDirectory,
+                clock: $this->clock,
             );
         } catch (UnauthorizedException|InvalidArgumentException|RuntimeException $exception) {
             $this->logFailure(exception: $exception);
@@ -140,7 +144,12 @@ abstract class MicrosoftAuthenticator extends Authenticator
 
     private function logFailure(Throwable $exception): void
     {
-        new LogFile(logDirectory: $this->logDirectory, group: 'ssoMicrosoft', logFileName: 'ssoMicrosoft')->write(
+        new LogFile(
+            logDirectory: $this->logDirectory,
+            group: 'ssoMicrosoft',
+            logFileName: 'ssoMicrosoft',
+            clock: $this->clock,
+        )->write(
             line: $exception::class . ': ' . $exception->getMessage(),
         );
     }

@@ -126,8 +126,8 @@ final class GraphMailerTest extends TestCase
             clientId: 'client-1',
             clientSecret: 'secret',
             tokenCache: null,
-            authorityUrl: $this->server->url(''),
             clock: new AdjustableClock(now: new DateTimeImmutable(datetime: '2026-10-08 12:00:00 UTC')),
+            authorityUrl: $this->server->url(''),
         );
         $mailer = $this->mailer(tokenProvider: $tokenProvider);
 
@@ -290,8 +290,8 @@ final class GraphMailerTest extends TestCase
             senderMailbox: $mailbox,
             oAuthTokenProvider: $tokenProvider ?? new FixedOAuthTokenProvider(accessToken: GraphMailerTest::TOKEN),
             serverNameCache: null,
-            graphBaseUrl: $baseUrl ?? $this->server->url('/v1.0'),
             clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-10-08 12:00:00 UTC')),
+            graphBaseUrl: $baseUrl ?? $this->server->url('/v1.0'),
             mimeIdGenerator: new FixedMimeIdGenerator(),
             serverNameResolver: new FixedServerNameResolver(),
         );

@@ -9,12 +9,14 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Double\mailer;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\mailer\AbstractMail;
 use actra\yuf\mailer\AbstractMailer;
 use actra\yuf\mailer\FixedServerNameResolver;
 use actra\yuf\mailer\MailerException;
 use actra\yuf\mailer\MailMimeBody;
 use actra\yuf\mailer\MailMimeHeader;
+use DateTimeImmutable;
 use Override;
 
 /**
@@ -24,7 +26,7 @@ final class FailingMailer extends AbstractMailer
 {
     public function __construct()
     {
-        parent::__construct(serverAddress: '192.0.2.1', serverNameResolver: new FixedServerNameResolver());
+        parent::__construct(serverAddress: '192.0.2.1', clock: new FixedClock(now: new DateTimeImmutable()), serverNameResolver: new FixedServerNameResolver());
     }
 
     #[Override]

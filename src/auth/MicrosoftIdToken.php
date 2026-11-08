@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\auth;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use actra\yuf\exception\UnauthorizedException;
 use InvalidArgumentException;
 use Override;
@@ -50,7 +49,7 @@ final class MicrosoftIdToken extends AuthWebToken
         #[SensitiveParameter]
         string $jwtString,
         string $cacheDirectory,
-        private readonly Clock $clock = new SystemClock(),
+        private readonly Clock $clock,
         ?JsonWebKeySetSource $keySetSource = null,
     ) {
         MicrosoftTenantId::assertValid(tenantId: $tenantId);

@@ -30,6 +30,7 @@ $mailer = new SmtpMailer(
     smtpUserName: 'noreply@example.com',
     smtpPassword: '',
     serverNameCache: $core->fileCache,
+    clock: new SystemClock(),
     oAuthTokenProvider: $tokenProvider, // your implementation of OAuthTokenProvider
 );
 ```
@@ -57,6 +58,7 @@ $mailer = new SmtpMailer(
     smtpUserName: $environmentSettings->getString(key: 'mailer.username'),
     smtpPassword: $environmentSettings->getString(key: 'mailer.password'),
     serverNameCache: $core->fileCache,
+    clock: new SystemClock(),
     encryption: $environmentSettings->getEnum(key: 'mailer.encryption', enumClass: SmtpEncryptionEnum::class),
     port: $environmentSettings->has(key: 'mailer.port') ? $environmentSettings->getInt(key: 'mailer.port') : null,
 );
@@ -87,12 +89,14 @@ $tokenProvider = new MicrosoftClientCredentialsTokenProvider(
     clientId: $core->environmentSettings->getString(key: 'mailer.clientId'),
     clientSecret: $core->environmentSettings->getString(key: 'mailer.clientSecret'),
     tokenCache: $core->fileCache, // the token serves the next requests too; null requests one per request
+    clock: new SystemClock(),
 );
 $mailer = new GraphMailer(
     serverAddress: '192.0.2.1',
     senderMailbox: 'noreply@example.com', // user ID or user principal name
     oAuthTokenProvider: $tokenProvider,
     serverNameCache: $core->fileCache,
+    clock: new SystemClock(),
 );
 ```
 
@@ -137,10 +141,10 @@ $mailer->addSentMailListener(sentMailListener: new SentMailLogger(…));
 ## Tests
 
 `RecordingMailer` records the sent `AbstractMail` objects instead of delivering them (no network, no DNS). Pass it
-wherever the code expects an `AbstractMailer`; a `FixedClock` as `clock:` fixes the date of the messages:
+wherever the code expects an `AbstractMailer`; its `FixedClock` fixes the date of the messages:
 
 ```php
-$mailer = new RecordingMailer();
+$mailer = new RecordingMailer(clock: new FixedClock(now: new DateTimeImmutable(datetime: '2026-01-02 03:04:05')));
 $mail->send(abstractMailer: $mailer);
 $this->assertCount(1, $mailer->sentMails);
 ```

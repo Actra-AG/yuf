@@ -9,11 +9,13 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\core;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\NativeResponseSender;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use DateTimeImmutable;
 use Override;
 use PHPUnit\Framework\TestCase;
 
@@ -71,6 +73,7 @@ final class NativeResponseSenderTest extends TestCase
             individualFileName: null,
             maxAge: 0,
             httpRequest: HttpRequestFactory::create(),
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $this->assertSame($content, $this->capturedOutput(httpResponse: $httpResponse));
@@ -85,6 +88,7 @@ final class NativeResponseSenderTest extends TestCase
             individualFileName: null,
             maxAge: 0,
             httpRequest: HttpRequestFactory::create(headers: ['If-None-Match' => '*']),
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_MODIFIED, $httpResponse->httpStatusCode);

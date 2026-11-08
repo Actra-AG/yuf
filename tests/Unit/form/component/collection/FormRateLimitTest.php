@@ -170,7 +170,7 @@ final class FormRateLimitTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         new FormRateLimit(
-            rateLimiter: new RateLimiter(directory: $this->directory, secret: FormRateLimitTest::SECRET),
+            rateLimiter: new RateLimiter(directory: $this->directory, secret: FormRateLimitTest::SECRET, clock: new FixedClock(now: new DateTimeImmutable())),
             failMode: RateLimitFailModeEnum::CLOSED,
             logger: $this->logger,
             clientLimits: [],
@@ -180,7 +180,7 @@ final class FormRateLimitTest extends TestCase
     public function testDefaultClientLimits(): void
     {
         $rateLimit = new FormRateLimit(
-            rateLimiter: new RateLimiter(directory: $this->directory, secret: FormRateLimitTest::SECRET),
+            rateLimiter: new RateLimiter(directory: $this->directory, secret: FormRateLimitTest::SECRET, clock: new FixedClock(now: new DateTimeImmutable())),
             failMode: RateLimitFailModeEnum::CLOSED,
             logger: $this->logger,
         );

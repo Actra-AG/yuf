@@ -110,7 +110,7 @@ final class AuthenticatorRateLimitTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         new LoginRateLimit(
-            rateLimiter: new RateLimiter(directory: $this->directory, secret: AuthenticatorRateLimitTest::SECRET),
+            rateLimiter: new RateLimiter(directory: $this->directory, secret: AuthenticatorRateLimitTest::SECRET, clock: new FixedClock(now: new DateTimeImmutable())),
             failMode: RateLimitFailModeEnum::CLOSED,
             logger: $this->logger,
             accountLimits: [],
@@ -120,7 +120,7 @@ final class AuthenticatorRateLimitTest extends TestCase
     public function testDefaultLimits(): void
     {
         $rateLimit = new LoginRateLimit(
-            rateLimiter: new RateLimiter(directory: $this->directory, secret: AuthenticatorRateLimitTest::SECRET),
+            rateLimiter: new RateLimiter(directory: $this->directory, secret: AuthenticatorRateLimitTest::SECRET, clock: new FixedClock(now: new DateTimeImmutable())),
             failMode: RateLimitFailModeEnum::CLOSED,
             logger: $this->logger,
         );

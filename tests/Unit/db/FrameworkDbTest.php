@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\db;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\db\DbConnectionParameters;
 use actra\yuf\db\DbQueryLogList;
 use actra\yuf\db\DbRow;
@@ -17,6 +18,7 @@ use actra\yuf\db\DbRuntimeException;
 use actra\yuf\db\FrameworkDb;
 use actra\yuf\tests\Double\db\SqliteDatabase;
 use actra\yuf\tests\Double\db\SteppingClock;
+use DateTimeImmutable;
 use InvalidArgumentException;
 use LogicException;
 use PDO;
@@ -157,7 +159,10 @@ final class FrameworkDbTest extends TestCase
 
     public function testGetLastInsertIdIsZeroWithoutInsert(): void
     {
-        $db = new FrameworkDb(connectionParameters: new DbConnectionParameters(dsn: 'sqlite::memory:'));
+        $db = new FrameworkDb(
+            connectionParameters: new DbConnectionParameters(dsn: 'sqlite::memory:'),
+            queryLog: new DbQueryLogList(clock: new FixedClock(now: new DateTimeImmutable())),
+        );
 
         $this->assertSame(0, $db->getLastInsertId());
     }
@@ -206,6 +211,7 @@ final class FrameworkDbTest extends TestCase
                 dsn: 'sqlite::memory:',
                 options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_SILENT],
             ),
+            queryLog: new DbQueryLogList(clock: new FixedClock(now: new DateTimeImmutable())),
         );
 
         $this->assertSame(PDO::ERRMODE_EXCEPTION, $db->getAttribute(PDO::ATTR_ERRMODE));
@@ -220,6 +226,7 @@ final class FrameworkDbTest extends TestCase
                     userName: 'someUser',
                     password: 'topSecretPassword',
                 ),
+                queryLog: new DbQueryLogList(clock: new FixedClock(now: new DateTimeImmutable())),
             );
             FrameworkDbTest::fail('Expected PDOException');
         } catch (PDOException $exception) {

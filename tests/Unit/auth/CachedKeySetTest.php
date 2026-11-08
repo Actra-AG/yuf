@@ -186,6 +186,7 @@ final class CachedKeySetTest extends TestCase
         $keySet = new CachedKeySet(
             cacheFilePath: $this->directory . DIRECTORY_SEPARATOR . 'missing' . DIRECTORY_SEPARATOR . 'keys.json',
             source: new FakeKeySetSource(json: $this->issuer->createKeySetJson()),
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $this->expectException(RuntimeException::class);

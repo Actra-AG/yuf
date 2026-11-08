@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\auth;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use actra\yuf\exception\UnauthorizedException;
 use OpenSSLAsymmetricKey;
 use RuntimeException;
@@ -28,7 +27,7 @@ final readonly class CachedKeySet
     public function __construct(
         private string $cacheFilePath,
         private JsonWebKeySetSource $source,
-        private Clock $clock = new SystemClock(),
+        private Clock $clock,
         private int $refreshIntervalInSeconds = 300,
     ) {}
 

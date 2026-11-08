@@ -4,6 +4,42 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v7](docs/upgrade/v7.md), [v6](docs/upgrade/v6.md), [v5](docs/upgrade/v5.md), [v4](docs/upgrade/v4.md),
 [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md), [v0](docs/upgrade/v0.md).
 
+## v8.16.0 (2026-11-08)
+
+### ⚠️ The `Clock` is a required argument
+
+The `Clock $clock = new SystemClock()` defaults are gone: pass `clock: new SystemClock()` in production and a
+`FixedClock` in tests. `App` and `Core` (`withFileSessions()`, `withFileLogger()`, `createFileLogger()`,
+`createFileSessionHandler()`) are unchanged: they use the `SystemClock` unless you pass another one.
+
+Now required: `clock:` of `FileCache`, `FileLogger`, `LogFile`, `RateLimiter`, `CachedKeySet`, `LoginHandOver`,
+`SharedLogin`, `MicrosoftIdToken`, `IdTokenTimeClaimsValidator`, `SessionFileUploadStorage`, `FileSessionHandler` and
+`AbstractSessionHandler` (also in your subclasses), `AbstractMailer` (also in your subclasses), `SmtpMailer`,
+`GraphMailer`, `MailMailer`, `RecordingMailer`, `MicrosoftClientCredentialsTokenProvider`, `DbQueryLogItem`,
+`DbQueryLogList`, `ViewTestClient`, `HttpResponse::createResponseFromFilePath()`.
+
+New required arguments, because these classes create a clock-dependent object themselves:
+
+- `FrameworkDb`: `queryLog: new DbQueryLogList(clock: …)` (was optional).
+- `MicrosoftAuthenticator::__construct()` (your subclass passes it on): `clock:`.
+- `CsvFile::pushDownloadAndExit()`, `FileHandler::output()`, `DbResultTable::exportCsv()`: `clock:`.
+
+In constructors with optional arguments, `clock` moved before the first optional one (`SmtpMailer`, `GraphMailer`,
+`MailMailer`, `MicrosoftClientCredentialsTokenProvider`, `ViewTestClient`); with named arguments, which yuf requires,
+only the order of the arguments in your call changes.
+
+```php
+// Before
+$rateLimiter = new RateLimiter(directory: $directory, secret: $secret);
+$db = new FrameworkDb(connectionParameters: $parameters);
+
+// After
+$rateLimiter = new RateLimiter(directory: $directory, secret: $secret, clock: new SystemClock());
+$db = new FrameworkDb(connectionParameters: $parameters, queryLog: new DbQueryLogList(clock: new SystemClock()));
+```
+
+---
+
 ## v8.15.0 (2026-11-08)
 
 ### ⚠️ Shared login: check at every request that needs a login

@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\security;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use InvalidArgumentException;
 use JsonException;
 use RuntimeException;
@@ -48,7 +47,7 @@ final readonly class RateLimiter
         string $directory,
         #[SensitiveParameter]
         private string $secret,
-        private Clock $clock = new SystemClock(),
+        private Clock $clock,
         private int $purgeProbabilityPercent = 1,
     ) {
         if (strlen(string: $secret) < RateLimiter::MIN_SECRET_LENGTH) {

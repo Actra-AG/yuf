@@ -140,6 +140,7 @@ final class HttpResponseTest extends TestCase
             individualFileName: null,
             maxAge: 0,
             httpRequest: HttpRequestFactory::create(),
+            clock: new FixedClock(now: new DateTimeImmutable()),
         )->getHeader(key: 'Etag');
 
         $httpResponse = HttpResponse::createResponseFromFilePath(
@@ -148,6 +149,7 @@ final class HttpResponseTest extends TestCase
             individualFileName: null,
             maxAge: 0,
             httpRequest: HttpRequestFactory::create(headers: ['If-None-Match' => $eTag]),
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $headers = $httpResponse->listHeaders();
@@ -195,6 +197,7 @@ final class HttpResponseTest extends TestCase
             individualFileName: null,
             maxAge: 31536000,
             httpRequest: HttpRequestFactory::create(),
+            clock: new FixedClock(now: new DateTimeImmutable()),
             isPublic: true,
             isImmutable: true,
         );
@@ -230,6 +233,7 @@ final class HttpResponseTest extends TestCase
             individualFileName: $fileName,
             maxAge: 0,
             httpRequest: HttpRequestFactory::create(),
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
     }
 
@@ -311,6 +315,7 @@ final class HttpResponseTest extends TestCase
             httpRequest: HttpRequestFactory::create(
                 headers: ['If-Modified-Since' => gmdate(format: 'r', timestamp: 1_700_000_000)],
             ),
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_MODIFIED, $httpResponse->httpStatusCode);
@@ -424,6 +429,7 @@ final class HttpResponseTest extends TestCase
             individualFileName: null,
             maxAge: 0,
             httpRequest: HttpRequestFactory::create(),
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $httpResponse->httpStatusCode);
@@ -440,6 +446,7 @@ final class HttpResponseTest extends TestCase
             individualFileName: null,
             maxAge: 0,
             httpRequest: HttpRequestFactory::create(),
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $httpResponse->httpStatusCode);
@@ -458,6 +465,7 @@ final class HttpResponseTest extends TestCase
             individualFileName: null,
             maxAge: 0,
             httpRequest: HttpRequestFactory::create(),
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_FORBIDDEN, $httpResponse->httpStatusCode);
@@ -473,6 +481,7 @@ final class HttpResponseTest extends TestCase
             individualFileName: null,
             maxAge: 0,
             httpRequest: HttpRequestFactory::create(),
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $httpResponse->httpStatusCode);

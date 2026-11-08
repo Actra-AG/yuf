@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\form\upload;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use actra\yuf\form\model\UploadedFile;
 use actra\yuf\form\model\UploadInput;
 use actra\yuf\session\Session;
@@ -53,7 +52,7 @@ final readonly class SessionFileUploadStorage implements FileUploadStorage
         private Session $session,
         string $rootDirectory,
         ?string $documentRoot,
-        private Clock $clock = new SystemClock(),
+        private Clock $clock,
     ) {
         $this->uploadDirectory = new UploadDirectory(path: $rootDirectory);
         if ($documentRoot !== null) {

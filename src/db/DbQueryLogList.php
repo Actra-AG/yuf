@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\db;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 
 /**
  * The queries a `FrameworkDb` has executed with logging switched on (see `FrameworkDb::getQueryLog()`). One list per
@@ -23,7 +22,7 @@ final class DbQueryLogList
     /** @var list<DbQueryLogItem> */
     private array $items = [];
 
-    public function __construct(private readonly Clock $clock = new SystemClock()) {}
+    public function __construct(private readonly Clock $clock) {}
 
     /**
      * Starts the time measurement of a query. The item gets part of the list with `add()`.

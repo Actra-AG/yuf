@@ -8,6 +8,7 @@ a public form or check an IP address may send, without database. Every `RateLimi
 $rateLimiter = new RateLimiter(
     directory: $core->cacheDirectory . 'rateLimit',
     secret: $core->environmentSettings->getString(key: 'rateLimit.secret'), // at least 32 bytes
+    clock: new SystemClock(),
 );
 $ipLimits = [new RateLimit(maxHits: 5, windowSeconds: 60), new RateLimit(maxHits: 50, windowSeconds: 86400)];
 $globalLimits = [new RateLimit(maxHits: 1000, windowSeconds: 86400)];

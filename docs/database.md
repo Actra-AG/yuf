@@ -15,6 +15,7 @@ $db = new FrameworkDb(
             password: $password,
         ),
     ),
+    queryLog: new DbQueryLogList(clock: new SystemClock()),
 );
 ```
 
@@ -26,7 +27,7 @@ $db = new FrameworkDb(
 - `createInQuery()` creates the placeholders of an `IN (...)` list, `getLastInsertId()` returns the generated ID as
   `int`, `getQueryLog()` the queries run with `logQuery: true`.
 - A `DbRuntimeException` carries the SQL and the number of bound values, never the values (they may be personal data).
-- Tests: `new FrameworkDb(connectionParameters: new DbConnectionParameters(dsn: 'sqlite::memory:'))`.
+- Tests: `new FrameworkDb(connectionParameters: new DbConnectionParameters(dsn: 'sqlite::memory:'), queryLog: new DbQueryLogList(clock: new FixedClock(…)))`.
 
 ## Typed rows
 

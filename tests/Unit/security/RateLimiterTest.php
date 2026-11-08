@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\security;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\security\RateLimit;
 use actra\yuf\security\RateLimiter;
 use actra\yuf\tests\Double\clock\AdjustableClock;
@@ -72,14 +73,14 @@ final class RateLimiterTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new RateLimiter(directory: $this->directory, secret: str_repeat(string: 'x', times: 31));
+        new RateLimiter(directory: $this->directory, secret: str_repeat(string: 'x', times: 31), clock: new FixedClock(now: new DateTimeImmutable()));
     }
 
     public function testRejectsAnInvalidPurgeProbability(): void
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new RateLimiter(directory: $this->directory, secret: RateLimiterTest::SECRET, purgeProbabilityPercent: 101);
+        new RateLimiter(directory: $this->directory, secret: RateLimiterTest::SECRET, clock: new FixedClock(now: new DateTimeImmutable()), purgeProbabilityPercent: 101);
     }
 
     public function testRejectsAConsumeWithoutLimit(): void

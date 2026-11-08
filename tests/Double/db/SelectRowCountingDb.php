@@ -9,9 +9,12 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Double\db;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\db\DbConnectionParameters;
+use actra\yuf\db\DbQueryLogList;
 use actra\yuf\db\DbRow;
 use actra\yuf\db\FrameworkDb;
+use DateTimeImmutable;
 use Override;
 
 /**
@@ -24,7 +27,10 @@ final class SelectRowCountingDb extends FrameworkDb
 
     public function __construct()
     {
-        parent::__construct(connectionParameters: new DbConnectionParameters(dsn: 'sqlite::memory:'));
+        parent::__construct(
+            connectionParameters: new DbConnectionParameters(dsn: 'sqlite::memory:'),
+            queryLog: new DbQueryLogList(clock: new FixedClock(now: new DateTimeImmutable())),
+        );
         $this->execute(sql: 'CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL, age INTEGER NULL)');
         $this->execute(
             sql: 'INSERT INTO users (id, name, age) VALUES (1, ?, 30), (2, ?, NULL), (3, ?, 41)',

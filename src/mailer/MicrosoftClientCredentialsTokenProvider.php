@@ -12,7 +12,6 @@ namespace actra\yuf\mailer;
 use actra\yuf\api\CurlClient;
 use actra\yuf\api\request\CurlPostRequest;
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use actra\yuf\common\FileCache;
 use actra\yuf\common\JsonUtils;
 use DateTimeImmutable;
@@ -63,10 +62,10 @@ final class MicrosoftClientCredentialsTokenProvider implements OAuthTokenProvide
         #[SensitiveParameter]
         private readonly string $clientSecret,
         private readonly ?FileCache $tokenCache,
+        private readonly Clock $clock,
         private readonly string $scope = MicrosoftClientCredentialsTokenProvider::GRAPH_SCOPE,
         private readonly string $authorityUrl = MicrosoftClientCredentialsTokenProvider::DEFAULT_AUTHORITY_URL,
         private readonly CurlClient $curlClient = new CurlClient(),
-        private readonly Clock $clock = new SystemClock(),
     ) {
         if (preg_match(pattern: '/^[A-Za-z0-9.-]+$/D', subject: $tenantId) !== 1) {
             throw new InvalidArgumentException(

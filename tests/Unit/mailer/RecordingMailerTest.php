@@ -38,7 +38,7 @@ final class RecordingMailerTest extends TestCase
             textBody: " Vielen Dank.\n",
         );
         $mail->addReplyTo(inputEmail: 'support@example.com');
-        $mailer = new RecordingMailer();
+        $mailer = new RecordingMailer(clock: new FixedClock(now: new DateTimeImmutable()));
 
         $mail->send(abstractMailer: $mailer);
 
@@ -68,7 +68,7 @@ final class RecordingMailerTest extends TestCase
         );
         $attachment = new MailerStringAttachment(contentString: '%PDF-1.4', fileName: 'rechnung.pdf', type: '');
         $mail->addAttachment(mailerAttachment: $attachment);
-        $mailer = new RecordingMailer();
+        $mailer = new RecordingMailer(clock: new FixedClock(now: new DateTimeImmutable()));
 
         $mail->send(abstractMailer: $mailer);
 
@@ -91,7 +91,7 @@ final class RecordingMailerTest extends TestCase
 
     public function testRecordsEveryMailInOrderWithoutNetwork(): void
     {
-        $mailer = new RecordingMailer();
+        $mailer = new RecordingMailer(clock: new FixedClock(now: new DateTimeImmutable()));
         $first = $this->createMail(subject: 'First');
         $second = $this->createMail(subject: 'Second');
 
@@ -104,7 +104,7 @@ final class RecordingMailerTest extends TestCase
 
     public function testBuildsTheMessageLikeAnSmtpMailer(): void
     {
-        $mailer = new RecordingMailer();
+        $mailer = new RecordingMailer(clock: new FixedClock(now: new DateTimeImmutable()));
 
         $this->assertTrue($mailer->headerHasTo());
         $this->assertTrue($mailer->headerHasSubject());

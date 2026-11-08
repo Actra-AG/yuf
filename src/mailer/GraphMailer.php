@@ -12,7 +12,6 @@ namespace actra\yuf\mailer;
 use actra\yuf\api\CurlClient;
 use actra\yuf\api\request\CurlPostRequest;
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use actra\yuf\common\FileCache;
 use actra\yuf\core\HttpStatusCodeEnum;
 use InvalidArgumentException;
@@ -58,9 +57,9 @@ final class GraphMailer extends AbstractMailer
         private readonly string $senderMailbox,
         private readonly OAuthTokenProvider $oAuthTokenProvider,
         ?FileCache $serverNameCache,
+        Clock $clock,
         private readonly string $graphBaseUrl = GraphMailer::DEFAULT_BASE_URL,
         private readonly CurlClient $curlClient = new CurlClient(),
-        Clock $clock = new SystemClock(),
         MimeIdGenerator $mimeIdGenerator = new RandomMimeIdGenerator(),
         ?ServerNameResolver $serverNameResolver = null,
     ) {

@@ -55,10 +55,15 @@ final class AbstractSessionHandlerTest extends TestCase
         );
 
         try {
-            $sessionHandler = new FileSessionHandler(httpRequest: $httpRequest, sessionSettings: new SessionSettings(
-                savePath: $savePath,
-                individualName: AbstractSessionHandlerTest::SESSION_NAME,
-            ), defaultSavePath: '/not/used');
+            $sessionHandler = new FileSessionHandler(
+                httpRequest: $httpRequest,
+                sessionSettings: new SessionSettings(
+                    savePath: $savePath,
+                    individualName: AbstractSessionHandlerTest::SESSION_NAME,
+                ),
+                defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable()),
+            );
             $sessionId = $sessionHandler->getId();
             session_write_close();
         } finally {
@@ -387,6 +392,7 @@ final class AbstractSessionHandlerTest extends TestCase
                     individualName: AbstractSessionHandlerTest::SESSION_NAME,
                 ),
                 defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable()),
             );
             $sessionId = $sessionHandler->getId();
             session_write_close();
@@ -414,6 +420,7 @@ final class AbstractSessionHandlerTest extends TestCase
                     individualName: AbstractSessionHandlerTest::SESSION_NAME,
                 ),
                 defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable()),
             );
             $sessionHandler->ensureStarted();
             $existing = $sessionHandler->validateId(id: AbstractSessionHandlerTest::REQUESTED_SESSION_ID);
@@ -461,6 +468,7 @@ final class AbstractSessionHandlerTest extends TestCase
                     individualName: AbstractSessionHandlerTest::SESSION_NAME,
                 ),
                 defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable()),
             );
             $sessionId = $sessionHandler->getId();
             session_write_close();
@@ -500,6 +508,7 @@ final class AbstractSessionHandlerTest extends TestCase
                     isSameSiteStrict: $isSameSiteStrict,
                 ),
                 defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable()),
             );
             $sessionHandler->ensureStarted();
             $parameters = session_get_cookie_params();
@@ -567,6 +576,7 @@ final class AbstractSessionHandlerTest extends TestCase
                     individualName: AbstractSessionHandlerTest::SESSION_NAME,
                 ),
                 defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable()),
             );
             $sessionHandler->ensureStarted();
             $strict = session_get_cookie_params();
@@ -673,6 +683,7 @@ final class AbstractSessionHandlerTest extends TestCase
                     individualName: AbstractSessionHandlerTest::SESSION_NAME,
                 ),
                 defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable()),
             );
             $sessionHandler->ensureStarted();
             $permissions = fileperms(filename: $savePath) & 0o777;
@@ -701,6 +712,7 @@ final class AbstractSessionHandlerTest extends TestCase
                 httpRequest: $httpRequest,
                 sessionSettings: new SessionSettings(savePath: $blocker . DIRECTORY_SEPARATOR . 'sessions'),
                 defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable()),
             );
             $sessionHandler->ensureStarted();
         } finally {
@@ -729,6 +741,7 @@ final class AbstractSessionHandlerTest extends TestCase
                     individualName: AbstractSessionHandlerTest::SESSION_NAME,
                 ),
                 defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable()),
             );
             $sessionHandler->changeCookieSameSiteToLax();
             $statusBefore = session_status();
@@ -774,6 +787,7 @@ final class AbstractSessionHandlerTest extends TestCase
                     individualName: AbstractSessionHandlerTest::SESSION_NAME,
                 ),
                 defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable()),
             );
             $session = new Session(storage: new NativeSessionStorage(sessionHandler: $sessionHandler));
             $isStartedBefore = $sessionHandler->isStarted();
@@ -824,6 +838,7 @@ final class AbstractSessionHandlerTest extends TestCase
                     individualName: AbstractSessionHandlerTest::SESSION_NAME,
                 ),
                 defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable()),
             );
             $session = new Session(storage: new NativeSessionStorage(sessionHandler: $sessionHandler));
             $session->set(key: 'cart', value: 'full');
@@ -873,6 +888,7 @@ final class AbstractSessionHandlerTest extends TestCase
             httpRequest: HttpRequestFactory::create(),
             sessionSettings: new SessionSettings(),
             defaultSavePath: '/not/used',
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
 
         $sessionHandler->writeClose();
@@ -946,6 +962,7 @@ final class AbstractSessionHandlerTest extends TestCase
                 httpRequest: $httpRequest,
                 sessionSettings: new SessionSettings(individualName: AbstractSessionHandlerTest::SESSION_NAME),
                 defaultSavePath: $defaultSavePath,
+                clock: new FixedClock(now: new DateTimeImmutable()),
             );
             $sessionId = $sessionHandler->getId();
             $usedSavePath = session_save_path();
@@ -970,6 +987,7 @@ final class AbstractSessionHandlerTest extends TestCase
             httpRequest: HttpRequestFactory::create(cookies: $cookies),
             sessionSettings: new SessionSettings(savePath: $savePath, individualName: $individualName),
             defaultSavePath: '/not/used',
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
     }
 
@@ -1070,6 +1088,7 @@ final class AbstractSessionHandlerTest extends TestCase
                     individualName: AbstractSessionHandlerTest::SESSION_NAME,
                 ),
                 defaultSavePath: '/not/used',
+                clock: new FixedClock(now: new DateTimeImmutable()),
             );
             $sessionHandler->ensureStarted();
             $sessionId = $sessionHandler->getId();

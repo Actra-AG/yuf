@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\common;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use RuntimeException;
 
 final class LogFile
@@ -27,7 +26,7 @@ final class LogFile
         string $logDirectory,
         string $group,
         string $logFileName,
-        private readonly Clock $clock = new SystemClock(),
+        private readonly Clock $clock,
     ) {
         $now = $this->clock->now();
         $dayDirectoryPath = $logDirectory . $group;

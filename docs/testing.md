@@ -17,9 +17,9 @@ require __DIR__ . '/../vendor/autoload.php';
 | `HttpRequest`  | `new HttpRequest(host: 'example.com', method: …, queryParameters: …)`                        |
 | `Session`      | `new Session(storage: new ArraySessionStorage())`                                            |
 | `FormInput`    | `FormInput::fromArray(data: […], query: […])` (see [forms.md](forms.md))                     |
-| `FrameworkDb`  | `new FrameworkDb(connectionParameters: new DbConnectionParameters(dsn: 'sqlite::memory:'))`  |
+| `FrameworkDb`  | `new FrameworkDb(connectionParameters: …, queryLog: new DbQueryLogList(clock: $clock))`      |
 | `Clock`        | `new FixedClock(now: new DateTimeImmutable(datetime: '2026-01-02 03:04:05'))`                |
-| Mailer         | `new RecordingMailer()`: records the sent mails, see [mail.md](mail.md#tests)                |
+| Mailer         | `new RecordingMailer(clock: $clock)`: records the sent mails, see [mail.md](mail.md#tests)                |
 | Mailbox        | `new RecordingImapMailbox(folders: […])`: messages in memory, see [mailbox.md](mailbox.md#tests) |
 | Response sender | `new RecordingResponseSender()`: records responses that end the script, see below           |
 | Views          | `new ViewTestClient(…)`: runs views of an HTML route with one session, see below             |
@@ -62,8 +62,9 @@ $client = new ViewTestClient(
     cacheDirectory: $cacheDirectory,          // compiled templates of the test
     host: 'www.example.com',
     language: new Language(code: 'de', locale: 'de_CH.UTF-8'),
+    clock: $clock,
 );
-$mailer = new RecordingMailer();
+$mailer = new RecordingMailer(clock: $clock);
 // The factory creates the view of the request, as the ViewFactory of the route does
 $viewFactory = static fn(ViewContext $context): BaseView => $context->fileTitle === 'login'
     ? new LoginView(context: $context, mailer: $mailer)
@@ -98,8 +99,9 @@ $page->context->session?->getString(key: 'email');                     // the se
 ## Clock
 
 Time-dependent code takes an `actra\yuf\clock\Clock` (`now(): DateTimeImmutable`, the signature of PSR-20's
-`ClockInterface`, without the `psr/clock` dependency) through its constructor. Production code uses `SystemClock` (the
-default everywhere), tests pass a `FixedClock`. There is no static accessor.
+`ClockInterface`, without the `psr/clock` dependency) through its constructor. The argument is required: production
+code passes a `SystemClock`, tests pass a `FixedClock`. There is no static accessor and no default. `App` and `Core`
+use a `SystemClock` unless their `clock:` argument says otherwise.
 
 ```php
 $logger = new FileLogger(

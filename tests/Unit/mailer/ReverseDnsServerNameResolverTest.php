@@ -9,8 +9,10 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\mailer;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\common\FileCache;
 use actra\yuf\mailer\ReverseDnsServerNameResolver;
+use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -55,7 +57,7 @@ final class ReverseDnsServerNameResolverTest extends TestCase
     {
         $directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-server-name-'
             . bin2hex(string: random_bytes(length: 8));
-        $cache = new FileCache(directory: $directory);
+        $cache = new FileCache(directory: $directory, clock: new FixedClock(now: new DateTimeImmutable()));
         $cache->set(key: 'yuf-server-name|192.0.2.1', value: 'cached.example.com', lifetimeInSeconds: 60);
 
         try {
@@ -73,7 +75,7 @@ final class ReverseDnsServerNameResolverTest extends TestCase
     {
         $directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'yuf-server-name-'
             . bin2hex(string: random_bytes(length: 8));
-        $cache = new FileCache(directory: $directory);
+        $cache = new FileCache(directory: $directory, clock: new FixedClock(now: new DateTimeImmutable()));
 
         try {
             $serverName = new ReverseDnsServerNameResolver(cache: $cache)->resolve(serverAddress: '127.0.0.1');

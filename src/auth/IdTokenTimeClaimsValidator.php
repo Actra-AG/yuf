@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\auth;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use actra\yuf\exception\UnauthorizedException;
 use InvalidArgumentException;
 use stdClass;
@@ -24,7 +23,7 @@ final readonly class IdTokenTimeClaimsValidator
     /**
      * @throws InvalidArgumentException if the leeway is negative
      */
-    public function __construct(private Clock $clock = new SystemClock(), private int $leewayInSeconds = 60)
+    public function __construct(private Clock $clock, private int $leewayInSeconds = 60)
     {
         if ($leewayInSeconds < 0) {
             throw new InvalidArgumentException(message: 'The leeway must not be negative.');

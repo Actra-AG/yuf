@@ -142,7 +142,7 @@ final class IdTokenTimeClaimsValidatorTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
 
-        new IdTokenTimeClaimsValidator(leewayInSeconds: -1);
+        new IdTokenTimeClaimsValidator(clock: new FixedClock(now: new DateTimeImmutable()), leewayInSeconds: -1);
     }
 
     public function testClaimsAsFloatsAreAccepted(): void

@@ -9,10 +9,12 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Double\session;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\session\AbstractSessionHandler;
 use actra\yuf\session\SessionSettings;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use DateTimeImmutable;
 use LogicException;
 use Override;
 
@@ -38,6 +40,7 @@ final class NonStartingSessionHandler extends AbstractSessionHandler
         parent::__construct(
             httpRequest: $httpRequest ?? HttpRequestFactory::create(),
             sessionSettings: new SessionSettings(),
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
     }
 

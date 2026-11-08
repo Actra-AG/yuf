@@ -429,6 +429,7 @@ final class MicrosoftIdTokenTest extends TestCase
             ssoNonce: MicrosoftIdTokenTest::NONCE,
             jwtString: 'a.b.c',
             cacheDirectory: $this->cacheDirectory,
+            clock: new FixedClock(now: new DateTimeImmutable()),
         );
     }
 

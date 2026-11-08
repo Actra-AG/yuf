@@ -49,7 +49,7 @@ class FrameworkDb extends PDO
      */
     public function __construct(
         DbConnectionParameters $connectionParameters,
-        DbQueryLogList $queryLog = new DbQueryLogList(),
+        DbQueryLogList $queryLog,
     ) {
         $this->queryLog = $queryLog;
         try {

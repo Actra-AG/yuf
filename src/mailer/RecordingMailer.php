@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace actra\yuf\mailer;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use Override;
 
 /**
@@ -23,7 +22,7 @@ final class RecordingMailer extends AbstractMailer
     /** @var list<AbstractMail> */
     public private(set) array $sentMails = [];
 
-    public function __construct(Clock $clock = new SystemClock())
+    public function __construct(Clock $clock)
     {
         parent::__construct(
             serverAddress: '192.0.2.1',

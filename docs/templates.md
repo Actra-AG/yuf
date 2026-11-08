@@ -90,7 +90,7 @@ $html = $snippet->render(templateEngine: $this->context->templateEngine);
   templates of the table (`fullHtml`, `oddRowHtml`, …) are properties; the texts are not.
 - A row (`TableItem`) holds scalars and `NULL` only; an array or object throws an `UnexpectedValueException` when the
   row is created. Render other values with a `CallbackColumn`.
-- `DbResultTable::exportCsv(fileName: 'users.csv')` sends all rows of the table as CSV download and ends the script,
+- `DbResultTable::exportCsv(fileName: 'users.csv', clock: new SystemClock())` sends all rows of the table as CSV download and ends the script,
   with the filter and the sorting the user chose, but not paged. The first row has the labels of the columns (tags
   removed), then one row per result row with the values as the database delivers them in the order of the columns;
   `NULL` is an empty cell, so no cell moves. `ActionsColumn` and `CallbackColumn` have no data of their own and are

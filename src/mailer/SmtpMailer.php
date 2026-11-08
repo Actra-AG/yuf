@@ -32,7 +32,6 @@ declare(strict_types=1);
 namespace actra\yuf\mailer;
 
 use actra\yuf\clock\Clock;
-use actra\yuf\clock\SystemClock;
 use actra\yuf\common\FileCache;
 use InvalidArgumentException;
 use Override;
@@ -86,10 +85,10 @@ final class SmtpMailer extends AbstractMailer
         #[SensitiveParameter]
         private readonly string $smtpPassword,
         ?FileCache $serverNameCache,
+        Clock $clock,
         private readonly SmtpEncryptionEnum $encryption = SmtpEncryptionEnum::STARTTLS,
         ?int $port = null,
         private readonly SmtpTransport $transport = new StreamSmtpTransport(),
-        Clock $clock = new SystemClock(),
         MimeIdGenerator $mimeIdGenerator = new RandomMimeIdGenerator(),
         ?ServerNameResolver $serverNameResolver = null,
         private readonly ?SmtpAuthMethodEnum $authMethod = null,

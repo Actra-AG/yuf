@@ -9,20 +9,22 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\db;
 
+use actra\yuf\clock\FixedClock;
 use actra\yuf\db\DbQueryLogList;
 use actra\yuf\tests\Double\db\SteppingClock;
+use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
 final class DbQueryLogListTest extends TestCase
 {
     public function testNewListIsEmpty(): void
     {
-        $this->assertSame([], new DbQueryLogList()->getItems());
+        $this->assertSame([], new DbQueryLogList(clock: new FixedClock(now: new DateTimeImmutable()))->getItems());
     }
 
     public function testStartedItemIsNotPartOfTheListUntilItIsAdded(): void
     {
-        $queryLog = new DbQueryLogList();
+        $queryLog = new DbQueryLogList(clock: new FixedClock(now: new DateTimeImmutable()));
 
         $item = $queryLog->start(sqlQuery: 'SELECT ?', params: [1]);
 
@@ -33,7 +35,7 @@ final class DbQueryLogListTest extends TestCase
 
     public function testItemsAreKeptInTheOrderTheyWereAdded(): void
     {
-        $queryLog = new DbQueryLogList();
+        $queryLog = new DbQueryLogList(clock: new FixedClock(now: new DateTimeImmutable()));
         $first = $queryLog->start(sqlQuery: 'SELECT 1', params: []);
         $second = $queryLog->start(sqlQuery: 'SELECT 2', params: []);
 
@@ -45,8 +47,8 @@ final class DbQueryLogListTest extends TestCase
 
     public function testListsAreIndependent(): void
     {
-        $first = new DbQueryLogList();
-        $second = new DbQueryLogList();
+        $first = new DbQueryLogList(clock: new FixedClock(now: new DateTimeImmutable()));
+        $second = new DbQueryLogList(clock: new FixedClock(now: new DateTimeImmutable()));
 
         $first->add(dbQueryLogItem: $first->start(sqlQuery: 'SELECT 1', params: []));
 

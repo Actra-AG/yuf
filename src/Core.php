@@ -134,7 +134,7 @@ final class Core
         $this->baseDirectory = $settings->baseDirectory;
         $this->appDirectory = $settings->appDirectory;
         $this->cacheDirectory = $settings->cacheDirectory;
-        $this->fileCache = new FileCache(directory: $settings->cacheDirectory . 'values');
+        $this->fileCache = new FileCache(directory: $settings->cacheDirectory . 'values', clock: new SystemClock());
         $this->errorDocsDirectory = $settings->errorDocsDirectory;
         $this->logDirectory = $settings->logDirectory;
         $this->settingsDirectory = $settings->settingsDirectory;
