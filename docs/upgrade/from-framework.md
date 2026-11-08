@@ -101,7 +101,7 @@ App::fromEnvironment(envFilePath: __DIR__ . '/../.env.php', copyrightYear: 2020)
 | `CspPolicySettingsModel` → `withCsp(cspPolicySettings: new CspPolicySettings(…))` | `CspPolicySettingsModel` | [v4.md](v4.md#-settings-bundles-and-value-objects-without-model-suffix) |
 | `new Logger(…)` → nothing (default `FileLogger`), or `withFileLogger(mailer: …, mailSenderAddress: …)` | `new Logger(` | [setup.md](../setup.md#error-log) |
 | `individualExceptionHandler:` → `withExceptionHandler()`; `individualSessionHandler:` → nothing (default), `withoutSession()` or `withSessionHandler()` | `individual` | [setup.md](../setup.md#application-entry-point) |
-| Own code for "the page requested before the login" → `withLoginPath(loginPath: '/login.html')` and `LoginRedirect::findReturnPath()` | `UnauthorizedAccessRightException` | [views.md](../views.md#required-access-rights-and-the-login-page) |
+| Own code for "the page requested before the login" → `withLoginTarget(loginTarget: LoginTarget::local(path: '/login.html'))` and `LoginRedirect::findReturnPath()` | `UnauthorizedAccessRightException` | [views.md](../views.md#required-access-rights-and-the-login-page) |
 | ⚠️ A host that is not in `allowedDomains` gets a 404, also over HTTP (no redirect to HTTPS) | `allowedDomains` | [UPGRADE.md](../../UPGRADE.md#-routing-host-and-language-files) |
 
 ## 3. Settings

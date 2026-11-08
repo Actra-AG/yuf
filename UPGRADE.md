@@ -4,6 +4,32 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v8.11.0 (2026-11-08)
+
+### ⚠️ Typed login target
+
+The login page is a `LoginTarget` instead of a string; behaviour of a local login page is unchanged
+([docs/views.md](docs/views.md#required-access-rights-and-the-login-page)).
+
+- `App::withLoginPath(loginPath:)` → `App::withLoginTarget(loginTarget:)`.
+- `RouteCollection(loginPath:)` → `RouteCollection(loginTarget:)`, `RouteCollection::$loginPath` and
+  `RequestHandler::$loginPath` → `$loginTarget` (`?LoginTarget`, the path is `$loginTarget->uri`).
+- An invalid path throws in `LoginTarget::local()` (same message as before).
+
+Before: `$app->withLoginPath(loginPath: '/login.html')`.
+After: `$app->withLoginTarget(loginTarget: LoginTarget::local(path: '/login.html'))`.
+
+### Login page on another host
+
+- New `LoginTarget::remote(url: 'https://login.example.net/login.html')`: visitors without login are redirected there
+  with the absolute URL of the request as `returnTo` ([docs/views.md](docs/views.md#login-page-on-another-host)).
+- New `LoginRedirect::findReturnUrl(httpRequest:, allowedHosts:)` and `isAllowedReturnUri(uri:, allowedHosts:)` for
+  the login page: a local path or an `https` URL of an explicitly allowed host, else `null`. `findReturnPath()` is
+  unchanged. `LoginRedirect::createLoginUri()` keeps such a URL with the new `allowedHosts:` (default `[]`: local
+  paths only, as before). New `LoginRedirect::findHttpsHost()`.
+- The session is not shared between hosts; see the limits in
+  [docs/session-and-login.md](docs/session-and-login.md#login-on-another-host).
+
 ## v8.10.0 (2026-11-08)
 
 - `ReceivedMail` (`MimeMessageParser`) has the HTML and the attachments of a message

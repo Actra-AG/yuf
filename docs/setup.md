@@ -39,7 +39,7 @@ App::fromEnvironment(envFilePath: __DIR__ . '/../.env.php', copyrightYear: 2026)
   extension is a 404.
 - `usesRequestLanguage: true` (all three route methods), `withRequestLanguageProvider()`, `withLanguageSwitchRoute()`:
   one path for all languages ([Languages](#languages)).
-- `withCsp()`, `withoutSession()`, `withSessionHandler()`, `withLogger()`, `withLoginPath()`, `withTemplateTags()`,
+- `withCsp()`, `withoutSession()`, `withSessionHandler()`, `withLogger()`, `withLoginTarget()`, `withTemplateTags()`,
   `withNavigation()`, `withExceptionHandler()`: the arguments of `Core::prepareHttpResponse()`.
 - `withFileSessions(sessionSettings: new SessionSettings(maxLifeTime: 43200))`: the default session files with own
   settings.

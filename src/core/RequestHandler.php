@@ -26,9 +26,9 @@ final class RequestHandler
      */
     public readonly ?Route $defaultRequestLanguageRoute;
     /**
-     * The login path of the route collection (`RouteCollection::$loginPath`), `null` for none.
+     * The login page of the route collection (`RouteCollection::$loginTarget`), `null` for none.
      */
-    public readonly ?string $loginPath;
+    public readonly ?LoginTarget $loginTarget;
     /**
      * The language of the request: the first available language, after `resolveRoute()` the language of the route if
      * it has one, for a route with `usesRequestLanguage` the language of `RequestLanguageResolver`; for a path without
@@ -76,7 +76,7 @@ final class RequestHandler
         $this->fileName = trim(string: array_last(array: $this->pathParts));
         $this->defaultRoutesByLanguage = $this->initDefaultRoutes();
         $this->defaultRequestLanguageRoute = $this->findDefaultRequestLanguageRoute();
-        $this->loginPath = $routeCollection->loginPath;
+        $this->loginTarget = $routeCollection->loginTarget;
     }
 
     /**

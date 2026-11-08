@@ -10,11 +10,10 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\core;
 
 use actra\yuf\core\Language;
+use actra\yuf\core\LoginTarget;
 use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
-use InvalidArgumentException;
 use LogicException;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class RouteCollectionTest extends TestCase
@@ -144,32 +143,15 @@ final class RouteCollectionTest extends TestCase
         $this->assertNull($collection->getRouteForLanguage(languageCode: 'de'));
     }
 
-    public function testLoginPathIsNullByDefault(): void
+    public function testLoginTargetIsNullByDefault(): void
     {
-        $this->assertNull(new RouteCollection()->loginPath);
+        $this->assertNull(new RouteCollection()->loginTarget);
     }
 
-    public function testLoginPathIsKept(): void
+    public function testLoginTargetIsKept(): void
     {
-        $this->assertSame('/login/', new RouteCollection(loginPath: '/login/')->loginPath);
-    }
+        $loginTarget = LoginTarget::local(path: '/login/');
 
-    #[DataProvider('invalidLoginPaths')]
-    public function testInvalidLoginPathThrows(string $loginPath): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-
-        new RouteCollection(loginPath: $loginPath);
-    }
-
-    /**
-     * @return iterable<string, array{string}>
-     */
-    public static function invalidLoginPaths(): iterable
-    {
-        yield 'empty' => [''];
-        yield 'relative' => ['login/'];
-        yield 'absolute URL' => ['https://example.com/login/'];
-        yield 'protocol relative' => ['//example.com/login/'];
+        $this->assertSame($loginTarget, new RouteCollection(loginTarget: $loginTarget)->loginTarget);
     }
 }

@@ -18,6 +18,7 @@ use actra\yuf\core\Language;
 use actra\yuf\core\LanguageSwitch;
 use actra\yuf\core\Logger;
 use actra\yuf\core\LoginRedirect;
+use actra\yuf\core\LoginTarget;
 use actra\yuf\core\RequestLanguageProvider;
 use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
@@ -68,7 +69,7 @@ final readonly class App
         private ?AbstractSessionHandler $sessionHandler = null,
         private ?Logger $logger = null,
         private ?ExceptionHandler $exceptionHandler = null,
-        private ?string $loginPath = null,
+        private ?LoginTarget $loginTarget = null,
         private array $templateTags = [],
         private ?Closure $navigationProvider = null,
         private ?RequestLanguageProvider $requestLanguageProvider = null,
@@ -455,18 +456,12 @@ final readonly class App
     }
 
     /**
-     * @param string $loginPath Local path of the login page: a view with required access rights redirects a request
-     *     without user there
-     *
-     * @throws InvalidArgumentException if the login path is no local path
+     * @param LoginTarget $loginTarget The login page (`LoginTarget::local()` or `LoginTarget::remote()`): a view with
+     *     required access rights redirects a request without user there
      */
-    public function withLoginPath(string $loginPath): App
+    public function withLoginTarget(LoginTarget $loginTarget): App
     {
-        if (!LoginRedirect::isLocalPath(uri: $loginPath)) {
-            throw new InvalidArgumentException(message: 'The login path must be a local path starting with "/"');
-        }
-
-        return clone($this, ['loginPath' => $loginPath]);
+        return clone($this, ['loginTarget' => $loginTarget]);
     }
 
     /**
@@ -503,7 +498,7 @@ final readonly class App
 
         return $app->core->prepareHttpResponse(
             logger: $app->logger,
-            routeCollection: new RouteCollection(routes: $app->routes, loginPath: $app->loginPath),
+            routeCollection: new RouteCollection(routes: $app->routes, loginTarget: $app->loginTarget),
             individualExceptionHandler: $app->exceptionHandler,
             cspPolicySettings: $app->cspPolicySettings,
             individualSessionHandler: $app->hasSession ? $app->sessionHandler : false,

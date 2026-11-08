@@ -17,6 +17,7 @@ use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\Language;
 use actra\yuf\core\LanguageCollection;
+use actra\yuf\core\LoginTarget;
 use actra\yuf\core\RecordingResponseSender;
 use actra\yuf\core\RequestHandler;
 use actra\yuf\core\RequestLanguageProvider;
@@ -320,7 +321,6 @@ final class ExceptionHandlerTest extends TestCase
         string $requestUri = '/en/nope.html',
         ?Language $language = null,
         ?Language $otherLanguage = null,
-        ?string $loginPath = null,
     ): RequestHandler {
         $language ??= new Language(code: 'en', locale: 'C');
         $languages = [$language];
@@ -346,7 +346,7 @@ final class ExceptionHandlerTest extends TestCase
 
         return new RequestHandler(
             httpRequest: HttpRequestFactory::create(uri: $requestUri),
-            routeCollection: new RouteCollection(routes: $routes, loginPath: $loginPath),
+            routeCollection: new RouteCollection(routes: $routes),
             availableLanguages: new LanguageCollection(languages: $languages),
             allowedDomains: ['example.com'],
             session: null,
@@ -408,13 +408,16 @@ final class ExceptionHandlerTest extends TestCase
         ?string $loginPath = '/en/login.html',
         bool $isDebug = false,
         ?ContentType $contentType = null,
+        string $host = 'example.com',
+        ?LoginTarget $remoteLoginTarget = null,
     ): ExceptionHandler {
-        $httpRequest = HttpRequestFactory::create(method: $method, uri: $uri);
+        $loginTarget = $remoteLoginTarget ?? ($loginPath === null ? null : LoginTarget::local(path: $loginPath));
+        $httpRequest = HttpRequestFactory::create(host: $host, method: $method, uri: $uri);
         $handler = $this->register(context: $this->createContext(isDebug: $isDebug, httpRequest: $httpRequest));
         $handler->setRequestHandler(
             requestHandler: new RequestHandler(
                 httpRequest: $httpRequest,
-                routeCollection: new RouteCollection(loginPath: $loginPath),
+                routeCollection: new RouteCollection(loginTarget: $loginTarget),
                 availableLanguages: new LanguageCollection(),
                 allowedDomains: ['example.com'],
                 session: null,
@@ -502,6 +505,61 @@ final class ExceptionHandlerTest extends TestCase
     public function testTheLoginPathItselfIsNotRedirected(): void
     {
         $handler = $this->createLoginRedirectHandler(uri: '/en/login.html?returnTo=%2Fen%2Fx');
+
+        $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_UNAUTHORIZED, $response->httpStatusCode);
+    }
+
+    public function testNotLoggedInUserIsRedirectedToTheRemoteLoginPageWithTheRequestedUrl(): void
+    {
+        $handler = $this->createLoginRedirectHandler(
+            uri: '/de/page.html?a=1',
+            host: 'site-a.example.com',
+            remoteLoginTarget: LoginTarget::remote(url: 'https://login.example.net/login.html'),
+        );
+
+        $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_SEE_OTHER, $response->httpStatusCode);
+        $this->assertSame(
+            'https://login.example.net/login.html?returnTo=https%3A%2F%2Fsite-a.example.com%2Fde%2Fpage.html%3Fa%3D1',
+            $response->getHeader(key: 'Location'),
+        );
+    }
+
+    public function testTheSamePathOnAnotherHostThanTheRemoteLoginPageIsRedirected(): void
+    {
+        $handler = $this->createLoginRedirectHandler(
+            uri: '/login.html',
+            host: 'site-a.example.com',
+            remoteLoginTarget: LoginTarget::remote(url: 'https://login.example.net/login.html'),
+        );
+
+        $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_SEE_OTHER, $response->httpStatusCode);
+    }
+
+    public function testTheRemoteLoginPageItselfIsNotRedirected(): void
+    {
+        $handler = $this->createLoginRedirectHandler(
+            uri: '/login.html?returnTo=x',
+            host: 'Login.Example.net',
+            remoteLoginTarget: LoginTarget::remote(url: 'https://login.example.net/login.html'),
+        );
+
+        $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_UNAUTHORIZED, $response->httpStatusCode);
+    }
+
+    public function testPostRequestIsNotRedirectedToTheRemoteLoginPage(): void
+    {
+        $handler = $this->createLoginRedirectHandler(
+            method: RequestMethodEnum::POST,
+            remoteLoginTarget: LoginTarget::remote(url: 'https://login.example.net/login.html'),
+        );
 
         $response = $handler->createResponse(throwable: new UnauthorizedAccessRightException(isNotLoggedIn: true));
 

@@ -233,6 +233,26 @@ microsoftIdToken:)` (the same `redirectUri`) compares it with the token, and del
 is used once, a token without the cookie of the same browser fails. The project stores no nonce, and the session
 cookie keeps `Strict`.
 
+### Login on another host
+
+`LoginTarget::remote()` sends visitors to a login page on another host and `LoginRedirect::findReturnUrl()` sends them
+back ([views.md](views.md#login-page-on-another-host)). This is the redirect only, not a shared login:
+
+- The session cookie belongs to the host that set it (no `Domain` attribute) and is `SameSite`. A login on
+  `login.example.net` creates a session there; back on `site-a.example.com` the visitor has no session and is sent to the login
+  page again, as long as `site-a.example.com` does not take the login over.
+- The hand-over is a separate step that each project builds today: the login host appends a one-time ticket to the
+  return URL; `site-a.example.com` checks it (signature, audience = its own host, expiry of seconds, used once) and calls
+  `logInIdentifiedUser()` of its `Authenticator`. Never put a session ID or user ID unsigned into the URL.
+- With `SameSite=Strict` (default) browsers send no session cookie on a navigation that comes from another site, also
+  not on the redirects that follow it within the target site: after the way back, the first page of `site-a.example.com` sees
+  no session, also if one exists. Sites with a login page on another host use `SessionSettings(isSameSiteStrict:
+  false)` (`Lax`), or end the hand-over with a page of their own (a link or a form) instead of a redirect.
+
+The hand-over is not part of yuf yet. A generic ticket (signed with a shared secret, bound to the target host, short
+expiry, single use through a store of used ticket IDs) fits yuf; looking up the user and its login belong to the
+application (users and sessions, e.g. `actra/backend`).
+
 ### Users without password
 
 `AuthUser::$password` is `?Password`; `null` is a user without password (identity provider, one-time code, web token).

@@ -524,14 +524,6 @@ final class AppTest extends TestCase
         $this->assertSame($sessionHandler, $app->core->sessionHandler);
     }
 
-    public function testInvalidLoginPathThrows(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessageIs('The login path must be a local path starting with "/"');
-
-        $this->createApp()->withLoginPath(loginPath: 'https://evil.example/login/');
-    }
-
     public function testTemplateTagsArePassedToCore(): void
     {
         $app = $this->createApp()->withTemplateTags(templateTags: [new NamedTag(name: 'text')]);

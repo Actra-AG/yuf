@@ -16,7 +16,7 @@ use actra\yuf\exception\UnauthorizedException;
  * A view requires access rights that the user does not have.
  *
  * `$isNotLoggedIn` tells nobody is logged in (the view got no user), as opposed to a user without the right: with a
- * login path on the route collection (`RouteCollection::$loginPath`) the first is answered with a redirect to the
+ * login page on the route collection (`RouteCollection::$loginTarget`) the first is answered with a redirect to the
  * login, the second with the error page.
  */
 final class UnauthorizedAccessRightException extends UnauthorizedException

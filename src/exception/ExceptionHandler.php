@@ -10,13 +10,11 @@ declare(strict_types=1);
 namespace actra\yuf\exception;
 
 use actra\yuf\auth\UnauthorizedAccessRightException;
-use actra\yuf\common\StringUtils;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentType;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\LocaleHandler;
-use actra\yuf\core\LoginRedirect;
 use actra\yuf\core\RequestHandler;
 use actra\yuf\core\RequestMethodEnum;
 use actra\yuf\html\HtmlReplacementCollection;
@@ -169,16 +167,17 @@ class ExceptionHandler
     }
 
     /**
-     * The redirect to the login page (`RouteCollection::$loginPath`) for a page view that requires access rights
-     * without a logged-in user, with the requested URI as return target; `null` for everything else: a user without
-     * the right, a request that is no GET of an HTML page (a form post, an API call would lose its data or get an HTML
-     * page as answer) and the login page itself (no redirect loop). Without a login path nothing changes.
+     * The redirect to the login page (`RouteCollection::$loginTarget`) for a page view that requires access rights
+     * without a logged-in user, with the requested page as return target (`LoginTarget::createLoginUri()`); `null` for
+     * everything else: a user without the right, a request that is no GET of an HTML page (a form post, an API call
+     * would lose its data or get an HTML page as answer) and the login page itself (no redirect loop, same path and,
+     * for a remote login page, same host). Without a login target nothing changes.
      */
     private function createLoginRedirect(Throwable $throwable): ?HttpResponse
     {
-        $loginPath = $this->requestHandler?->loginPath;
+        $loginTarget = $this->requestHandler?->loginTarget;
         if (
-            $loginPath === null
+            $loginTarget === null
             || !$throwable instanceof UnauthorizedAccessRightException
             || !$throwable->isNotLoggedIn
         ) {
@@ -188,16 +187,13 @@ class ExceptionHandler
         if (
             $httpRequest->getMethod() !== RequestMethodEnum::GET
             || !$this->getContentType()->isHtml()
-            || $httpRequest->getPath() === StringUtils::beforeFirst(string: $loginPath, before: '?')
+            || $loginTarget->isLoginRequest(httpRequest: $httpRequest)
         ) {
             return null;
         }
 
         return HttpResponse::createRedirectResponse(
-            relativeOrAbsoluteUri: LoginRedirect::createLoginUri(
-                loginPath: $loginPath,
-                returnUri: $httpRequest->getUri(),
-            ),
+            relativeOrAbsoluteUri: $loginTarget->createLoginUri(httpRequest: $httpRequest),
             httpRequest: $httpRequest,
         );
     }
