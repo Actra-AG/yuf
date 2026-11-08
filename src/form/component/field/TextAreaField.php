@@ -25,8 +25,8 @@ use UnexpectedValueException;
  */
 class TextAreaField extends TextualField
 {
-    public private(set) int $rows;
-    public private(set) int $cols;
+    public private(set) readonly int $rows;
+    public private(set) readonly int $cols;
     /** @var list<string> */
     public private(set) array $cssClassesForRenderer = [];
     private ?string $placeholder = null;

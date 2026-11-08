@@ -20,9 +20,9 @@ use actra\yuf\html\HtmlText;
 trait HasSelectOptionsPresentation
 {
     /** @var list<string> */
-    public private(set) array $cssClasses;
-    public private(set) bool $renderEmptyValueOption;
-    public private(set) ?string $placeholder;
+    public private(set) readonly array $cssClasses;
+    public private(set) readonly bool $renderEmptyValueOption;
+    public private(set) readonly ?string $placeholder;
     private ?HtmlText $individualEmptyValueLabel;
     private bool $hasDefaultEmptyValueText;
     /** @var array<string, string> */

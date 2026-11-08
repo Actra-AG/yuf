@@ -38,7 +38,7 @@ abstract class FormField extends FormComponent
     }
     public bool $renderRequiredAbbr = true;
     public string $id;
-    public private(set) HtmlText $label;
+    public private(set) readonly HtmlText $label;
     public private(set) bool $renderLabel = true;
     public bool $autoFocus = false;
     /** The texts of the form; set by `Form::addField()`, a field without a form uses the English defaults. */
