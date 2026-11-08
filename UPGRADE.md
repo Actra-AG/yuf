@@ -4,6 +4,12 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v7](docs/upgrade/v7.md), [v6](docs/upgrade/v6.md), [v5](docs/upgrade/v5.md), [v4](docs/upgrade/v4.md),
 [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md), [v0](docs/upgrade/v0.md).
 
+## v8.14.0 (2026-11-08)
+
+No migration needed. New, optional: `FormMessages::french()`, `italian()`, `TableMessages::french()`, `italian()` and
+`AuthResultMessages::french()`, `italian()` (formal address, Swiss usage). Projects that pass own French or Italian
+texts may replace them.
+
 ## v8.13.0 (2026-11-08)
 
 ### Shared login: the visitor stays on the site
@@ -30,12 +36,6 @@ page of the login host. Same directory as `LoginHandOver`, which is unchanged.
   (`execute()` with `HtmlDocument`, rendered page) and the work after the response. Replaces hand-built `ViewContext`s
   and test-only steps in views.
 - `RecordingResponseSender::capture(runAfterResponseCallbacks: true)` runs the work registered with `afterResponse()`.
-
-### French and Italian texts
-
-New, optional: `FormMessages::french()`, `italian()`, `TableMessages::french()`, `italian()` and
-`AuthResultMessages::french()`, `italian()` (formal address, Swiss usage). Projects that pass own French or Italian
-texts may replace them.
 
 ### Upgrade notes
 
