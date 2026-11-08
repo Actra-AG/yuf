@@ -4,6 +4,17 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v7](docs/upgrade/v7.md), [v6](docs/upgrade/v6.md), [v5](docs/upgrade/v5.md), [v4](docs/upgrade/v4.md),
 [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md), [v0](docs/upgrade/v0.md).
 
+## v8.17.0 (2026-11-08)
+
+No migration needed.
+
+- New `HtmlSanitizer::isAllowedUrl(url:)`: checks a single URL with the rule of the URL attributes of `sanitize()`
+  (http, https, mailto, tel or no scheme), e.g. for link targets entered in a form.
+- `NavigationItem` checks `href` with the same rule: it now also rejects a scheme with spaces (`java script:`) and a
+  colon before the first `/`, `?` or `#` (`1x:a`).
+
+---
+
 ## v8.16.1 (2026-11-08)
 
 No migration needed; no changes visible to consumers. Development tooling only: `actra/coding-standard` v2.4.0, quiet

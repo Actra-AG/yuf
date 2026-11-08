@@ -323,6 +323,8 @@ final class NavigationItemTest extends TestCase
         yield 'data' => ['data:text/html,<b>'];
         yield 'vbscript' => ['vbscript:x'];
         yield 'file' => ['file:///etc/passwd'];
+        yield 'javascript with space in the scheme' => ['java script:alert(1)'];
+        yield 'colon before the first slash' => ['1x:alert(1)'];
         yield 'double quote' => ['/a" onclick="x'];
         yield 'angle bracket' => ['/a<b'];
         yield 'null byte' => ["/a\0b"];

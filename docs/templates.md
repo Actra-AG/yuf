@@ -56,7 +56,8 @@ test the truthiness; any other `against` is compared as string with strings, num
   elements are unwrapped (their text is kept), `script`, `style` and `template` are removed with their content, all
   other attributes are dropped. Pass your own allowlist with `allowedTags: ['a' => ['href'], 'p' => []]`; URL
   attributes (`href`, `src`, …) keep only http, https, mailto, tel and relative URLs. `HtmlSanitizer::sanitize()`
-  returns the sanitized string (e.g. to store it).
+  returns the sanitized string (e.g. to store it); `HtmlSanitizer::isAllowedUrl(url: $url)` checks a single URL with
+  the same rule (e.g. a link target entered in a form).
 - Language texts and non-`.html` snippets are output as they are.
 - Escaping is for HTML text and quoted attributes. Values in `<script>` or `<style>` are not escaped for these
   contexts: use `data-*` attributes or JSON prepared by the view.

@@ -11,6 +11,7 @@ namespace actra\yuf\layout;
 
 use actra\yuf\auth\AccessRightCollection;
 use actra\yuf\html\HtmlDataObject;
+use actra\yuf\html\HtmlSanitizer;
 use actra\yuf\html\HtmlText;
 use InvalidArgumentException;
 
@@ -21,11 +22,9 @@ use InvalidArgumentException;
  */
 final readonly class NavigationItem
 {
-    private const string ALLOWED_URL_SCHEMES_PATTERN = '/^(https?|mailto|tel)$/i';
-
     /**
-     * @param string $href Relative or absolute URL of the page: no control characters, no `"`, `<`, `>`, and no
-     *                     scheme other than `http`, `https`, `mailto` or `tel` (no `javascript:`)
+     * @param string $href Relative or absolute URL of the page: no control characters, no `"`, `<`, `>`, and allowed
+     *                     by `HtmlSanitizer::isAllowedUrl()` (`http`, `https`, `mailto`, `tel` or no scheme)
      *
      * @throws InvalidArgumentException for an invalid `href`
      */
@@ -95,13 +94,9 @@ final readonly class NavigationItem
                 message: 'The navigation href must not contain control characters, double quotes or angle brackets.',
             );
         }
-        if (
-            preg_match(pattern: '/^\s*([A-Za-z][A-Za-z0-9+.-]*):/', subject: $href, matches: $matches) === 1
-            && preg_match(pattern: NavigationItem::ALLOWED_URL_SCHEMES_PATTERN, subject: $matches[1]) !== 1
-        ) {
+        if (!HtmlSanitizer::isAllowedUrl(url: $href)) {
             throw new InvalidArgumentException(
-                message: 'The navigation href has the scheme "' . $matches[1] . ':", only http, https, mailto and tel'
-                    . ' are allowed.',
+                message: 'The navigation href has a scheme other than http, https, mailto and tel: ' . $href,
             );
         }
     }

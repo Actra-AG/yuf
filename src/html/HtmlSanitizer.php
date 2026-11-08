@@ -76,6 +76,29 @@ final class HtmlSanitizer
     }
 
     /**
+     * The rule of the URL attributes (`href`, `src`, …) of `sanitize()`, e.g. to check a link target that a user
+     * enters: true for http, https, mailto, tel (case-insensitive) and URLs without scheme (relative, `#anchor`,
+     * `?query`, empty string); false for every other scheme (`javascript:`, `data:`, …), also when control characters
+     * or whitespace hide it (`java\tscript:`), and for a colon before the first `/`, `?` or `#`. Pass the decoded
+     * value (no HTML entities).
+     */
+    public static function isAllowedUrl(string $url): bool
+    {
+        // Browsers ignore control characters and whitespace in the scheme ("java\tscript:")
+        $normalizedUrl = preg_replace(pattern: '/[\x00-\x20\x7F]+/', replacement: '', subject: $url) ?? '';
+        if (preg_match(pattern: '/^([a-z][a-z0-9+.\-]*):/i', subject: $normalizedUrl, matches: $matches) !== 1) {
+            // Relative URL; a colon before the first "/", "?" or "#" would be a scheme
+            return preg_match(pattern: '/^[^\/?#]*:/', subject: $normalizedUrl) !== 1;
+        }
+
+        return in_array(
+            needle: strtolower(string: $matches[1]),
+            haystack: HtmlSanitizer::ALLOWED_URL_SCHEMES,
+            strict: true,
+        );
+    }
+
+    /**
      * @param array<string, list<string>> $allowedTags
      */
     private static function checkAllowedTags(array $allowedTags): void
@@ -144,21 +167,5 @@ final class HtmlSanitizer
             HtmlSanitizer::copyChildren(document: $document, from: $node, to: $element, allowedTags: $allowedTags);
             $to->append($element);
         }
-    }
-
-    private static function isAllowedUrl(string $url): bool
-    {
-        // Browsers ignore control characters and whitespace in the scheme ("java\tscript:")
-        $normalizedUrl = preg_replace(pattern: '/[\x00-\x20\x7F]+/', replacement: '', subject: $url) ?? '';
-        if (preg_match(pattern: '/^([a-z][a-z0-9+.\-]*):/i', subject: $normalizedUrl, matches: $matches) !== 1) {
-            // Relative URL; a colon before the first "/", "?" or "#" would be a scheme
-            return preg_match(pattern: '/^[^\/?#]*:/', subject: $normalizedUrl) !== 1;
-        }
-
-        return in_array(
-            needle: strtolower(string: $matches[1]),
-            haystack: HtmlSanitizer::ALLOWED_URL_SCHEMES,
-            strict: true,
-        );
     }
 }

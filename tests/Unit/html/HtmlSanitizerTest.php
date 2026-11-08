@@ -149,6 +149,45 @@ final class HtmlSanitizerTest extends TestCase
         );
     }
 
+    /**
+     * @return array<string, array{string, bool}>
+     */
+    public static function isAllowedUrlProvider(): array
+    {
+        return [
+            'https' => ['https://example.com/?a=1&b=2', true],
+            'http' => ['http://example.com', true],
+            'mailto' => ['mailto:info@example.com', true],
+            'tel' => ['tel:+41441234567', true],
+            'https uppercase' => ['HTTPS://example.com', true],
+            'mailto uppercase' => ['MAILTO:info@example.com', true],
+            'relative path' => ['/products/1?x=a:b#c', true],
+            'relative without slash' => ['products/1', true],
+            'anchor' => ['#top', true],
+            'query' => ['?page=2', true],
+            'empty' => ['', true],
+            'colon after slash' => ['/a:b', true],
+            'javascript' => ['javascript:alert(1)', false],
+            'javascript mixed case' => ['JaVaScRiPt:alert(1)', false],
+            'javascript with tab' => ["java\tscript:alert(1)", false],
+            'javascript with newline' => ["java\nscript:alert(1)", false],
+            'javascript with leading spaces' => ['  javascript:alert(1)', false],
+            'javascript with leading control character' => ["\x0E javascript:alert(1)", false],
+            'data' => ['data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==', false],
+            'vbscript' => ['vbscript:msgbox(1)', false],
+            'ftp' => ['ftp://example.com', false],
+            'invalid scheme' => ['1x:alert(1)', false],
+            'leading colon' => [':alert(1)', false],
+            'colon after invalid scheme character' => ['a_b:c/d', false],
+        ];
+    }
+
+    #[DataProvider('isAllowedUrlProvider')]
+    public function testIsAllowedUrl(string $url, bool $expected): void
+    {
+        $this->assertSame($expected, HtmlSanitizer::isAllowedUrl(url: $url));
+    }
+
     public function testDefaultAllowlistDropsLinks(): void
     {
         $this->assertSame(
