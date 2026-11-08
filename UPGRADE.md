@@ -6,7 +6,8 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 
 ## v8.14.1 (2026-11-08)
 
-No migration needed; no changes visible to consumers.
+No migration needed; no changes visible to consumers. v8.13.0 and v8.14.0 are withdrawn: v8.14.1 contains their
+changes (below), update to it.
 
 ## v8.14.0 (2026-11-08)
 
