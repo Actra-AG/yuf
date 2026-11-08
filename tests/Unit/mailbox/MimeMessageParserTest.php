@@ -10,7 +10,12 @@ declare(strict_types=1);
 namespace actra\yuf\tests\Unit\mailbox;
 
 use actra\yuf\mailbox\MimeMessageParser;
+use actra\yuf\mailbox\ReceivedAttachment;
 use actra\yuf\mailbox\ReceivedMail;
+use actra\yuf\mailer\attachment\MailerFileAttachment;
+use actra\yuf\mailer\attachment\MailerStringAttachment;
+use actra\yuf\mailer\HtmlMail;
+use actra\yuf\tests\Double\mailer\CapturingMailer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -65,6 +70,14 @@ final class MimeMessageParserTest extends TestCase
         $this->assertSame('2026-10-28T11:30:00+00:00', $mail->date?->format(format: DATE_ATOM));
     }
 
+    public function testMultipartAlternativeHasTheHtmlPart(): void
+    {
+        $mail = MimeMessageParserTest::parseFixture(name: 'multipart-alternative.eml');
+
+        $this->assertSame('<p>Das Backup von über 2 GB ist <b>abgeschlossen</b>.</p>', $mail->htmlBody);
+        $this->assertSame([], $mail->attachments);
+    }
+
     public function testMultipartMixedWithBase64TextAndWithoutAttachment(): void
     {
         $mail = MimeMessageParserTest::parseFixture(name: 'multipart-mixed.eml');
@@ -72,6 +85,121 @@ final class MimeMessageParserTest extends TestCase
         $this->assertSame('Der Bericht ist angehängt.', $mail->textBody);
         $this->assertSame('reports@example.com', $mail->from?->getPunyEncodedEmail());
         $this->assertSame('', $mail->from->getName());
+    }
+
+    public function testMultipartMixedHasTheHtmlPartAndTheAttachment(): void
+    {
+        $mail = MimeMessageParserTest::parseFixture(name: 'multipart-mixed.eml');
+
+        $this->assertSame('<p>Der Bericht ist angeh&auml;ngt.</p>', $mail->htmlBody);
+        $this->assertSame(
+            [['report.txt', 'text/plain', false, null, 'Secret attachment text', 22]],
+            MimeMessageParserTest::describeAttachments(mail: $mail),
+        );
+    }
+
+    public function testMultipartRelatedWithInlineImageAndEncodedFileNames(): void
+    {
+        $mail = MimeMessageParserTest::parseFixture(name: 'multipart-related.eml');
+
+        $this->assertSame('<p>Grüsse aus Zürich <img src="cid:logo@example.com"></p>', $mail->htmlBody);
+        $this->assertSame('Grüsse aus Zürich', $mail->textBody);
+        $this->assertSame(
+            [
+                [null, 'image/png', true, 'logo@example.com', MimeMessageParserTest::pixel(), 70],
+                ['Bericht für Zürich.pdf', 'application/pdf', false, null, '%PDF-1.4', 8],
+                ['Müller.csv', 'text/csv', false, null, 'a;b', 3],
+                ['notes.txt', 'text/plain', false, null, 'Note', 4],
+                [null, 'application/octet-stream', false, null, 'data', 4],
+            ],
+            MimeMessageParserTest::describeAttachments(mail: $mail),
+        );
+    }
+
+    public function testPlainMessageHasNoHtmlAndNoAttachments(): void
+    {
+        $mail = MimeMessageParserTest::parseFixture(name: 'plain.eml');
+
+        $this->assertNull($mail->htmlBody);
+        $this->assertSame([], $mail->attachments);
+    }
+
+    public function testHtmlOnlyMessageHasTheHtmlBody(): void
+    {
+        $mail = MimeMessageParserTest::parseFixture(name: 'html-only-8bit.eml');
+
+        $this->assertStringStartsWith('<', $mail->htmlBody ?? '');
+        $this->assertStringContainsString('übersteigt bald das Limit', $mail->htmlBody ?? '');
+    }
+
+    public function testImageOnlyMessageIsAnAttachment(): void
+    {
+        $raw = "Content-Type: image/png; name=pixel.png\r\nContent-Transfer-Encoding: base64\r\n\r\n"
+            . base64_encode(string: MimeMessageParserTest::pixel());
+
+        $mail = new MimeMessageParser()->parse(rawMessage: $raw);
+
+        $this->assertSame(
+            [['pixel.png', 'image/png', false, null, MimeMessageParserTest::pixel(), 70]],
+            MimeMessageParserTest::describeAttachments(mail: $mail),
+        );
+        $this->assertSame('', $mail->textBody);
+    }
+
+    /**
+     * @param bool $isSmtpLike `false`: header lines of at most 63 characters, the encoded file names are folded
+     */
+    #[DataProvider('mailerProvider')]
+    public function testMessageOfHtmlMailIsParsedBack(bool $isSmtpLike): void
+    {
+        $htmlMail = new HtmlMail(
+            senderEmail: 'send@example.com',
+            fromEmail: 'from@example.com',
+            fromName: 'Example Sender',
+            toEmail: 'to@example.com',
+            toName: '',
+            subject: 'Rechnung für Oktober',
+            htmlBody: '<p>Die Rechnung für Oktober <img src="cid:pixel.png"></p>',
+            alternativeBody: 'Die Rechnung für Oktober',
+        );
+        $htmlMail->addAttachment(mailerAttachment: new MailerStringAttachment(
+            contentString: 'Betrag: 100 CHF',
+            fileName: 'Rechnung für Oktober mit einem sehr langen Dateinamen.txt',
+            type: '',
+        ));
+        $htmlMail->addAttachment(mailerAttachment: new MailerFileAttachment(
+            path: __DIR__ . '/../../Fixture/mailer/pixel.png',
+            dispositionInline: true,
+        ));
+        $message = CapturingMailer::capture(mail: $htmlMail, isSmtpLike: $isSmtpLike);
+
+        $mail = new MimeMessageParser()->parse(rawMessage: $message->header . "\r\n\r\n" . $message->body);
+
+        $this->assertSame('Die Rechnung für Oktober', $mail->textBody);
+        $this->assertSame('<p>Die Rechnung für Oktober <img src="cid:pixel.png"></p>', $mail->htmlBody);
+        $this->assertSame(
+            [
+                ['pixel.png', 'image/png', true, 'pixel.png', MimeMessageParserTest::pixel(), 70],
+                [
+                    'Rechnung für Oktober mit einem sehr langen Dateinamen.txt',
+                    'text/plain',
+                    false,
+                    null,
+                    'Betrag: 100 CHF',
+                    15,
+                ],
+            ],
+            MimeMessageParserTest::describeAttachments(mail: $mail),
+        );
+    }
+
+    /**
+     * @return iterable<string, array{bool}>
+     */
+    public static function mailerProvider(): iterable
+    {
+        yield 'SMTP' => [true];
+        yield 'mail()' => [false];
     }
 
     public function testIso88591IsConvertedToUtf8(): void
@@ -203,6 +331,34 @@ final class MimeMessageParserTest extends TestCase
         $mail = new MimeMessageParser()->parse(rawMessage: $raw);
 
         $this->assertSame("First\n\nSecond", $mail->textBody);
+    }
+
+    /**
+     * @return list<array{string|null, string, bool, string|null, string, int}>
+     */
+    private static function describeAttachments(ReceivedMail $mail): array
+    {
+        return array_map(
+            callback: static fn(ReceivedAttachment $attachment): array => [
+                $attachment->fileName,
+                $attachment->contentType,
+                $attachment->isInline,
+                $attachment->contentId,
+                $attachment->content,
+                $attachment->getSize(),
+            ],
+            array: $mail->attachments,
+        );
+    }
+
+    private static function pixel(): string
+    {
+        $content = file_get_contents(filename: __DIR__ . '/../../Fixture/mailer/pixel.png');
+        if ($content === false) {
+            throw new RuntimeException(message: 'Missing fixture pixel.png');
+        }
+
+        return $content;
     }
 
     private static function parseFixture(string $name): ReceivedMail

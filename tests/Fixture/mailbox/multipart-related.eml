@@ -1,0 +1,47 @@
+Message-ID: <related-1@example.com>
+Date: Fri, 30 Oct 2026 09:00:00 +0100
+From: newsletter@example.com
+Subject: Newsletter with image and attachments
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="outer"
+
+--outer
+Content-Type: multipart/related; boundary="related"; type="text/html"
+
+--related
+Content-Type: text/html; charset=ISO-8859-1
+Content-Transfer-Encoding: quoted-printable
+
+<p>Gr=FCsse aus Z=FCrich <img src=3D"cid:logo@example.com"></p>
+--related
+Content-Type: image/png
+Content-Transfer-Encoding: base64
+Content-ID: <logo@example.com>
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAHnOc
+QAAAAABJRU5ErkJggg==
+--related--
+
+--outer
+Content-Type: application/pdf
+Content-Disposition: attachment;
+ filename*0*=utf-8''Bericht%20f%C3%BCr;
+ filename*1*=%20Z%C3%BCrich.pdf
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQ=
+--outer
+Content-Type: text/csv; name="=?ISO-8859-1?Q?M=FCller.csv?="
+Content-Disposition: attachment
+
+a;b
+--outer
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: attachment; filename*=UTF-8''..%2F..%2Fnotes%0A.txt
+
+Note
+--outer
+Content-Type: application/octet-stream
+
+data
+--outer--

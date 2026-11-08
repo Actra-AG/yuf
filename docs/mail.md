@@ -145,9 +145,10 @@ $mail->send(abstractMailer: $mailer);
 $this->assertCount(1, $mailer->sentMails);
 ```
 
-The test asserts each mail of `sentMails` with `getSubject()`, `getBody()`, `fromAddress` and
-`mailerAddressCollection->list(mailerAddressKindEnum: MailerAddressKindEnum::KIND_TO)` (`getPunyEncodedEmail()`,
-`getName()` of each `MailerAddress`).
+The test asserts each mail of `sentMails` with `getSubject()`, `getBody()`, `isHtmlBody()`, `getAlternativeBody()`,
+`listAttachments()` (`fileName`, `type`, `dispositionInline`, `getContent()` of each `MailerAttachment`),
+`fromAddress` and `mailerAddressCollection->list(mailerAddressKindEnum: MailerAddressKindEnum::KIND_TO)`
+(`getPunyEncodedEmail()`, `getName()` of each `MailerAddress`).
 
 ## Performance
 

@@ -4,6 +4,15 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v4](docs/upgrade/v4.md), [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md),
 [v0](docs/upgrade/v0.md).
 
+## v8.10.0 (2026-11-08)
+
+- `ReceivedMail` (`MimeMessageParser`) has the HTML and the attachments of a message
+  ([docs/mailbox.md](docs/mailbox.md#received-mail)): `htmlBody` (first inline `text/html` part, `null` without one;
+  untrusted HTML, never output it unfiltered) and `attachments` (`list<ReceivedAttachment>`: `fileName`, decoded RFC
+  2231/2047, `contentType`, `isInline`, `contentId`, `content`, `getSize()`). `textBody` is unchanged.
+- `AbstractMail::isHtmlBody()`, `getAlternativeBody()` and `listAttachments()` for tests with `RecordingMailer`
+  ([docs/mail.md](docs/mail.md#tests)).
+
 ## v8.9.0 (2026-11-06)
 
 - `ZipCodeValidator` (and `ZipCodeField`) checks Liechtenstein (`LI`): only 9485–9498 are valid. Before, every LI zip

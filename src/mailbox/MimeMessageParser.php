@@ -11,6 +11,7 @@ namespace actra\yuf\mailbox;
 
 use actra\yuf\mailer\MailerAddress;
 use actra\yuf\mailer\MailerException;
+use actra\yuf\mailer\MailerFileName;
 use DateTimeImmutable;
 
 /**
@@ -18,7 +19,9 @@ use DateTimeImmutable;
  * never throw: what cannot be read is `null` or empty.
  *
  * The text body comes from the `text/plain` parts (`multipart/mixed`: all inline ones, `multipart/alternative`: the
- * plain one); without such a part from the `text/html` part, converted to text. Attachments are ignored.
+ * plain one); without such a part from the `text/html` part, converted to text. The HTML body is the first inline
+ * `text/html` part. Every other part (not `text/plain` or `text/html`, or `Content-Disposition: attachment`) is an
+ * attachment.
  */
 final class MimeMessageParser
 {
@@ -34,6 +37,7 @@ final class MimeMessageParser
         [$headerBlock, $body] = MimeMessageParser::splitHeaderAndBody(part: $message);
         $headers = MimeHeaders::fromHeaderBlock(headerBlock: $headerBlock);
         $messageId = $headers->first(name: 'message-id');
+        $leafParts = MimeMessageParser::collectLeafParts(headers: $headers, body: $body, depth: 0);
 
         return new ReceivedMail(
             messageId: $messageId === null || $messageId === '' ? null : $messageId,
@@ -43,6 +47,114 @@ final class MimeMessageParser
             headers: $headers->decoded(),
             textBody: MimeMessageParser::textOf(headers: $headers, body: $body, depth: 0),
             rawMessage: $rawMessage,
+            htmlBody: MimeMessageParser::findHtmlBody(leafParts: $leafParts),
+            attachments: MimeMessageParser::listAttachments(leafParts: $leafParts),
+        );
+    }
+
+    /**
+     * @return list<array{MimeHeaders, string}> the parts that are no multipart, in the order of the message
+     */
+    private static function collectLeafParts(MimeHeaders $headers, string $body, int $depth): array
+    {
+        if ($depth > MimeMessageParser::MAX_DEPTH) {
+            return [];
+        }
+        $contentType = MimeMessageParser::contentTypeOf(headers: $headers);
+        if (!$contentType->isMultipart()) {
+            return [[$headers, $body]];
+        }
+        $leafParts = [];
+        $boundary = $contentType->getParameter(name: 'boundary');
+        foreach (MimeMessageParser::splitMultipart(body: $body, boundary: $boundary) as $part) {
+            [$headerBlock, $partBody] = MimeMessageParser::splitHeaderAndBody(part: $part);
+            $leafParts = [
+                ...$leafParts,
+                ...MimeMessageParser::collectLeafParts(
+                    headers: MimeHeaders::fromHeaderBlock(headerBlock: $headerBlock),
+                    body: $partBody,
+                    depth: $depth + 1,
+                ),
+            ];
+        }
+
+        return $leafParts;
+    }
+
+    /**
+     * @param list<array{MimeHeaders, string}> $leafParts
+     */
+    private static function findHtmlBody(array $leafParts): ?string
+    {
+        foreach ($leafParts as [$headers, $body]) {
+            $contentType = MimeMessageParser::contentTypeOf(headers: $headers);
+            if ($contentType->value === 'text/html' && !MimeMessageParser::isAttachment(headers: $headers)) {
+                return MimeCharsetConverter::toUtf8(
+                    text: MimeMessageParser::decodeBody(headers: $headers, body: $body),
+                    charset: $contentType->getParameter(name: 'charset'),
+                );
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<array{MimeHeaders, string}> $leafParts
+     *
+     * @return list<ReceivedAttachment>
+     */
+    private static function listAttachments(array $leafParts): array
+    {
+        $attachments = [];
+        foreach ($leafParts as [$headers, $body]) {
+            $contentType = MimeMessageParser::contentTypeOf(headers: $headers);
+            $isBodyText = $contentType->value === 'text/plain' || $contentType->value === 'text/html';
+            if ($isBodyText && !MimeMessageParser::isAttachment(headers: $headers)) {
+                continue;
+            }
+            $disposition = MimeMessageParser::dispositionOf(headers: $headers);
+            $contentId = trim(string: $headers->first(name: 'content-id') ?? '', characters: " \t<>");
+            $attachments[] = new ReceivedAttachment(
+                fileName: MimeMessageParser::fileNameOf(disposition: $disposition, contentType: $contentType),
+                contentType: $contentType->value,
+                isInline: $disposition->value === 'inline' || ($disposition->value === '' && $contentId !== ''),
+                contentId: $contentId === '' ? null : $contentId,
+                content: MimeMessageParser::decodeBody(headers: $headers, body: $body),
+            );
+        }
+
+        return $attachments;
+    }
+
+    private static function fileNameOf(MimeHeaderValue $disposition, MimeHeaderValue $contentType): ?string
+    {
+        $fileName = $disposition->getDecodedParameter(name: 'filename')
+            ?? $contentType->getDecodedParameter(name: 'name');
+        if ($fileName === null) {
+            return null;
+        }
+        // A name of the sender must not suggest a path or contain line breaks
+        $fileName = MailerFileName::sanitizeAttachmentName(fileName: $fileName);
+
+        return $fileName === '' ? null : $fileName;
+    }
+
+    private static function isAttachment(MimeHeaders $headers): bool
+    {
+        return MimeMessageParser::dispositionOf(headers: $headers)->value === 'attachment';
+    }
+
+    private static function dispositionOf(MimeHeaders $headers): MimeHeaderValue
+    {
+        return MimeHeaderValue::fromHeader(header: $headers->first(name: 'content-disposition'), default: '');
+    }
+
+    private static function decodeBody(MimeHeaders $headers, string $body): string
+    {
+        return MimeMessageParser::decodeTransferEncoding(
+            body: $body,
+            encoding: strtolower(string: trim(string: $headers->first(name: 'content-transfer-encoding') ?? '')),
         );
     }
 
@@ -64,8 +176,7 @@ final class MimeMessageParser
 
     private static function textOf(MimeHeaders $headers, string $body, int $depth): string
     {
-        $disposition = MimeHeaderValue::fromHeader(header: $headers->first(name: 'content-disposition'), default: '');
-        if ($disposition->value === 'attachment' || $depth > MimeMessageParser::MAX_DEPTH) {
+        if (MimeMessageParser::isAttachment(headers: $headers) || $depth > MimeMessageParser::MAX_DEPTH) {
             return '';
         }
         $contentType = MimeMessageParser::contentTypeOf(headers: $headers);
@@ -76,10 +187,7 @@ final class MimeMessageParser
             return '';
         }
         $text = MimeCharsetConverter::toUtf8(
-            text: MimeMessageParser::decodeTransferEncoding(
-                body: $body,
-                encoding: strtolower(string: trim(string: $headers->first(name: 'content-transfer-encoding') ?? '')),
-            ),
+            text: MimeMessageParser::decodeBody(headers: $headers, body: $body),
             charset: $contentType->getParameter(name: 'charset'),
         );
         if ($contentType->value === 'text/html') {

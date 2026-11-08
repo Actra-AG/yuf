@@ -11,6 +11,8 @@ namespace actra\yuf\tests\Unit\mailer;
 
 use actra\yuf\clock\FixedClock;
 use actra\yuf\mailer\AbstractMail;
+use actra\yuf\mailer\attachment\MailerStringAttachment;
+use actra\yuf\mailer\HtmlMail;
 use actra\yuf\mailer\MailerAddress;
 use actra\yuf\mailer\MailerAddressKindEnum;
 use actra\yuf\mailer\RecordingMailer;
@@ -50,6 +52,41 @@ final class RecordingMailerTest extends TestCase
             ['support@example.com'],
             $this->listEmails(mail: $sentMail, kind: MailerAddressKindEnum::KIND_REPLY_TO),
         );
+    }
+
+    public function testRecordsTheHtmlBodyAndTheAttachments(): void
+    {
+        $mail = new HtmlMail(
+            senderEmail: 'sender@example.com',
+            fromEmail: 'from@example.com',
+            fromName: 'Shop',
+            toEmail: 'customer@example.com',
+            toName: 'Customer',
+            subject: 'Rechnung',
+            htmlBody: '<p>Ihre Rechnung</p>',
+            alternativeBody: ' Ihre Rechnung ',
+        );
+        $attachment = new MailerStringAttachment(contentString: '%PDF-1.4', fileName: 'rechnung.pdf', type: '');
+        $mail->addAttachment(mailerAttachment: $attachment);
+        $mailer = new RecordingMailer();
+
+        $mail->send(abstractMailer: $mailer);
+
+        $this->assertSame([$mail], $mailer->sentMails);
+        $sentMail = $mailer->sentMails[0];
+        $this->assertTrue($sentMail->isHtmlBody());
+        $this->assertSame('<p>Ihre Rechnung</p>', $sentMail->getBody());
+        $this->assertSame('Ihre Rechnung', $sentMail->getAlternativeBody());
+        $this->assertSame([$attachment], $sentMail->listAttachments());
+    }
+
+    public function testTextMailHasNoHtmlBodyAndNoAttachments(): void
+    {
+        $mail = $this->createMail(subject: 'Text');
+
+        $this->assertFalse($mail->isHtmlBody());
+        $this->assertSame('', $mail->getAlternativeBody());
+        $this->assertSame([], $mail->listAttachments());
     }
 
     public function testRecordsEveryMailInOrderWithoutNetwork(): void

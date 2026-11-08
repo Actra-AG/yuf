@@ -76,13 +76,35 @@ a malformed message never throws, what cannot be read is `null` or empty.
 | `subject`     | decoded (RFC 2047, also over several lines and charsets), `''` if missing                          |
 | `headers`     | all headers by lower case name (`list<string>` each), unfolded and decoded; `getHeader(name:)`      |
 | `textBody`    | the inline `text/plain` parts; without them a text version of the `text/html` part                 |
+| `htmlBody`    | the first inline `text/html` part, `null` without one; untrusted, see below                        |
+| `attachments` | `list<ReceivedAttachment>`: every other part (attachments, inline images), see below               |
 | `rawMessage`  | the message as the server sent it                                                                 |
 
-The text body is decoded (quoted-printable, base64, 7bit/8bit) and converted from its charset (ISO-8859-1 as
-Windows-1252, unknown charsets as UTF-8 or Windows-1252). Attachments are ignored. The text version of HTML has no
+The bodies are decoded (quoted-printable, base64, 7bit/8bit) and converted from their charset (ISO-8859-1 as
+Windows-1252, unknown charsets as UTF-8 or Windows-1252). The text version of HTML has no
 tags, styles, scripts or comments, entities are decoded; paragraphs, headings, lists and tables are separated by an
 empty line, rows, list items, `div` and `<br>` start a new line, table cells are separated by a space; links with
 text and an absolute http/https target are written as `text <url>` (once if the text is the URL).
+
+`htmlBody` is the HTML of the sender as sent: scripts, forms, styles and remote images included. Never output it
+unfiltered. Show it in a sandboxed `iframe` (`<iframe sandbox srcdoc="…">` with the HTML escaped for the attribute,
+no `allow-scripts` or `allow-same-origin`) or escaped as source.
+
+A part is an attachment if it has `Content-Disposition: attachment` or is no `text/plain` or `text/html` part (e.g.
+an image of `multipart/related`). `ReceivedAttachment` has:
+
+| Property      | Content                                                                                           |
+|:--------------|:--------------------------------------------------------------------------------------------------|
+| `fileName`    | `filename` of `Content-Disposition`, otherwise `name` of `Content-Type`; decoded (RFC 2231 and     |
+|               | RFC 2047), without directories and control characters; `null` if missing                          |
+| `contentType` | lower case `type/subtype` as sent                                                                 |
+| `isInline`    | `Content-Disposition: inline`, or no disposition and a `Content-ID`                                |
+| `contentId`   | header `Content-ID` without `<>` (for `cid:` URLs of the HTML), `null` if missing                   |
+| `content`     | the decoded bytes; `getSize()` in bytes                                                           |
+
+File name and content type come from the sender: check them before using them (e.g. send attachments as download
+with `Content-Type: application/octet-stream`). Nested multiparts deeper than 20 levels are ignored, for the body
+and the attachments.
 
 ## Tests
 

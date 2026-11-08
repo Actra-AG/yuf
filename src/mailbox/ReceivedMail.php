@@ -24,6 +24,10 @@ final readonly class ReceivedMail
      * @param array<string, list<string>> $headers   all headers by lower case name, unfolded and RFC 2047 decoded
      * @param string                      $textBody  the text of the message: the `text/plain` parts, otherwise a text
      *                                               version of the `text/html` part; attachments are not included
+     * @param string|null                 $htmlBody  the first inline `text/html` part, `null` without one; untrusted
+     *                                               HTML of the sender: never output it unfiltered (show it in a
+     *                                               sandboxed `iframe` with `srcdoc`, or escaped as source)
+     * @param list<ReceivedAttachment>    $attachments the attachments and inline parts, in the order of the message
      */
     public function __construct(
         public ?string $messageId,
@@ -33,6 +37,8 @@ final readonly class ReceivedMail
         public array $headers,
         public string $textBody,
         public string $rawMessage,
+        public ?string $htmlBody = null,
+        public array $attachments = [],
     ) {}
 
     /**

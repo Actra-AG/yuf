@@ -229,6 +229,30 @@ abstract class AbstractMail
         return $this->body;
     }
 
+    /**
+     * `true` if the body was set by `setHtmlBody()`.
+     */
+    public function isHtmlBody(): bool
+    {
+        return $this->isHtmlBody;
+    }
+
+    /**
+     * The text alternative of an HTML body as set by `setHtmlBody()` (trimmed), empty for a text body.
+     */
+    public function getAlternativeBody(): string
+    {
+        return $this->alternativeBody;
+    }
+
+    /**
+     * @return list<MailerAttachment> the attachments and inline images in the order they were added
+     */
+    public function listAttachments(): array
+    {
+        return $this->mailerAttachmentCollection->list();
+    }
+
     public function getSubjectForHeader(int $maxLineLength): string
     {
         return MailerHeaderEncoder::encodeText(
