@@ -49,7 +49,7 @@ limits a project can override:
 | Class | Where | Counted | Default limits |
 | --- | --- | --- | --- |
 | `FormRateLimit` | `SpamProtection(rateLimit:)`, [forms.md](forms.md#rate-limit) | every submit with a valid CSRF token, per IP and form; optionally per form for all clients (`globalLimits:`) | 10 per 10 minutes and 50 per day per IP |
-| `LoginRateLimit` | `Authenticator(loginRateLimit:)`, [session-and-login.md](session-and-login.md#rate-limit) | every login, password verification and token request, per IP, then per account name | 20 per 15 minutes and 100 per day per IP, 10 per 15 minutes per account name |
+| `LoginRateLimit` | `Authenticator(loginRateLimit:)`, [session-and-login.md](session-and-login.md#rate-limit) | every login, password verification and token request, per IP, then per account name; one-time code attempts (`consumeCodeAttempt()`) per IP, under their own key | 20 per 15 minutes and 100 per day per IP, 10 per 15 minutes per account name; 30 code attempts per hour per IP |
 
 ```php
 new FormRateLimit(

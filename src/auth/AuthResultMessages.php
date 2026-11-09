@@ -32,6 +32,7 @@ final readonly class AuthResultMessages
         public string $successfulOtpLogin = 'OTP-Anmeldung',
         public string $successfulMicrosoftLogin = 'Microsoft-Anmeldung',
         public string $errorRateLimited = 'Zu viele Anmeldeversuche',
+        public string $errorWrongCode = 'Falscher Code',
     ) {}
 
     public static function english(): AuthResultMessages
@@ -52,6 +53,7 @@ final readonly class AuthResultMessages
             successfulOtpLogin: 'OTP login',
             successfulMicrosoftLogin: 'Microsoft login',
             errorRateLimited: 'Too many login attempts',
+            errorWrongCode: 'Wrong code',
         );
     }
 
@@ -73,6 +75,7 @@ final readonly class AuthResultMessages
             successfulOtpLogin: 'Connexion OTP',
             successfulMicrosoftLogin: 'Connexion Microsoft',
             errorRateLimited: 'Trop de tentatives de connexion',
+            errorWrongCode: 'Code erroné',
         );
     }
 
@@ -94,6 +97,7 @@ final readonly class AuthResultMessages
             successfulOtpLogin: 'Accesso OTP',
             successfulMicrosoftLogin: 'Accesso Microsoft',
             errorRateLimited: 'Troppi tentativi di accesso',
+            errorWrongCode: 'Codice errato',
         );
     }
 }

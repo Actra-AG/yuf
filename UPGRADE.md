@@ -4,6 +4,18 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v7](docs/upgrade/v7.md), [v6](docs/upgrade/v6.md), [v5](docs/upgrade/v5.md), [v4](docs/upgrade/v4.md),
 [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md), [v0](docs/upgrade/v0.md).
 
+## v8.19.0 (2026-11-09)
+
+- ⚠️ New case `AuthResultEnum::ERROR_WRONG_CODE` (16), text `AuthResultMessages::$errorWrongCode`: add it to
+  exhaustive `match` expressions on the enum. A log that stores the enum as int needs no schema change.
+- New protected `Authenticator::consumeCodeAttempt(userName:, userId:)` and `rejectWrongCode(userName:, userId:)` for
+  the one-time code of a second login step: count every code attempt per client IP address before the check, log
+  blocked and wrong ones. See [session-and-login.md](docs/session-and-login.md#rate-limit).
+- New argument `LoginRateLimit(codeLimits:)` (default 30 per hour per IP) and method `consumeCode(ipAddress:)`. Code
+  attempts are limited only where the project calls `consumeCodeAttempt()`.
+
+---
+
 ## v8.18.0 (2026-11-08)
 
 - ⚠️ `TemplateCache` has the new method `remove(templateFile:)`: own implementations of the interface add it (remove

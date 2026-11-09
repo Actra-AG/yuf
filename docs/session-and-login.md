@@ -97,6 +97,8 @@ available separately:
 | `verifyPassword(userName:, inputPassword:)` | public | Every check of `passwordLogin()` and the password itself (wrong ones are counted, outdated hashes rehashed), without logging in. Logs rejections. |
 | `verifyCredentials(authMethod:, userName:, password:)` | protected | The same for any method; `null` as password skips the password check, so it is not callable from a view. |
 | `logInVerifiedUser(authMethod:, authUser:, userName:)` | protected | Logs the success and the user in. |
+| `consumeCodeAttempt(userName:, userId:)` | protected | Counts a code attempt per client IP address before the check (`LoginRateLimit`); `false` = blocked, logged as `ERROR_RATE_LIMITED`, do not check the code. |
+| `rejectWrongCode(userName:, userId:)` | protected | Logs a wrong code as `ERROR_WRONG_CODE` (never the code itself). |
 
 `precheck()`, `verifyPassword()` and `verifyCredentials()` return `AuthResultEnum|AuthUser`: the reason of the
 rejection (`$authResult` has it too), or the user. Like a login they are not repeatable on one authenticator after a
@@ -124,7 +126,13 @@ final class AppAuthenticator extends Authenticator
     public function finishTwoFactorLogin(string $userName, string $code): bool
     {
         $authUser = $this->createAuthUserByUserName(userName: $userName);
+        // Counted before the check, also when the code is right; blocked: do not check it
+        if (!$this->consumeCodeAttempt(userName: $userName, userId: $authUser?->id)) {
+            return false;
+        }
         if ($authUser === null || !$this->isCodeValid(authUser: $authUser, code: $code)) {
+            $this->rejectWrongCode(userName: $userName, userId: $authUser?->id);
+
             return false;
         }
 
@@ -136,10 +144,11 @@ final class AppAuthenticator extends Authenticator
 `logInVerifiedUser()` checks the user again against what can change between the requests (IP whitelist,
 `checkLoginCredentials()`, inactive, lock-out; a rejection is logged and returns `false`), but it cannot know whether
 the password and the code were verified: call it only after your own check, with a user you loaded again from the
-stored ID (never keep the object in the session). Wrong codes belong to the project: count and limit them (a failed
-code should be counted like a password: `registerWrongPasswordAttempt()` before the check,
-`releaseWrongPasswordAttempt()` after the right code, see "Lock-out"). `logAuthResult()` stays protected: the methods
-above write the log.
+stored ID (never keep the object in the session). Count every code attempt with `consumeCodeAttempt()` before the
+check (per client IP address, see "Rate limit"; without `LoginRateLimit` it always returns `true`) and log a wrong code
+with `rejectWrongCode()`; the project checks the code itself. To count wrong codes per user as well, use
+`registerWrongPasswordAttempt()` before the check and `releaseWrongPasswordAttempt()` after the right code (see
+"Lock-out"). `logAuthResult()` stays protected: the methods above write the log.
 
 ### Rate limit
 
@@ -155,7 +164,7 @@ parent::__construct(
         rateLimiter: $rateLimiter, // see rate-limiting.md
         failMode: RateLimitFailModeEnum::CLOSED,
         logger: $logger,
-        // clientLimits: and accountLimits: override the defaults
+        // clientLimits:, accountLimits: and codeLimits: override the defaults
     ),
 );
 ```
@@ -171,6 +180,11 @@ parent::__construct(
   "too many attempts, try again later" that does not depend on the account.
 - `logInVerifiedUser()` and `logInIdentifiedUser()` are not counted (verified in an earlier, counted step or by the
   identity provider).
+- `consumeCodeAttempt()` counts the one-time code of a second step per client IP address under its own key
+  (`login|code|ip|<ip bucket>`, default 30 per hour), so code attempts and logins do not use up each other's budget.
+  Every attempt is counted before the check, also the right code (a hit cannot be given back, and counting first is
+  safe against parallel requests). Blocked: `$authResult` is `ERROR_RATE_LIMITED` and logged with the given user,
+  `$retryAfterSeconds` is set, and the code must not be checked.
 - Anyone can use up the account limit of a name for the current window by trying it from many IP addresses: keep the
   account window short. The lock-out below stays the protection against slow guessing.
 - `failMode: CLOSED` is recommended: if the rate limit directory is not writable, logins fail (and are logged) instead

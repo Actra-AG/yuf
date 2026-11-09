@@ -11,6 +11,7 @@ namespace actra\yuf\auth;
 
 use actra\yuf\core\HttpRequest;
 use actra\yuf\datacheck\validatorTypes\IpValidator;
+use actra\yuf\security\RateLimitResult;
 use LogicException;
 use SensitiveParameter;
 
@@ -30,13 +31,15 @@ use SensitiveParameter;
  * With a `LoginRateLimit`, every login, password verification and token request (`precheck()`) is counted per client
  * IP address and per account name before the user is loaded; a blocked attempt is rejected and logged as
  * `AuthResultEnum::ERROR_RATE_LIMITED`, without user lookup and password check. The logins of already verified users
- * (`logInVerifiedUser()`, `logInIdentifiedUser()`) are not counted.
+ * (`logInVerifiedUser()`, `logInIdentifiedUser()`) are not counted. The one-time code of a second step is counted
+ * per client IP address by `consumeCodeAttempt()`, and a wrong one is logged by `rejectWrongCode()`.
  */
 abstract class Authenticator
 {
     public protected(set) AuthResultEnum $authResult = AuthResultEnum::UNDEFINED;
     /** Seconds until the rate limit allows the next attempt; 0 if the attempt was not blocked by it */
     public protected(set) int $retryAfterSeconds = 0;
+    private bool $codeAttemptConsumed = false;
 
     /**
      * @param HttpRequest $httpRequest The request of the login: its remote address is checked against the IP
@@ -236,6 +239,64 @@ abstract class Authenticator
     }
 
     /**
+     * Counts an attempt to enter a one-time code (the second step of a login, see docs/session-and-login.md) per client
+     * IP address (`LoginRateLimit::consumeCode()`). Call it before the code is checked: every attempt costs one hit,
+     * also the right code, so parallel requests cannot try more codes than allowed. Blocked: `$authResult` is
+     * `ERROR_RATE_LIMITED`, `$retryAfterSeconds` tells when the next attempt is allowed, the attempt is logged, and the
+     * code must not be checked (not even a right one). Allowed (always without `LoginRateLimit`): nothing is logged and
+     * `$authResult` stays `UNDEFINED`, so `rejectWrongCode()` or `logInVerifiedUser()` can follow.
+     *
+     * @param string $userName Of the pending user, as far as the project knows it (e.g. the email address), `''` if
+     *     there is none; written to the log
+     * @param ?int $userId Of the pending user, `null` if there is none; written to the log
+     *
+     * @return bool Whether the code may be checked
+     *
+     * @throws LogicException if this authenticator counted a code attempt, rejected a user or logged one in already, or
+     *     the user is already logged in
+     */
+    protected function consumeCodeAttempt(string $userName, ?int $userId): bool
+    {
+        $this->assertNoLoginTried();
+        if ($this->codeAttemptConsumed) {
+            throw new LogicException(message: 'A code attempt is counted only once per authenticator.');
+        }
+        $this->codeAttemptConsumed = true;
+        if ($this->loginRateLimit === null) {
+            return true;
+        }
+        $attempt = $this->createAttempt(userName: $userName);
+        if ($this->applyRateLimitResult(
+            result: $this->loginRateLimit->consumeCode(ipAddress: $attempt->ipAddress),
+        )) {
+            return true;
+        }
+        $this->reject(authResult: AuthResultEnum::ERROR_RATE_LIMITED, attempt: $attempt, userId: $userId);
+
+        return false;
+    }
+
+    /**
+     * Rejects a wrong one-time code (the second step of a login): `$authResult` is `ERROR_WRONG_CODE`, and the attempt
+     * is logged with the pending user. The code itself is neither passed nor logged.
+     *
+     * @param string $userName Of the pending user, as far as the project knows it, `''` if there is none
+     * @param ?int $userId Of the pending user, `null` if there is none
+     *
+     * @throws LogicException if this authenticator rejected a user or logged one in already, or the user is already
+     *     logged in
+     */
+    protected function rejectWrongCode(string $userName, ?int $userId): void
+    {
+        $this->assertNoLoginTried();
+        $this->reject(
+            authResult: AuthResultEnum::ERROR_WRONG_CODE,
+            attempt: $this->createAttempt(userName: $userName),
+            userId: $userId,
+        );
+    }
+
+    /**
      * @throws LogicException
      */
     protected function assertNoLoginTried(): void
@@ -295,7 +356,16 @@ abstract class Authenticator
         if ($this->loginRateLimit === null) {
             return true;
         }
-        $result = $this->loginRateLimit->consume(userName: $attempt->userName, ipAddress: $attempt->ipAddress);
+        return $this->applyRateLimitResult(
+            result: $this->loginRateLimit->consume(userName: $attempt->userName, ipAddress: $attempt->ipAddress),
+        );
+    }
+
+    /**
+     * @return bool Whether the attempt may go on
+     */
+    private function applyRateLimitResult(RateLimitResult $result): bool
+    {
         $this->retryAfterSeconds = $result->retryAfterSeconds;
 
         return $result->isAllowed;

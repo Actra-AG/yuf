@@ -14,6 +14,7 @@ use actra\yuf\auth\AuthResultEnum;
 use actra\yuf\auth\AuthSession;
 use actra\yuf\auth\LoginRateLimit;
 use actra\yuf\auth\Password;
+use actra\yuf\clock\Clock;
 use actra\yuf\clock\FixedClock;
 use actra\yuf\security\RateLimit;
 use actra\yuf\security\RateLimiter;
@@ -22,6 +23,7 @@ use actra\yuf\session\ArraySessionStorage;
 use actra\yuf\session\Session;
 use actra\yuf\tests\Double\auth\RecordingAuthenticator;
 use actra\yuf\tests\Double\auth\TestAuthUser;
+use actra\yuf\tests\Double\clock\AdjustableClock;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
 use actra\yuf\tests\Double\core\RecordingLogger;
 use DateTimeImmutable;
@@ -31,7 +33,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * The `LoginRateLimit` of the `Authenticator`: counted per client IP address and account name before the user is
- * loaded, the same for existing and unknown accounts.
+ * loaded, the same for existing and unknown accounts; one-time codes per client IP address under their own key.
  */
 final class AuthenticatorRateLimitTest extends TestCase
 {
@@ -72,18 +74,21 @@ final class AuthenticatorRateLimitTest extends TestCase
         int $clientMaxHits = 10,
         int $accountMaxHits = 2,
         RateLimitFailModeEnum $failMode = RateLimitFailModeEnum::CLOSED,
+        int $codeMaxHits = 30,
+        ?Clock $clock = null,
     ): LoginRateLimit {
         return new LoginRateLimit(
             rateLimiter: new RateLimiter(
                 directory: $this->directory,
                 secret: AuthenticatorRateLimitTest::SECRET,
-                clock: new FixedClock(now: new DateTimeImmutable(datetime: '@1800000000')),
+                clock: $clock ?? new FixedClock(now: new DateTimeImmutable(datetime: '@1800000000')),
                 purgeProbabilityPercent: 0,
             ),
             failMode: $failMode,
             logger: $this->logger,
             clientLimits: [new RateLimit(maxHits: $clientMaxHits, windowSeconds: 900)],
             accountLimits: [new RateLimit(maxHits: $accountMaxHits, windowSeconds: 900)],
+            codeLimits: [new RateLimit(maxHits: $codeMaxHits, windowSeconds: 3600)],
         );
     }
 
@@ -130,6 +135,19 @@ final class AuthenticatorRateLimitTest extends TestCase
             $rateLimit->clientLimits,
         );
         $this->assertEquals([new RateLimit(maxHits: 10, windowSeconds: 900)], $rateLimit->accountLimits);
+        $this->assertEquals([new RateLimit(maxHits: 30, windowSeconds: 3600)], $rateLimit->codeLimits);
+    }
+
+    public function testRequiresCodeLimits(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new LoginRateLimit(
+            rateLimiter: new RateLimiter(directory: $this->directory, secret: AuthenticatorRateLimitTest::SECRET, clock: new FixedClock(now: new DateTimeImmutable())),
+            failMode: RateLimitFailModeEnum::CLOSED,
+            logger: $this->logger,
+            codeLimits: [],
+        );
     }
 
     public function testBlockedAttemptIsRejectedAndLoggedWithoutUserLookup(): void
@@ -253,6 +271,116 @@ final class AuthenticatorRateLimitTest extends TestCase
 
         $this->assertTrue($authenticator->passwordLogin(userName: 'ann', inputPassword: 'right password'));
 
+        $this->assertCount(1, $this->logger->loggedExceptions);
+    }
+
+    public function testCodeAttemptsAreLimitedPerClient(): void
+    {
+        $rateLimit = $this->createRateLimit();
+        for ($attempt = 1; $attempt <= 30; $attempt++) {
+            $this->assertTrue($rateLimit->consumeCode(ipAddress: '203.0.113.5')->isAllowed);
+        }
+
+        $blocked = $rateLimit->consumeCode(ipAddress: '203.0.113.5');
+
+        $this->assertFalse($blocked->isAllowed);
+        $this->assertSame(3600, $blocked->retryAfterSeconds);
+        $this->assertTrue($rateLimit->consumeCode(ipAddress: '198.51.100.1')->isAllowed);
+    }
+
+    public function testCodeWindowResets(): void
+    {
+        $clock = new AdjustableClock(now: new DateTimeImmutable(datetime: '@1800000000'));
+        $rateLimit = $this->createRateLimit(codeMaxHits: 1, clock: $clock);
+        $rateLimit->consumeCode(ipAddress: '203.0.113.5');
+        $this->assertFalse($rateLimit->consumeCode(ipAddress: '203.0.113.5')->isAllowed);
+
+        $clock->advanceSeconds(seconds: 3600);
+
+        $this->assertTrue($rateLimit->consumeCode(ipAddress: '203.0.113.5')->isAllowed);
+    }
+
+    public function testCodeAttemptsDoNotUseUpTheLoginLimits(): void
+    {
+        $rateLimit = $this->createRateLimit(clientMaxHits: 1, accountMaxHits: 1, codeMaxHits: 1);
+        $rateLimit->consumeCode(ipAddress: '203.0.113.5');
+
+        $this->assertTrue($rateLimit->consume(userName: 'ann', ipAddress: '203.0.113.5')->isAllowed);
+    }
+
+    public function testLoginsDoNotUseUpTheCodeLimit(): void
+    {
+        $rateLimit = $this->createRateLimit(clientMaxHits: 1, accountMaxHits: 1, codeMaxHits: 1);
+        $rateLimit->consume(userName: 'ann', ipAddress: '203.0.113.5');
+        $this->assertFalse($rateLimit->consume(userName: 'ann', ipAddress: '203.0.113.5')->isAllowed);
+
+        $this->assertTrue($rateLimit->consumeCode(ipAddress: '203.0.113.5')->isAllowed);
+    }
+
+    public function testAllowedCodeAttemptIsNotLoggedAndAllowsTheLogin(): void
+    {
+        $authUser = TestAuthUser::create(accessRights: []);
+        $authenticator = $this->createAuthenticator(rateLimit: $this->createRateLimit(), authUser: $authUser);
+
+        $this->assertTrue($authenticator->codeAttempt(userName: 'ann@example.com', userId: $authUser->id));
+
+        $this->assertSame(AuthResultEnum::UNDEFINED, $authenticator->authResult);
+        $this->assertSame(0, $authenticator->retryAfterSeconds);
+        $this->assertSame([], $authenticator->loggedResults);
+        $this->assertTrue($authenticator->loginVerified(
+            authMethod: AuthMethodEnum::OTP,
+            authUser: $authUser,
+            userName: 'ann@example.com',
+        ));
+    }
+
+    public function testBlockedCodeAttemptIsRejectedAndLoggedWithThePendingUser(): void
+    {
+        $rateLimit = $this->createRateLimit(codeMaxHits: 1);
+        $this->createAuthenticator(rateLimit: $rateLimit)->codeAttempt(userName: 'ann@example.com', userId: 7);
+        $authenticator = $this->createAuthenticator(rateLimit: $rateLimit);
+
+        $this->assertFalse($authenticator->codeAttempt(userName: 'ann@example.com', userId: 7));
+
+        $this->assertSame(AuthResultEnum::ERROR_RATE_LIMITED, $authenticator->authResult);
+        $this->assertSame(3600, $authenticator->retryAfterSeconds);
+        $this->assertSame(
+            [
+                [
+                    'userId' => 7,
+                    'sessionId' => 'array-session',
+                    'ip' => '203.0.113.5',
+                    'userName' => 'ann@example.com',
+                    'authResult' => AuthResultEnum::ERROR_RATE_LIMITED,
+                ],
+            ],
+            $authenticator->loggedResults,
+        );
+    }
+
+    public function testCodeAttemptFailClosedBlocksAndLogs(): void
+    {
+        touch(filename: $this->directory);
+        $authenticator = $this->createAuthenticator(
+            rateLimit: $this->createRateLimit(failMode: RateLimitFailModeEnum::CLOSED),
+        );
+
+        $this->assertFalse($authenticator->codeAttempt(userName: 'ann', userId: null));
+
+        $this->assertSame(AuthResultEnum::ERROR_RATE_LIMITED, $authenticator->authResult);
+        $this->assertCount(1, $this->logger->loggedExceptions);
+    }
+
+    public function testCodeAttemptFailOpenAllowsAndLogs(): void
+    {
+        touch(filename: $this->directory);
+        $authenticator = $this->createAuthenticator(
+            rateLimit: $this->createRateLimit(failMode: RateLimitFailModeEnum::OPEN),
+        );
+
+        $this->assertTrue($authenticator->codeAttempt(userName: 'ann', userId: null));
+
+        $this->assertSame(AuthResultEnum::UNDEFINED, $authenticator->authResult);
         $this->assertCount(1, $this->logger->loggedExceptions);
     }
 }

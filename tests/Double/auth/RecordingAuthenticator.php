@@ -94,4 +94,14 @@ final class RecordingAuthenticator extends Authenticator
     {
         return $this->logInVerifiedUser(authMethod: $authMethod, authUser: $authUser, userName: $userName);
     }
+
+    public function codeAttempt(string $userName, ?int $userId): bool
+    {
+        return $this->consumeCodeAttempt(userName: $userName, userId: $userId);
+    }
+
+    public function wrongCode(string $userName, ?int $userId): void
+    {
+        $this->rejectWrongCode(userName: $userName, userId: $userId);
+    }
 }

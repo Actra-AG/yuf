@@ -40,6 +40,7 @@ final class AuthResultEnumTest extends TestCase
         yield 'SUCCESSFUL_OTP_LOGIN' => [13, AuthResultEnum::SUCCESSFUL_OTP_LOGIN];
         yield 'SUCCESSFUL_MICROSOFT_LOGIN' => [14, AuthResultEnum::SUCCESSFUL_MICROSOFT_LOGIN];
         yield 'ERROR_RATE_LIMITED' => [15, AuthResultEnum::ERROR_RATE_LIMITED];
+        yield 'ERROR_WRONG_CODE' => [16, AuthResultEnum::ERROR_WRONG_CODE];
     }
 
     #[DataProvider('storedValueProvider')]
@@ -112,6 +113,7 @@ final class AuthResultEnumTest extends TestCase
             'Zu viele Anmeldeversuche',
             'Too many login attempts',
         ];
+        yield 'ERROR_WRONG_CODE' => [AuthResultEnum::ERROR_WRONG_CODE, 'Falscher Code', 'Wrong code'];
     }
 
     #[DataProvider('textProvider')]
@@ -122,6 +124,18 @@ final class AuthResultEnumTest extends TestCase
     ): void {
         $this->assertSame($german, $authResult->label(messages: new AuthResultMessages())->render());
         $this->assertSame($english, $authResult->label(messages: AuthResultMessages::english())->render());
+    }
+
+    public function testWrongCodeIsTranslated(): void
+    {
+        $this->assertSame(
+            'Code erroné',
+            AuthResultEnum::ERROR_WRONG_CODE->label(messages: AuthResultMessages::french())->render(),
+        );
+        $this->assertSame(
+            'Codice errato',
+            AuthResultEnum::ERROR_WRONG_CODE->label(messages: AuthResultMessages::italian())->render(),
+        );
     }
 
     public function testLabelEncodesThePlainTextOfTheMessages(): void

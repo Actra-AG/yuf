@@ -920,4 +920,103 @@ final class AuthenticatorTest extends TestCase
             userName: 'user',
         );
     }
+
+    public function testCodeAttemptWithoutRateLimitIsAllowedAndNotLogged(): void
+    {
+        $authenticator = $this->createAuthenticator(authUser: null);
+
+        $this->assertTrue($authenticator->codeAttempt(userName: 'ann@example.com', userId: 1));
+
+        $this->assertSame(AuthResultEnum::UNDEFINED, $authenticator->authResult);
+        $this->assertSame(0, $authenticator->retryAfterSeconds);
+        $this->assertSame([], $authenticator->loggedResults);
+    }
+
+    public function testWrongCodeIsLoggedWithThePendingUser(): void
+    {
+        $authenticator = $this->createAuthenticator(authUser: null);
+        $authenticator->codeAttempt(userName: 'ann@example.com', userId: 7);
+
+        $authenticator->wrongCode(userName: 'ann@example.com', userId: 7);
+
+        $this->assertSame(AuthResultEnum::ERROR_WRONG_CODE, $authenticator->authResult);
+        $this->assertSame(
+            [
+                [
+                    'userId' => 7,
+                    'sessionId' => 'array-session',
+                    'ip' => '203.0.113.5',
+                    'userName' => 'ann@example.com',
+                    'authResult' => AuthResultEnum::ERROR_WRONG_CODE,
+                ],
+            ],
+            $authenticator->loggedResults,
+        );
+        $this->assertFalse($this->authSession->isLoggedIn());
+    }
+
+    public function testWrongCodeOfAnUnknownSessionIsLoggedWithoutUser(): void
+    {
+        $authenticator = $this->createAuthenticator(authUser: null);
+
+        $authenticator->wrongCode(userName: '', userId: null);
+
+        $this->assertSame(
+            [
+                [
+                    'userId' => null,
+                    'sessionId' => 'array-session',
+                    'ip' => '203.0.113.5',
+                    'userName' => '',
+                    'authResult' => AuthResultEnum::ERROR_WRONG_CODE,
+                ],
+            ],
+            $authenticator->loggedResults,
+        );
+    }
+
+    public function testLogInVerifiedUserAfterAnAllowedCodeAttempt(): void
+    {
+        $authUser = TestAuthUser::create(accessRights: []);
+        $authenticator = $this->createAuthenticator(authUser: $authUser);
+        $authenticator->codeAttempt(userName: 'user', userId: $authUser->id);
+
+        $this->assertTrue(
+            $authenticator->loginVerified(authMethod: AuthMethodEnum::OTP, authUser: $authUser, userName: 'user'),
+        );
+        $this->assertSame(AuthResultEnum::SUCCESSFUL_OTP_LOGIN, $authenticator->authResult);
+    }
+
+    public function testSecondCodeAttemptThrows(): void
+    {
+        $authenticator = $this->createAuthenticator(authUser: null);
+        $authenticator->codeAttempt(userName: 'user', userId: null);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIs('A code attempt is counted only once per authenticator.');
+
+        $authenticator->codeAttempt(userName: 'user', userId: null);
+    }
+
+    public function testWrongCodeTwiceThrows(): void
+    {
+        $authenticator = $this->createAuthenticator(authUser: null);
+        $authenticator->wrongCode(userName: 'user', userId: null);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIs('It is not allowed to execute this method multiple times.');
+
+        $authenticator->wrongCode(userName: 'user', userId: null);
+    }
+
+    public function testCodeAttemptWhileLoggedInThrows(): void
+    {
+        $this->authSession->logIn(authSessionId: 5);
+        $authenticator = $this->createAuthenticator(authUser: null);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessageIs('It is not allowed to log in, if user is already logged in.');
+
+        $authenticator->codeAttempt(userName: 'user', userId: null);
+    }
 }
