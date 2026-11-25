@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\session;
 
 use actra\yuf\clock\Clock;
+use actra\yuf\common\Directory;
 use actra\yuf\core\HttpRequest;
 use Override;
 use RuntimeException;
@@ -41,14 +42,7 @@ final class FileSessionHandler extends AbstractSessionHandler
         }
         $directory = FileSessionHandler::splitSavePath(savePath: $savePath)['directory'];
         if ($directory !== '' && !is_dir(filename: $directory)) {
-            // Another request may create the directory in the meantime: only the final state counts
-            set_error_handler(callback: static fn(): bool => true);
-            try {
-                mkdir(directory: $directory, permissions: 0o700, recursive: true);
-            } finally {
-                restore_error_handler();
-            }
-            if (!is_dir(filename: $directory)) {
+            if (!Directory::create(path: $directory, permissions: 0o700, recursive: true)) {
                 throw new RuntimeException(message: 'Cannot create the session directory "' . $directory . '".');
             }
         }

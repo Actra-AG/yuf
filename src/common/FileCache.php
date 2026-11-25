@@ -126,10 +126,7 @@ final readonly class FileCache
         if (is_dir(filename: $this->directory)) {
             return;
         }
-        if (
-            !mkdir(directory: $this->directory, permissions: FileCache::DIRECTORY_MODE, recursive: true)
-            && !is_dir(filename: $this->directory)
-        ) {
+        if (!Directory::create(path: $this->directory, permissions: FileCache::DIRECTORY_MODE, recursive: true)) {
             throw new RuntimeException(message: 'Cannot create the cache directory "' . $this->directory . '".');
         }
     }

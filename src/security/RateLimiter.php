@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\security;
 
 use actra\yuf\clock\Clock;
+use actra\yuf\common\Directory;
 use InvalidArgumentException;
 use JsonException;
 use RuntimeException;
@@ -362,10 +363,7 @@ final readonly class RateLimiter
         if (is_dir(filename: $this->directory)) {
             return;
         }
-        if (
-            !mkdir(directory: $this->directory, permissions: RateLimiter::DIRECTORY_MODE, recursive: true)
-            && !is_dir(filename: $this->directory)
-        ) {
+        if (!Directory::create(path: $this->directory, permissions: RateLimiter::DIRECTORY_MODE, recursive: true)) {
             throw new RuntimeException(
                 message: 'Cannot create the rate limit directory "' . $this->directory . '".',
             );

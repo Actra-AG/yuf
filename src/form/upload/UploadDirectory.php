@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\form\upload;
 
+use actra\yuf\common\Directory;
 use RuntimeException;
 
 /**
@@ -99,8 +100,7 @@ final readonly class UploadDirectory
 
             return;
         }
-        if (!mkdir(directory: $this->path, permissions: UploadDirectory::DIRECTORY_PERMISSIONS, recursive: true)
-            && !is_dir(filename: $this->path)) {
+        if (!Directory::create(path: $this->path, permissions: UploadDirectory::DIRECTORY_PERMISSIONS, recursive: true)) {
             throw new RuntimeException(message: 'The upload directory ' . $this->path . ' cannot be created.');
         }
         // mkdir() applies the umask, so the permissions are set explicitly
@@ -120,8 +120,7 @@ final readonly class UploadDirectory
         $this->ensureExists();
         $directory = $this->path . DIRECTORY_SEPARATOR . $name;
         if (!is_dir(filename: $directory)) {
-            if (!mkdir(directory: $directory, permissions: UploadDirectory::DIRECTORY_PERMISSIONS)
-                && !is_dir(filename: $directory)) {
+            if (!Directory::create(path: $directory, permissions: UploadDirectory::DIRECTORY_PERMISSIONS, recursive: false)) {
                 throw new RuntimeException(message: 'The upload directory ' . $directory . ' cannot be created.');
             }
             $this->makePrivate(path: $directory);

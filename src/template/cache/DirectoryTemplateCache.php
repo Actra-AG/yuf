@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\template\cache;
 
+use actra\yuf\common\Directory;
 use actra\yuf\template\compiler\TemplateCompiler;
 use actra\yuf\template\TemplateException;
 use Override;
@@ -123,10 +124,7 @@ final readonly class DirectoryTemplateCache implements TemplateCache
         if (is_dir(filename: $directory)) {
             return;
         }
-        if (
-            !mkdir(directory: $directory, permissions: DirectoryTemplateCache::DIRECTORY_MODE, recursive: true)
-            && !is_dir(filename: $directory)
-        ) {
+        if (!Directory::create(path: $directory, permissions: DirectoryTemplateCache::DIRECTORY_MODE, recursive: true)) {
             throw new TemplateException(reason: 'Could not create the template cache directory ' . $directory);
         }
     }

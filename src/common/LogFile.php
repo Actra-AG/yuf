@@ -64,14 +64,7 @@ final class LogFile
         if (is_dir(filename: $path)) {
             return;
         }
-        // Another process may create the directory in the meantime: only the final state counts
-        set_error_handler(callback: static fn(): bool => true);
-        try {
-            mkdir(directory: $path);
-        } finally {
-            restore_error_handler();
-        }
-        if (!is_dir(filename: $path)) {
+        if (!Directory::create(path: $path, permissions: 0o777, recursive: false)) {
             throw new RuntimeException(message: 'Cannot create log directory "' . $path . '".');
         }
     }

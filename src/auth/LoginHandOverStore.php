@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace actra\yuf\auth;
 
 use actra\yuf\clock\Clock;
+use actra\yuf\common\Directory;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\LoginRedirect;
 use InvalidArgumentException;
@@ -360,10 +361,7 @@ final readonly class LoginHandOverStore
 
             return;
         }
-        if (
-            !mkdir(directory: $this->directory, permissions: LoginHandOverStore::DIRECTORY_MODE, recursive: true)
-            && !is_dir(filename: $this->directory)
-        ) {
+        if (!Directory::create(path: $this->directory, permissions: LoginHandOverStore::DIRECTORY_MODE, recursive: true)) {
             throw new RuntimeException(message: 'Cannot create the directory "' . $this->directory . '".');
         }
     }

@@ -12,6 +12,7 @@ namespace actra\yuf;
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
 use actra\yuf\common\AcceptingMailDomainResolver;
+use actra\yuf\common\Directory;
 use actra\yuf\common\FileCache;
 use actra\yuf\common\MailDomainResolver;
 use actra\yuf\common\SystemMailDomainResolver;
@@ -290,7 +291,7 @@ final class Core
             baseDirectory: $baseDirectory,
             appDirectory: $appDirectory,
         );
-        if (!is_dir(filename: $path) && !mkdir(directory: $path, recursive: true) && !is_dir(filename: $path)) {
+        if (!is_dir(filename: $path) && !Directory::create(path: $path, permissions: 0o777, recursive: true)) {
             throw new RuntimeException(message: 'Cannot create the directory ' . $path);
         }
 
