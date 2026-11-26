@@ -63,6 +63,7 @@ See [.env.example.php](.env.example.php), [index.example.php](index.example.php)
 - [Mail](docs/mail.md): SMTP (STARTTLS or implicit TLS), Microsoft 365, log of sent mails
 - [Mailbox](docs/mailbox.md): reading and moving the messages of an IMAP mailbox, text of HTML mails
 - [Phone numbers](docs/phone-numbers.md): parsing, formats, validation
+- [HTTP client](docs/http-client.md): requests to APIs, requests to URLs of users (SSRF)
 - [Rate limiting](docs/rate-limiting.md): limits per IP address or globally, public forms and logins, without
   database
 - [Testing](docs/testing.md): PHPStan and PHPUnit in projects using yuf, test objects, views, clock

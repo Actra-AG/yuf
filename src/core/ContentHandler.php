@@ -26,6 +26,29 @@ use Throwable;
 
 final class ContentHandler
 {
+    /** RFC 9110, section 5.6.2 */
+    private const string HEADER_NAME_PATTERN = "/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/D";
+    /** Control characters except the horizontal tab (header injection) */
+    private const string HEADER_VALUE_FORBIDDEN_PATTERN = '/[\x00-\x08\x0A-\x1F\x7F]/';
+    /**
+     * Set by yuf itself (content, caching, security, session, redirects), in lower case: use the existing methods
+     */
+    private const array RESERVED_HEADERS = [
+        'cache-control',
+        'content-disposition',
+        'content-language',
+        'content-length',
+        'content-security-policy',
+        'content-type',
+        'etag',
+        'location',
+        'referrer-policy',
+        'set-cookie',
+        'strict-transport-security',
+        'transfer-encoding',
+        'x-content-type-options',
+    ];
+
     public HttpStatusCodeEnum $httpStatusCode = HttpStatusCodeEnum::HTTP_OK;
     public private(set) bool $suppressCspHeader = false;
     /** The version of a page without personal data (`BaseView::respondNotModifiedIfUnchanged()`), else `null` */
@@ -34,6 +57,8 @@ final class ContentHandler
     private ContentType $contentType;
     private ?HtmlDocument $htmlDocument = null;
     private bool $isProcessed = false;
+    /** @var array<string, array{name: string, value: string}> by lower case name */
+    private array $headers = [];
     // Set by processRequest()
     private ?HtmlDocumentSettings $htmlDocumentSettings = null;
     private ?TemplateEngine $templateEngine = null;
@@ -236,5 +261,56 @@ final class ContentHandler
     public function suppressCspHeader(): void
     {
         $this->suppressCspHeader = true;
+    }
+
+    /**
+     * Adds a header to the response (e.g. `Link`); a header of the same name (in any case) is replaced. The headers
+     * that yuf sets itself (`Content-Type`, `Cache-Control`, `ETag`, `Content-Security-Policy`, the security headers,
+     * `Location`, `Set-Cookie`, …) cannot be set: use the methods of the content handler, the response or the session.
+     *
+     * @throws InvalidArgumentException for an invalid name, a value with control characters (header injection) or a
+     *                                  header that yuf sets itself
+     */
+    public function setHeader(string $name, string $value): void
+    {
+        if (preg_match(pattern: ContentHandler::HEADER_NAME_PATTERN, subject: $name) !== 1) {
+            throw new InvalidArgumentException(message: 'The response header name "' . $name . '" is invalid.');
+        }
+        $key = strtolower(string: $name);
+        if (in_array(needle: $key, haystack: ContentHandler::RESERVED_HEADERS, strict: true)) {
+            throw new InvalidArgumentException(
+                message: 'The response header "' . $name . '" is set by yuf and cannot be set by a view.',
+            );
+        }
+        if (preg_match(pattern: ContentHandler::HEADER_VALUE_FORBIDDEN_PATTERN, subject: $value) === 1) {
+            throw new InvalidArgumentException(
+                message: 'The value of the response header "' . $name . '" must not contain control characters.',
+            );
+        }
+        $this->headers[$key] = ['name' => $name, 'value' => $value];
+    }
+
+    /**
+     * Sets `Retry-After` for a `429 Too Many Requests` or `503 Service Unavailable` answer, e.g. with
+     * `RateLimitResult::$retryAfterSeconds` or `$form->retryAfterSeconds`.
+     *
+     * @param int $seconds Values below 1 are sent as 1
+     */
+    public function setRetryAfter(int $seconds): void
+    {
+        $this->setHeader(name: 'Retry-After', value: (string) max(1, $seconds));
+    }
+
+    /**
+     * @return array<string, string> The headers of `setHeader()` by name, as set
+     */
+    public function listHeaders(): array
+    {
+        $headers = [];
+        foreach ($this->headers as $header) {
+            $headers[$header['name']] = $header['value'];
+        }
+
+        return $headers;
     }
 }

@@ -21,8 +21,11 @@ use InvalidArgumentException;
 final readonly class CurlTargetUrl
 {
     public string $url;
+    /** In lower case; an IPv6 address in brackets */
     public string $host;
     public bool $isHttps;
+    /** The port of the URL, else 443 for https and 80 for http */
+    public int $port;
 
     public function __construct(string $url)
     {
@@ -50,6 +53,18 @@ final readonly class CurlTargetUrl
         $this->url = $url;
         $this->host = strtolower(string: $parts['host']);
         $this->isHttps = $scheme === 'https';
+        $this->port = array_key_exists(key: 'port', array: $parts) ? $parts['port'] : ($this->isHttps ? 443 : 80);
+    }
+
+    /**
+     * The address if the host is an IP address (an IPv6 address without brackets), else null.
+     */
+    public function getIpAddress(): ?string
+    {
+        $address = str_starts_with(haystack: $this->host, needle: '[') ? trim(string: $this->host, characters: '[]')
+            : $this->host;
+
+        return filter_var(value: $address, filter: FILTER_VALIDATE_IP) === false ? null : $address;
     }
 
     public function isLoopback(): bool

@@ -45,8 +45,8 @@ final readonly class ContentResponseFactory
         $eTag = $this->isPersonal || $contentHandler->httpStatusCode !== HttpStatusCodeEnum::HTTP_OK
             ? null
             : $contentHandler->eTag;
-        if ($contentType->isHtml()) {
-            return HttpResponse::createHtmlResponse(
+        $httpResponse = $contentType->isHtml()
+            ? HttpResponse::createHtmlResponse(
                 httpStatusCode: $contentHandler->httpStatusCode,
                 htmlContent: $contentHandler->getContent(),
                 cspPolicySettings: $contentHandler->suppressCspHeader ? null : $this->cspPolicySettings,
@@ -54,15 +54,19 @@ final readonly class ContentResponseFactory
                 httpRequest: $this->httpRequest,
                 languageCode: $this->language?->code,
                 eTag: $eTag,
+            )
+            : HttpResponse::createResponseFromString(
+                httpStatusCode: $contentHandler->httpStatusCode,
+                contentString: $contentHandler->getContent(),
+                contentType: $contentType,
+                httpRequest: $this->httpRequest,
+                eTag: $eTag,
             );
+        // Also for error status codes (429 with Retry-After); the names cannot collide with the headers of yuf
+        foreach ($contentHandler->listHeaders() as $name => $value) {
+            $httpResponse->setHeader(key: $name, val: $value);
         }
 
-        return HttpResponse::createResponseFromString(
-            httpStatusCode: $contentHandler->httpStatusCode,
-            contentString: $contentHandler->getContent(),
-            contentType: $contentType,
-            httpRequest: $this->httpRequest,
-            eTag: $eTag,
-        );
+        return $httpResponse;
     }
 }

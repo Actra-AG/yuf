@@ -42,6 +42,8 @@ abstract class AbstractCurlRequest
     private int $requestTimeoutInSeconds = AbstractCurlRequest::DEFAULT_TIMEOUT_IN_SECONDS;
     private int $maxResponseSizeInBytes = AbstractCurlRequest::DEFAULT_MAX_RESPONSE_SIZE_IN_BYTES;
     private bool $acceptRedirectionResponseCode = false;
+    /** @var list<string> */
+    private array $pinnedIpAddresses = [];
     private readonly CurlTargetUrl $targetUrl;
 
     /**
@@ -97,6 +99,65 @@ abstract class AbstractCurlRequest
             throw new LogicException(message: 'You are not allowed to overwrite the HTTP-Header ' . $key);
         }
         $this->putHeader(header: new CurlHeader(name: $key, value: $value));
+    }
+
+    /**
+     * Connects only to these addresses for the host and port of the URL (`CURLOPT_RESOLVE`) instead of resolving the
+     * host again; the certificate is still verified against the host name. curl tries them in the given order.
+     * Replaces earlier pinned addresses.
+     *
+     * Requests to URLs of users (webhooks, imports, link previews; SSRF): resolve the host once (A and AAAA), check
+     * every address against private and reserved ranges, then pin the request to the checked addresses. Without it,
+     * curl resolves the host a second time and a DNS name with a short TTL can answer an internal address (DNS
+     * rebinding). Redirects are never followed, so the pin cannot be left. Keep the error message of cURL away from
+     * the user: it tells whether an internal port is open.
+     *
+     * A pinned request is sent with a cURL handle of its own: it neither uses nor leaves a connection or a DNS entry
+     * in the client.
+     *
+     * @param list<string> $ipAddresses IPv4 or IPv6 addresses (without brackets and zone ID)
+     *
+     * @throws InvalidArgumentException If the list is empty or an entry is no IP address
+     * @throws LogicException If the host of the URL is an IP address and the list has another address
+     */
+    public function pinToIpAddresses(array $ipAddresses): void
+    {
+        if ($ipAddresses === []) {
+            throw new InvalidArgumentException(message: 'Pin the request to at least one IP address.');
+        }
+        $normalizedAddresses = [];
+        foreach ($ipAddresses as $ipAddress) {
+            $packedAddress = filter_var(value: $ipAddress, filter: FILTER_VALIDATE_IP) === false
+                ? false
+                : inet_pton(ip: $ipAddress);
+            if ($packedAddress === false) {
+                throw new InvalidArgumentException(
+                    message: 'The pinned address "' . $ipAddress . '" is no IPv4 or IPv6 address.',
+                );
+            }
+            $normalizedAddresses[] = (string) inet_ntop(ip: $packedAddress);
+        }
+        $hostAddress = $this->targetUrl->getIpAddress();
+        if ($hostAddress !== null) {
+            $normalizedHostAddress = (string) inet_ntop(ip: (string) inet_pton(ip: $hostAddress));
+            foreach ($normalizedAddresses as $normalizedAddress) {
+                if ($normalizedAddress !== $normalizedHostAddress) {
+                    throw new LogicException(
+                        message: 'The host of the URL is the IP address ' . $hostAddress . ', it cannot be pinned to '
+                        . $normalizedAddress . '.',
+                    );
+                }
+            }
+        }
+        $this->pinnedIpAddresses = $normalizedAddresses;
+    }
+
+    /**
+     * @return list<string> The pinned addresses (see `pinToIpAddresses()`), [] if curl resolves the host
+     */
+    public function getPinnedIpAddresses(): array
+    {
+        return $this->pinnedIpAddresses;
     }
 
     /**
@@ -194,6 +255,14 @@ abstract class AbstractCurlRequest
     /**
      * @internal
      */
+    public function getTargetUrl(): CurlTargetUrl
+    {
+        return $this->targetUrl;
+    }
+
+    /**
+     * @internal
+     */
     public function getAuthentication(): ?CurlAuthentication
     {
         return $this->authentication;
@@ -202,7 +271,7 @@ abstract class AbstractCurlRequest
     /**
      * Never shows the secrets (headers can carry API keys; the target URL a token).
      *
-     * @return array{method: string, host: string, hasBody: bool, hasAuthentication: bool}
+     * @return array{method: string, host: string, hasBody: bool, hasAuthentication: bool, pinnedIpAddresses: int}
      */
     public function __debugInfo(): array
     {
@@ -211,6 +280,7 @@ abstract class AbstractCurlRequest
             'host' => $this->targetUrl->host,
             'hasBody' => $this->body !== null,
             'hasAuthentication' => $this->authentication !== null,
+            'pinnedIpAddresses' => count(value: $this->pinnedIpAddresses),
         ];
     }
 

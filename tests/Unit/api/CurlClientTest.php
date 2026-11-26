@@ -70,6 +70,38 @@ final class CurlClientTest extends TestCase
         $this->assertFalse($getEcho->hasHeader(name: 'Content-Type'));
     }
 
+    public function testPinnedRequestConnectsToThePinnedAddressAndLeavesNothingInTheClient(): void
+    {
+        $client = new CurlClient();
+        // ".invalid" never resolves (RFC 6761): only the pin reaches the server
+        $url = 'http://pinned.invalid:' . $this->server->port . '/echo';
+        $pinned = CurlGetRequest::create(requestTargetUrl: $url);
+        $pinned->pinToIpAddresses(ipAddresses: ['127.0.0.1']);
+        $unpinned = CurlGetRequest::create(requestTargetUrl: $url);
+
+        $pinnedResponse = $client->send(request: $pinned);
+        $unpinnedResponse = $client->send(request: $unpinned);
+        $serverResponse = $client->send(request: CurlGetRequest::create(requestTargetUrl: $this->server->url('/echo')));
+
+        $this->assertFalse($pinnedResponse->hasErrors());
+        $this->assertSame('GET', EchoedRequest::fromResponse(response: $pinnedResponse)->method);
+        $this->assertTrue($unpinnedResponse->hasErrors());
+        $this->assertFalse($serverResponse->hasErrors());
+    }
+
+    public function testPinIsNotServedByAnOpenConnectionOfTheClient(): void
+    {
+        $client = new CurlClient();
+        $url = 'http://localhost:' . $this->server->port . '/echo';
+        $unpinnedResponse = $client->send(request: CurlGetRequest::create(requestTargetUrl: $url));
+        // Nothing listens on 127.0.0.2: the open connection to localhost must not serve the pinned request
+        $pinned = CurlGetRequest::create(requestTargetUrl: $url);
+        $pinned->pinToIpAddresses(ipAddresses: ['127.0.0.2']);
+
+        $this->assertFalse($unpinnedResponse->hasErrors());
+        $this->assertTrue($client->send(request: $pinned)->hasErrors());
+    }
+
     public function testClientsAreIndependentOfEachOther(): void
     {
         $firstClient = new CurlClient();

@@ -4,6 +4,19 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v7](docs/upgrade/v7.md), [v6](docs/upgrade/v6.md), [v5](docs/upgrade/v5.md), [v4](docs/upgrade/v4.md),
 [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md), [v0](docs/upgrade/v0.md).
 
+## v8.22.0 (2026-11-26)
+
+- New `ContentHandler::setHeader(name:, value:)`, `setRetryAfter(seconds:)` and `listHeaders()`: a view adds response
+  headers, e.g. `Retry-After` for `429` (`$this->context->content->setRetryAfter(seconds: $result->retryAfterSeconds)`).
+  Headers that yuf sets itself cannot be set. See [views.md](docs/views.md#response-headers).
+- New `AbstractCurlRequest::pinToIpAddresses(ipAddresses:)` and `getPinnedIpAddresses()`: the request connects only to
+  the given (checked) IP addresses for the host and port of its URL (`CURLOPT_RESOLVE`), the certificate is still
+  verified against the host name. A pinned request uses a cURL handle of its own: it never reuses or leaves a
+  connection or a DNS entry of the client. Use it for requests to URLs of users (webhooks) after checking every address
+  of the host: without it curl resolves the host again (DNS rebinding). See [http-client.md](docs/http-client.md).
+
+---
+
 ## v8.21.0 (2026-11-26)
 
 - ⚠️ `DbSettings` has the new required argument `timeZone:` (before `charset:`): the database session uses the time

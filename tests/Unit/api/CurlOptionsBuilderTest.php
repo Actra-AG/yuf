@@ -220,6 +220,65 @@ final class CurlOptionsBuilderTest extends TestCase
         $this->assertSame($expected, $options[$option]);
     }
 
+    public function testUnpinnedRequestResolvesTheHost(): void
+    {
+        $options = $this->buildOptions(request: CurlGetRequest::create(requestTargetUrl: CurlOptionsBuilderTest::URL));
+
+        $this->assertArrayNotHasKey(CURLOPT_RESOLVE, $options);
+        $this->assertArrayNotHasKey(CURLOPT_FRESH_CONNECT, $options);
+        $this->assertArrayNotHasKey(CURLOPT_FORBID_REUSE, $options);
+        $this->assertArrayNotHasKey(CURLOPT_DNS_CACHE_TIMEOUT, $options);
+    }
+
+    /**
+     * @param list<string> $addresses
+     */
+    #[DataProvider('pinProvider')]
+    public function testPinnedRequestConnectsOnlyToItsAddresses(string $url, array $addresses, string $expected): void
+    {
+        $request = CurlGetRequest::create(requestTargetUrl: $url);
+        $request->pinToIpAddresses(ipAddresses: $addresses);
+
+        $options = $this->buildOptions(request: $request);
+
+        $this->assertOption(expected: [$expected], options: $options, option: CURLOPT_RESOLVE);
+        $this->assertOption(expected: true, options: $options, option: CURLOPT_FRESH_CONNECT);
+        $this->assertOption(expected: true, options: $options, option: CURLOPT_FORBID_REUSE);
+        $this->assertOption(expected: 0, options: $options, option: CURLOPT_DNS_CACHE_TIMEOUT);
+        // The security options stay
+        $this->assertOption(expected: false, options: $options, option: CURLOPT_FOLLOWLOCATION);
+        $this->assertOption(expected: true, options: $options, option: CURLOPT_SSL_VERIFYPEER);
+        $this->assertOption(expected: 2, options: $options, option: CURLOPT_SSL_VERIFYHOST);
+    }
+
+    /**
+     * @return array<string, array{string, list<string>, string}>
+     */
+    public static function pinProvider(): array
+    {
+        return [
+            'https default port' => ['https://Hooks.Example.com/in', ['203.0.113.5'], 'hooks.example.com:443:203.0.113.5'],
+            'http default port' => ['http://hooks.example.com/in', ['203.0.113.5'], 'hooks.example.com:80:203.0.113.5'],
+            'explicit port' => ['https://hooks.example.com:8443/', ['203.0.113.5'], 'hooks.example.com:8443:203.0.113.5'],
+            'IPv6 in brackets, order kept' => [
+                'https://hooks.example.com/',
+                ['2001:db8::2', '203.0.113.5'],
+                'hooks.example.com:443:[2001:db8::2],203.0.113.5',
+            ],
+        ];
+    }
+
+    public function testPinnedRequestToAnIpAddressNeedsNoResolveEntry(): void
+    {
+        $request = CurlGetRequest::create(requestTargetUrl: 'https://[2001:db8::1]/');
+        $request->pinToIpAddresses(ipAddresses: ['2001:db8::1']);
+
+        $options = $this->buildOptions(request: $request);
+
+        $this->assertArrayNotHasKey(CURLOPT_RESOLVE, $options);
+        $this->assertOption(expected: true, options: $options, option: CURLOPT_FRESH_CONNECT);
+    }
+
     /**
      * @return array<int, mixed>
      */

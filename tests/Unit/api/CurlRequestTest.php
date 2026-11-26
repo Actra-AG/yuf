@@ -501,4 +501,87 @@ final class CurlRequestTest extends TestCase
 
         return $headers;
     }
+
+    public function testRequestIsNotPinnedByDefault(): void
+    {
+        $this->assertSame([], CurlGetRequest::create(requestTargetUrl: 'https://example.com/')->getPinnedIpAddresses());
+    }
+
+    public function testPinnedAddressesAreNormalizedAndReplaced(): void
+    {
+        $request = CurlPostRequest::createWithJsonBody(requestTargetUrl: 'https://example.com/', jsonString: '{}');
+        $request->pinToIpAddresses(ipAddresses: ['203.0.113.5']);
+        $request->pinToIpAddresses(ipAddresses: ['2001:DB8:0::1', '198.51.100.7']);
+
+        $this->assertSame(['2001:db8::1', '198.51.100.7'], $request->getPinnedIpAddresses());
+    }
+
+    /**
+     * @param list<string> $addresses
+     */
+    #[DataProvider('invalidPinProvider')]
+    public function testInvalidPinIsRejected(array $addresses): void
+    {
+        $request = CurlGetRequest::create(requestTargetUrl: 'https://example.com/');
+
+        $this->expectException(InvalidArgumentException::class);
+        $request->pinToIpAddresses(ipAddresses: $addresses);
+    }
+
+    /**
+     * @return array<string, array{list<string>}>
+     */
+    public static function invalidPinProvider(): array
+    {
+        return [
+            'empty list' => [[]],
+            'host name' => [['example.com']],
+            'empty' => [['']],
+            'zone ID' => [['fe80::1%eth0']],
+            'shorthand IPv4' => [['127.1']],
+            'brackets' => [['[2001:db8::1]']],
+            'with port' => [['203.0.113.5:443']],
+            'second invalid' => [['203.0.113.5', '203.0.113.256']],
+        ];
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function ipHostProvider(): array
+    {
+        return [
+            'IPv4' => ['http://127.0.0.1:8080/', '127.0.0.1'],
+            'IPv6' => ['https://[2001:db8::1]/', '2001:DB8:0::1'],
+        ];
+    }
+
+    #[DataProvider('ipHostProvider')]
+    public function testIpHostCanBePinnedToItsOwnAddress(string $url, string $address): void
+    {
+        $request = CurlGetRequest::create(requestTargetUrl: $url);
+        $request->pinToIpAddresses(ipAddresses: [$address]);
+
+        $this->assertCount(1, $request->getPinnedIpAddresses());
+    }
+
+    #[DataProvider('ipHostProvider')]
+    public function testIpHostCannotBePinnedToAnotherAddress(string $url, string $address): void
+    {
+        $request = CurlGetRequest::create(requestTargetUrl: $url);
+
+        $this->expectException(LogicException::class);
+        $request->pinToIpAddresses(ipAddresses: [$address, '203.0.113.5']);
+    }
+
+    public function testDebugInfoShowsTheNumberOfPinnedAddressesOnly(): void
+    {
+        $request = CurlGetRequest::create(requestTargetUrl: 'https://example.com/');
+        $request->pinToIpAddresses(ipAddresses: ['203.0.113.5', '198.51.100.7']);
+
+        $dump = print_r(value: $request, return: true);
+
+        $this->assertStringContainsString('[pinnedIpAddresses] => 2', $dump);
+        $this->assertStringNotContainsString('203.0.113.5', $dump);
+    }
 }

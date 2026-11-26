@@ -18,6 +18,7 @@ use actra\yuf\exception\NotFoundException;
 use actra\yuf\security\CspNonce;
 use actra\yuf\security\CspPolicySettings;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -182,6 +183,42 @@ final class ContentResponseFactoryTest extends TestCase
         $httpResponse = $this->createFactory(cspPolicySettings: null)->create(contentHandler: $contentHandler);
 
         $this->assertNull($httpResponse->getHeader(key: 'Content-Language'));
+    }
+
+    /**
+     * @return array<string, array{ContentType}>
+     */
+    public static function contentTypeProvider(): array
+    {
+        return ['html' => [ContentType::createHtml()], 'json' => [ContentType::createJson()]];
+    }
+
+    #[DataProvider('contentTypeProvider')]
+    public function testHeadersOfTheViewAreSentWithAnErrorStatus(ContentType $contentType): void
+    {
+        $contentHandler = new ContentHandler(contentType: $contentType, cspNonce: new CspNonce(value: 'fixed-nonce'));
+        $contentHandler->setContent(contentString: 'slow down');
+        $contentHandler->httpStatusCode = HttpStatusCodeEnum::HTTP_TOO_MANY_REQUESTS;
+        $contentHandler->setRetryAfter(seconds: 30);
+
+        $httpResponse = $this->createFactory(cspPolicySettings: new CspPolicySettings())
+            ->create(contentHandler: $contentHandler);
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_TOO_MANY_REQUESTS, $httpResponse->httpStatusCode);
+        $this->assertSame('30', $httpResponse->getHeader(key: 'Retry-After'));
+        $this->assertSame('private, no-store', $httpResponse->getHeader(key: 'Cache-Control'));
+    }
+
+    public function testHeadersOfTheViewDoNotChangeTheCaching(): void
+    {
+        $contentHandler = $this->createHandlerWithETag(contentType: ContentType::createJson());
+        $contentHandler->setHeader(name: 'Link', value: '</a>; rel=next');
+
+        $httpResponse = $this->createFactory(cspPolicySettings: null)->create(contentHandler: $contentHandler);
+
+        $this->assertSame('</a>; rel=next', $httpResponse->getHeader(key: 'Link'));
+        $this->assertSame('private, no-cache', $httpResponse->getHeader(key: 'Cache-Control'));
+        $this->assertSame('"abc"', $httpResponse->getHeader(key: 'Etag'));
     }
 
     public function testRequestWithoutContentIsNotFound(): void

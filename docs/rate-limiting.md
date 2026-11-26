@@ -22,7 +22,11 @@ try {
     $result = null; // storage error: fail closed (or open, if blocking would do more harm)
 }
 if ($result === null || !$result->isAllowed) {
-    // answer "too many requests", with $result->retryAfterSeconds for a Retry-After header
+    // answer "too many requests": status 429 and, if known, the Retry-After header
+    $this->context->content->httpStatusCode = HttpStatusCodeEnum::HTTP_TOO_MANY_REQUESTS;
+    if ($result !== null) {
+        $this->context->content->setRetryAfter(seconds: $result->retryAfterSeconds);
+    }
 }
 ```
 

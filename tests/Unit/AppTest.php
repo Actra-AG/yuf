@@ -293,6 +293,35 @@ final class AppTest extends TestCase
         $this->assertFalse($route->isDefaultForLanguage);
     }
 
+    public function testViewSendsRetryAfterWithTooManyRequests(): void
+    {
+        $app = $this->createApp(uri: '/api/status')->withJsonRoute(
+            path: '/api/',
+            viewGroup: 'frontend',
+            viewFactory: new ViewMap()->add(
+                fileTitle: 'status',
+                create: static function (ViewContext $context): BaseView {
+                    $context->content->httpStatusCode = HttpStatusCodeEnum::HTTP_TOO_MANY_REQUESTS;
+                    $context->content->setRetryAfter(seconds: 42);
+                    $view = new ConfigurableTestView(context: $context);
+                    $view->callSetContent(contentString: '{"retryAfterSeconds":42}');
+
+                    return $view;
+                },
+            ),
+        );
+        $httpResponse = $app->prepare();
+
+        $sentResponse = RecordingResponseSender::capture(
+            action: static function (ResponseSender $responseSender) use ($httpResponse): void {
+                $httpResponse->sendAndExit(responseSender: $responseSender);
+            },
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_TOO_MANY_REQUESTS, $sentResponse->httpStatusCode);
+        $this->assertSame('42', $sentResponse->getHeader(key: 'Retry-After'));
+    }
+
     public function testJsonRouteRejectsPathsWithExtension(): void
     {
         $app = $this->createApp(uri: '/api/status.json')->withJsonRoute(path: '/api/', viewGroup: 'frontend');

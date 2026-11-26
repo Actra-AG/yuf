@@ -279,7 +279,7 @@ $form->addSpamProtection(spamProtection: new SpamProtection(
   (default none; for forms that cost money or call third parties), checked after the client limits, so a blocked client
   uses up nothing of the global budget. Keys: `form|<form name>|<ip bucket>` and `form|<form name>`.
 - Blocked: `validate()` returns `false`, the form has the error `FormMessages::$rateLimited` (en/de) and
-  `$form->retryAfterSeconds` (for `429` and `Retry-After`, if wanted). The fields only read their input, so the typed
+  `$form->retryAfterSeconds` (for `429` and `$this->context->content->setRetryAfter(seconds: …)`, if wanted). The fields only read their input, so the typed
   values are shown again: no rules (no DNS check of e-mail fields), no listeners, no new uploads.
 - `failMode:` decides what happens when the submit cannot be counted (rate limit directory not writable, invalid
   client IP address); the error is logged with `logger:` either way. `CLOSED` blocks (the visitor sees the rate limit

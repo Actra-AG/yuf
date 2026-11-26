@@ -257,6 +257,21 @@ public function execute(): void
 - `sendAndExit()` closes a started session before the content is sent, so a download does not block other requests of
   the user. Write the session before.
 
+### Response headers
+
+A view adds headers with `$this->context->content->setHeader(name:, value:)` (e.g. `Link`); a second call with the
+same name (in any case) replaces the value. `setRetryAfter(seconds:)` sets `Retry-After` (at least 1) for a `429` or
+`503`. The headers are sent with every status. Headers that yuf sets itself (`Content-Type`, `Cache-Control`, `ETag`,
+`Content-Security-Policy`, the security headers, `Location`, `Set-Cookie`, …) and values with control characters
+throw an `InvalidArgumentException`.
+
+```php
+if (!$result->isAllowed) {
+    $this->context->content->httpStatusCode = HttpStatusCodeEnum::HTTP_TOO_MANY_REQUESTS;
+    $this->context->content->setRetryAfter(seconds: $result->retryAfterSeconds);
+}
+```
+
 ### After the response
 
 `$this->context->responseSender->afterResponse(callback: …)` runs a closure after the response was sent: the client
