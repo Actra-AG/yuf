@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\core;
 
+use actra\yuf\core\HostPatterns;
 use actra\yuf\core\Language;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\RecordingResponseSender;
@@ -76,7 +77,7 @@ final class RequestHandlerRequestLanguageTest extends TestCase
             ),
             routeCollection: new RouteCollection(routes: $routes),
             availableLanguages: new LanguageCollection(languages: [$this->german, $this->english]),
-            allowedDomains: ['example.com'],
+            hostPolicy: new HostPatterns(patterns: ['example.com']),
             session: new Session(storage: $storage),
             responseSender: $responseSender,
             requestLanguageProvider: $provider,
@@ -149,7 +150,7 @@ final class RequestHandlerRequestLanguageTest extends TestCase
             httpRequest: HttpRequestFactory::create(headers: ['Accept-Language' => 'en']),
             routeCollection: new RouteCollection(routes: [$this->createRequestLanguageRoute()]),
             availableLanguages: new LanguageCollection(languages: [$this->german, $this->english]),
-            allowedDomains: ['example.com'],
+            hostPolicy: new HostPatterns(patterns: ['example.com']),
             session: new Session(storage: $storage),
         );
 

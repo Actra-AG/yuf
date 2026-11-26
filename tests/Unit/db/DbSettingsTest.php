@@ -19,6 +19,7 @@ final class DbSettingsTest extends TestCase
     private function create(
         string $hostName = 'db.example.com',
         string $databaseName = 'app',
+        ?string $timeZone = 'Europe/Zurich',
         ?string $charset = null,
         ?string $timeNamesLanguage = 'de_CH',
         bool $sqlSafeUpdates = true,
@@ -28,6 +29,7 @@ final class DbSettingsTest extends TestCase
             databaseName: $databaseName,
             userName: 'app_user',
             password: 'not-a-real-password',
+            timeZone: $timeZone,
             charset: $charset,
             timeNamesLanguage: $timeNamesLanguage,
             sqlSafeUpdates: $sqlSafeUpdates,
@@ -41,8 +43,10 @@ final class DbSettingsTest extends TestCase
             databaseName: 'app',
             userName: 'app_user',
             password: 'not-a-real-password',
+            timeZone: null,
         );
 
+        $this->assertNull($settings->timeZone);
         $this->assertSame('utf8mb4', $settings->charset);
         $this->assertSame('de_CH', $settings->timeNamesLanguage);
         $this->assertTrue($settings->sqlSafeUpdates);
@@ -56,6 +60,7 @@ final class DbSettingsTest extends TestCase
         $this->assertSame('app', $settings->databaseName);
         $this->assertSame('app_user', $settings->userName);
         $this->assertSame('not-a-real-password', $settings->password);
+        $this->assertSame('Europe/Zurich', $settings->timeZone);
         $this->assertSame('utf8', $settings->charset);
         $this->assertNull($settings->timeNamesLanguage);
         $this->assertFalse($settings->sqlSafeUpdates);
@@ -152,6 +157,63 @@ final class DbSettingsTest extends TestCase
         ];
     }
 
+    #[DataProvider('timeZoneProvider')]
+    public function testValidTimeZoneIsAccepted(?string $timeZone): void
+    {
+        $this->assertSame($timeZone, $this->create(timeZone: $timeZone)->timeZone);
+    }
+
+    /**
+     * @return array<string, array{?string}>
+     */
+    public static function timeZoneProvider(): array
+    {
+        return [
+            'null keeps the server zone' => [null],
+            'name' => ['Europe/Zurich'],
+            'three parts' => ['America/Argentina/Buenos_Aires'],
+            'UTC' => ['UTC'],
+            'with sign' => ['Etc/GMT+1'],
+            'positive offset' => ['+01:00'],
+            'negative offset' => ['-05:30'],
+            'highest offset' => ['+14:00'],
+            'lowest offset' => ['-13:59'],
+            '64 characters' => [str_repeat(string: 'a', times: 64)],
+        ];
+    }
+
+    #[DataProvider('invalidTimeZoneProvider')]
+    public function testInvalidTimeZoneThrows(string $timeZone): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessageIsOrContains(
+            'The time zone must be a name like "Europe/Zurich" or an offset like "+01:00", got "' . $timeZone . '".',
+        );
+
+        $this->create(timeZone: $timeZone);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function invalidTimeZoneProvider(): array
+    {
+        return [
+            'empty' => [''],
+            'SYSTEM' => ['SYSTEM'],
+            'system' => ['system'],
+            'sql' => ["Europe/Zurich'; DROP TABLE users; --"],
+            'space' => ['Europe Zurich'],
+            'offset out of range' => ['+25:00'],
+            'offset beyond +14:00' => ['+14:01'],
+            'offset without sign and padding' => ['1:00'],
+            '65 characters' => [str_repeat(string: 'a', times: 65)],
+            'trailing line break' => ["Europe/Zurich\n"],
+            'four parts' => ['a/b/c/d'],
+            'leading slash' => ['/Europe/Zurich'],
+        ];
+    }
+
     #[DataProvider('invalidDsnValueProvider')]
     public function testInvalidHostNameThrows(string $hostName, string $message): void
     {
@@ -190,6 +252,17 @@ final class DbSettingsTest extends TestCase
             DbSettingsTest::fail('Expected InvalidArgumentException');
         } catch (InvalidArgumentException $exception) {
             $this->assertStringContainsString('hostName', $exception->getMessage());
+            $this->assertStringNotContainsString('not-a-real-password', $exception->getMessage());
+        }
+    }
+
+    public function testTimeZoneMessageDoesNotContainThePassword(): void
+    {
+        try {
+            $this->create(timeZone: 'SYSTEM');
+            DbSettingsTest::fail('Expected InvalidArgumentException');
+        } catch (InvalidArgumentException $exception) {
+            $this->assertStringContainsString('"SYSTEM"', $exception->getMessage());
             $this->assertStringNotContainsString('not-a-real-password', $exception->getMessage());
         }
     }

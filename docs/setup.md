@@ -61,8 +61,9 @@ same path, a missing `.env.php`) throw at startup with a message that names the 
 
 `fromEnvironment()` does everything global, once per process: it registers the error handler, reads the environment
 file, sets `error_reporting()` and the time zone, creates the directories and the request from the PHP
-globals. A request without HTTPS gets the redirect to HTTPS as response of `prepareHttpResponse()`, but only for a
-host of `allowedDomains` (an unknown host gets a 404 without redirect). Tests build `Core`
+globals. A request without HTTPS gets the redirect to HTTPS as response of `prepareHttpResponse()`, but only for an
+allowed host (see [Host and client IP address](#host-and-client-ip-address); an unknown host gets a 404 without
+redirect). Tests build `Core`
 without globals (see [testing.md](testing.md)).
 
 ## Languages
@@ -109,13 +110,13 @@ LanguageSwitch::createUri(switchPath: '/language/', languageCode: 'en', returnUr
 ## Environment settings
 
 `.env.php` returns an array. `Core` checks it once when it starts and throws an `UnexpectedValueException` naming the
-key if a setting is missing or has the wrong type:
+key if a setting is missing, has the wrong type or is invalid:
 
 | Key                     | Type           | Meaning                                              |
 |:------------------------|:---------------|:-----------------------------------------------------|
 | `defaultErrorReporting` | `int`          | Optional, default `E_ALL`: `error_reporting()` level |
 | `defaultTimeZone`       | `string`       | PHP time zone, e.g. `Europe/Zurich`                  |
-| `allowedDomains`        | `list<string>` | Host names the application answers to (else 404)     |
+| `allowedDomains`        | `list<string>` | Host names or patterns the application answers to (else 404) |
 | `logEmailRecipient`     | `string`       | Mail address of new errors, empty for no mails       |
 | `debug`                 | `bool`         | Shows the debug page for errors; `false` in production |
 | `robots`                | `string`       | Content of the `robots` meta tag                     |
@@ -129,9 +130,48 @@ type or an unknown enum value throws an `UnexpectedValueException`. Pass the val
 ## Host and client IP address
 
 - The host of a request (`HttpRequest::getHost()`, the `Host` header) is sent by the client and only trustworthy after
-  the domain check against `allowedDomains`. `Core` does it first, before the redirect to HTTPS and before the route is
-  resolved; absolute URLs (redirects, links) use the host of the request, so a site with several domains lists all of
-  them in `allowedDomains`. Do not use `getHost()` for security decisions in code that runs before `Core`.
+  the host check. `Core` does it first, before the redirect to HTTPS and before the route is resolved; absolute URLs
+  (redirects, links) use the host of the request, so a site with several domains allows all of them. Do not use
+  `getHost()` for security decisions in code that runs before `Core`.
+- `allowedDomains` lists host names and patterns (`HostPatterns`), compared in lower case:
+  - `example.ch`, `localhost`, `127.0.0.1`, `[::1]`: exactly this host.
+  - `*.example.ch`: exactly one label in front of `example.ch` (`dubach.example.ch`), neither `a.b.example.ch` nor
+    `example.ch` itself (list it, too). The wildcard is only allowed as the whole first label, in front of at least
+    two labels (no `*.ch`).
+  - `example.ch:8443`: the port is compared literally; a pattern without port matches only a host without port.
+  - International names in punycode (`xn--…`). An invalid pattern throws at startup.
+- Check a host in project code with `$core->allowedDomains->isAllowed(host: $host)`, never with an own comparison.
+- Hosts that patterns cannot describe (e.g. own domains of tenants in a database): implement `HostPolicy` and pass it
+  to `prepareHttpResponse(hostPolicy:)` or `App::withHostPolicy()`. It replaces `allowedDomains` for the redirect to
+  HTTPS and the route; the check cannot be switched off. It runs for every request (bots, 404, plain HTTP), so ask
+  `$core->allowedDomains` first and look up only the other hosts.
+
+### Multi-tenant hosts
+
+```php
+// .env.php
+'allowedDomains' => ['example.ch', 'www.example.ch', '*.example.ch'],
+
+// Own domains of the tenants, from the database
+final readonly class TenantHostPolicy implements HostPolicy
+{
+    public function __construct(private HostPatterns $allowedDomains, private TenantDomainRepository $domains) {}
+
+    public function isAllowed(string $host): bool
+    {
+        return $this->allowedDomains->isAllowed(host: $host)
+            || $this->domains->hasActiveHost(host: strtolower(string: $host));
+    }
+}
+
+$app = App::fromEnvironment(/* … */);
+$app->withHostPolicy(
+    hostPolicy: new TenantHostPolicy(allowedDomains: $app->core->allowedDomains, domains: $domains),
+)->run();
+```
+
+Wildcard DNS records and a wildcard TLS certificate are the job of the operator. Sessions stay per host: yuf sets no
+cookie domain (keep `session.cookie_domain` empty), so a login on one tenant host is not valid on another.
 - The client IP address (`HttpRequest::getRemoteAddress()`) is `REMOTE_ADDR` only: yuf never reads `X-Forwarded-For`
   or similar headers, a client could send them. Behind a reverse proxy or load balancer, configure the web server so
   that `REMOTE_ADDR` is the client address of the trusted proxy (Apache `mod_remoteip` with `RemoteIPHeader` and

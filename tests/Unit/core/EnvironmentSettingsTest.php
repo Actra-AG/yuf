@@ -45,7 +45,8 @@ final class EnvironmentSettingsTest extends TestCase
 
         $this->assertSame(E_ALL, $settings->errorReporting);
         $this->assertSame('Europe/Zurich', $settings->timeZone);
-        $this->assertSame(['example.com', 'www.example.com'], $settings->allowedDomains);
+        $this->assertSame(['example.com', 'www.example.com'], $settings->allowedDomains->getPatterns());
+        $this->assertTrue($settings->allowedDomains->isAllowed(host: 'www.example.com'));
         $this->assertSame('error@example.com', $settings->logEmailRecipient);
         $this->assertTrue($settings->debug);
         $this->assertSame('noindex,nofollow', $settings->robots);
@@ -118,7 +119,7 @@ final class EnvironmentSettingsTest extends TestCase
         );
 
         $this->assertSame('', $settings->logEmailRecipient);
-        $this->assertSame([], $settings->allowedDomains);
+        $this->assertSame([], $settings->allowedDomains->getPatterns());
     }
 
     public function testErrorReportingDefaultsToAll(): void
@@ -195,6 +196,12 @@ final class EnvironmentSettingsTest extends TestCase
             'allowedDomains',
             ['main' => 'example.com'],
             'The environment setting "allowedDomains" must be list of strings, array given.',
+        ];
+        yield 'invalid host pattern' => [
+            'allowedDomains',
+            ['example.com', '*.com'],
+            'The environment setting "allowedDomains" is invalid. The host pattern "*.com" is invalid: use '
+            . '"example.ch", "*.example.ch", "example.ch:8443", "127.0.0.1" or "[::1]".',
         ];
         yield 'unknown time zone' => [
             'defaultTimeZone',

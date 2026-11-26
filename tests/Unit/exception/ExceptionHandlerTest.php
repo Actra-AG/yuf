@@ -14,6 +14,7 @@ use actra\yuf\auth\UnauthorizedAccessRightException;
 use actra\yuf\clock\FixedClock;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentType;
+use actra\yuf\core\HostPatterns;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
@@ -352,7 +353,7 @@ final class ExceptionHandlerTest extends TestCase
             httpRequest: HttpRequestFactory::create(uri: $requestUri),
             routeCollection: new RouteCollection(routes: $routes),
             availableLanguages: new LanguageCollection(languages: $languages),
-            allowedDomains: ['example.com'],
+            hostPolicy: new HostPatterns(patterns: ['example.com']),
             session: null,
         );
     }
@@ -437,7 +438,7 @@ final class ExceptionHandlerTest extends TestCase
                 httpRequest: $httpRequest,
                 routeCollection: new RouteCollection(loginTarget: $loginTarget),
                 availableLanguages: new LanguageCollection(),
-                allowedDomains: ['example.com'],
+                hostPolicy: new HostPatterns(patterns: ['example.com']),
                 session: null,
             ),
         );
@@ -802,7 +803,7 @@ final class ExceptionHandlerTest extends TestCase
                 ),
             ]),
             availableLanguages: $languages,
-            allowedDomains: ['example.com'],
+            hostPolicy: new HostPatterns(patterns: ['example.com']),
             session: null,
             requestLanguageProvider: $provider,
         );
@@ -1019,6 +1020,23 @@ final class ExceptionHandlerTest extends TestCase
         $this->assertStringNotContainsString('<b>file', $content);
         $this->assertStringContainsString('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;', $content);
         $this->assertStringContainsString('/tmp/&lt;b&gt;file&lt;/b&gt;.php:4', $content);
+    }
+
+    public function testDebugPageEscapesTheHostOfADeniedHost(): void
+    {
+        $handler = $this->register(context: $this->createContext(isDebug: true));
+
+        $content = ExceptionHandlerTest::content(
+            response: $handler->createResponse(
+                throwable: new NotFoundException(
+                    message: '<script>alert(1)</script>.example.ch is not set as allowed domain in your environment '
+                    . 'settings.',
+                ),
+            ),
+        );
+
+        $this->assertStringNotContainsString('<script>', $content);
+        $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;.example.ch', $content);
     }
 
     public function testDebugPageShowsTheCauseOfAWrappedException(): void

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\core;
 
+use actra\yuf\core\HostPatterns;
 use actra\yuf\core\Language;
 use actra\yuf\core\LanguageCollection;
 use actra\yuf\core\RequestHandler;
@@ -77,7 +78,7 @@ final class RequestHandlerPreferredLanguageTest extends TestCase
                 ],
             ),
             availableLanguages: $available,
-            allowedDomains: ['example.com'],
+            hostPolicy: new HostPatterns(patterns: ['example.com']),
             session: $session,
         );
         $handler->rememberPreferredLanguage(resolvedRoute: $handler->resolveRoute());
@@ -316,7 +317,7 @@ final class RequestHandlerPreferredLanguageTest extends TestCase
                 ],
             ),
             availableLanguages: $this->bothLanguages(),
-            allowedDomains: ['example.com'],
+            hostPolicy: new HostPatterns(patterns: ['example.com']),
             session: new Session(storage: $storage),
         );
 

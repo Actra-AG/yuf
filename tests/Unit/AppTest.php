@@ -35,6 +35,7 @@ use actra\yuf\tests\Double\core\ConfigurableTestView;
 use actra\yuf\tests\Double\core\CoreWorkDirectory;
 use actra\yuf\tests\Double\core\FixedRequestLanguageProvider;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\core\RecordingHostPolicy;
 use actra\yuf\tests\Double\core\RecordingLogger;
 use actra\yuf\tests\Double\core\TestView;
 use actra\yuf\tests\Double\session\NonStartingSessionHandler;
@@ -450,6 +451,20 @@ final class AppTest extends TestCase
         $httpResponse = $this->createApp()->withCsp(cspPolicySettings: null)->prepare();
 
         $this->assertNull($httpResponse->getHeader(key: 'Content-Security-Policy'));
+    }
+
+    public function testWithHostPolicyDecidesAboutTheHost(): void
+    {
+        // example.com is in allowedDomains, but the host policy replaces them
+        $hostPolicy = new RecordingHostPolicy(allowedHosts: []);
+
+        try {
+            $this->createApp()->withHostPolicy(hostPolicy: $hostPolicy)->prepare();
+            AppTest::fail('A denied host must throw a NotFoundException.');
+        } catch (NotFoundException) {
+        }
+
+        $this->assertSame(['example.com'], $hostPolicy->askedHosts);
     }
 
     public function testWithoutSessionHasNoSession(): void

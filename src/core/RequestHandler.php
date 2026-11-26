@@ -47,7 +47,7 @@ final class RequestHandler
      * Prepares the request without resolving the route: the language, the path parts, the file name and the default
      * routes are available afterwards (also for the error page of an unknown route). Call `resolveRoute()` next.
      *
-     * @param list<string> $allowedDomains
+     * @param HostPolicy $hostPolicy Decides whether the host of the request is served
      * @param ?Session $session Remembers the language of the last route that has one (`rememberPreferredLanguage()`),
      *                          and the redirect of "/" reads it, but only while the session is active
      *                          (`Session::isActive()`: a visitor without a session cookie gets none; `Core::$session`,
@@ -63,7 +63,7 @@ final class RequestHandler
         private readonly HttpRequest $httpRequest,
         private readonly RouteCollection $routeCollection,
         private readonly LanguageCollection $availableLanguages,
-        private readonly array $allowedDomains,
+        private readonly HostPolicy $hostPolicy,
         private readonly ?Session $session,
         private readonly ResponseSender $responseSender = new NativeResponseSender(),
         private readonly ?RequestLanguageProvider $requestLanguageProvider = null,
@@ -216,13 +216,7 @@ final class RequestHandler
     {
         $host = $this->httpRequest->getHost();
 
-        if (
-            !in_array(
-                needle: $host,
-                haystack: $this->allowedDomains,
-                strict: true,
-            )
-        ) {
+        if (!$this->hostPolicy->isAllowed(host: $host)) {
             throw new NotFoundException(
                 message: $host . ' is not set as allowed domain in your environment settings.',
             );

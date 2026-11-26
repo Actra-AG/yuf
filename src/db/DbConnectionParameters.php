@@ -64,6 +64,9 @@ final readonly class DbConnectionParameters
     private static function createMysqlInitCommand(DbSettings $dbSettings): ?string
     {
         $assignments = [];
+        if ($dbSettings->timeZone !== null) {
+            $assignments[] = "time_zone='" . $dbSettings->timeZone . "'";
+        }
         if ($dbSettings->timeNamesLanguage !== null) {
             $assignments[] = "lc_time_names='" . $dbSettings->timeNamesLanguage . "'";
         }

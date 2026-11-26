@@ -21,10 +21,18 @@ final readonly class DbSettings
     private const string CHARSET_PATTERN = '/^[A-Za-z0-9_]+$/D';
     private const string TIME_NAMES_LANGUAGE_PATTERN = '/^[a-z]{2,3}_[A-Z]{2}(@[a-z]+)?$/D';
     private const string DEFAULT_CHARSET = 'utf8mb4';
+    private const string NAMED_TIME_ZONE_PATTERN = '/^[A-Za-z][A-Za-z0-9_+-]*(\/[A-Za-z0-9_+-]+){0,2}$/D';
+    /** The range MySQL accepts (-13:59 to +14:00); MariaDB rejects some of it when connecting. */
+    private const string TIME_ZONE_OFFSET_PATTERN = '/^(?:[+-](?:0\d|1[0-3]):[0-5]\d|\+14:00)$/D';
+    private const int MAX_TIME_ZONE_LENGTH = 64;
 
     public string $charset;
 
     /**
+     * @param ?string $timeZone Time zone of the database session (`time_zone`): a name (`Europe/Zurich`, `UTC`, needs
+     *                          the time zone tables of the server) or a fixed offset (`+01:00`, ignores daylight
+     *                          saving time); null keeps the zone of the server. Pass the `defaultTimeZone` of the
+     *                          environment settings, so that `NOW()` and `TIMESTAMP` columns agree with PHP.
      * @param ?string $charset null or empty for `utf8mb4`
      * @param ?string $timeNamesLanguage MySQL locale of the day and month names (`lc_time_names`), e.g. `de_CH`;
      *                                   null to keep the default of the server
@@ -41,6 +49,7 @@ final readonly class DbSettings
         public string $userName,
         #[SensitiveParameter]
         public string $password,
+        public ?string $timeZone,
         ?string $charset = null,
         public ?string $timeNamesLanguage = 'de_CH',
         public bool $sqlSafeUpdates = true,
@@ -54,6 +63,9 @@ final readonly class DbSettings
         DbSettings::assertDsnValue(name: 'hostName', value: $hostName);
         DbSettings::assertDsnValue(name: 'databaseName', value: $databaseName);
         $this->charset = DbSettings::normalizeCharset(charset: $charset);
+        if ($timeZone !== null) {
+            DbSettings::assertTimeZone(timeZone: $timeZone);
+        }
         if (
             $timeNamesLanguage !== null
             && preg_match(pattern: DbSettings::TIME_NAMES_LANGUAGE_PATTERN, subject: $timeNamesLanguage) !== 1
@@ -61,6 +73,26 @@ final readonly class DbSettings
             throw new InvalidArgumentException(
                 message: 'The time names language must be a MySQL locale like "de_CH", got "'
                 . $timeNamesLanguage . '".',
+            );
+        }
+    }
+
+    /**
+     * The value ends up in the init command, so only names and offsets in the documented formats are accepted.
+     * `SYSTEM` is refused: it is what the option is meant to replace.
+     */
+    private static function assertTimeZone(string $timeZone): void
+    {
+        $isValid = mb_strlen(string: $timeZone) <= DbSettings::MAX_TIME_ZONE_LENGTH
+            && mb_strtoupper(string: $timeZone) !== 'SYSTEM'
+            && (
+                preg_match(pattern: DbSettings::NAMED_TIME_ZONE_PATTERN, subject: $timeZone) === 1
+                || preg_match(pattern: DbSettings::TIME_ZONE_OFFSET_PATTERN, subject: $timeZone) === 1
+            );
+        if (!$isValid) {
+            throw new InvalidArgumentException(
+                message: 'The time zone must be a name like "Europe/Zurich" or an offset like "+01:00", got "'
+                . $timeZone . '".',
             );
         }
     }

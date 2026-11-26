@@ -45,7 +45,7 @@ class FrameworkDb extends PDO
     private readonly DbQueryLogList $queryLog;
 
     /**
-     * @throws PDOException If the connection cannot be opened. The exception does not carry the password.
+     * @throws DbConnectionException If the connection cannot be opened. The exception does not carry the password.
      */
     public function __construct(
         DbConnectionParameters $connectionParameters,
@@ -61,10 +61,7 @@ class FrameworkDb extends PDO
             );
         } catch (Throwable $throwable) {
             // We do not want to leak the database password in the StackTrace of the caught (PDO)Exception.
-            throw new PDOException(
-                $throwable->getMessage(),
-                (int) $throwable->getCode(),
-            );
+            throw DbConnectionException::fromThrowable(throwable: $throwable);
         }
     }
 

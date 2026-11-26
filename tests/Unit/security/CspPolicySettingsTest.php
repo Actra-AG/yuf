@@ -168,6 +168,19 @@ final class CspPolicySettingsTest extends TestCase
         $this->assertStringNotContainsString('script-src *', $policy);
     }
 
+    public function testHostOfAWildcardIsPutIntoThePolicyAsRequested(): void
+    {
+        $settings = new CspPolicySettings(defaultSrc: '{PROTOCOL}://{HOST}');
+
+        $policy = $settings->getHttpHeaderDataString(
+            nonce: 'n',
+            httpRequest: HttpRequestFactory::create(host: 'dubach.example.ch'),
+        );
+
+        // The checked host of the request, never the pattern "*.example.ch"
+        $this->assertStringStartsWith('default-src https://dubach.example.ch;', $policy);
+    }
+
     public function testIpv6HostWithPortIsKept(): void
     {
         $settings = new CspPolicySettings(defaultSrc: '{PROTOCOL}://{HOST}');

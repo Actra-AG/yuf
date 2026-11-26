@@ -23,6 +23,8 @@ use actra\yuf\core\DirectoryPathResolver;
 use actra\yuf\core\EnvironmentSettings;
 use actra\yuf\core\ErrorHandler;
 use actra\yuf\core\FileLogger;
+use actra\yuf\core\HostPatterns;
+use actra\yuf\core\HostPolicy;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\HttpStatusCodeEnum;
@@ -106,8 +108,8 @@ final class Core
     public readonly string $settingsDirectory;
     public readonly string $snippetsDirectory;
     public readonly string $viewDirectory;
-    /** @var list<string> */
-    public readonly array $allowedDomains;
+    /** The hosts of `allowedDomains`: check a host with `isAllowed()` */
+    public readonly HostPatterns $allowedDomains;
     public readonly LanguageCollection $availableLanguages;
     public readonly bool $debug;
     public private(set) ?CspPolicySettings $cspPolicySettings = null;
@@ -300,7 +302,7 @@ final class Core
 
     /**
      * Prepares the response of the request: a redirect to HTTPS for a request without SSL (303, nothing else is set
-     * up for it; a host that is not in `allowedDomains` gets a 404 without redirect), else the response of the
+     * up for it; a host that the host policy does not allow gets a 404 without redirect), else the response of the
      * matching route. Registers the exception handler, so call it once, as the last statement of the front controller
      * before sending the response.
      *
@@ -317,6 +319,9 @@ final class Core
      *                                        `usesRequestLanguage` (e.g. the profile language of the logged-in user,
      *                                        see `RequestLanguageResolver`); `null`: the session, the browser and the
      *                                        first language decide
+     * @param ?HostPolicy $hostPolicy Decides which hosts are served, e.g. one that looks up the domains of tenants
+     *                                        (see `HostPolicy`); `null`: `allowedDomains`. The check cannot be
+     *                                        switched off
      *
      * @throws InvalidArgumentException for an invalid template tag name
      * @throws LogicException if called twice, without a route or for a route without default content type
@@ -330,17 +335,15 @@ final class Core
         array $templateTags = [],
         ?Closure $navigationProvider = null,
         ?RequestLanguageProvider $requestLanguageProvider = null,
+        ?HostPolicy $hostPolicy = null,
     ): HttpResponse {
         if ($this->httpResponse !== null) {
             throw new LogicException(message: 'The HttpResponse is already prepared');
         }
+        $hostPolicy ??= $this->allowedDomains;
         if (!$this->httpRequest->isSsl()) {
             // The Host header is only used for the redirect after it was checked: an unknown host gets a 404
-            if (!in_array(
-                needle: $this->httpRequest->getHost(),
-                haystack: $this->allowedDomains,
-                strict: true,
-            )) {
+            if (!$hostPolicy->isAllowed(host: $this->httpRequest->getHost())) {
                 $this->httpResponse = HttpResponse::createStatusResponse(
                     httpStatusCode: HttpStatusCodeEnum::HTTP_NOT_FOUND,
                 );
@@ -399,7 +402,7 @@ final class Core
             httpRequest: $this->httpRequest,
             routeCollection: $routeCollection,
             availableLanguages: $this->availableLanguages,
-            allowedDomains: $this->allowedDomains,
+            hostPolicy: $hostPolicy,
             session: $this->session,
             responseSender: $this->responseSender,
             requestLanguageProvider: $requestLanguageProvider,

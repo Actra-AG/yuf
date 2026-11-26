@@ -348,9 +348,10 @@ final readonly class HttpRequest
     }
 
     /**
-     * The host of the `Host` header: sent by the client, so it is only trustworthy after it was checked against the
-     * allowed domains of the environment settings (`allowedDomains`; `Core::prepareHttpResponse()` does it before
-     * anything else is done for a request). Absolute URLs use it, so a site with several domains lists all of them.
+     * The host of the `Host` header as the client sent it (with the port, if any, not lower-cased): only trustworthy
+     * after the host policy allowed it (`allowedDomains` or the `HostPolicy` of the project;
+     * `Core::prepareHttpResponse()` checks it before anything else is done for a request). Absolute URLs use it, so a
+     * site with several domains allows all of them.
      */
     public function getHost(): string
     {

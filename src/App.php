@@ -12,6 +12,7 @@ namespace actra\yuf;
 use actra\yuf\clock\Clock;
 use actra\yuf\clock\SystemClock;
 use actra\yuf\core\ContentType;
+use actra\yuf\core\HostPolicy;
 use actra\yuf\core\HtmlFileExtensionEnum;
 use actra\yuf\core\HttpResponse;
 use actra\yuf\core\Language;
@@ -73,6 +74,7 @@ final readonly class App
         private array $templateTags = [],
         private ?Closure $navigationProvider = null,
         private ?RequestLanguageProvider $requestLanguageProvider = null,
+        private ?HostPolicy $hostPolicy = null,
     ) {}
 
     /**
@@ -387,6 +389,15 @@ final readonly class App
     }
 
     /**
+     * Decides which hosts are served instead of `allowedDomains`, e.g. hosts of tenants from a database (see
+     * `HostPolicy`).
+     */
+    public function withHostPolicy(HostPolicy $hostPolicy): App
+    {
+        return clone($this, ['hostPolicy' => $hostPolicy]);
+    }
+
+    /**
      * @param ?CspPolicySettings $cspPolicySettings `null`: no `Content-Security-Policy` header
      */
     public function withCsp(?CspPolicySettings $cspPolicySettings): App
@@ -505,6 +516,7 @@ final readonly class App
             templateTags: $app->templateTags,
             navigationProvider: $app->navigationProvider,
             requestLanguageProvider: $app->requestLanguageProvider,
+            hostPolicy: $app->hostPolicy,
         );
     }
 

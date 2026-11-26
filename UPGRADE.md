@@ -4,6 +4,49 @@ Changes of yuf, newest first. ⚠️ marks breaking changes: read them before `c
 [v7](docs/upgrade/v7.md), [v6](docs/upgrade/v6.md), [v5](docs/upgrade/v5.md), [v4](docs/upgrade/v4.md),
 [v3](docs/upgrade/v3.md), [v2](docs/upgrade/v2.md), [v1](docs/upgrade/v1.md), [v0](docs/upgrade/v0.md).
 
+## v8.21.0 (2026-11-26)
+
+- ⚠️ `DbSettings` has the new required argument `timeZone:` (before `charset:`): the database session uses the time
+  zone of PHP, so `NOW()`, `CURRENT_TIMESTAMP` and `TIMESTAMP` columns agree with the dates yuf reads and writes. Pass
+  `timeZone: $environmentSettings->timeZone` (load the time zone tables of the server first, otherwise the connection
+  fails with a message saying so), or `timeZone: null` to keep the zone of the server. `DATETIME` data is not changed.
+  See [database.md](docs/database.md#connection).
+
+  ```php
+  // before
+  new DbSettings(hostName: $host, databaseName: $name, userName: $user, password: $password);
+  // after
+  new DbSettings(
+      hostName: $host,
+      databaseName: $name,
+      userName: $user,
+      password: $password,
+      timeZone: $environmentSettings->timeZone,
+  );
+  ```
+
+- New `DbConnectionException` (a `PDOException`): `FrameworkDb` throws it if the connection cannot be opened.
+- ⚠️ `Core::$allowedDomains` and `EnvironmentSettings::$allowedDomains` are `HostPatterns` instead of a list. Check a
+  host with `isAllowed()`; `getPatterns()` returns the list.
+
+  ```php
+  // before
+  in_array(needle: $host, haystack: $core->allowedDomains, strict: true);
+  // after
+  $core->allowedDomains->isAllowed(host: $host);
+  ```
+
+- ⚠️ `RequestHandler::__construct()` takes `hostPolicy:` (a `HostPolicy`, e.g. `$core->allowedDomains`) instead of
+  `allowedDomains:`.
+- ⚠️ Hosts are compared in lower case, and an invalid entry of `allowedDomains` throws an `UnexpectedValueException`
+  at startup (before: it never matched).
+- New: `allowedDomains` accepts one-label wildcards (`*.example.ch`: `a.example.ch`, not `example.ch` or
+  `a.b.example.ch`). New interface `HostPolicy` for hosts from a database, passed to
+  `Core::prepareHttpResponse(hostPolicy:)` or `App::withHostPolicy()`; `null` keeps `allowedDomains`. See
+  [setup.md](docs/setup.md#host-and-client-ip-address).
+
+---
+
 ## v8.20.0 (2026-11-25)
 
 - Fix: parallel requests creating the same directory (template cache, file cache, rate limits, uploads, logs,

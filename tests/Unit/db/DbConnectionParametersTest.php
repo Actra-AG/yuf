@@ -21,13 +21,18 @@ use PHPUnit\Framework\TestCase;
  */
 final class DbConnectionParametersTest extends TestCase
 {
-    private function create(?string $timeNamesLanguage, bool $sqlSafeUpdates, ?string $charset = null): DbSettings
-    {
+    private function create(
+        ?string $timeNamesLanguage,
+        bool $sqlSafeUpdates,
+        ?string $charset = null,
+        ?string $timeZone = null,
+    ): DbSettings {
         return new DbSettings(
             hostName: 'db.example.com',
             databaseName: 'app',
             userName: 'app_user',
             password: 'not-a-real-password',
+            timeZone: $timeZone,
             charset: $charset,
             timeNamesLanguage: $timeNamesLanguage,
             sqlSafeUpdates: $sqlSafeUpdates,
@@ -75,6 +80,7 @@ final class DbConnectionParametersTest extends TestCase
                 databaseName: 'app',
                 userName: 'app_user',
                 password: 'not-a-real-password',
+                timeZone: null,
                 timeNamesLanguage: null,
             ),
         );
@@ -97,6 +103,33 @@ final class DbConnectionParametersTest extends TestCase
         );
     }
 
+    public function testTimeZoneIsSetFirst(): void
+    {
+        $parameters = DbConnectionParameters::forMysql(
+            dbSettings: $this->create(timeNamesLanguage: 'de_CH', sqlSafeUpdates: true, timeZone: 'Europe/Zurich'),
+        );
+
+        $this->assertSame(
+            [
+                PDO::ATTR_TIMEOUT => 3,
+                Mysql::ATTR_INIT_COMMAND => "SET time_zone='Europe/Zurich', lc_time_names='de_CH', sql_safe_updates=1",
+            ],
+            $parameters->options,
+        );
+    }
+
+    public function testOnlyTheTimeZoneIsSet(): void
+    {
+        $parameters = DbConnectionParameters::forMysql(
+            dbSettings: $this->create(timeNamesLanguage: null, sqlSafeUpdates: false, timeZone: 'UTC'),
+        );
+
+        $this->assertSame(
+            [PDO::ATTR_TIMEOUT => 3, Mysql::ATTR_INIT_COMMAND => "SET time_zone='UTC'"],
+            $parameters->options,
+        );
+    }
+
     public function testNoInitCommandWithoutAnythingToSet(): void
     {
         $parameters = DbConnectionParameters::forMysql(
@@ -114,6 +147,7 @@ final class DbConnectionParametersTest extends TestCase
                 databaseName: 'app',
                 userName: 'app_user',
                 password: 'not-a-real-password',
+                timeZone: null,
                 connectTimeoutInSeconds: 1,
             ),
         );
@@ -133,6 +167,7 @@ final class DbConnectionParametersTest extends TestCase
             databaseName: 'app',
             userName: 'app_user',
             password: 'not-a-real-password',
+            timeZone: null,
             connectTimeoutInSeconds: 0,
         );
     }

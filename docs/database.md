@@ -13,6 +13,7 @@ $db = new FrameworkDb(
             databaseName: 'app',
             userName: 'app_user',
             password: $password,
+            timeZone: $environmentSettings->timeZone,
         ),
     ),
     queryLog: new DbQueryLogList(clock: new SystemClock()),
@@ -22,6 +23,12 @@ $db = new FrameworkDb(
 - `DbSettings` validates its values (they end up in the DSN and the init command). `sqlSafeUpdates` is on by default
   (MySQL refuses `UPDATE` and `DELETE` without a key). `connectTimeoutInSeconds` (default 3) limits the wait for an
   unreachable database.
+- `timeZone` (required) sets the time zone of the database session (`time_zone`), so that `NOW()`,
+  `CURRENT_TIMESTAMP`, `CURDATE()` and `TIMESTAMP` columns agree with PHP. Pass the `defaultTimeZone` of the
+  environment settings, or `null` to keep the zone of the server. A name (`Europe/Zurich`, `UTC`) needs the time zone
+  tables of the server (`mariadb-tzinfo-to-sql` / `mysql_tzinfo_to_sql`); without them the connection fails with a
+  `DbConnectionException` saying so. A fixed offset (`+01:00`) ignores daylight saving time: use it only for zones
+  without. Check a server with `SELECT @@session.time_zone, NOW()`.
 - Use `?` placeholders for every value (`select()`, `selectRows()`, `selectRow()`, `execute()`, `prepareSelect()`). The
   values are `float|int|string|null`: convert booleans to `0` / `1`.
 - `createInQuery()` creates the placeholders of an `IN (...)` list, `getLastInsertId()` returns the generated ID as
@@ -71,7 +78,10 @@ $users = array_map(callback: User::fromRow(...), array: $db->selectRows(sql: 'SE
 - `iterateRows()` (`DbSelectStmt::executeAndIterate()`) returns the rows one by one, for exports and cron jobs over
   large tables. A CSV export passes them to `CsvFile::pushDownloadAndExit(moreRows: …)`, which writes them one by one.
 - `DbSelectStmt` has the same (`executeAndFetchRows()`, `executeAndFetchRow()`).
-- Date and time columns are parsed in the PHP default time zone: the time zone of the database session must match.
+- Date and time columns are parsed in the PHP default time zone: set `DbSettings(timeZone:)` to the same zone.
+  `DATETIME` columns are stored as given, `TIMESTAMP` columns are converted with the session zone; setting the option
+  does not change existing data. Local times in the hour that is repeated when daylight saving time ends cannot be told
+  apart in `DATETIME` columns.
   Write them with `DbDateTime::toDateTimeString()` / `toDateString()` (and the `toNullable…` variants) instead of
   `->format('Y-m-d H:i:s')`: they convert the value to the default time zone first, so a value in another time zone
   (e.g. UTC from an external API) reads back as the same point in time.

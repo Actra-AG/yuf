@@ -34,6 +34,7 @@ use actra\yuf\session\SessionPreferredLanguage;
 use actra\yuf\template\TemplateData;
 use actra\yuf\tests\Double\core\CoreWorkDirectory;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\core\RecordingHostPolicy;
 use actra\yuf\tests\Double\core\RecordingLogger;
 use actra\yuf\tests\Double\core\TestView;
 use actra\yuf\tests\Double\session\NonStartingSessionHandler;
@@ -77,13 +78,21 @@ final class CoreTest extends TestCase
         return is_array(value: $handler) && $handler[0] instanceof ExceptionHandler;
     }
 
+    /**
+     * @param list<string> $allowedDomains
+     */
     private function createCore(
         ?HttpRequest $httpRequest = null,
         int $copyrightYear = 2020,
         bool $debug = false,
+        array $allowedDomains = ['example.com'],
     ): Core {
         return new Core(
-            settings: $this->workDirectory->createSettings(copyrightYear: $copyrightYear, debug: $debug),
+            settings: $this->workDirectory->createSettings(
+                copyrightYear: $copyrightYear,
+                allowedDomains: $allowedDomains,
+                debug: $debug,
+            ),
             httpRequest: $httpRequest ?? HttpRequestFactory::create(),
             responseSender: new RecordingResponseSender(),
         );
@@ -132,7 +141,7 @@ final class CoreTest extends TestCase
         $this->assertSame($settings->settingsDirectory, $core->settingsDirectory);
         $this->assertSame($settings->snippetsDirectory, $core->snippetsDirectory);
         $this->assertSame($settings->viewDirectory, $core->viewDirectory);
-        $this->assertSame(['example.com'], $core->allowedDomains);
+        $this->assertSame(['example.com'], $core->allowedDomains->getPatterns());
         $this->assertFalse($core->debug);
         $this->assertSame('noindex', $core->robots);
         $this->assertTrue($core->availableLanguages->isEmpty());
@@ -488,6 +497,104 @@ final class CoreTest extends TestCase
         $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $httpResponse->httpStatusCode);
         $this->assertNull($httpResponse->getHeader(key: 'Location'));
         $this->assertNull($httpResponse->getContentString());
+    }
+
+    public function testPrepareHttpResponseRedirectsAnInsecureRequestOfAWildcardHost(): void
+    {
+        $core = $this->createCore(
+            httpRequest: HttpRequestFactory::create(
+                host: 'dubach.example.ch',
+                uri: '/page.html',
+                protocol: ProtocolEnum::HTTP,
+                port: 80,
+            ),
+            allowedDomains: ['example.ch', '*.example.ch'],
+        );
+
+        $httpResponse = $core->prepareHttpResponse();
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_SEE_OTHER, $httpResponse->httpStatusCode);
+        $this->assertSame('https://dubach.example.ch/page.html', $httpResponse->getHeader(key: 'Location'));
+    }
+
+    public function testPrepareHttpResponseDoesNotRedirectTwoLabelsInFrontOfAWildcard(): void
+    {
+        $core = $this->createCore(
+            httpRequest: HttpRequestFactory::create(
+                host: 'a.b.example.ch',
+                uri: '/page.html',
+                protocol: ProtocolEnum::HTTP,
+                port: 80,
+            ),
+            allowedDomains: ['example.ch', '*.example.ch'],
+        );
+
+        $httpResponse = $core->prepareHttpResponse();
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $httpResponse->httpStatusCode);
+        $this->assertNull($httpResponse->getHeader(key: 'Location'));
+    }
+
+    public function testPrepareHttpResponseRedirectsAnInsecureRequestOfAHostTheHostPolicyAllows(): void
+    {
+        $core = $this->createCore(
+            httpRequest: HttpRequestFactory::create(
+                host: 'termin.tenant.ch',
+                uri: '/page.html',
+                protocol: ProtocolEnum::HTTP,
+                port: 80,
+            ),
+        );
+
+        $httpResponse = $core->prepareHttpResponse(
+            hostPolicy: new RecordingHostPolicy(allowedHosts: ['termin.tenant.ch']),
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_SEE_OTHER, $httpResponse->httpStatusCode);
+        $this->assertSame('https://termin.tenant.ch/page.html', $httpResponse->getHeader(key: 'Location'));
+    }
+
+    public function testPrepareHttpResponseDoesNotRedirectAnInsecureRequestOfAHostTheHostPolicyDenies(): void
+    {
+        // example.com is in allowedDomains, but the host policy replaces them
+        $core = $this->createCore(
+            httpRequest: HttpRequestFactory::create(uri: '/page.html', protocol: ProtocolEnum::HTTP, port: 80),
+        );
+
+        $httpResponse = $core->prepareHttpResponse(hostPolicy: new RecordingHostPolicy(allowedHosts: []));
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_NOT_FOUND, $httpResponse->httpStatusCode);
+        $this->assertNull($httpResponse->getHeader(key: 'Location'));
+    }
+
+    public function testPrepareHttpResponseServesAHostTheHostPolicyAllows(): void
+    {
+        $hostPolicy = new RecordingHostPolicy(allowedHosts: ['termin.tenant.ch']);
+        $core = $this->createCore(httpRequest: HttpRequestFactory::create(host: 'termin.tenant.ch'));
+
+        $httpResponse = $core->prepareHttpResponse(
+            logger: new RecordingLogger(),
+            routeCollection: new RouteCollection(routes: [$this->createTextRoute()]),
+            individualSessionHandler: false,
+            hostPolicy: $hostPolicy,
+        );
+
+        $this->assertSame(HttpStatusCodeEnum::HTTP_OK, $httpResponse->httpStatusCode);
+        $this->assertSame(['termin.tenant.ch'], $hostPolicy->askedHosts);
+    }
+
+    public function testPrepareHttpResponseThrowsForAHostTheHostPolicyDenies(): void
+    {
+        $core = $this->createCore();
+
+        $this->expectException(NotFoundException::class);
+        $this->expectExceptionMessageIs('example.com is not set as allowed domain in your environment settings.');
+        $core->prepareHttpResponse(
+            logger: new RecordingLogger(),
+            routeCollection: new RouteCollection(routes: [$this->createTextRoute()]),
+            individualSessionHandler: false,
+            hostPolicy: new RecordingHostPolicy(allowedHosts: []),
+        );
     }
 
     public function testPrepareHttpResponseRedirectsWithoutAnyRoute(): void

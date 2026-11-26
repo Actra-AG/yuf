@@ -17,7 +17,8 @@ use actra\yuf\core\HttpRequest;
  * request (`CspNonce`), which is added to `script-src` and `style-src` unless the directive contains `'none'` or
  * `'unsafe-inline'` (a nonce would switch `'unsafe-inline'` off). `{PROTOCOL}` and `{HOST}` in a value are replaced
  * with the protocol and host of the request (a host with other characters than letters, digits, `.`, `:`, `-`, `[` and
- * `]` becomes `invalid.invalid`). The values are trusted configuration of the application, not user input.
+ * `]` becomes `invalid.invalid`). `Core` checks the host with the host policy (`allowedDomains`) before, so `{HOST}` is
+ * always an allowed host, never a pattern like `*.example.ch`. The values are trusted configuration of the application, not user input.
  */
 final readonly class CspPolicySettings
 {

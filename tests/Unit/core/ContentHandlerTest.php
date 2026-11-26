@@ -12,6 +12,7 @@ namespace actra\yuf\tests\Unit\core;
 use actra\yuf\core\BaseView;
 use actra\yuf\core\ContentHandler;
 use actra\yuf\core\ContentType;
+use actra\yuf\core\HostPatterns;
 use actra\yuf\core\HttpRequest;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\LanguageCollection;
@@ -86,7 +87,7 @@ final class ContentHandlerTest extends TestCase
             httpRequest: $httpRequest,
             routeCollection: new RouteCollection(routes: [$route]),
             availableLanguages: new LanguageCollection(),
-            allowedDomains: ['example.com'],
+            hostPolicy: new HostPatterns(patterns: ['example.com']),
             session: null,
             responseSender: new RecordingResponseSender(),
         );

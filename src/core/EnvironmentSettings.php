@@ -12,13 +12,14 @@ namespace actra\yuf\core;
 use BackedEnum;
 use DateTimeZone;
 use Exception;
+use InvalidArgumentException;
 use ReflectionEnum;
 use UnexpectedValueException;
 
 /**
  * The settings of the environment file (`.env.php`, returns an array), checked once when `Core` starts:
  * `defaultErrorReporting` (int, optional, default `E_ALL`), `defaultTimeZone` (string), `allowedDomains` (list of
- * host names), `logEmailRecipient` (string, may be empty), `debug` (bool), `robots` (string) and
+ * host patterns, see `HostPatterns`), `logEmailRecipient` (string, may be empty), `debug` (bool), `robots` (string) and
  * `checkTemplateChanges` (bool, optional, default: the value of `debug`) are typed properties.
  * All keys of the file (also the own keys of a project, used as given, e.g. `mailer.hostname`) are read with
  * `getString()`, `getInt()`, `getBool()`, `getStringList()` and `getEnum()` (a backed enum by its value), which throw
@@ -27,7 +28,6 @@ use UnexpectedValueException;
 final readonly class EnvironmentSettings
 {
     /**
-     * @param list<string> $allowedDomains
      * @param array<array-key, mixed> $values All keys of the environment file
      * @param bool $checkTemplateChanges Whether a changed template is compiled again; `false` in production saves the
      *     file checks of every render, then the template cache must be cleared on every deployment
@@ -35,7 +35,7 @@ final readonly class EnvironmentSettings
     public function __construct(
         public int $errorReporting,
         public string $timeZone,
-        public array $allowedDomains,
+        public HostPatterns $allowedDomains,
         public string $logEmailRecipient,
         public bool $debug,
         public string $robots,
@@ -46,7 +46,7 @@ final readonly class EnvironmentSettings
     /**
      * @param array<array-key, mixed> $values The array of the environment file
      *
-     * @throws UnexpectedValueException if a setting is missing or has the wrong type
+     * @throws UnexpectedValueException if a setting is missing, has the wrong type or is invalid
      */
     public static function fromArray(array $values): EnvironmentSettings
     {
@@ -57,7 +57,7 @@ final readonly class EnvironmentSettings
                 default: E_ALL,
             ),
             timeZone: EnvironmentSettings::readTimeZone(values: $values, key: 'defaultTimeZone'),
-            allowedDomains: EnvironmentSettings::readStringList(values: $values, key: 'allowedDomains'),
+            allowedDomains: EnvironmentSettings::readHostPatterns(values: $values, key: 'allowedDomains'),
             logEmailRecipient: EnvironmentSettings::readString(values: $values, key: 'logEmailRecipient'),
             debug: EnvironmentSettings::readBoolean(values: $values, key: 'debug'),
             robots: EnvironmentSettings::readString(values: $values, key: 'robots'),
@@ -269,6 +269,21 @@ final readonly class EnvironmentSettings
         }
 
         return $timeZone;
+    }
+
+    /**
+     * @param array<array-key, mixed> $values
+     */
+    private static function readHostPatterns(array $values, string $key): HostPatterns
+    {
+        try {
+            return new HostPatterns(patterns: EnvironmentSettings::readStringList(values: $values, key: $key));
+        } catch (InvalidArgumentException $exception) {
+            throw new UnexpectedValueException(
+                message: 'The environment setting "' . $key . '" is invalid. ' . $exception->getMessage(),
+                previous: $exception,
+            );
+        }
     }
 
     private static function createTypeException(

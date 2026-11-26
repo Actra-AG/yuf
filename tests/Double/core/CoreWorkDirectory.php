@@ -11,6 +11,7 @@ namespace actra\yuf\tests\Double\core;
 
 use actra\yuf\core\CoreSettings;
 use actra\yuf\core\EnvironmentSettings;
+use actra\yuf\core\HostPatterns;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -57,7 +58,7 @@ final class CoreWorkDirectory
             environmentSettings: new EnvironmentSettings(
                 errorReporting: E_ALL,
                 timeZone: 'UTC',
-                allowedDomains: $allowedDomains,
+                allowedDomains: new HostPatterns(patterns: $allowedDomains),
                 logEmailRecipient: '',
                 debug: $debug,
                 robots: 'noindex',

@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace actra\yuf\tests\Unit\core;
 
+use actra\yuf\core\HostPatterns;
+use actra\yuf\core\HostPolicy;
 use actra\yuf\core\HttpStatusCodeEnum;
 use actra\yuf\core\Language;
 use actra\yuf\core\LanguageCollection;
@@ -21,6 +23,7 @@ use actra\yuf\core\Route;
 use actra\yuf\core\RouteCollection;
 use actra\yuf\exception\NotFoundException;
 use actra\yuf\tests\Double\core\HttpRequestFactory;
+use actra\yuf\tests\Double\core\RecordingHostPolicy;
 use LogicException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -60,12 +63,13 @@ final class RequestHandlerTest extends TestCase
         string $host = 'example.com',
         ResponseSender $responseSender = new NativeResponseSender(),
         string $queryString = '',
+        ?HostPolicy $hostPolicy = null,
     ): RequestHandler {
         return new RequestHandler(
             httpRequest: HttpRequestFactory::create(host: $host, uri: $requestUri, queryString: $queryString),
             routeCollection: $routeCollection,
             availableLanguages: $availableLanguages,
-            allowedDomains: [$allowedDomain ?? $host],
+            hostPolicy: $hostPolicy ?? new HostPatterns(patterns: [$allowedDomain ?? $host]),
             session: null,
             responseSender: $responseSender,
         );
@@ -226,6 +230,73 @@ final class RequestHandlerTest extends TestCase
         );
 
         $this->expectException(NotFoundException::class);
+        $handler->resolveRoute();
+    }
+
+    public function testResolveRouteAcceptsAHostOfAWildcard(): void
+    {
+        $handler = $this->createRequestHandler(
+            requestUri: '/index.html',
+            routeCollection: new RouteCollection(routes: [$this->createRoute(path: '/')]),
+            allowedDomain: '*.example.ch',
+            host: 'Dubach.example.ch',
+        );
+
+        $this->assertSame('/', $handler->resolveRoute()->route->path);
+    }
+
+    public function testResolveRouteThrowsForTwoLabelsInFrontOfAWildcard(): void
+    {
+        $handler = $this->createRequestHandler(
+            requestUri: '/index.html',
+            routeCollection: new RouteCollection(routes: [$this->createRoute(path: '/')]),
+            allowedDomain: '*.example.ch',
+            host: 'a.b.example.ch',
+        );
+
+        $this->expectException(NotFoundException::class);
+        $this->expectExceptionMessageIs('a.b.example.ch is not set as allowed domain in your environment settings.');
+        $handler->resolveRoute();
+    }
+
+    public function testResolveRouteThrowsForAWildcardWithoutThePort(): void
+    {
+        $handler = $this->createRequestHandler(
+            requestUri: '/index.html',
+            routeCollection: new RouteCollection(routes: [$this->createRoute(path: '/')]),
+            allowedDomain: '*.example.ch:8443',
+            host: 'a.example.ch',
+        );
+
+        $this->expectException(NotFoundException::class);
+        $handler->resolveRoute();
+    }
+
+    public function testResolveRouteAsksTheHostPolicy(): void
+    {
+        $hostPolicy = new RecordingHostPolicy(allowedHosts: ['termin.tenant.ch']);
+        $handler = $this->createRequestHandler(
+            requestUri: '/index.html',
+            routeCollection: new RouteCollection(routes: [$this->createRoute(path: '/')]),
+            host: 'termin.tenant.ch',
+            hostPolicy: $hostPolicy,
+        );
+
+        $this->assertSame('/', $handler->resolveRoute()->route->path);
+        $this->assertSame(['termin.tenant.ch'], $hostPolicy->askedHosts);
+    }
+
+    public function testResolveRouteThrowsForAHostTheHostPolicyDenies(): void
+    {
+        $handler = $this->createRequestHandler(
+            requestUri: '/index.html',
+            routeCollection: new RouteCollection(routes: [$this->createRoute(path: '/')]),
+            host: 'example.com',
+            hostPolicy: new RecordingHostPolicy(allowedHosts: []),
+        );
+
+        $this->expectException(NotFoundException::class);
+        $this->expectExceptionMessageIs('example.com is not set as allowed domain in your environment settings.');
         $handler->resolveRoute();
     }
 
